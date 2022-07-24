@@ -1,8 +1,7 @@
-package com.transgressoft.commons.music.repository;
+package com.transgressoft.commons.music.playlist;
 
 import com.google.common.graph.*;
 import com.transgressoft.commons.music.AudioItem;
-import com.transgressoft.commons.music.playlist.*;
 
 import java.util.*;
 

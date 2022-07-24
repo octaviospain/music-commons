@@ -1,4 +1,4 @@
-package com.transgressoft.commons.music.repository;
+package com.transgressoft.commons.music.playlist;
 
 import com.google.common.graph.Graph;
 import com.transgressoft.commons.music.AudioItem;
