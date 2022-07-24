@@ -1,12 +1,13 @@
 package com.transgressoft.commons.music;
 
-import com.google.common.collect.*;
-import com.transgressoft.commons.music.AudioItem;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * @author Octavio Calleya
  */
-public interface AudioRepository {
+public interface AudioItemRepository {
+
+    AudioItem findById(int id);
 
     ImmutableSet<AudioItem> audioCollection();
 }
