@@ -5,7 +5,7 @@ import java.util.Optional;
 /**
  * @author Octavio Calleya
  */
-public interface Album {
+public interface Album extends Comparable<Album> {
 
     String name();
 

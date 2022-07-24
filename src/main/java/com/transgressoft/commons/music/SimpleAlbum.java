@@ -85,6 +85,22 @@ public class SimpleAlbum implements Album {
     }
 
     @Override
+    public int compareTo(Album o) {
+        int nameComparison = name.compareTo(o.name());
+        int artistComparison = albumArtist.name().compareTo(o.albumArtist().name());
+        int labelComparison = label.name().compareTo(o.label().name());
+        int yearComparison = year - o.year();
+
+        if (nameComparison != 0) {
+            return nameComparison;
+        } else if (artistComparison != 0) {
+            return artistComparison;
+        } else if (labelComparison != 0) {
+            return labelComparison;
+        } else return yearComparison;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
