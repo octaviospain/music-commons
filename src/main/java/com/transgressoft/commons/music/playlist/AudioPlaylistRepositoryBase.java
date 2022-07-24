@@ -21,30 +21,14 @@ public abstract class AudioPlaylistRepositoryBase<I extends AudioItem, P extends
         playlistsTree.addNode(rootPlaylist);
     }
 
-    /**
-     * Includes an {@link AudioPlaylist} in the repository, at the top of the hierarchy,
-     * this is, at the first level of the tree, where is children of the root playlist.
-     *
-     * @param playlist  The {@link AudioPlaylist} to include
-     */
     @Override
-    public void addFirstLevelPlaylist(P playlist) {
-        addPlaylist(rootPlaylist, playlist);
+    public void addToFirstLevel(P playlist) {
+        add(playlist, rootPlaylist);
     }
 
-    /**
-     * Includes an {@link AudioPlaylist} as a child of a given {@link AudioPlaylistFolder} into the
-     * repository. If the given {@link AudioPlaylistFolder} does not exist in the repository yet,
-     * the {@link AudioPlaylistFolder} is added to the top of the hierarchy.
-     * If the given {@link AudioPlaylist} is an instance of {@link AudioPlaylistFolder} too,
-     * all its contained playlists are added recursively.
-     *
-     * @param playlistFolder    The {@link AudioPlaylistFolder} of the playlist
-     * @param playlist          The {@link AudioPlaylist} to add to the folder playlist
-     */
     @SuppressWarnings("unchecked")
     @Override
-    public void addPlaylist(F playlistFolder, P playlist) {
+    public void add(P playlist, F playlistFolder) {
         if (! playlistsTree.nodes().contains(playlistFolder))
             playlistsTree.putEdge(rootPlaylist, playlistFolder);
 
@@ -57,32 +41,18 @@ public abstract class AudioPlaylistRepositoryBase<I extends AudioItem, P extends
 
         if (playlist instanceof AudioPlaylistFolder) {
             F audioPlaylistFolder = (F) playlist;
-            addPlaylists(audioPlaylistFolder, (Collection<P>) audioPlaylistFolder.includedPlaylists());
+            add(audioPlaylistFolder, (Collection<P>) audioPlaylistFolder.includedPlaylists());
         }
     }
 
-    /**
-     * Includes a {@link Collection} of {@link AudioPlaylist}s as children of a given {@link AudioPlaylistFolder} into the
-     * repository, and if some the given playlists are instances of {@link AudioPlaylistFolder}, the playlists
-     * included in them are added recursively too.
-     *
-     * @param parent    The {@link AudioPlaylistFolder} where to add the given playlists
-     * @param playlists The <tt>collection</tt> of {@link AudioPlaylist}s to add to the repository under the given parent playlist
-     */
     @Override
-    public void addPlaylists(F parent, Collection<P> playlists) {
+    public void add(F parent, Collection<P> playlists) {
         playlists.forEach(includedPlaylist ->
-            addPlaylist(parent, includedPlaylist));
+            add(includedPlaylist, parent));
     }
 
-    /**
-     * Removes a given {@link AudioPlaylist} from the tree hierarchy and all of its
-     * included playlists if contains any.
-     *
-     * @param playlist  The given {@link AudioPlaylist} to remove from the repository
-     */
     @Override
-    public void deletePlaylist(P playlist) {
+    public void delete(P playlist) {
         getParentPlaylist(playlist).ifPresent(parent -> {
             playlistsTree.removeEdge(parent, playlist);
             parent.removeIncludedPlaylist(playlist);
@@ -91,7 +61,7 @@ public abstract class AudioPlaylistRepositoryBase<I extends AudioItem, P extends
     }
 
     @Override
-    public void movePlaylist(P playlistToMove, F destinationPlaylistFolder) {
+    public void move(P playlistToMove, F destinationPlaylistFolder) {
         Optional<F> parentOfMovedPlaylist = getParentPlaylist(playlistToMove);
         parentOfMovedPlaylist.ifPresent(parent -> {
             playlistsTree.removeEdge(parent, playlistToMove);
@@ -107,7 +77,7 @@ public abstract class AudioPlaylistRepositoryBase<I extends AudioItem, P extends
     }
 
     @Override
-    public boolean containsPlaylist(String playlistName) {
+    public boolean contains(String playlistName) {
         return playlistsTree.nodes().stream().anyMatch(playlist -> playlist.name().equals(playlistName));
     }
 
