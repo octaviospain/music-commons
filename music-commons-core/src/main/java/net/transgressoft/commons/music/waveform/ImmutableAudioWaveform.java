@@ -2,8 +2,6 @@ package net.transgressoft.commons.music.waveform;
 
 import com.google.common.base.Objects;
 
-import java.util.Arrays;
-
 /**
  * @author Octavio Calleya
  */

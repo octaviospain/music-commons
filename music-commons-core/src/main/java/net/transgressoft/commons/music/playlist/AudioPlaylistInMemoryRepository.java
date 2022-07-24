@@ -26,41 +26,40 @@ import java.util.stream.Collectors;
 
 import static net.transgressoft.commons.music.playlist.PlaylistStringAttribute.NAME;
 
-public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends AudioPlaylist<I>, D extends AudioPlaylistDirectory<I>>
-        implements AudioPlaylistRepository<I, N, D> {
+public class AudioPlaylistInMemoryRepository<I extends AudioItem, P extends AudioPlaylist<I>, D extends AudioPlaylistDirectory<I>,
+        MP extends MutableAudioPlaylist<I>, MD extends MutableAudioPlaylistDirectory<I>> implements AudioPlaylistRepository<I, P, D> {
 
     private static final Logger LOG = LoggerFactory.getLogger(AudioPlaylistInMemoryRepository.class);
 
     private final AtomicInteger idCounter = new AtomicInteger(1);
     private final Set<Integer> idSet = new HashSet<>();
 
-    private final InMemoryRepository<MutableAudioPlaylist<I>> playlists;
-    private final InMemoryRepository<MutableAudioPlaylistDirectory<I>> directories;
+    private final InMemoryRepository<MP> playlists;
+    private final InMemoryRepository<MD> directories;
     private final Multimap<String, String> playlistsMultiMap = MultimapBuilder.treeKeys().treeSetValues().build();
 
     public AudioPlaylistInMemoryRepository() {
         this(new HashMap<>(), new HashMap<>());
     }
 
-    protected AudioPlaylistInMemoryRepository(Map<Integer, MutableAudioPlaylist<I>> playlistsById,
-                                              Map<Integer, MutableAudioPlaylistDirectory<I>> directoriesByID) {
+    protected AudioPlaylistInMemoryRepository(Map<Integer, MP> playlistsById, Map<Integer, MD> directoriesByID) {
       playlists = new InMemoryRepository<>(playlistsById);
       directories = new InMemoryRepository<>(directoriesByID);
     }
 
     @Override
-    public void add(N... playlists) {
+    public void add(P... playlists) {
         Objects.requireNonNull(playlists);
         addAll(Set.of(playlists));
     }
 
     @Override
-    public void addAll(Set<N> playlists) {
+    public void addAll(Set<P> playlists) {
         Objects.requireNonNull(playlists);
         playlists.forEach(this::add);
     }
 
-    private void add(N playlist) {
+    private void add(P playlist) {
         if (playlist.isDirectory()) {
             if (directories.findByAttribute(NAME, playlist.getName()).isEmpty()) {
                 var mutableDirectory = toMutableDirectory((D) playlist);
@@ -83,33 +82,33 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
         return id;
     }
 
-    private MutableAudioPlaylist<I> toMutablePlaylists(N playlistDirectory) {
-        return new MutablePlaylist<>(getNewId(), playlistDirectory.getName(), playlistDirectory.audioItems());
+    private MP toMutablePlaylists(P playlistDirectory) {
+        return (MP) new MutablePlaylist<>(getNewId(), playlistDirectory.getName(), playlistDirectory.audioItems());
     }
 
-    private MutableAudioPlaylistDirectory<I> toMutableDirectory(D playlistDirectory) {
-        return new MutablePlaylistDirectory<>(getNewId(), playlistDirectory.getName(), playlistDirectory.audioItems(), toMutablePlaylists(playlistDirectory.descendantPlaylists()));
+    private MD toMutableDirectory(D playlistDirectory) {
+        return (MD) new MutablePlaylistDirectory<>(getNewId(), playlistDirectory.getName(), playlistDirectory.audioItems(), toMutablePlaylists(playlistDirectory.descendantPlaylists()));
     }
 
     private void addRecursive(MutableAudioPlaylistDirectory<I> parent, Set<MutableAudioPlaylist<I>> mutablePlaylistNodes) {
         for (MutableAudioPlaylist<I> playlist : mutablePlaylistNodes) {
             playlistsMultiMap.put(parent.getUniqueId(), playlist.getUniqueId());
-            add((N) playlist);
+            add((P) playlist);
         }
     }
 
-    private MutableAudioPlaylistDirectory<I> findDirectory(int id) {
+    private MD findDirectory(int id) {
         return directories.findById(id).orElseThrow(() -> new RuntimeException("Playlist Directory not found by id: " + id));
     }
 
     @Override
-    public void remove(N... entities) {
+    public void remove(P... entities) {
         Objects.requireNonNull(entities);
         removeAll(Set.of(entities));
     }
 
     @Override
-    public void removeAll(Set<N> entities) {
+    public void removeAll(Set<P> entities) {
         Objects.requireNonNull(entities);
         removeRecursive(entities);
     }
@@ -121,8 +120,8 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
         playlistsMultiMap.clear();
     }
 
-    private void removeRecursive(Set<N> mutablePlaylistNodes) {
-        for (N p : mutablePlaylistNodes) {
+    private void removeRecursive(Set<P> mutablePlaylistNodes) {
+        for (P p : mutablePlaylistNodes) {
             playlistsMultiMap.asMap().remove(p.getUniqueId());
             if (p.isDirectory()) {
                 removeRecursive(findDirectory(p.id()).descendantPlaylists());
@@ -133,35 +132,35 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
     }
 
     @Override
-    public List<N> search(BooleanQueryTerm<N> booleanQueryTerm) {
-        return ImmutableList.<N>builder()
-                .addAll(playlists.search((BooleanQueryTerm<MutableAudioPlaylist<I>>) booleanQueryTerm).stream()
+    public List<P> search(BooleanQueryTerm<P> booleanQueryTerm) {
+        return ImmutableList.<P>builder()
+                .addAll(playlists.search((BooleanQueryTerm<MP>) booleanQueryTerm).stream()
                                 .map(this::toImmutablePlaylist)
                                 .toList())
-                .addAll(directories.search((BooleanQueryTerm<MutableAudioPlaylistDirectory<I>>) booleanQueryTerm).stream()
+                .addAll(directories.search((BooleanQueryTerm<MD>) booleanQueryTerm).stream()
                                 .map(this::toImmutablePlaylistDirectory)
                                 .toList()).build();
     }
 
     @Override
-    public Optional<N> findById(int id) {
+    public Optional<P> findById(int id) {
         return findByIdInternal(id).map(this::toImmutablePlaylist);
     }
 
-    private Optional<MutableAudioPlaylist<I>> findByIdInternal(int id) {
-        return playlists.findById(id).or(() -> directories.findById(id));
+    private Optional<MP> findByIdInternal(int id) {
+        return playlists.findById(id).or(() -> (Optional<? extends MP>) directories.findById(id));
     }
 
     @Override
-    public Optional<N> findByUniqueId(String id) {
+    public Optional<P> findByUniqueId(String id) {
         return playlists.findByUniqueId(id)
                 .map(this::toImmutablePlaylist)
                 .or(() -> directories.findByUniqueId(id).map(this::toImmutablePlaylistDirectory));
     }
 
     @Override
-    public <A extends EntityAttribute<V>, V> List<N> findByAttribute(A a, V v) {
-        return ImmutableList.<N>builder()
+    public <A extends EntityAttribute<V>, V> List<P> findByAttribute(A a, V v) {
+        return ImmutableList.<P>builder()
                 .addAll(playlists.findByAttribute(a, v).stream()
                                 .map(this::toImmutablePlaylist)
                                 .toList())
@@ -171,7 +170,7 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
     }
 
     @Override
-    public <A extends EntityAttribute<V>, V> Optional<N> findSingleByAttribute(A a, V v) throws RepositoryException {
+    public <A extends EntityAttribute<V>, V> Optional<P> findSingleByAttribute(A a, V v) throws RepositoryException {
         var foundPlaylist = playlists.findSingleByAttribute(a, v).orElse(null);
         var foundDirectory = directories.findSingleByAttribute(a, v).orElse(null);
         if (foundPlaylist != null && foundDirectory != null)
@@ -193,34 +192,34 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
 
     @Override
     @SuppressWarnings("UnstableApiUsage")
-    public Iterator<N> iterator() {
-        var setBuilder = ImmutableSet.<N>builderWithExpectedSize(playlists.size() + directories.size());
+    public Iterator<P> iterator() {
+        var setBuilder = ImmutableSet.<P>builderWithExpectedSize(playlists.size() + directories.size());
         playlists.forEach(p -> setBuilder.add(toImmutablePlaylist(p)));
         directories.forEach(d -> setBuilder.add(toImmutablePlaylistDirectory(d)));
         return setBuilder.build().iterator();
     }
 
-    private N toImmutablePlaylist(MutableAudioPlaylist<I> audioPlaylist) {
-        return (N) new ImmutablePlaylist<>(audioPlaylist.id(), audioPlaylist.getName(), audioPlaylist.audioItems());
+    private P toImmutablePlaylist(MutableAudioPlaylist<I> audioPlaylist) {
+        return (P) new ImmutablePlaylist<>(audioPlaylist.id(), audioPlaylist.getName(), audioPlaylist.audioItems());
     }
 
-    private N toImmutablePlaylist(N audioPlaylist) {
-        return (N) new ImmutablePlaylist<>(audioPlaylist.id(), audioPlaylist.getName(), audioPlaylist.audioItems());
+    private P toImmutablePlaylist(P audioPlaylist) {
+        return (P) new ImmutablePlaylist<>(audioPlaylist.id(), audioPlaylist.getName(), audioPlaylist.audioItems());
     }
 
-    private N toImmutablePlaylistDirectory(MutableAudioPlaylistDirectory<I> playlistDirectory) {
+    private P toImmutablePlaylistDirectory(MutableAudioPlaylistDirectory<I> playlistDirectory) {
         return playlistDirectory == null ? null :
-                (N) new ImmutablePlaylistDirectory<>(playlistDirectory.id(), playlistDirectory.getName(), playlistDirectory.audioItems(),
+                (P) new ImmutablePlaylistDirectory<>(playlistDirectory.id(), playlistDirectory.getName(), playlistDirectory.audioItems(),
                                                      toImmutablePlaylistDirectories(playlistDirectory.descendantPlaylists()));
     }
 
-    private N toImmutablePlaylistDirectory(D playlistDirectory) {
+    private P toImmutablePlaylistDirectory(D playlistDirectory) {
         return playlistDirectory == null ? null :
-                (N) new ImmutablePlaylistDirectory<>(playlistDirectory.id(), playlistDirectory.getName(), playlistDirectory.audioItems(),
+                (P) new ImmutablePlaylistDirectory<>(playlistDirectory.id(), playlistDirectory.getName(), playlistDirectory.audioItems(),
                                                      toImmutablePlaylistDirectories(playlistDirectory.descendantPlaylists()));
     }
 
-    private Set<N> toImmutablePlaylistDirectories(Set<N> audioPlaylists) {
+    private Set<P> toImmutablePlaylistDirectories(Set<P> audioPlaylists) {
         return audioPlaylists.stream()
                 .map(p -> p.isDirectory() ? toImmutablePlaylistDirectory((D) p) : toImmutablePlaylist(p))
                 .collect(Collectors.toSet());
@@ -237,15 +236,15 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
     }
 
     @Override
-    public N createPlaylist(String name) throws RepositoryException {
+    public P createPlaylist(String name) throws RepositoryException {
         return createPlaylist(name, Collections.emptyList());
     }
 
     @Override
-    public N createPlaylist(String name, List<I> audioItems) throws RepositoryException {
+    public P createPlaylist(String name, List<I> audioItems) throws RepositoryException {
         var searchResult = playlists.search(NAME.equalsTo(name));
         if (searchResult.isEmpty()) {
-            var playlist = new MutablePlaylist<>(getNewId(), name, audioItems);
+            var playlist = (MP) new MutablePlaylist<>(getNewId(), name, audioItems);
             playlists.add(playlist);
             return toImmutablePlaylist(playlist);
         } else if (searchResult.size() == 1) {
@@ -264,7 +263,7 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
     public D createPlaylistDirectory(String name, List<I> audioItems) throws RepositoryException {
         var searchResult = directories.search(NAME.equalsTo(name));
         if (searchResult.isEmpty()) {
-            var playlistDirectory = new MutablePlaylistDirectory<>(getNewId(), name, audioItems);
+            var playlistDirectory = (MD) new MutablePlaylistDirectory<>(getNewId(), name, audioItems);
             directories.add(playlistDirectory);
             return (D) toImmutablePlaylistDirectory(playlistDirectory);
         } else if (searchResult.size() == 1) {
@@ -275,17 +274,17 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
     }
 
     @Override
-    public void addAudioItemsToPlaylist(List<I> audioItems, N playlist) {
+    public void addAudioItemsToPlaylist(List<I> audioItems, P playlist) {
         Objects.requireNonNull(audioItems);
         Objects.requireNonNull(playlist);
 
         playlists.findById(playlist.id())
-                .or(() -> directories.findById(playlist.id()))
+                .or(() -> (Optional<? extends MP>) directories.findById(playlist.id()))
                 .ifPresent(p -> p.addAudioItems(audioItems));
     }
 
     @Override
-    public void addPlaylistsToDirectory(Set<N> playlistsToAdd, D directory) {
+    public void addPlaylistsToDirectory(Set<P> playlistsToAdd, D directory) {
         Objects.requireNonNull(playlistsToAdd);
         Objects.requireNonNull(directory);
 
@@ -298,7 +297,7 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
                 });
     }
 
-    private Set<MutableAudioPlaylist<I>> toMutablePlaylists(Set<N> audioPlaylists) {
+    private Set<MutableAudioPlaylist<I>> toMutablePlaylists(Set<P> audioPlaylists) {
         return audioPlaylists.stream()
                 .map(e -> {
                     if (e.isDirectory()) {
@@ -312,7 +311,7 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
     }
 
     @Override
-    public void movePlaylist(N playlistToMove, D destinationPlaylist) {
+    public void movePlaylist(P playlistToMove, D destinationPlaylist) {
         Objects.requireNonNull(playlistToMove);
         Objects.requireNonNull(destinationPlaylist);
 
@@ -329,7 +328,7 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
                 }));
     }
 
-    private Optional<MutableAudioPlaylistDirectory<I>> ancestor(N playlistNode) {
+    private Optional<MD> ancestor(P playlistNode) {
         if (playlistsMultiMap.containsValue(playlistNode.getUniqueId())) {
             return playlistsMultiMap.entries().stream()
                     .filter(entry -> playlistNode.getUniqueId().equals(entry.getValue()))
@@ -341,9 +340,9 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
     }
 
     @Override
-    public List<N> findAllByName(String name) {
+    public List<P> findAllByName(String name) {
         Objects.requireNonNull(name);
-        return ImmutableList.<N>builder()
+        return ImmutableList.<P>builder()
                 .addAll(playlists.findByAttribute(NAME, name).stream()
                                 .map(this::toImmutablePlaylist)
                                 .collect(Collectors.toSet()))
@@ -353,7 +352,7 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
     }
 
     @Override
-    public Optional<N> findSinglePlaylistByName(String name) {
+    public Optional<P> findSinglePlaylistByName(String name) {
         Objects.requireNonNull(name);
         try {
             return playlists.findSingleByAttribute(NAME, name).map(this::toImmutablePlaylist);
@@ -380,7 +379,7 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
             return true;
         if (o == null || getClass() != o.getClass())
             return false;
-        var that = (AudioPlaylistInMemoryRepository<I, N, D>) o;
+        var that = (AudioPlaylistInMemoryRepository<I, P, D, MP, MD>) o;
         return Objects.equals(playlistsMultiMap, that.playlistsMultiMap) && Objects.equals(playlists, that.playlists) && Objects.equals(directories, that.directories);
     }
 
