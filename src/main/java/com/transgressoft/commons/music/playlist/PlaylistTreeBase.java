@@ -183,21 +183,6 @@ public abstract class PlaylistTreeBase<I extends AudioItem> implements PlaylistT
     }
 
     @Override
-    public int compareTo(PlaylistTree<I> playlistTreeObject) {
-        int result;
-        if (Objects.equal(this.name, playlistTreeObject.name())) {
-            if (subPlaylistTrees.size() - playlistTreeObject.subPlaylistTrees().size() == 0) {
-                return audioPlaylists.size() - playlistTreeObject.audioPlaylists().size();
-            } else {
-                result = subPlaylistTrees.size() - playlistTreeObject.subPlaylistTrees().size();
-            }
-        } else {
-            result = this.name.compareTo(playlistTreeObject.name());
-        }
-        return result;
-    }
-
-    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;

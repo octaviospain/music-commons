@@ -163,11 +163,9 @@ class SimplePlaylistTreeTest {
         PlaylistTree<AudioItem> bestHits2 =
                 new SimplePlaylistTree("Best hits", Collections.emptySet(), ImmutableSet.of(fiftiesHits));
 
-        assertTrue(bestHits.compareTo(bestHits2) > 0);
         assertFalse(bestHits.equals(bestHits2));
 
         bestHits2.name("est hits of my life");
-        assertTrue(bestHits.compareTo(bestHits2) < 0);
 
         bestHits2.removeAudioItems(ImmutableSet.of(item3, item4));
         fiftiesHits.name("60s hits");
@@ -175,7 +173,6 @@ class SimplePlaylistTreeTest {
 
         bestHits2.name("Best hits of my life");
         assertTrue(bestHits.equals(bestHits2));
-        assertEquals(0, bestHits.compareTo(bestHits2));
         assertEquals("SimplePlaylistTree{audioPlaylists=[SimpleAudioPlaylist{name=60s hits}], subPlaylistTrees=[], name=Best hits of my life}", bestHits.toString());
     }
 }
