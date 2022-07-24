@@ -1,8 +1,10 @@
 package com.transgressoft.commons.music.playlist;
 
+import com.transgressoft.commons.music.AudioItem;
+
 /**
  * @author Octavio Calleya
  */
-public class SimplePlaylistExportTool extends PlaylistExportToolBase<AudioPlaylist> implements PlaylistExportTool<AudioPlaylist> {
+public class SimplePlaylistExportTool extends PlaylistExportToolBase<AudioPlaylist<AudioItem>> {
 
 }

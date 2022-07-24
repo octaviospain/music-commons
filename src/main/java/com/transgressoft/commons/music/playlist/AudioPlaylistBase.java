@@ -10,13 +10,13 @@ import java.util.*;
 /**
  * @author Octavio Calleya
  */
-public abstract class AudioPlaylistBase<I extends AudioItem> implements AudioPlaylist {
+public class AudioPlaylistBase<I extends AudioItem> implements AudioPlaylist<I> {
 
-    protected final String name;
-    protected final Collection<I> audioItems;
-    protected final Set<AudioPlaylist> childPlaylists;
+    protected String name;
+    protected Collection<I> audioItems;
+    protected  Set<AudioPlaylist<I>> childPlaylists;
 
-    public AudioPlaylistBase(String name, Collection<I> audioItems, Set<AudioPlaylist> childPlaylists) {
+    public AudioPlaylistBase(String name, Collection<I> audioItems, Set<AudioPlaylist<I>> childPlaylists) {
         this.name = name;
         this.audioItems = audioItems;
         this.childPlaylists = childPlaylists;
@@ -40,18 +40,43 @@ public abstract class AudioPlaylistBase<I extends AudioItem> implements AudioPla
     }
 
     @Override
-    public ImmutableCollection<AudioItem> audioItems() {
-        return ImmutableList.copyOf(audioItems);
+    public void name(String name) {
+        this.name = name;
     }
 
     @Override
-    public ImmutableSet<AudioPlaylist> childPlaylists() {
-        return ImmutableSet.copyOf(childPlaylists);
+    public ImmutableList<I> audioItems() {
+        return ImmutableList.copyOf(audioItems);
     }
 
     @Override
     public boolean isEmpty() {
         return audioItems.isEmpty();
+    }
+
+    @Override
+    public void addAudioItems(List<I> audioItems) {
+        this.audioItems.addAll(audioItems);
+    }
+
+    @Override
+    public void removeAudioItems(List<I> audioItems) {
+        this.audioItems.removeAll(audioItems);
+    }
+
+    @Override
+    public ImmutableSet<AudioPlaylist<I>> childPlaylists() {
+        return ImmutableSet.copyOf(childPlaylists);
+    }
+
+    @Override
+    public void addChildPlaylist(AudioPlaylist<I> audioPlaylist) {
+        childPlaylists.add(audioPlaylist);
+    }
+
+    @Override
+    public void removeChildPlaylist(AudioPlaylist<I> audioPlaylist) {
+        this.childPlaylists.remove(audioPlaylist);
     }
 
     @Override

@@ -7,12 +7,12 @@ import org.slf4j.*;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
-import java.util.*;
+import java.util.Collection;
 
 /**
  * @author Octavio Calleya  
  */
-public abstract class PlaylistExportToolBase<P extends AudioPlaylist> implements PlaylistExportTool<P> {
+public abstract class PlaylistExportToolBase<P extends AudioPlaylist<? extends AudioItem>> implements PlaylistExportTool<P> {
 
     private final Logger LOG = LoggerFactory.getLogger(getClass().getName());
 

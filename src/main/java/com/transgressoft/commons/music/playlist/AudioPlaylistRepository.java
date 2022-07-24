@@ -8,7 +8,7 @@ import java.util.*;
 /**
  * @author Octavio Calleya
  */
-public interface AudioPlaylistRepository<P extends AudioPlaylist> {
+public interface AudioPlaylistRepository<P extends AudioPlaylist<I>, I extends AudioItem> {
 
    Graph<P> getPlaylistsTree();
 
@@ -22,7 +22,7 @@ public interface AudioPlaylistRepository<P extends AudioPlaylist> {
 
    void movePlaylist(P movedPlaylist, P targetFolder);
 
-   void removeAudioItems(Collection<? extends AudioItem> tracks);
+   void removeAudioItems(List<I> tracks);
 
    boolean containsPlaylist(String playlistName);
 

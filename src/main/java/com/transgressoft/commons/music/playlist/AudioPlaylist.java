@@ -3,28 +3,28 @@ package com.transgressoft.commons.music.playlist;
 import com.google.common.collect.*;
 import com.transgressoft.commons.music.AudioItem;
 
-import java.util.Collection;
+import java.util.List;
 
 /**
  * @author Octavio Calleya
  */
-public interface AudioPlaylist {
+public interface AudioPlaylist<I extends AudioItem> {
 
     String name();
 
-    AudioPlaylist name(String name);
+    void name(String name);
 
-    ImmutableCollection<AudioItem> audioItems();
+    ImmutableList<I> audioItems();
 
     boolean isEmpty();
 
-    AudioPlaylist addAudioItems(Collection<AudioItem> audioItems);
+    void addAudioItems(List<I> audioItems);
 
-    AudioPlaylist removeAudioItems(Collection<? extends AudioItem> audioItems);
+    void removeAudioItems(List<I> audioItems);
 
-    ImmutableSet<AudioPlaylist> childPlaylists();
+    ImmutableSet<AudioPlaylist<I>> childPlaylists();
 
-    AudioPlaylist addChildPlaylist(AudioPlaylist audioPlaylist);
+    void addChildPlaylist(AudioPlaylist<I> audioPlaylist);
 
-    AudioPlaylist removeChildPlaylist(AudioPlaylist audioPlaylist);
+    void removeChildPlaylist(AudioPlaylist<I>audioPlaylist);
 }
