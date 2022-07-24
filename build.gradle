@@ -24,6 +24,11 @@ dependencies {
     compile 'org.slf4j:jcl-over-slf4j:2.0.0-alpha1'
 }
 
+compileJava   {
+    sourceCompatibility = '1.8'
+    targetCompatibility = '1.8'
+}
+
 task sourceJar(type: Jar) {
     from sourceSets.main.allJava
     archiveClassifier = "sources"

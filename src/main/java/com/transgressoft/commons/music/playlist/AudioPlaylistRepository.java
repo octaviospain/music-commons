@@ -2,32 +2,33 @@ package com.transgressoft.commons.music.playlist;
 
 import com.google.common.graph.Graph;
 import com.transgressoft.commons.music.AudioItem;
-import com.transgressoft.commons.music.playlist.AudioPlaylist;
 
 import java.util.*;
 
 /**
  * @author Octavio Calleya
  */
-public interface AudioPlaylistRepository {
+public interface AudioPlaylistRepository<P extends AudioPlaylist> {
 
-   Graph<AudioPlaylist> getPlaylistsTree();
+   Graph<P> getPlaylistsTree();
 
-   void addPlaylist(AudioPlaylist parentPlaylist, AudioPlaylist playlist);
+   void addPlaylist(P parentPlaylist, P playlist);
 
-   void addPlaylistToRoot(AudioPlaylist playlist);
+   void addPlaylistToRoot(P playlist);
 
-   void addPlaylistsRecursively(AudioPlaylist parent, Collection<? extends AudioPlaylist> playlists);
+   void addPlaylistsRecursively(P parent, Collection<P> playlists);
 
-   void deletePlaylist(AudioPlaylist playlist);
+   void deletePlaylist(P playlist);
 
-   void movePlaylist(AudioPlaylist movedPlaylist, AudioPlaylist targetFolder);
+   void movePlaylist(P movedPlaylist, P targetFolder);
 
    void removeAudioItems(Collection<? extends AudioItem> tracks);
 
    boolean containsPlaylist(String playlistName);
 
-   Optional<AudioPlaylist> getParentPlaylist(AudioPlaylist playlist);
+   Optional<P> getParentPlaylist(P playlist);
+
+   boolean isParentPlaylistRoot(P playlist);
 
    boolean isEmpty();
 

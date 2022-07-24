@@ -8,15 +8,15 @@ import java.util.*;
 /**
  * @author Octavio Calleya
  */
-public class SimpleAudioPlaylistRepository implements AudioPlaylistRepository {
+public class SimpleAudioPlaylistRepository implements AudioPlaylistRepository<AudioPlaylist> {
 
-    private AudioPlaylist rootPlaylist;
+    private final AudioPlaylist ROOT_PLAYLIST;
 
     private MutableGraph<AudioPlaylist> playlistsTree = GraphBuilder.directed().build();
 
     public SimpleAudioPlaylistRepository() {
-        rootPlaylist = new SimpleAudioPlaylist("ROOT");
-        playlistsTree.addNode(rootPlaylist);
+        ROOT_PLAYLIST = new SimpleAudioPlaylist("ROOT");
+        playlistsTree.addNode(ROOT_PLAYLIST);
     }
 
     @Override
@@ -34,11 +34,11 @@ public class SimpleAudioPlaylistRepository implements AudioPlaylistRepository {
 
     @Override
     public void addPlaylistToRoot(AudioPlaylist playlist) {
-        addPlaylist(rootPlaylist, playlist);
+        addPlaylist(ROOT_PLAYLIST, playlist);
     }
 
     @Override
-    public void addPlaylistsRecursively(AudioPlaylist parent, Collection<? extends AudioPlaylist> playlists) {
+    public void addPlaylistsRecursively(AudioPlaylist parent, Collection<AudioPlaylist> playlists) {
         playlists.forEach(childPlaylist -> {
             addPlaylist(parent, childPlaylist);
             if (! childPlaylist.childPlaylists().isEmpty())
@@ -57,7 +57,7 @@ public class SimpleAudioPlaylistRepository implements AudioPlaylistRepository {
 
     @Override
     public void movePlaylist(AudioPlaylist movedPlaylist, AudioPlaylist targetFolder) {
-        var parentOfMovedPlaylist = getParentPlaylist(movedPlaylist);
+        Optional<AudioPlaylist> parentOfMovedPlaylist = getParentPlaylist(movedPlaylist);
         parentOfMovedPlaylist.ifPresent(parent -> {
             playlistsTree.removeEdge(parent, movedPlaylist);
             parent.removeChildPlaylist(movedPlaylist);
@@ -84,13 +84,19 @@ public class SimpleAudioPlaylistRepository implements AudioPlaylistRepository {
     }
 
     @Override
+    public boolean isParentPlaylistRoot(AudioPlaylist playlist) {
+        Optional<AudioPlaylist> parentPlaylist = getParentPlaylist(playlist);
+        return parentPlaylist.map(audioPlaylist -> audioPlaylist.equals(ROOT_PLAYLIST)).orElse(false);
+    }
+
+    @Override
     public boolean isEmpty() {
-        return playlistsTree.nodes().size() == 1  && playlistsTree.nodes().contains(rootPlaylist);
+        return playlistsTree.nodes().size() == 1  && playlistsTree.nodes().contains(ROOT_PLAYLIST);
     }
 
     @Override
     public void clear() {
-        rootPlaylist = new SimpleAudioPlaylist("ROOT");
         playlistsTree = GraphBuilder.directed().build();
+        playlistsTree.addNode(ROOT_PLAYLIST);
     }
 }

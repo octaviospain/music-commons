@@ -16,6 +16,7 @@ public abstract class PlaylistExportToolBase<P extends AudioPlaylist> implements
 
     private final Logger LOG = LoggerFactory.getLogger(getClass().getName());
 
+    @SuppressWarnings("unchecked")
     @Override
     public void exportPlaylistsAsM3u(Collection<P> playlists, Path folder) throws ExportException {
         for (P playlist : playlists) {

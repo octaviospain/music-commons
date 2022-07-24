@@ -52,7 +52,7 @@ public class JAudioTaggerMetadataParser implements AudioItemMetadataParser {
     }
 
     private int getBitRate(AudioHeader audioHeader) {
-        var bitRate = audioHeader.getBitRate();
+        String bitRate = audioHeader.getBitRate();
         if ("~".equals(bitRate.substring(0, 1))) {
             return Integer.parseInt(bitRate.substring(1));
         }
