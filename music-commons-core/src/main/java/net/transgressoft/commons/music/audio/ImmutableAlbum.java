@@ -88,7 +88,7 @@ public class ImmutableAlbum implements Album {
 
     @Override
     public Optional<byte[]> coverImage() {
-        return Arrays.equals(coverBytes, new byte[0]) ? Optional.empty() : Optional.of(coverBytes);
+        return Arrays.equals(coverBytes, null) ? Optional.empty() : Optional.of(coverBytes);
     }
 
     @Override
