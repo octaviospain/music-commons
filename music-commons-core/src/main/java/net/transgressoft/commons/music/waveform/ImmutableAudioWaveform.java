@@ -2,11 +2,12 @@ package net.transgressoft.commons.music.waveform;
 
 import com.google.common.base.Objects;
 
+import java.util.Arrays;
+
 /**
  * @author Octavio Calleya
  */
 public class ImmutableAudioWaveform implements AudioWaveform {
-
     private final float[] amplitudes;
     private final int width;
     private final int height;
@@ -33,7 +34,7 @@ public class ImmutableAudioWaveform implements AudioWaveform {
     }
 
     @Override
-    public ImmutableAudioWaveform scale(int width, int height) {
+    public AudioWaveform scale(int width, int height) {
         throw new UnsupportedOperationException("Not implemented");
         // TODO Do some math and figure out how to scale the amplitudes given the new width and height without processing again
     }

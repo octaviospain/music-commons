@@ -26,6 +26,7 @@ public interface AudioPlaylistRepository<I extends AudioItem, N extends AudioPla
      * Precondition, <tt>playlist</tt> exist in the <tt>AudioPlaylistRepository</tt>.
      * Otherwise, no action is performed.
      *
+     * @param audioItems
      * @param playlist
      */
     void addAudioItemsToPlaylist(List<I> audioItems, N playlist);

@@ -5,7 +5,7 @@ import net.transgressoft.commons.query.Repository;
 import java.nio.file.Path;
 import java.time.Duration;
 
-public interface AudioItemRepository extends Repository<AudioItem> {
+public interface AudioItemRepository<I extends AudioItem> extends Repository<I> {
 
-    AudioItemBuilder<AudioItem> create(Path path, String title, Duration duration, int bitRate);
+    AudioItemBuilder<I> create(Path path, String title, Duration duration, int bitRate);
 }

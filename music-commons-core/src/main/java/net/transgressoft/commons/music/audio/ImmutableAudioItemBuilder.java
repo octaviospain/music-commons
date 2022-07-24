@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static net.transgressoft.commons.music.audio.FloatAudioItemAttribute.BPM;
@@ -25,7 +26,7 @@ import static net.transgressoft.commons.music.audio.ShortAudioItemAttribute.DISC
 import static net.transgressoft.commons.music.audio.ShortAudioItemAttribute.TRACK_NUMBER;
 import static net.transgressoft.commons.music.audio.StringAudioItemAttribute.*;
 
-class ImmutableAudioItemBuilder implements AudioItemBuilder<AudioItem> {
+class ImmutableAudioItemBuilder<I extends AudioItem> implements AudioItemBuilder<I> {
 
     public static final Map<EntityAttribute<?>, Object> defaultValues;
     private static final Map<Pattern, Pattern> artistsRegexMap;
@@ -122,69 +123,69 @@ class ImmutableAudioItemBuilder implements AudioItemBuilder<AudioItem> {
     }
 
     @Override
-    public AudioItemBuilder<AudioItem> artist(Artist artist) {
+    public AudioItemBuilder<I> artist(Artist artist) {
         this.artist = artist;
         return this;
     }
 
     @Override
-    public AudioItemBuilder<AudioItem> album(Album album) {
+    public AudioItemBuilder<I> album(Album album) {
         this.album = album;
         return this;
     }
 
     @Override
-    public AudioItemBuilder<AudioItem> genre(Genre genre) {
+    public AudioItemBuilder<I> genre(Genre genre) {
         this.genre = genre;
         return this;
     }
 
     @Override
-    public AudioItemBuilder<AudioItem> comments(String comments) {
+    public AudioItemBuilder<I> comments(String comments) {
         this.comments = comments;
         return this;
     }
 
     @Override
-    public AudioItemBuilder<AudioItem> trackNumber(short trackNumber) {
+    public AudioItemBuilder<I> trackNumber(short trackNumber) {
         this.trackNumber = trackNumber;
         return this;
     }
 
     @Override
-    public AudioItemBuilder<AudioItem> discNumber(short discNumber) {
+    public AudioItemBuilder<I> discNumber(short discNumber) {
         this.discNumber = discNumber;
         return this;
     }
 
     @Override
-    public AudioItemBuilder<AudioItem> bpm(float bpm) {
+    public AudioItemBuilder<I> bpm(float bpm) {
         this.bpm = bpm;
         return this;
     }
 
     @Override
-    public AudioItemBuilder<AudioItem> encoder(String encoder) {
+    public AudioItemBuilder<I> encoder(String encoder) {
         this.encoder = encoder;
         return this;
     }
 
     @Override
-    public AudioItemBuilder<AudioItem> encoding(String encoding) {
+    public AudioItemBuilder<I> encoding(String encoding) {
         this.encoding = encoding;
         return this;
     }
 
     @Override
-    public AudioItemBuilder<AudioItem> playCount(short playCount) {
+    public AudioItemBuilder<I> playCount(short playCount) {
         this.playCount = playCount;
         return this;
     }
 
     @Override
-    public ImmutableAudioItem build() {
+    public I build() {
         var artistsNamesInvolved = getArtistsNamesInvolved(title, artist.name(), album.albumArtist().name());
-        return new ImmutableAudioItem(path,
+        return (I) new ImmutableAudioItem(path,
                                       beautifyName(),
                                       artist,
                                       artistsNamesInvolved,
@@ -227,13 +228,13 @@ class ImmutableAudioItemBuilder implements AudioItemBuilder<AudioItem> {
      *
      * @return An {@code ImmutableSet} object with the names of the artists
      */
-    private static ImmutableSet<String> getArtistsNamesInvolved(String title, String artistName, String albumArtistName) {
+    private static Set<String> getArtistsNamesInvolved(String title, String artistName, String albumArtistName) {
         Set<String> artistsInvolved = new HashSet<>();
         var albumArtistNames = Splitter.on(CharMatcher.anyOf(",&")).trimResults().omitEmptyStrings().splitToList(albumArtistName);
         artistsInvolved.addAll(albumArtistNames);
         artistsInvolved.addAll(getNamesInArtist(artistName));
         artistsInvolved.addAll(getNamesInTitle(title));
-        return artistsInvolved.stream().map(WordUtils::capitalize).collect(ImmutableSet.toImmutableSet());
+        return artistsInvolved.stream().map(WordUtils::capitalize).collect(Collectors.toSet());
     }
 
     /**
@@ -253,8 +254,8 @@ class ImmutableAudioItemBuilder implements AudioItemBuilder<AudioItem> {
      *
      * @return An {@link ImmutableSet} with the artists found
      */
-    private static ImmutableSet<String> getNamesInArtist(String artistName) {
-        ImmutableSet<String> artistsInvolved;
+    private static Set<String> getNamesInArtist(String artistName) {
+        Set<String> artistsInvolved;
         Optional<List<String>> splittedNames = Stream.of(" versus ", " vs ").filter(artistName::contains)
                 .map(s -> Splitter.on(s)
                         .trimResults()
@@ -263,10 +264,10 @@ class ImmutableAudioItemBuilder implements AudioItemBuilder<AudioItem> {
                 .findAny();
 
         if (splittedNames.isPresent())
-            artistsInvolved = ImmutableSet.copyOf(splittedNames.get());
+            artistsInvolved = new HashSet<>(splittedNames.get());
         else {
             var cleanedArtist = artistName.replaceAll("(?i)(feat)(\\.|\\s+)", ",").replaceAll("(?i)(ft)(\\.|\\s+)", ",");
-            artistsInvolved = ImmutableSet.copyOf(Splitter.on(CharMatcher.anyOf(",&"))
+            artistsInvolved = new HashSet<>(Splitter.on(CharMatcher.anyOf(",&"))
                                                           .trimResults()
                                                           .omitEmptyStrings()
                                                           .splitToList(cleanedArtist));

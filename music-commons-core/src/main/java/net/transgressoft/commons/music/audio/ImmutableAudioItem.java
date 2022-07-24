@@ -14,6 +14,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Set;
 import java.util.StringJoiner;
 
 import static net.transgressoft.commons.music.audio.DurationAudioItemAttribute.DURATION;
@@ -33,7 +34,7 @@ class ImmutableAudioItem implements AudioItem, Comparable<AudioItem> {
     private final Path path;
     private final String title;
     private final Artist artist;
-    private final ImmutableSet<String> artistsInvolved;
+    private final Set<String> artistsInvolved;
     private final Album album;
     private final Genre genre;
     private final String comments;
@@ -51,10 +52,9 @@ class ImmutableAudioItem implements AudioItem, Comparable<AudioItem> {
 
     private final Map<EntityAttribute<?>, Object> attributes;
 
-    protected ImmutableAudioItem(Path path, String title, Artist artist, ImmutableSet<String> artistsInvolved, Album album, Genre genre,
+    protected ImmutableAudioItem(Path path, String title, Artist artist, Set<String> artistsInvolved, Album album, Genre genre,
                                  String comments, short trackNumber, short discNumber, float bpm, Duration duration, int bitRate, String encoder,
-                                 String encoding, short playCount, LocalDateTime dateOfInclusion,
-                                 LocalDateTime lastDateModified) {
+                                 String encoding, short playCount, LocalDateTime dateOfInclusion, LocalDateTime lastDateModified) {
         this.path = path;
         this.title = title;
         this.artist = artist;
@@ -152,7 +152,7 @@ class ImmutableAudioItem implements AudioItem, Comparable<AudioItem> {
 
     @Override
     public ImmutableSet<String> artistsInvolved() {
-        return artistsInvolved;
+        return ImmutableSet.copyOf(artistsInvolved);
     }
 
     @Override
@@ -271,7 +271,6 @@ class ImmutableAudioItem implements AudioItem, Comparable<AudioItem> {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public <A extends EntityAttribute<V>, V> V getAttribute(A attribute) {
         return (V) attributes.get(attribute);
     }

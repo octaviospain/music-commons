@@ -12,25 +12,25 @@ import static java.util.Objects.requireNonNull;
 /**
  * @author Octavio Calleya
  */
-public class AudioItemInMemoryRepository extends InMemoryRepository<AudioItem> implements AudioItemRepository {
+public class AudioItemInMemoryRepository<I extends AudioItem> extends InMemoryRepository<I> implements AudioItemRepository<I> {
 
     public AudioItemInMemoryRepository() {
         super();
     }
 
-    public AudioItemInMemoryRepository(Collection<AudioItem> entities) {
+    public AudioItemInMemoryRepository(Collection<I> entities) {
         super(entities);
     }
 
     @Override
-    public AudioItemBuilder<AudioItem> create(Path path, String title, Duration duration, int bitRate) {
+    public AudioItemBuilder<I> create(Path path, String title, Duration duration, int bitRate) {
         requireNonNull(path);
         requireNonNull(title);
         requireNonNull(duration);
 
-        return new ImmutableAudioItemBuilder(path, title, duration, bitRate, LocalDateTime.now()) {
+        return new ImmutableAudioItemBuilder<I>(path, title, duration, bitRate, LocalDateTime.now()) {
             @Override
-            public ImmutableAudioItem build() {
+            public I build() {
                 var audioItem = super.build();
                 add(audioItem);
                 return audioItem;

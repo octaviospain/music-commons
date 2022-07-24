@@ -66,7 +66,7 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
         }
     }
 
-    private int getNewId() {
+    protected int getNewId() {
         int id;
         do {
             id = idCounter.getAndIncrement();

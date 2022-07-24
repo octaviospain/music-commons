@@ -8,7 +8,7 @@ import org.apache.commons.text.WordUtils;
 /**
  * @author Octavio Calleya
  */
-class ImmutableArtist implements Artist {
+public class ImmutableArtist implements Artist {
 
     private final String name;
     private final CountryCode countryCode;

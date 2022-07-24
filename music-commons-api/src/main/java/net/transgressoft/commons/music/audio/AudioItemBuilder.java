@@ -4,23 +4,23 @@ public interface AudioItemBuilder<E extends AudioItem> {
 
     E build();
 
-    AudioItemBuilder<AudioItem> artist(Artist artist);
+    AudioItemBuilder<E> artist(Artist artist);
 
-    AudioItemBuilder<AudioItem> album(Album album);
+    AudioItemBuilder<E> album(Album album);
 
-    AudioItemBuilder<AudioItem> genre(Genre genre);
+    AudioItemBuilder<E> genre(Genre genre);
 
-    AudioItemBuilder<AudioItem> comments(String comments);
+    AudioItemBuilder<E> comments(String comments);
 
-    AudioItemBuilder<AudioItem> trackNumber(short trackNumber);
+    AudioItemBuilder<E> trackNumber(short trackNumber);
 
-    AudioItemBuilder<AudioItem> discNumber(short discNumber);
+    AudioItemBuilder<E> discNumber(short discNumber);
 
-    AudioItemBuilder<AudioItem> bpm(float bpm);
+    AudioItemBuilder<E> bpm(float bpm);
 
-    AudioItemBuilder<AudioItem> encoder(String encoder);
+    AudioItemBuilder<E> encoder(String encoder);
 
-    AudioItemBuilder<AudioItem> encoding(String encoding);
+    AudioItemBuilder<E> encoding(String encoding);
 
-    AudioItemBuilder<AudioItem> playCount(short playCount);
+    AudioItemBuilder<E> playCount(short playCount);
 }

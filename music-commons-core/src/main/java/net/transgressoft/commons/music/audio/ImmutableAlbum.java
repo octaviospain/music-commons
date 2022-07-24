@@ -9,7 +9,7 @@ import java.util.Optional;
 /**
  * @author Octavio Calleya
  */
-class ImmutableAlbum implements Album {
+public class ImmutableAlbum implements Album {
 
     private final String name;
     private final Artist albumArtist;
@@ -87,7 +87,7 @@ class ImmutableAlbum implements Album {
 
     @Override
     public Optional<byte[]> coverImage() {
-        return coverBytes == new byte[0] ? Optional.empty() : Optional.of(coverBytes);
+        return java.util.Objects.equals(coverBytes, new byte[0]) ? Optional.empty() : Optional.of(coverBytes);
     }
 
     @Override
