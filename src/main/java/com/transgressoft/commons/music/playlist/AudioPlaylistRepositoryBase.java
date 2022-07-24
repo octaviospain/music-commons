@@ -11,13 +11,14 @@ import java.util.*;
 public abstract class AudioPlaylistRepositoryBase<I extends AudioItem, P extends AudioPlaylist<I>, F extends AudioPlaylistFolder<I>>
         implements AudioPlaylistRepository<I, P, F> {
 
-    protected final F rootPlaylist;
+    private final F rootPlaylist;
 
     private MutableGraph<AudioPlaylist<I>> playlistsTree = GraphBuilder.directed().build();
 
-    protected AudioPlaylistRepositoryBase(F rootPlaylist) {
-        this.rootPlaylist = rootPlaylist;
-        playlistsTree.addNode(this.rootPlaylist);
+    @SuppressWarnings("unchecked")
+    protected AudioPlaylistRepositoryBase() {
+        rootPlaylist = (F) new SimpleAudioPlaylistFolder("ROOT");
+        playlistsTree.addNode(rootPlaylist);
     }
 
     @Override
@@ -57,7 +58,7 @@ public abstract class AudioPlaylistRepositoryBase<I extends AudioItem, P extends
     public void deletePlaylist(P playlist) {
         getParentPlaylist(playlist).ifPresent(parent -> {
             playlistsTree.removeEdge(parent, playlist);
-            parent.includePlaylist(playlist);
+            parent.removeIncludedPlaylist(playlist);
         });
         playlistsTree.removeNode(playlist);
     }

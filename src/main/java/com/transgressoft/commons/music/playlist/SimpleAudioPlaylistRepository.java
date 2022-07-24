@@ -8,6 +8,6 @@ import com.transgressoft.commons.music.AudioItem;
 public class SimpleAudioPlaylistRepository extends AudioPlaylistRepositoryBase<AudioItem, AudioPlaylist<AudioItem>, AudioPlaylistFolder<AudioItem>> {
 
     public SimpleAudioPlaylistRepository() {
-        super(new SimpleAudioPlaylistFolder("ROOT"));
+        super();
     }
 }
