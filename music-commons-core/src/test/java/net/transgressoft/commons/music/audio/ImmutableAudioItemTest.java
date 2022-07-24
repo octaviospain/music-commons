@@ -22,7 +22,7 @@ class ImmutableAudioItemTest {
     AudioItem audioItem;
 
     Path path = Path.of("testfiles", "testeable.mp3");
-    String name = "Yesterday";
+    String title = "Yesterday";
     Duration duration = Duration.ofMinutes(2);
     int bitRate = 320;
     Artist artist = new ImmutableArtist("The Beatles", CountryCode.UK);
@@ -41,7 +41,7 @@ class ImmutableAudioItemTest {
     @DisplayName("AudioItem properties")
     void propertiesTest() {
         audioItem =
-                new ImmutableAudioItemBuilder(path, name, duration, bitRate, LocalDateTime.now())
+                new ImmutableAudioItemBuilder(path, title, duration, bitRate, LocalDateTime.now())
                         .album(album)
                         .artist(artist)
                         .bpm(bpm)
@@ -61,7 +61,7 @@ class ImmutableAudioItemTest {
         assertEquals(dateOfInclusion, audioItem.dateOfInclusion());
         assertEquals("testeable.mp3", audioItem.fileName());
         assertEquals("mp3", audioItem.extension());
-        assertEquals(name, audioItem.title());
+        assertEquals(title, audioItem.title());
         assertEquals(duration, audioItem.duration());
         assertEquals(bitRate, audioItem.bitRate());
         assertEquals(album.name(), audioItem.album().name());
@@ -139,7 +139,7 @@ class ImmutableAudioItemTest {
             ImmutableSet<String> expectedArtists;
 
             private void initTrackWithArtistAndResult(String artistString, String... expectedArtist) {
-                audioItem = new ImmutableAudioItemBuilder(path, name, duration, bitRate, LocalDateTime.now(), LocalDateTime.now())
+                audioItem = new ImmutableAudioItemBuilder(path, title, duration, bitRate, LocalDateTime.now(), LocalDateTime.now())
                         .album(ImmutableAlbum.UNKNOWN_ALBUM)
                         .artist(new ImmutableArtist(artistString))
                         .bpm(bpm)

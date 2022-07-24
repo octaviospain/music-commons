@@ -228,7 +228,7 @@ class ImmutableAudioItemBuilder<I extends AudioItem> implements AudioItemBuilder
      *
      * @return An {@code ImmutableSet} object with the names of the artists
      */
-    private static Set<String> getArtistsNamesInvolved(String title, String artistName, String albumArtistName) {
+    public static Set<String> getArtistsNamesInvolved(String title, String artistName, String albumArtistName) {
         Set<String> artistsInvolved = new HashSet<>();
         var albumArtistNames = Splitter.on(CharMatcher.anyOf(",&")).trimResults().omitEmptyStrings().splitToList(albumArtistName);
         artistsInvolved.addAll(albumArtistNames);
