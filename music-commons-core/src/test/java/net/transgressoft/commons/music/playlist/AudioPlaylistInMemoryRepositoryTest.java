@@ -94,6 +94,9 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
         var playlistsThatContainsAudioItemsWithDurationBelow60 =
                 audioPlaylistRepository.search(QueryPredicate.of(SELF.audioItemsAnyMatch(DURATION.isShorterThan(Duration.ofSeconds(61)))));
         assertThat(playlistsThatContainsAudioItemsWithDurationBelow60).containsExactly(rock, fifties);
+
+        audioPlaylistRepository.clear();
+        assertThat(audioPlaylistRepository).isEmpty();
     }
 
     // ├──Best hits

@@ -12,7 +12,7 @@ subprojects {
     apply plugin: 'maven-publish'
 
     dependencies {
-        implementation 'net.transgressoft:soft-query-api:0.17'
+        implementation 'net.transgressoft:soft-query-api:0.18'
     }
 
     repositories {

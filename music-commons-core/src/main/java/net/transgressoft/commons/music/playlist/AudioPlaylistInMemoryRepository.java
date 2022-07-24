@@ -29,8 +29,8 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
 
     private static final Logger LOG = LoggerFactory.getLogger(AudioPlaylistInMemoryRepository.class);
 
-    private static final AtomicInteger idCounter = new AtomicInteger(0);
-    private static final Set<Integer> idSet = new HashSet<>();
+    private final AtomicInteger idCounter = new AtomicInteger(1);
+    private final Set<Integer> idSet = new HashSet<>();
 
     private final InMemoryRepository<MutableAudioPlaylist<I>> playlists = new InMemoryRepository<>();
     private final InMemoryRepository<MutableAudioPlaylistDirectory<I>> directories = new InMemoryRepository<>();
@@ -104,6 +104,13 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
     public void removeAll(Set<N> entities) {
         Objects.requireNonNull(entities);
         removeRecursive(entities);
+    }
+
+    @Override
+    public void clear() {
+        playlists.clear();
+        directories.clear();
+        playlistsMultiMap.clear();
     }
 
     private void removeRecursive(Set<N> mutablePlaylistNodes) {

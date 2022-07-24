@@ -34,7 +34,7 @@ public class AudioItemInMemoryRepository<I extends AudioItem> extends InMemoryRe
         requireNonNull(title);
         requireNonNull(duration);
 
-        return new ImmutableAudioItemBuilder<I>(path, title, duration, bitRate, LocalDateTime.now()) {
+        return new ImmutableAudioItemBuilder<>(path, title, duration, bitRate, LocalDateTime.now()) {
             @Override
             public I build() {
                 var audioItem = super.build();
