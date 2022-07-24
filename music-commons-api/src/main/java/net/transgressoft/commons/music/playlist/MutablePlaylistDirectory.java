@@ -6,11 +6,11 @@ import java.util.ListIterator;
 
 public interface MutablePlaylistDirectory<I extends AudioItem> extends MutablePlaylistNode<I> {
 
-    void addPlaylist(MutablePlaylistNode<I> playlist);
+    <P extends MutablePlaylistNode<I>> void addPlaylist(P playlist);
 
-    void removePlaylist(MutablePlaylistNode<?> playlist);
+    <P extends MutablePlaylistNode<?>> void removePlaylist(P playlist);
 
-    boolean containsPlaylist(MutablePlaylistNode<I> playlist);
+    <P extends MutablePlaylistNode<I>> boolean containsPlaylist(P playlist);
 
     void clearAudioItemsFromPlaylists();
 
@@ -18,5 +18,5 @@ public interface MutablePlaylistDirectory<I extends AudioItem> extends MutablePl
 
     boolean isEmptyOfPlaylists();
 
-    ListIterator<MutablePlaylistNode<I>> descendantPlaylistsIterator();
+    <P extends MutablePlaylistNode<I>> ListIterator<P> descendantPlaylistsIterator();
 }

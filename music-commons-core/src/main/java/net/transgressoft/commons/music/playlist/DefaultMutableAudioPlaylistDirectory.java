@@ -3,10 +3,10 @@ package net.transgressoft.commons.music.playlist;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.UnmodifiableListIterator;
 import net.transgressoft.commons.music.audio.AudioItem;
 
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 
@@ -30,7 +30,7 @@ class DefaultMutableAudioPlaylistDirectory extends MutablePlaylistNodeBase<Audio
     }
 
     @Override
-    public void addPlaylist(MutablePlaylistNode<AudioItem> playlist) {
+    public <P extends MutablePlaylistNode<AudioItem>> void addPlaylist(P playlist) {
         requireNonNull(playlist);
         if (isDirectory()) {
             descendantPlaylists.add(playlist);
@@ -39,7 +39,7 @@ class DefaultMutableAudioPlaylistDirectory extends MutablePlaylistNodeBase<Audio
     }
 
     @Override
-    public void removePlaylist(MutablePlaylistNode<?> playlist) {
+    public <P extends MutablePlaylistNode<?>> void removePlaylist(P playlist) {
         var iterator = descendantPlaylists.iterator();
         while (iterator.hasNext()) {
             var p = iterator.next();
@@ -51,8 +51,8 @@ class DefaultMutableAudioPlaylistDirectory extends MutablePlaylistNodeBase<Audio
     }
 
     @Override
-    public UnmodifiableListIterator<MutablePlaylistNode<AudioItem>> descendantPlaylistsIterator() {
-        return ImmutableList.copyOf(descendantPlaylists).listIterator();
+    public <P extends MutablePlaylistNode<AudioItem>> ListIterator<P> descendantPlaylistsIterator() {
+        return (ListIterator<P>) ImmutableList.copyOf(descendantPlaylists).listIterator();
     }
 
     @Override
@@ -71,7 +71,7 @@ class DefaultMutableAudioPlaylistDirectory extends MutablePlaylistNodeBase<Audio
     }
 
     @Override
-    public boolean containsPlaylist(MutablePlaylistNode<AudioItem> playlist) {
+    public <P extends MutablePlaylistNode<AudioItem>> boolean containsPlaylist(P playlist) {
         return descendantPlaylists.contains(playlist);
     }
 
