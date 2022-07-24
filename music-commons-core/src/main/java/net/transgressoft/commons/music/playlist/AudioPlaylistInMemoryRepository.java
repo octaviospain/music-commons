@@ -177,6 +177,7 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
     }
 
     @Override
+    @SuppressWarnings("unstable")
     public Iterator<N> iterator() {
         var setBuilder = ImmutableSet.<N>builderWithExpectedSize(playlists.size() + directories.size());
         playlists.forEach(p -> setBuilder.add(toImmutablePlaylist(p)));
@@ -277,7 +278,7 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
 
         directories.findById(directory.id())
                 .ifPresent(d -> {
-                    d.addAllPlaylists(mutablePlaylists);
+                    d.addPlaylists(mutablePlaylists);
                     playlistsMultiMap.putAll(d.getUniqueId(), mutablePlaylists.stream().map(MutableAudioPlaylist::getUniqueId).collect(Collectors.toSet()));
                 });
     }
@@ -304,10 +305,10 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
                 .ifPresent(playlist -> directories.findById(destinationPlaylist.id()).ifPresent(playlistDirectory -> {
                     ancestor(playlistToMove).ifPresent(ancestor -> {
                         playlistsMultiMap.remove(ancestor.getUniqueId(), playlist.getUniqueId());
-                        ancestor.removePlaylist(playlist);
+                        ancestor.removePlaylists(playlist);
                     });
                     playlistsMultiMap.put(playlistDirectory.getUniqueId(), playlist.getUniqueId());
-                    playlistDirectory.addPlaylist(playlist);
+                    playlistDirectory.addPlaylists(playlist);
 
                     LOG.info("Playlist '{}' moved to '{}'", playlistToMove.getName(), destinationPlaylist.getName());
                 }));

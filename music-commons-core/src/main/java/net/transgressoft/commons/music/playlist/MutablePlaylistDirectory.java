@@ -46,20 +46,27 @@ class MutablePlaylistDirectory<I extends AudioItem> extends ImmutablePlaylistDir
     }
 
     @Override
-    public <N extends AudioPlaylist<I>> void addPlaylist(N... playlists) {
+    public <N extends AudioPlaylist<I>> void addPlaylists(N... playlists) {
         requireNonNull(playlists);
-        addAllPlaylists(Set.of(playlists));
+        addPlaylists(Set.of(playlists));
     }
 
     @Override
-    public <N extends AudioPlaylist<I>> void addAllPlaylists(Set<N> playlists) {
+    public <N extends AudioPlaylist<I>> void addPlaylists(Set<N> playlists) {
         requireNonNull(playlists);
         super.addAll(playlists);
     }
 
     @Override
-    public <N extends AudioPlaylist<I>> void removePlaylist(N playlist) {
-        super.remove(playlist);
+    public <N extends AudioPlaylist<I>> void removePlaylists(N... playlists) {
+        requireNonNull(playlists);
+        removePlaylists(Set.of(playlists));
+    }
+
+    @Override
+    public <N extends AudioPlaylist<I>> void removePlaylists(Set<N> playlists) {
+        requireNonNull(playlists);
+        super.removeAll(playlists);
     }
 
     @Override

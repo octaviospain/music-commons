@@ -27,15 +27,14 @@ class ImmutablePlaylistDirectory<I extends AudioItem> extends ImmutablePlaylist<
     }
 
     protected <N extends AudioPlaylist<I>> void addAll(Set<N> playlists) {
-        if (! playlists.isEmpty()) {
-            descendantPlaylists.addAll(playlists);
+        if (descendantPlaylists.addAll(playlists)) {
             LOG.info("Added playlists to playlist directory '{}': {}", getName(), playlists);
         }
     }
 
-    protected <N extends AudioPlaylist<I>> void remove(N playlist) {
-        if (descendantPlaylists.remove(playlist))
-            LOG.info("Playlist '{}' removed from playlist directory '{}'", playlist.getName(), getName());
+    protected <N extends AudioPlaylist<I>> void removeAll(Set<N> playlists) {
+        if (descendantPlaylists.removeAll(playlists))
+            LOG.info("Playlists removed from playlist directory '{}': {}", getName(), playlists);
     }
 
     @Override
