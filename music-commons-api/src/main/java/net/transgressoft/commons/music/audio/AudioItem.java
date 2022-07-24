@@ -68,12 +68,6 @@ public interface AudioItem extends QueryEntity {
 
     int bitRate();
 
-    short playCount();
-
-    AudioItem playCount(short playCount);
-
-    AudioItem incrementPlayCount();
-
     LocalDateTime dateOfInclusion();
 
     LocalDateTime lastDateModified();

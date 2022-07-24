@@ -21,6 +21,4 @@ public interface AudioItemBuilder<E extends AudioItem> {
     AudioItemBuilder<E> encoder(String encoder);
 
     AudioItemBuilder<E> encoding(String encoding);
-
-    AudioItemBuilder<E> playCount(short playCount);
 }

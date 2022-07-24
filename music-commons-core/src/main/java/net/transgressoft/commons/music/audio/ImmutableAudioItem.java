@@ -46,7 +46,6 @@ class ImmutableAudioItem implements AudioItem, Comparable<AudioItem> {
     private final int bitRate;
     private final String encoder;
     private final String encoding;
-    private final short playCount;
     private final LocalDateTime dateOfInclusion;
     private final LocalDateTime lastDateModified;
 
@@ -54,7 +53,7 @@ class ImmutableAudioItem implements AudioItem, Comparable<AudioItem> {
 
     protected ImmutableAudioItem(Path path, String title, Artist artist, Set<String> artistsInvolved, Album album, Genre genre,
                                  String comments, short trackNumber, short discNumber, float bpm, Duration duration, int bitRate, String encoder,
-                                 String encoding, short playCount, LocalDateTime dateOfInclusion, LocalDateTime lastDateModified) {
+                                 String encoding, LocalDateTime dateOfInclusion, LocalDateTime lastDateModified) {
         this.path = path;
         this.title = title;
         this.artist = artist;
@@ -69,7 +68,6 @@ class ImmutableAudioItem implements AudioItem, Comparable<AudioItem> {
         this.bitRate = bitRate;
         this.encoder = encoder;
         this.encoding = encoding;
-        this.playCount = playCount;
         this.dateOfInclusion = dateOfInclusion;
         this.lastDateModified = lastDateModified;
 
@@ -89,7 +87,6 @@ class ImmutableAudioItem implements AudioItem, Comparable<AudioItem> {
                 .put(BITRATE, bitRate)
                 .put(ENCODER, encoder)
                 .put(ENCODING, encoder)
-                .put(PLAY_COUNT, playCount)
                 .put(DATE_OF_INCLUSION, dateOfInclusion)
                 .put(LAST_DATE_MODIFIED, lastDateModified)
                 .build();
@@ -248,21 +245,6 @@ class ImmutableAudioItem implements AudioItem, Comparable<AudioItem> {
     @Override
     public AudioItem encoding(String encoding) {
         return new ImmutableAudioItemBuilder<>(this).encoding(encoding).build();
-    }
-
-    @Override
-    public short playCount() {
-        return playCount;
-    }
-
-    @Override
-    public AudioItem playCount(short playCount) {
-        return new ImmutableAudioItemBuilder<>(this).playCount(playCount).build();
-    }
-
-    @Override
-    public AudioItem incrementPlayCount() {
-        return new ImmutableAudioItemBuilder<>(this).playCount((short) (playCount + 1)).build();
     }
 
     @Override

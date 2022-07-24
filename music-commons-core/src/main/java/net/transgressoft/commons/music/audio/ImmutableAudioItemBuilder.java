@@ -73,7 +73,6 @@ class ImmutableAudioItemBuilder<I extends AudioItem> implements AudioItemBuilder
     protected float bpm = (float) defaultValues.get(BPM);
     protected String encoder = "";
     protected String encoding = "";
-    protected short playCount = 0;
     protected LocalDateTime dateOfInclusion;
     protected LocalDateTime lastDateModified;
 
@@ -96,7 +95,7 @@ class ImmutableAudioItemBuilder<I extends AudioItem> implements AudioItemBuilder
     }
 
     protected ImmutableAudioItemBuilder(Path path, String title, Duration duration, int bitRate, Artist artist, Album album, Genre genre, String comments,
-                                        short trackNumber, short discNumber, float bpm, String encoder, String encoding, short playCount,
+                                        short trackNumber, short discNumber, float bpm, String encoder, String encoding,
                                         LocalDateTime dateOfInclusion, LocalDateTime lastDateModified) {
         this.path = path;
         this.title = title;
@@ -111,7 +110,6 @@ class ImmutableAudioItemBuilder<I extends AudioItem> implements AudioItemBuilder
         this.bpm = bpm;
         this.encoder = encoder;
         this.encoding = encoding;
-        this.playCount = playCount;
         this.dateOfInclusion = dateOfInclusion;
         this.lastDateModified = lastDateModified;
     }
@@ -119,7 +117,7 @@ class ImmutableAudioItemBuilder<I extends AudioItem> implements AudioItemBuilder
     ImmutableAudioItemBuilder(AudioItem audioItem) {
         this(audioItem.path(), audioItem.title(), audioItem.duration(), audioItem.bitRate(), audioItem.artist(), audioItem.album(),
              audioItem.genre(), audioItem.comments(), audioItem.trackNumber(), audioItem.discNumber(), audioItem.bpm(),
-             audioItem.encoder(), audioItem.encoding(), audioItem.playCount(), audioItem.dateOfInclusion(), LocalDateTime.now());
+             audioItem.encoder(), audioItem.encoding(), audioItem.dateOfInclusion(), LocalDateTime.now());
     }
 
     @Override
@@ -177,12 +175,6 @@ class ImmutableAudioItemBuilder<I extends AudioItem> implements AudioItemBuilder
     }
 
     @Override
-    public AudioItemBuilder<I> playCount(short playCount) {
-        this.playCount = playCount;
-        return this;
-    }
-
-    @Override
     public I build() {
         var artistsNamesInvolved = getArtistsNamesInvolved(title, artist.name(), album.albumArtist().name());
         return (I) new ImmutableAudioItem(path,
@@ -199,7 +191,6 @@ class ImmutableAudioItemBuilder<I extends AudioItem> implements AudioItemBuilder
                                       bitRate,
                                       encoder,
                                       encoding,
-                                      playCount,
                                       dateOfInclusion,
                                       lastDateModified);
     }

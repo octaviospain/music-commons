@@ -35,4 +35,9 @@ public class AudioItemInMemoryRepository<I extends AudioItem> extends InMemoryRe
             }
         };
     }
+
+    @Override
+    public boolean containsAudioItemWithArtist(String artistName) {
+        return !findByAttribute(StringAudioItemAttribute.ARTISTS_INVOLVED, artistName).isEmpty();
+    }
 }

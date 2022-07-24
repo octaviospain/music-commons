@@ -35,7 +35,6 @@ class ImmutableAudioItemTest {
     Genre genre = Genre.ROCK;
     String encoding = "Lame MP3";
     String encoder = "transgressoft";
-    short playCount = 0;
 
     @Test
     @DisplayName("AudioItem properties")
@@ -80,7 +79,6 @@ class ImmutableAudioItemTest {
         assertEquals(genre, audioItem.genre());
         assertEquals(encoding, audioItem.encoding());
         assertEquals(encoder, audioItem.encoder());
-        assertEquals(playCount, audioItem.playCount());
 
         assertEquals(path.toString(), String.valueOf(audioItem.getAttribute(PATH)));
 
@@ -124,7 +122,6 @@ class ImmutableAudioItemTest {
         assertEquals(3, modifiedAlbum.trackNumber());
 
         assertTrue(audioItem.artist().compareTo(modifiedAlbum.artist()) > 0);
-        assertEquals((short) 4, audioItem.playCount((short) 4).playCount());
     }
 
     @Nested
