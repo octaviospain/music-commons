@@ -1,6 +1,7 @@
 package net.transgressoft.commons.music.audio;
 
 import net.transgressoft.commons.music.MusicLibraryTestBase;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -11,7 +12,8 @@ import static com.google.common.truth.Truth.assertThat;
 class AudioItemInMemoryRepositoryTest extends MusicLibraryTestBase {
 
     @Test
-    void createRepositoryAndItemsTest() {
+    @DisplayName("Create repository and new item")
+    void createRepositoryAndNewItemTest() {
         var audioItemRepository = new AudioItemInMemoryRepository(createTestAudioItemsSet(10));
         assertThat(audioItemRepository).hasSize(10);
 
