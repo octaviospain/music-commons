@@ -1,6 +1,6 @@
 package com.transgressoft.commons.music.playlist;
 
-import com.google.common.graph.Graph;
+import com.google.common.graph.ImmutableGraph;
 import com.transgressoft.commons.music.AudioItem;
 
 import java.util.*;
@@ -10,13 +10,11 @@ import java.util.*;
  */
 public interface AudioPlaylistRepository<I extends AudioItem, P extends AudioPlaylist<I>, F extends AudioPlaylistFolder<I>> {
 
-   Graph<AudioPlaylist<I>> getPlaylistsTree();
+   void addFirstLevelPlaylist(P playlist);
 
    void addPlaylist(F parentPlaylist, P playlist);
 
-   void addFirstLevelPlaylist(P playlist);
-
-   void addPlaylistsRecursively(F parent, Collection<P> playlists);
+   void addPlaylists(F parent, Collection<P> playlists);
 
    void deletePlaylist(P playlist);
 
@@ -25,6 +23,8 @@ public interface AudioPlaylistRepository<I extends AudioItem, P extends AudioPla
    void removeAudioItems(List<I> tracks);
 
    boolean containsPlaylist(String playlistName);
+
+   ImmutableGraph<AudioPlaylist<I>> getPlaylistTree();
 
    Optional<F> getParentPlaylist(P playlist);
 
