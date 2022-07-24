@@ -7,7 +7,7 @@ import com.neovisionaries.i18n.CountryCode;
 /**
  * @author Octavio Calleya
  */
-class ImmutableLabel implements Label {
+public class ImmutableLabel implements Label {
 
     private final String name;
     private final CountryCode countryCode;

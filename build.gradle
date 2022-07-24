@@ -85,9 +85,4 @@ project('music-commons-core') {
     dependencies {
         api project(path: ':music-commons-api')
     }
-
-    compileJava {
-        sourceCompatibility = JavaVersion.VERSION_16
-        targetCompatibility = JavaVersion.VERSION_16
-    }
 }

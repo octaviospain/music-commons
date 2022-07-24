@@ -4,6 +4,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.neovisionaries.i18n.CountryCode;
 
+import java.util.Arrays;
 import java.util.Optional;
 
 /**
@@ -87,7 +88,7 @@ public class ImmutableAlbum implements Album {
 
     @Override
     public Optional<byte[]> coverImage() {
-        return java.util.Objects.equals(coverBytes, new byte[0]) ? Optional.empty() : Optional.of(coverBytes);
+        return Arrays.equals(coverBytes, new byte[0]) ? Optional.empty() : Optional.of(coverBytes);
     }
 
     @Override
