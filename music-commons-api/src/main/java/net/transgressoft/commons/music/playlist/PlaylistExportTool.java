@@ -11,5 +11,5 @@ public interface PlaylistExportTool {
 
     <P extends MutablePlaylistNode<? extends AudioItem>> void exportPlaylistAsM3u(P playlistNode, Path path) throws ExportException;
 
-    <D extends MutablePlaylistDirectory<? extends AudioItem>> void exportPlaylistDirectoryAsM3u(D playlistNode, Path path) throws ExportException;
+    <P extends MutablePlaylistDirectory<? extends AudioItem>> void exportPlaylistDirectoryAsM3u(P playlistNode, Path path) throws ExportException;
 }

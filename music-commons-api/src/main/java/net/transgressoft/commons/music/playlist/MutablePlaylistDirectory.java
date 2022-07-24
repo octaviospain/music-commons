@@ -4,13 +4,13 @@ import net.transgressoft.commons.music.audio.AudioItem;
 
 import java.util.ListIterator;
 
-public interface MutablePlaylistDirectory<I extends AudioItem, D extends MutablePlaylistDirectory<I, D>> extends MutablePlaylistNode<I> {
+public interface MutablePlaylistDirectory<I extends AudioItem> extends MutablePlaylistNode<I> {
 
-    void addPlaylist(D playlist);
+    <P extends MutablePlaylistNode<I>> void addPlaylist(P playlist);
 
-    <P extends MutablePlaylistNode<?>> void removePlaylist(P playlist);
+    <P extends MutablePlaylistNode<I>> void removePlaylist(P playlist);
 
-    boolean containsPlaylist(D playlist);
+    <P extends MutablePlaylistNode<I>> boolean containsPlaylist(P playlist);
 
     void clearAudioItemsFromPlaylists();
 
@@ -18,5 +18,5 @@ public interface MutablePlaylistDirectory<I extends AudioItem, D extends Mutable
 
     boolean isEmptyOfPlaylists();
 
-    ListIterator<D> descendantPlaylistsIterator();
+    <P extends MutablePlaylistNode<I>> ListIterator<P> descendantPlaylistsIterator();
 }
