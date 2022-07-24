@@ -45,7 +45,7 @@ public class SimpleAudioPlaylist implements AudioPlaylist {
     }
 
     @Override
-    public ImmutableCollection<AudioItem> audioItems() {
+    public ImmutableCollection<? extends AudioItem> audioItems() {
         return ImmutableList.copyOf(audioItems);
     }
 
@@ -69,7 +69,7 @@ public class SimpleAudioPlaylist implements AudioPlaylist {
     }
 
     @Override
-    public ImmutableSet<AudioPlaylist> childPlaylists() {
+    public ImmutableCollection<? extends AudioPlaylist> childPlaylists() {
         return ImmutableSet.copyOf(childPlaylists);
     }
 

@@ -14,7 +14,7 @@ public interface AudioPlaylist {
 
     AudioPlaylist name(String name);
 
-    ImmutableCollection<AudioItem> audioItems();
+    ImmutableCollection<? extends AudioItem> audioItems();
 
     boolean isEmpty();
 
@@ -22,7 +22,7 @@ public interface AudioPlaylist {
 
     AudioPlaylist removeAudioItems(Collection<? extends AudioItem> audioItems);
 
-    ImmutableCollection<AudioPlaylist> childPlaylists();
+    ImmutableCollection<? extends AudioPlaylist> childPlaylists();
 
     AudioPlaylist addChildPlaylist(AudioPlaylist audioPlaylist);
 

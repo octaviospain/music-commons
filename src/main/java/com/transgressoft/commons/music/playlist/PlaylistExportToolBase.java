@@ -71,7 +71,7 @@ public abstract class PlaylistExportToolBase<P extends AudioPlaylist> implements
     }
 
     protected void printPlaylist(P audioPlaylist, Path playlistsPath) throws IOException {
-        ImmutableCollection<AudioItem> tracks = audioPlaylist.audioItems();
+        ImmutableCollection<? extends AudioItem> tracks = audioPlaylist.audioItems();
         try (PrintWriter printWriter = new PrintWriter(playlistsPath.toFile(), StandardCharsets.UTF_8.name())) {
             LOG.info("Creating playlist folder {}", playlistsPath);
             printWriter.println("#EXTM3U");
