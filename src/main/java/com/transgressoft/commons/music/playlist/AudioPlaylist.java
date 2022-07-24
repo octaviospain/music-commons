@@ -1,6 +1,6 @@
 package com.transgressoft.commons.music.playlist;
 
-import com.google.common.collect.ImmutableCollection;
+import com.google.common.collect.*;
 import com.transgressoft.commons.music.AudioItem;
 
 import java.util.Collection;
@@ -8,23 +8,23 @@ import java.util.Collection;
 /**
  * @author Octavio Calleya
  */
-public interface AudioPlaylist {
+public interface AudioPlaylist<I extends AudioItem> {
 
     String name();
 
-    AudioPlaylist name(String name);
+    AudioPlaylist<I> name(String name);
 
-    ImmutableCollection<? extends AudioItem> audioItems();
+    ImmutableCollection<I> audioItems();
 
     boolean isEmpty();
 
-    AudioPlaylist addAudioItems(Collection<? extends AudioItem> audioItems);
+    AudioPlaylist<I> addAudioItems(Collection<I> audioItems);
 
-    AudioPlaylist removeAudioItems(Collection<? extends AudioItem> audioItems);
+    AudioPlaylist<I> removeAudioItems(Collection<I> audioItems);
 
-    ImmutableCollection<? extends AudioPlaylist> childPlaylists();
+    ImmutableSet<AudioPlaylist<I>> childPlaylists();
 
-    AudioPlaylist addChildPlaylist(AudioPlaylist audioPlaylist);
+    AudioPlaylist<I> addChildPlaylist(AudioPlaylist<I> audioPlaylist);
 
-    AudioPlaylist removeChildPlaylist(AudioPlaylist audioPlaylist);
+    AudioPlaylist<I> removeChildPlaylist(AudioPlaylist<I> audioPlaylist);
 }

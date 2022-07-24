@@ -1,112 +1,63 @@
 package com.transgressoft.commons.music.playlist;
 
-import com.google.common.base.*;
-import com.google.common.base.Objects;
 import com.google.common.collect.*;
-import com.transgressoft.commons.music.*;
+import com.transgressoft.commons.music.AudioItem;
 
 import java.util.*;
 
 /**
  * @author Octavio Calleya
  */
-public class SimpleAudioPlaylist implements AudioPlaylist {
+public class SimpleAudioPlaylist extends AudioPlaylistBase<AudioItem> {
 
-    private final String name;
-    private final Collection<AudioItem> audioItems;
-    private final Set<AudioPlaylist> childPlaylists;
-
-    public SimpleAudioPlaylist(String name, Collection<AudioItem> audioItems, Set<AudioPlaylist> childPlaylists) {
-        this.name = name;
-        this.audioItems = audioItems;
-        this.childPlaylists = childPlaylists;
+    public SimpleAudioPlaylist(String name, Collection<AudioItem> audioItems, Set<AudioPlaylist<AudioItem>> childPlaylists) {
+        super(name, audioItems, childPlaylists);
     }
 
     public SimpleAudioPlaylist(String name, Collection<AudioItem> audioItems) {
-        this.name = name;
-        this.audioItems = audioItems;
-        this.childPlaylists = ImmutableSet.of();
+        super(name, audioItems);
     }
 
     public SimpleAudioPlaylist(String name) {
-        this.name = name;
-        this.audioItems = ImmutableList.of();
-        this.childPlaylists = ImmutableSet.of();
+        super(name);
     }
 
     @Override
-    public String name() {
-        return name;
-    }
-
-    @Override
-    public AudioPlaylist name(String name) {
+    public SimpleAudioPlaylist name(String name) {
         return new SimpleAudioPlaylist(name, audioItems, childPlaylists);
     }
 
     @Override
-    public ImmutableCollection<? extends AudioItem> audioItems() {
-        return ImmutableList.copyOf(audioItems);
+    public ImmutableSet<AudioPlaylist<AudioItem>> childPlaylists() {
+        return ImmutableSet.copyOf(childPlaylists);
     }
 
     @Override
-    public boolean isEmpty() {
-        return audioItems.isEmpty();
-    }
-
-    @Override
-    public AudioPlaylist addAudioItems(Collection<? extends AudioItem> audioItems) {
+    public SimpleAudioPlaylist addAudioItems(Collection<AudioItem> audioItems) {
         Collection<AudioItem> list = Lists.newArrayList(this.audioItems);
         list.addAll(audioItems);
         return new SimpleAudioPlaylist(name, list);
     }
 
     @Override
-    public AudioPlaylist removeAudioItems(Collection<? extends AudioItem> audioItems) {
+    public SimpleAudioPlaylist removeAudioItems(Collection<AudioItem> audioItems) {
         Collection<AudioItem> list = Lists.newArrayList(this.audioItems);
         list.removeAll(audioItems);
         return new SimpleAudioPlaylist(name, list);
     }
 
     @Override
-    public ImmutableCollection<? extends AudioPlaylist> childPlaylists() {
-        return ImmutableSet.copyOf(childPlaylists);
-    }
-
-    @Override
-    public AudioPlaylist addChildPlaylist(AudioPlaylist audioPlaylist) {
-        Set<AudioPlaylist> set = Sets.newHashSet(childPlaylists);
+    public SimpleAudioPlaylist addChildPlaylist(AudioPlaylist<AudioItem> audioPlaylist) {
+        Set<AudioPlaylist<AudioItem>> set = Sets.newHashSet(childPlaylists());
         set.add(audioPlaylist);
         return new SimpleAudioPlaylist(name, audioItems, set);
     }
 
     @Override
-    public AudioPlaylist removeChildPlaylist(AudioPlaylist audioPlaylist) {
+    public SimpleAudioPlaylist removeChildPlaylist(AudioPlaylist<AudioItem> audioPlaylist) {
         childPlaylists.remove(audioPlaylist);
-        Set<AudioPlaylist> set = Sets.newHashSet(childPlaylists);
+        Set<AudioPlaylist<AudioItem>> set = Sets.newHashSet(childPlaylists);
         set.add(audioPlaylist);
         return new SimpleAudioPlaylist(name, audioItems, set);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        SimpleAudioPlaylist that = (SimpleAudioPlaylist) o;
-        return Objects.equal(name, that.name) &&
-                Objects.equal(audioItems, that.audioItems) &&
-                Objects.equal(childPlaylists, that.childPlaylists);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(name, audioItems, childPlaylists);
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                .add("name", name)
-                .toString();
     }
 }
