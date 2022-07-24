@@ -7,7 +7,7 @@ import java.nio.file.Path;
  */
 public interface AudioWaveformTool {
 
-    AudioWaveform extractWaveform(Path path) throws AudioWaveformProcessingException;
+    SimpleAudioWaveform extractWaveform(Path path) throws AudioWaveformProcessingException;
 
-    AudioWaveform extractWaveform(Path path, int width, int height) throws AudioWaveformProcessingException;
+    SimpleAudioWaveform extractWaveform(Path path, int width, int height) throws AudioWaveformProcessingException;
 }
