@@ -29,7 +29,7 @@ import static net.transgressoft.commons.music.playlist.PlaylistStringAttribute.U
 
 class ImmutablePlaylist<I extends AudioItem> implements AudioPlaylist<I> {
 
-    private final Logger log = LoggerFactory.getLogger(getClass());
+    private static final Logger LOG = LoggerFactory.getLogger(ImmutablePlaylist.class);
 
     private final int id;
     private final Set<I> audioItems;
@@ -77,7 +77,7 @@ class ImmutablePlaylist<I extends AudioItem> implements AudioPlaylist<I> {
     protected void setName(String name) {
         if (! Objects.equal(this.name, name)) {
             this.name = name;
-            log.info("Changed name of playlist with id {} from '{}' to '{}'", id, this.name, name);
+            LOG.info("Changed name of playlist with id {} from '{}' to '{}'", id, this.name, name);
         }
     }
 
@@ -94,21 +94,21 @@ class ImmutablePlaylist<I extends AudioItem> implements AudioPlaylist<I> {
     protected void addAll(List<I> audioItems) {
         if (! audioItems.isEmpty()) {
             this.audioItems.addAll(audioItems);
-            log.info("Added {} audio items to playlist '{}'", audioItems.size(), getName());
+            LOG.info("Added audio items to playlist '{}': {}", getName(), audioItems);
         }
     }
 
     protected void removeAll(Collection<I> audioItems) {
         if (! audioItems.isEmpty()) {
             audioItems.forEach(this.audioItems::remove);
-            log.info("Removed {} audio items from playlist '{}'", audioItems.size(), getName());
+            LOG.info("Removed audio items from playlist '{}': {}", getName(), audioItems);
         }
     }
 
     protected void clear() {
         if (! this.audioItems.isEmpty()) {
             this.audioItems.clear();
-            log.info("Playlist '{}' cleared", getName());
+            LOG.info("Playlist '{}' cleared", getName());
         }
     }
 

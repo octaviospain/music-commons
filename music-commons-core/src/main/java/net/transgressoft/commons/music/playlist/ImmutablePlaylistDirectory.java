@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 class ImmutablePlaylistDirectory<I extends AudioItem> extends ImmutablePlaylist<I> implements AudioPlaylistDirectory<I> {
 
-    private final Logger log = LoggerFactory.getLogger(getClass());
+    private static final Logger LOG = LoggerFactory.getLogger(ImmutablePlaylistDirectory.class);
 
     private final Set<AudioPlaylist<I>> descendantPlaylists;
 
@@ -29,13 +29,13 @@ class ImmutablePlaylistDirectory<I extends AudioItem> extends ImmutablePlaylist<
     protected <N extends AudioPlaylist<I>> void addAll(Set<N> playlists) {
         if (! playlists.isEmpty()) {
             descendantPlaylists.addAll(playlists);
-            log.info("Added {} playlists to playlist directory '{}'", playlists.size(), getName());
+            LOG.info("Added playlists to playlist directory '{}': {}", getName(), playlists);
         }
     }
 
     protected <N extends AudioPlaylist<I>> void remove(N playlist) {
         if (descendantPlaylists.remove(playlist))
-            log.info("Playlist '{}' removed from playlist directory '{}'", playlist.getName(), getName());
+            LOG.info("Playlist '{}' removed from playlist directory '{}'", playlist.getName(), getName());
     }
 
     @Override
