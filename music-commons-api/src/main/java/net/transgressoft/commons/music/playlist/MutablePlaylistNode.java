@@ -14,9 +14,9 @@ public interface MutablePlaylistNode<I extends AudioItem> extends QueryEntity {
 
     void setName(String name);
 
-    MutablePlaylistDirectory<?> getAncestor();
+    MutablePlaylistDirectory<I> getAncestor();
 
-    void setAncestor(MutablePlaylistDirectory<?> ancestor);
+    void setAncestor(MutablePlaylistDirectory<I> ancestor);
 
     boolean isDirectory();
 

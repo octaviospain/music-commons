@@ -7,7 +7,7 @@ import java.util.List;
 
 class DefaultMutableAudioPlaylist extends MutablePlaylistNodeBase<AudioItem> implements MutableAudioPlaylist<AudioItem> {
 
-    protected DefaultMutableAudioPlaylist(int id, String name, MutablePlaylistDirectory<?> ancestor, List<AudioItem> audioItems) {
+    protected DefaultMutableAudioPlaylist(int id, String name, MutablePlaylistDirectory<AudioItem> ancestor, List<AudioItem> audioItems) {
         super(id, name, ancestor, audioItems);
     }
 

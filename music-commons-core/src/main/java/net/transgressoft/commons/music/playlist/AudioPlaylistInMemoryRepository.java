@@ -22,12 +22,12 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-
 public class AudioPlaylistInMemoryRepository extends InMemoryRepository<MutablePlaylistNode<AudioItem>> implements AudioPlaylistRepository {
 
     private static final Logger LOG = LoggerFactory.getLogger(AudioPlaylistInMemoryRepository.class);
     private static final AtomicInteger idCounter = new AtomicInteger(1);    // 0 is for RootAudioPlaylistNode
 
+    @SuppressWarnings("UnstableApiUsage")
     private final MutableGraph<MutablePlaylistNode<AudioItem>> graph = GraphBuilder.undirected()
             .nodeOrder(ElementOrder.sorted(Comparator.comparingInt((MutablePlaylistNode<AudioItem> n) -> n.id())))
             .build();
@@ -47,6 +47,7 @@ public class AudioPlaylistInMemoryRepository extends InMemoryRepository<MutableP
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void add(MutablePlaylistNode<AudioItem>... entities) throws RepositoryException {
         Objects.requireNonNull(entities);
         addAll(Set.of(entities));
@@ -58,10 +59,11 @@ public class AudioPlaylistInMemoryRepository extends InMemoryRepository<MutableP
         addRecursive(entities.iterator());
     }
 
+    @SuppressWarnings({"unchecked", "UnstableApiUsage"})
     private void addRecursive(Iterator<MutablePlaylistNode<AudioItem>> mutablePlaylistNodes) throws RepositoryException {
         while (mutablePlaylistNodes.hasNext()) {
             MutablePlaylistNode<AudioItem> p = mutablePlaylistNodes.next();
-            graph.putEdge((MutablePlaylistDirectory<AudioItem>) p.getAncestor(), p);
+            graph.putEdge(p.getAncestor(), p);
             super.add(p);
             if (p instanceof MutablePlaylistDirectory<AudioItem> apd) {
                 addRecursive(apd.descendantPlaylistsIterator());
@@ -70,6 +72,7 @@ public class AudioPlaylistInMemoryRepository extends InMemoryRepository<MutableP
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void remove(MutablePlaylistNode<AudioItem>... entities) {
         Objects.requireNonNull(entities);
         removeAll(Set.of(entities));
@@ -81,6 +84,7 @@ public class AudioPlaylistInMemoryRepository extends InMemoryRepository<MutableP
         removeRecursive(entities.iterator());
     }
 
+    @SuppressWarnings({"unchecked", "UnstableApiUsage"})
     private void removeRecursive(Iterator<MutablePlaylistNode<AudioItem>> mutablePlaylistNodes) {
         while (mutablePlaylistNodes.hasNext()) {
             MutablePlaylistNode<AudioItem> p = mutablePlaylistNodes.next();
@@ -127,6 +131,7 @@ public class AudioPlaylistInMemoryRepository extends InMemoryRepository<MutableP
     }
 
     @Override
+    @SuppressWarnings("UnstableApiUsage")
     public List<MutablePlaylistNode<AudioItem>> findAllByName(String name) {
         Objects.requireNonNull(name);
         return graph.nodes().stream().filter(p -> name.equals(p.getName())).collect(Collectors.toList());
@@ -141,8 +146,8 @@ public class AudioPlaylistInMemoryRepository extends InMemoryRepository<MutableP
             return Optional.empty();
         } else if (allByName.size() > 1) {
             throw new RepositoryException("Found several playlists when searching single by name " + name);
-        } else if (allByName.get(0) instanceof DefaultMutableAudioPlaylist) {
-            return Optional.of((DefaultMutableAudioPlaylist) allByName.get(0));
+        } else if (allByName.get(0) instanceof DefaultMutableAudioPlaylist d) {
+            return Optional.of(d);
         } else {
             return Optional.empty();
         }
@@ -157,14 +162,15 @@ public class AudioPlaylistInMemoryRepository extends InMemoryRepository<MutableP
             return Optional.empty();
         } else if (allByName.size() > 1) {
             throw new RepositoryException("Found several playlists when searching single by name " + name + ": " + allByName);
-        } else if (allByName.get(0) instanceof DefaultMutableAudioPlaylistDirectory) {
-            return Optional.of((DefaultMutableAudioPlaylistDirectory) allByName.get(0));
+        } else if (allByName.get(0) instanceof DefaultMutableAudioPlaylistDirectory d) {
+            return Optional.of(d);
         } else {
             return Optional.empty();
         }
     }
 
     @Override
+    @SuppressWarnings({"unchecked", "UnstableApiUsage"})
     public <P extends MutablePlaylistNode<AudioItem>, D extends MutablePlaylistDirectory<AudioItem>> void movePlaylist(P playlistToMove, D destinationPlaylist) throws RepositoryException {
         Objects.requireNonNull(playlistToMove);
         Objects.requireNonNull(destinationPlaylist);
@@ -177,7 +183,7 @@ public class AudioPlaylistInMemoryRepository extends InMemoryRepository<MutableP
             add(destinationPlaylist);
         }
 
-        graph.removeEdge((MutablePlaylistNode<AudioItem>) playlistToMove.getAncestor(), playlistToMove);
+        graph.removeEdge(playlistToMove.getAncestor(), playlistToMove);
         graph.putEdge(destinationPlaylist, playlistToMove);
         playlistToMove.getAncestor().removePlaylist(playlistToMove);
         playlistToMove.setAncestor(destinationPlaylist);

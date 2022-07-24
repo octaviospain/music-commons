@@ -9,7 +9,7 @@ abstract class AudioPlaylistBuilderBase<P extends MutablePlaylistNode<I>, I exte
 
     protected int id;
     protected String name = "";
-    protected MutablePlaylistDirectory<?> ancestor = RootAudioPlaylistNode.INSTANCE;
+    protected MutablePlaylistDirectory<I> ancestor = (MutablePlaylistDirectory<I>) RootAudioPlaylistNode.INSTANCE;
     protected List<I> audioItems = Collections.emptyList();
 
     protected AudioPlaylistBuilderBase(int id, String name) {

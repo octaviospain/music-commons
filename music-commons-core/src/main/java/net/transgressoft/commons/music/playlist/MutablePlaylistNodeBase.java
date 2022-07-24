@@ -36,11 +36,11 @@ abstract class MutablePlaylistNodeBase<I extends AudioItem> implements MutablePl
     private final int id;
     private final Set<I> audioItems;
     private final Map<EntityAttribute<?>, Supplier<Object>> attributes;
-    private MutablePlaylistDirectory<?> ancestor;
+    private MutablePlaylistDirectory<I> ancestor;
 
     private String name;
 
-    protected MutablePlaylistNodeBase(int id, String name, MutablePlaylistDirectory<?> ancestor, List<I> audioItems) {
+    protected MutablePlaylistNodeBase(int id, String name, MutablePlaylistDirectory<I> ancestor, List<I> audioItems) {
         requireNonNull(name);
         requireNonNull(ancestor);
         requireNonNull(audioItems);
@@ -80,12 +80,12 @@ abstract class MutablePlaylistNodeBase<I extends AudioItem> implements MutablePl
     }
 
     @Override
-    public MutablePlaylistDirectory<?> getAncestor() {
+    public MutablePlaylistDirectory<I> getAncestor() {
         return ancestor;
     }
 
     @Override
-    public void setAncestor(MutablePlaylistDirectory<?> ancestor) {
+    public void setAncestor(MutablePlaylistDirectory<I> ancestor) {
         this.ancestor = ancestor;
     }
 

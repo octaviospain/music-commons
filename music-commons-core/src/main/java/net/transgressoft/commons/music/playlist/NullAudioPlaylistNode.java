@@ -19,7 +19,7 @@ class NullAudioPlaylistNode extends DefaultMutableAudioPlaylistDirectory {
     }
 
     @Override
-    public void setAncestor(MutablePlaylistDirectory<?> ancestor) {
+    public void setAncestor(MutablePlaylistDirectory<AudioItem> ancestor) {
         throw new UnsupportedOperationException("Ancestor of NullAudioPlaylistNode cannot be modified");
     }
 

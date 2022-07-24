@@ -16,7 +16,7 @@ class DefaultMutableAudioPlaylistDirectory extends MutablePlaylistNodeBase<Audio
 
     private final Set<MutablePlaylistNode<AudioItem>> descendantPlaylists;
 
-    protected DefaultMutableAudioPlaylistDirectory(int id, String name, MutablePlaylistDirectory<?> ancestor,
+    protected DefaultMutableAudioPlaylistDirectory(int id, String name, MutablePlaylistDirectory<AudioItem> ancestor,
                                                    Set<MutablePlaylistNode<AudioItem>> descendantPlaylists, List<AudioItem> audioItems) {
         super(id, name, ancestor, audioItems);
         this.descendantPlaylists = new ConcurrentSkipListSet<>(descendantPlaylists);
@@ -39,7 +39,7 @@ class DefaultMutableAudioPlaylistDirectory extends MutablePlaylistNodeBase<Audio
     }
 
     @Override
-    public <P extends MutablePlaylistNode<?>> void removePlaylist(P playlist) {
+    public <P extends MutablePlaylistNode<AudioItem>> void removePlaylist(P playlist) {
         var iterator = descendantPlaylists.iterator();
         while (iterator.hasNext()) {
             var p = iterator.next();
