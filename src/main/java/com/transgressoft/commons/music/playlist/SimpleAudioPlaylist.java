@@ -1,4 +1,4 @@
-package com.transgressoft.commons.music.repository;
+package com.transgressoft.commons.music.playlist;
 
 import com.google.common.base.*;
 import com.google.common.base.Objects;
@@ -63,6 +63,14 @@ public class SimpleAudioPlaylist implements AudioPlaylist {
 
     @Override
     public AudioPlaylist addChildPlaylist(AudioPlaylist audioPlaylist) {
+        Set<AudioPlaylist> set = Sets.newHashSet(childPlaylists);
+        set.add(audioPlaylist);
+        return new SimpleAudioPlaylist(name, audioItems, set);
+    }
+
+    @Override
+    public AudioPlaylist removeChildPlaylist(AudioPlaylist audioPlaylist) {
+        childPlaylists.remove(audioPlaylist);
         Set<AudioPlaylist> set = Sets.newHashSet(childPlaylists);
         set.add(audioPlaylist);
         return new SimpleAudioPlaylist(name, audioItems, set);

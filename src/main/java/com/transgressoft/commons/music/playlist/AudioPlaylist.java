@@ -1,4 +1,4 @@
-package com.transgressoft.commons.music.repository;
+package com.transgressoft.commons.music.playlist;
 
 import com.google.common.collect.ImmutableCollection;
 import com.transgressoft.commons.music.AudioItem;
@@ -19,4 +19,6 @@ public interface AudioPlaylist {
     ImmutableCollection<AudioPlaylist> childPlaylists();
 
     AudioPlaylist addChildPlaylist(AudioPlaylist audioPlaylist);
+
+    AudioPlaylist removeChildPlaylist(AudioPlaylist audioPlaylist);
 }
