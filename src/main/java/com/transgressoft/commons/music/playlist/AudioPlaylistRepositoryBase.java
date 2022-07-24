@@ -28,9 +28,9 @@ public abstract class AudioPlaylistRepositoryBase<P extends AudioPlaylist<I>, I 
     @Override
     public void addPlaylist(P parentPlaylist, P playlist) {
         playlistsTree.putEdge(parentPlaylist, playlist);
-        parentPlaylist.addChildPlaylist(playlist);
-        if (! playlist.childPlaylists().isEmpty())
-            addPlaylistsRecursively(playlist, (Collection<P>) playlist.childPlaylists());
+        parentPlaylist.includePlaylist(playlist);
+        if (! playlist.includedPlaylists().isEmpty())
+            addPlaylistsRecursively(playlist, (Collection<P>) playlist.includedPlaylists());
     }
 
     @Override
@@ -43,8 +43,8 @@ public abstract class AudioPlaylistRepositoryBase<P extends AudioPlaylist<I>, I 
     public void addPlaylistsRecursively(P parent, Collection<P> playlists) {
         playlists.forEach(childPlaylist -> {
             addPlaylist(parent, childPlaylist);
-            if (! childPlaylist.childPlaylists().isEmpty())
-                addPlaylistsRecursively(childPlaylist, (Collection<P>) childPlaylist.childPlaylists());
+            if (! childPlaylist.includedPlaylists().isEmpty())
+                addPlaylistsRecursively(childPlaylist, (Collection<P>) childPlaylist.includedPlaylists());
         });
     }
 
@@ -52,7 +52,7 @@ public abstract class AudioPlaylistRepositoryBase<P extends AudioPlaylist<I>, I 
     public void deletePlaylist(P playlist) {
         getParentPlaylist(playlist).ifPresent(parent -> {
             playlistsTree.removeEdge(parent, playlist);
-            parent.removeChildPlaylist(playlist);
+            parent.includePlaylist(playlist);
         });
         playlistsTree.removeNode(playlist);
     }
@@ -62,16 +62,16 @@ public abstract class AudioPlaylistRepositoryBase<P extends AudioPlaylist<I>, I 
         Optional<P> parentOfMovedPlaylist = getParentPlaylist(movedPlaylist);
         parentOfMovedPlaylist.ifPresent(parent -> {
             playlistsTree.removeEdge(parent, movedPlaylist);
-            parent.removeChildPlaylist(movedPlaylist);
+            parent.includePlaylist(movedPlaylist);
             playlistsTree.putEdge(targetFolder, movedPlaylist);
-            targetFolder.addChildPlaylist(movedPlaylist);
+            targetFolder.includePlaylist(movedPlaylist);
         });
     }
 
     @Override
     public void removeAudioItems(List<I> tracks) {
         playlistsTree.nodes().stream()
-                .filter(playlist -> ! playlist.childPlaylists().isEmpty())
+                .filter(playlist -> ! playlist.includedPlaylists().isEmpty())
                 .forEach(playlist -> playlist.removeAudioItems(tracks));
     }
 

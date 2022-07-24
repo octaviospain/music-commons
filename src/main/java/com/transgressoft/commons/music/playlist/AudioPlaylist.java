@@ -22,9 +22,10 @@ public interface AudioPlaylist<I extends AudioItem> {
 
     void removeAudioItems(List<I> audioItems);
 
-    ImmutableSet<AudioPlaylist<I>> childPlaylists();
+    ImmutableSet<AudioPlaylist<AudioItem>> includedPlaylists();
 
-    void addChildPlaylist(AudioPlaylist<I> audioPlaylist);
+    void includePlaylist(AudioPlaylist<I> audioPlaylist);
 
-    void removeChildPlaylist(AudioPlaylist<I>audioPlaylist);
+    void removeIncludedPlaylist(AudioPlaylist<I> audioPlaylist);
 }
+

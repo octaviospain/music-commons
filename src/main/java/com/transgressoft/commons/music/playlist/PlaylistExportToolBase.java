@@ -22,7 +22,7 @@ public abstract class PlaylistExportToolBase<P extends AudioPlaylist<? extends A
         for (P playlist : playlists) {
             String playlistFileName = getPlaylistM3uName(playlist.name());
             try {
-                if (! playlist.childPlaylists().isEmpty()) {
+                if (! playlist.includedPlaylists().isEmpty()) {
                     Path createdDirectory = folder.resolve(playlist.name());
                     File folderFile = createdDirectory.toFile();
 
@@ -35,8 +35,8 @@ public abstract class PlaylistExportToolBase<P extends AudioPlaylist<? extends A
                         throw new ExportException("Folder was not created");
                     else {
                         Path playlistFolderName = folder.resolve(playlistFileName);
-                        printContainedPlaylistsInFolderPlaylist((Collection<P>) playlist.childPlaylists(), createdDirectory, playlistFolderName);
-                        exportPlaylistsAsM3u((Collection<P>) playlist.childPlaylists(), folderFile.toPath());
+                        printContainedPlaylistsInFolderPlaylist((Collection<P>) playlist.includedPlaylists(), createdDirectory, playlistFolderName);
+                        exportPlaylistsAsM3u((Collection<P>) playlist.includedPlaylists(), folderFile.toPath());
                     }
 
                 } else {
