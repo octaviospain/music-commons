@@ -26,18 +26,16 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
 
     AudioPlaylistRepository<AudioItem, AudioPlaylist<AudioItem>, AudioPlaylistDirectory<AudioItem>> audioPlaylistRepository;
 
-    /**
-     * ├──Best hits
-     * │  ├──50s
-     * │  │  ├──Rock
-     * │  │  │  ├──*50s Rock hit 1
-     * │  │  │  └──*50s Rock hit 2 my fav
-     * │  │  ├──Pop
-     * │  │  ├──*50s hit 1
-     * │  │  └──*50s favorite song
-     * │  └──60s favorites
-     * └──This weeks' favorites songs
-     */
+    // ├──Best hits
+    // │  ├──50s
+    // │  │  ├──Rock
+    // │  │  │  ├──:50s Rock hit 1
+    // │  │  │  └──:50s Rock hit 2 my fav
+    // │  │  ├──Pop
+    // │  │  ├──:50s hit 1
+    // │  │  └──:50s favorite song
+    // │  └──60s favorites
+    // └──This weeks' favorites songs
     @Test
     @DisplayName("Mixed playlists hierarchy structure and audio items search")
     void searchOperationsTest() throws Exception {
@@ -98,13 +96,11 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
         assertThat(playlistsThatContainsAudioItemsWithDurationBelow60).containsExactly(rock, fifties);
     }
 
-    /**
-     * ├──Best hits
-     * │  └──50s
-     * │     ├──Rock
-     * │     └──Pop
-     * └──Selection of playlists
-     */
+    // ├──Best hits
+    // │  └──50s
+    // │     ├──Rock
+    // │     └──Pop
+    // └──Selection of playlists
     @Test
     @DisplayName("Move playlists in the hierarchy")
     void movePlaylists() throws Exception {
