@@ -10,7 +10,7 @@ import java.util.Set;
 
 public interface PlaylistNode<I extends AudioItem> extends QueryEntity {
 
-    interface Builder<P extends PlaylistNode<? extends AudioItem>> {
+    interface Builder<P extends PlaylistNode<I>, I extends AudioItem> {
 
         P build();
     }
@@ -19,9 +19,9 @@ public interface PlaylistNode<I extends AudioItem> extends QueryEntity {
 
     void setName(String name);
 
-    PlaylistNode<I> getAncestor();
+    AudioPlaylistDirectory getAncestor();
 
-    void setAncestor(PlaylistNode<I> ancestor);
+    void setAncestor(AudioPlaylistDirectory ancestor);
 
     boolean isDirectory();
 
@@ -52,4 +52,6 @@ public interface PlaylistNode<I extends AudioItem> extends QueryEntity {
     boolean audioItemsAllMatch(BooleanQueryTerm<AudioItem> queryPredicate);
 
     boolean audioItemsAnyMatch(BooleanQueryTerm<AudioItem> queryPredicate);
+
+    boolean containsPlaylist(PlaylistNode<I> playlist);
 }

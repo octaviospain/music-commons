@@ -1,5 +1,6 @@
 package net.transgressoft.commons.music.playlist;
 
+import com.google.common.base.Objects;
 import net.transgressoft.commons.music.audio.AudioItem;
 
 import java.util.Collections;
@@ -15,13 +16,8 @@ public class AudioPlaylist extends PlaylistNodeBase<AudioItem> {
         return new AudioPlaylistBuilder(name);
     }
 
-    protected AudioPlaylist(String name, PlaylistNode<AudioItem> ancestor, Set<PlaylistNode<AudioItem>> descendantPlaylists, List<AudioItem> audioItems) {
+    protected AudioPlaylist(String name, AudioPlaylistDirectory ancestor, Set<PlaylistNode<AudioItem>> descendantPlaylists, List<AudioItem> audioItems) {
         super(indexCounter.getAndIncrement(), name, ancestor, descendantPlaylists, audioItems);
-    }
-
-    @Override
-    protected void removeAncestor(PlaylistNode<AudioItem> playlistNode) {
-        playlistNode.setAncestor(ROOT);
     }
 
     @Override
@@ -40,31 +36,51 @@ public class AudioPlaylist extends PlaylistNodeBase<AudioItem> {
         throw new UnsupportedOperationException();
     }
 
-    public static class AudioPlaylistBuilder implements Builder<PlaylistNode<? extends AudioItem>> {
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        AudioPlaylist that = (AudioPlaylist) o;
+        return Objects.equal(getName(), that.getName()) && Objects.equal(getAncestor(), that.getAncestor()) && Objects.equal(id(), that.id());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(getName(), getAncestor(), id());
+    }
+
+    protected abstract static class AudioPlaylistBuilderBase<P extends PlaylistNode<I>, I extends AudioItem> implements Builder<P, I> {
 
         protected String name = "";
-        protected PlaylistNode<AudioItem> ancestor = ROOT;
+        protected AudioPlaylistDirectory ancestor = ROOT;
         protected List<AudioItem> audioItems = Collections.emptyList();
 
-        public AudioPlaylistBuilder(String name) {
+        protected AudioPlaylistBuilderBase(String name) {
             if (name != null)
                 this.name = name;
         }
 
-        public AudioPlaylistBuilder ancestor(PlaylistNode<AudioItem> ancestor) {
+        public Builder<P, I> ancestor(AudioPlaylistDirectory ancestor) {
             if (ancestor != null)
                 this.ancestor = ancestor;
             return this;
         }
 
-        public AudioPlaylistBuilder audioItems(List<AudioItem> audioItems) {
+        public Builder<P, I> audioItems(List<AudioItem> audioItems) {
             if (audioItems != null)
                 this.audioItems = audioItems;
             return this;
         }
+    }
+
+    protected static class AudioPlaylistBuilder extends AudioPlaylistBuilderBase<AudioPlaylist, AudioItem> {
+
+        public AudioPlaylistBuilder(String name) {
+            super(name);
+        }
 
         @Override
-        public PlaylistNode<AudioItem> build() {
+        public AudioPlaylist build() {
             return new AudioPlaylist(name, ancestor, Collections.emptySet(), audioItems);
         }
     }

@@ -7,7 +7,6 @@ import com.google.common.collect.UnmodifiableListIterator;
 import net.transgressoft.commons.music.audio.AudioItem;
 import net.transgressoft.commons.query.BooleanQueryTerm;
 import net.transgressoft.commons.query.QueryEntity;
-import net.transgressoft.commons.query.QueryPredicate;
 import net.transgressoft.commons.query.attribute.EntityAttribute;
 import net.transgressoft.commons.query.attribute.UnknownAttributeException;
 
@@ -22,7 +21,6 @@ import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 import static net.transgressoft.commons.music.playlist.attribute.PlaylistNodeAttribute.ANCESTOR;
@@ -43,9 +41,9 @@ public abstract class PlaylistNodeBase<I extends AudioItem> implements PlaylistN
     private final Map<EntityAttribute<?>, Supplier<Object>> attributes;
 
     private String name;
-    private PlaylistNode<I> ancestor;
+    private AudioPlaylistDirectory ancestor;
 
-    protected PlaylistNodeBase(int id, String name, PlaylistNode<I> ancestor, Set<PlaylistNode<I>> descendantPlaylists, List<I> audioItems) {
+    protected PlaylistNodeBase(int id, String name, AudioPlaylistDirectory ancestor, Set<PlaylistNode<I>> descendantPlaylists, List<I> audioItems) {
         requireNonNull(name);
         requireNonNull(ancestor);
         requireNonNull(descendantPlaylists);
@@ -55,7 +53,7 @@ public abstract class PlaylistNodeBase<I extends AudioItem> implements PlaylistN
         this.name = name;
         this.ancestor = ancestor;
         this.descendantPlaylists = new ConcurrentSkipListSet<>(descendantPlaylists);
-        descendantPlaylists.forEach(p -> p.setAncestor(this));
+        descendantPlaylists.forEach(p -> p.setAncestor((AudioPlaylistDirectory) this));
         this.audioItems = new ConcurrentSkipListSet<>(audioItems);
         this.attributes = new ConcurrentHashMap<>();
         initializeAttributeMap();
@@ -68,7 +66,17 @@ public abstract class PlaylistNodeBase<I extends AudioItem> implements PlaylistN
         descendantPlaylists = new ConcurrentSkipListSet<>(Collections.emptySet());
         audioItems = Collections.emptySet();
         attributes = new ConcurrentHashMap<>();
-        ancestor = this;
+        ancestor = AudioPlaylistDirectory.NULL;
+        initializeAttributeMap();
+    }
+    // Only intended for the null audio playlist directory
+    protected PlaylistNodeBase() {
+        id = -1;
+        name = "NULL";
+        descendantPlaylists = Collections.emptySet();
+        audioItems = Collections.emptySet();
+        attributes = new ConcurrentHashMap<>();
+        ancestor = AudioPlaylistDirectory.NULL;
         initializeAttributeMap();
     }
 
@@ -79,7 +87,9 @@ public abstract class PlaylistNodeBase<I extends AudioItem> implements PlaylistN
         attributes.put(ANCESTOR, this::getAncestor);
     }
 
-    protected abstract void removeAncestor(PlaylistNode<I> p);
+    protected Set<PlaylistNode<I>> descendantPlaylists() {
+        return descendantPlaylists;
+    }
 
     @Override
     public int id() {
@@ -108,21 +118,21 @@ public abstract class PlaylistNodeBase<I extends AudioItem> implements PlaylistN
     }
 
     @Override
-    public PlaylistNode<I> getAncestor() {
+    public AudioPlaylistDirectory getAncestor() {
         return ancestor;
     }
 
     @Override
-    public void setAncestor(PlaylistNode<I> ancestor) {
-        requireNonNull(ancestor);
+    public void setAncestor(AudioPlaylistDirectory ancestor) {
         this.ancestor = ancestor;
     }
 
     @Override
     public void addPlaylist(PlaylistNode<I> playlist) {
-        if (playlist != null) {
+        requireNonNull(playlist);
+        if (isDirectory()) {
             descendantPlaylists.add(playlist);
-            playlist.setAncestor(this);
+            playlist.setAncestor((AudioPlaylistDirectory) this);
         }
     }
 
@@ -132,7 +142,7 @@ public abstract class PlaylistNodeBase<I extends AudioItem> implements PlaylistN
         while (iterator.hasNext()) {
             var p = iterator.next();
             if (p.equals(playlist)) {
-                removeAncestor(p);
+                p.setAncestor(null);
                 iterator.remove();
             }
         }
@@ -155,13 +165,13 @@ public abstract class PlaylistNodeBase<I extends AudioItem> implements PlaylistN
 
     @Override
     public void addAudioItems(List<I> audioItems) {
-        if (audioItems != null) {
-            this.audioItems.addAll(audioItems);
-        }
+        requireNonNull(audioItems);
+        this.audioItems.addAll(audioItems);
     }
 
     @Override
     public void removeAudioItems(Set<I> audioItems) {
+        requireNonNull(audioItems);
         this.audioItems.removeAll(audioItems);
     }
 
@@ -192,14 +202,21 @@ public abstract class PlaylistNodeBase<I extends AudioItem> implements PlaylistN
 
     @Override
     public boolean audioItemsAllMatch(BooleanQueryTerm<AudioItem> queryPredicate) {
+        requireNonNull(queryPredicate);
         return audioItems.stream()
                 .allMatch(queryPredicate::apply);
     }
 
     @Override
     public boolean audioItemsAnyMatch(BooleanQueryTerm<AudioItem> queryPredicate) {
+        requireNonNull(queryPredicate);
         return audioItems.stream()
                 .anyMatch(queryPredicate::apply);
+    }
+
+    @Override
+    public boolean containsPlaylist(PlaylistNode<I> playlist) {
+        return descendantPlaylists.contains(playlist);
     }
 
     @SuppressWarnings("unchecked")

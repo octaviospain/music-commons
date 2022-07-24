@@ -1,5 +1,7 @@
 package net.transgressoft.commons.query;
 
+import net.transgressoft.commons.music.playlist.RepositoryException;
+import net.transgressoft.commons.query.attribute.EntityAttribute;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -23,6 +25,7 @@ import static net.transgressoft.commons.query.PersonLocalDateTimeAttribute.BIRTH
 import static net.transgressoft.commons.query.PersonPathAttribute.USER_HOME;
 import static net.transgressoft.commons.query.PersonShortAttribute.INTERESTS;
 import static net.transgressoft.commons.query.PersonStringAttribute.NAME;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class InMemoryRepositoryTest {
 
@@ -40,7 +43,7 @@ class InMemoryRepositoryTest {
 
     @Test
     @DisplayName("Basic operations")
-    void basicOperationsTest() {
+    void basicOperationsTest() throws Exception {
         var repository = new PersonRepository();
         assertThat(repository.isEmpty()).isTrue();
 
@@ -85,16 +88,16 @@ class InMemoryRepositoryTest {
 
         entity2.name = "Obi";
         entity2.attributes.put(NAME, "Obi");
-        repository2.addAll(List.of(entity, entity2));
+        repository2.addAll(Set.of(entity, entity2));
         var obiPersons = repository2.findByAttribute(NAME, "Obi");
         assertThat(obiPersons).containsExactly(entity, entity2);
     }
 
     @Test
     @DisplayName("Search operations")
-    void searchOperationsTest() {
+    void searchOperationsTest() throws Exception {
         var repository = new PersonRepository(Collections.singleton(entity));
-        QueryPredicate query = QueryPredicate.of(BREATH_DURATION.isShorterThan(Duration.ofSeconds(500)));
+        QueryPredicate<PersonEntity> query = QueryPredicate.of(BREATH_DURATION.isShorterThan(Duration.ofSeconds(500)));
         var list = repository.search(query);
         assertThat(list).containsExactly(entity);
 
@@ -105,12 +108,59 @@ class InMemoryRepositoryTest {
         query = query.and(NAME.contains("Kenobi"));
         list = repository.search(query);
         assertThat(list).isEmpty();
+
+        assertThat(repository.findSingleByAttribute(BREATH_DURATION, Duration.ofSeconds(80)).get()).isEqualTo(entity);
+        assertThat(repository.findSingleByAttribute(BREATH_DURATION, Duration.ofSeconds(60))).isEqualTo(Optional.empty());
+        assertThat(repository.findSingleByAttribute(HEIGHT, 1.75f, PersonEntity.class).get()).isEqualTo(entity);
+        assertThat(repository.findSingleByAttribute(HEIGHT, 1.80f, PersonEntity.class)).isEqualTo(Optional.empty());
+
+        var entity2 = new PersonEntity(24,
+                                       "Leia",
+                                       1.75f,
+                                       (short) 5,
+                                       1_000,
+                                       LocalDateTime.of(2000, Month.APRIL, 1, 0, 0),
+                                       Path.of("opt"),
+                                       Duration.ofSeconds(40));
+
+        repository.add(entity2);
+
+        assertThat(repository.findSingleByAttribute(NAME, "Leia").get()).isEqualTo(entity2);
+        assertThat(assertThrows(RepositoryException.class, () -> repository.findSingleByAttribute(HEIGHT, 1.75f)))
+                .hasMessageThat().isEqualTo("Found several results when expecting single when searching [HEIGHT, 1.75]");
+        assertThat(assertThrows(RepositoryException.class, () -> repository.findSingleByAttribute(HEIGHT, 1.75f, PersonEntity.class)))
+                .hasMessageThat().isEqualTo("Found several results when expecting single when searching [HEIGHT, 1.75]");
+        assertThat(assertThrows(RepositoryException.class, () -> repository.findSingleByAttribute(NAME, "Leia", SomeClass.class)))
+                .hasMessageThat().isEqualTo("Result " + entity2 + " is not of the expected type " + SomeClass.class.getSimpleName());
     }
 
     @Test
     @DisplayName("Iterator operations")
     void iteratorOperationsTest() {
         // TODO concurrent operations on the repository iterator
+    }
+
+    private class SomeClass implements QueryEntity {
+
+        @Override
+        public int id() {
+            return 0;
+        }
+
+        @Override
+        public String getUniqueId() {
+            return null;
+        }
+
+        @Override
+        public <A extends EntityAttribute<V>, V> V getAttribute(A attribute) {
+            return null;
+        }
+
+        @Override
+        public int compareTo(QueryEntity o) {
+            return 0;
+        }
     }
 
     private static class PersonRepository extends InMemoryRepository<PersonEntity> {

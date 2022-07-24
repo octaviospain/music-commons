@@ -2,6 +2,8 @@ package net.transgressoft.commons.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.UnmodifiableListIterator;
+import net.transgressoft.commons.music.playlist.AudioPlaylistDirectory;
+import net.transgressoft.commons.music.playlist.RepositoryException;
 import net.transgressoft.commons.query.attribute.EntityAttribute;
 
 import java.util.Collection;
@@ -31,21 +33,25 @@ public class InMemoryRepository<E extends QueryEntity> implements Repository<E> 
     }
 
     @Override
-    public void add(E entity) {
-        Objects.requireNonNull(entity);
-        entitiesById.put(entity.id(), entity);
+    public void add(E... entities) throws RepositoryException {
+        Objects.requireNonNull(entities);
+        for (E entity : entities) {
+            entitiesById.put(entity.id(), entity);
+        }
     }
 
     @Override
-    public void addAll(List<E> entities) {
+    public void addAll(Set<E> entities) throws RepositoryException {
         Objects.requireNonNull(entities);
         entitiesById.putAll(entities.stream().collect(toMap(E::id, Function.identity())));
     }
 
     @Override
-    public void remove(E entity) {
-        Objects.requireNonNull(entity);
-        entitiesById.remove(entity.id());
+    public void remove(E... entities) {
+        Objects.requireNonNull(entities);
+        for (E entity : entities) {
+            entitiesById.remove(entity.id());
+        }
     }
 
     @Override
@@ -57,6 +63,7 @@ public class InMemoryRepository<E extends QueryEntity> implements Repository<E> 
     public List<E> search(QueryPredicate<E> query) {
         return entitiesById.values().stream()
                 .filter(query::apply)
+                .filter(p -> !AudioPlaylistDirectory.ROOT.equals(p))
                 .collect(Collectors.toUnmodifiableList());
     }
 
@@ -70,6 +77,7 @@ public class InMemoryRepository<E extends QueryEntity> implements Repository<E> 
         Objects.requireNonNull(uniqueId);
         return entitiesById.values().stream()
                 .filter(entity -> entity.getUniqueId().equals(uniqueId))
+                .filter(p -> !AudioPlaylistDirectory.ROOT.equals(p))
                 .findAny();
     }
 
@@ -78,8 +86,34 @@ public class InMemoryRepository<E extends QueryEntity> implements Repository<E> 
         return entitiesById.values().stream()
                 .filter(entity -> attribute.equalsTo(value).apply(entity))          // Transgressoft Query DSL
 //                .filter(entity -> entity.getAttribute(attribute).equals(value))   // Java
+                .filter(p -> !AudioPlaylistDirectory.ROOT.equals(p))
                 .collect(Collectors.toUnmodifiableList());
     }
+
+    @Override
+    public <A extends EntityAttribute<V>, V> Optional<E> findSingleByAttribute(A attribute, V value) throws RepositoryException {
+        var results = findByAttribute(attribute, value);
+        if (results.isEmpty())
+            return Optional.empty();
+        else if (results.size() > 1)
+            throw new RepositoryException("Found several results when expecting single when searching [" + attribute + ", " + value + "]");
+        return Optional.of(results.get(0));
+    }
+
+    @Override
+    public <A extends EntityAttribute<V>, V, X extends QueryEntity> Optional<X> findSingleByAttribute(A attribute, V value, Class<X> resultType) throws RepositoryException {
+        var results = findByAttribute(attribute, value);
+        if (results.isEmpty()) {
+            return Optional.empty();
+        } else if (results.size() > 1) {
+            throw new RepositoryException("Found several results when expecting single when searching [" + attribute + ", " + value + "]");
+        }
+        if (! resultType.isInstance(results.get(0))) {
+            throw new RepositoryException("Result " + results.get(0) + " is not of the expected type " + resultType.getSimpleName());
+        }
+        return Optional.of(resultType.cast(results.get(0)));
+    }
+
 
     @Override
     public boolean isEmpty() {

@@ -3,6 +3,7 @@ package net.transgressoft.commons.music.playlist;
 import net.transgressoft.commons.music.audio.AudioItem;
 import net.transgressoft.commons.music.audio.AudioItemTestFactory;
 import net.transgressoft.commons.music.audio.attribute.StringAudioItemAttribute;
+import net.transgressoft.commons.query.attribute.EntityAttribute;
 import net.transgressoft.commons.query.attribute.UnknownAttributeException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,8 @@ import static org.junit.Assert.assertThrows;
  */
 class PlaylistNodeTest {
 
-    PlaylistNode<AudioItem> rootNode = AudioPlaylistDirectory.ROOT;
+    AudioPlaylistDirectory rootNode = AudioPlaylistDirectory.ROOT;
+    AudioPlaylistDirectory nullNode = AudioPlaylistDirectory.NULL;
     AudioItemTestFactory audioItemTestFactory = new AudioItemTestFactory();
 
     @Test
@@ -34,10 +36,10 @@ class PlaylistNodeTest {
         assertThat(rootNode.id()).isEqualTo(0);
         assertThat(rootNode.isDirectory()).isTrue();
         assertThat(rootNode.getName()).isEqualTo("ROOT-" + classLoaderHashcode);
-        assertThat(rootNode.getAncestor()).isEqualTo(rootNode);
+        assertThat(rootNode.getAncestor()).isEqualTo(nullNode);
         assertThat(rootNode.getUniqueId()).isEqualTo("0-D-ROOT-" + classLoaderHashcode);
         assertThat(rootNode.descendantPlaylistsIterator().hasNext()).isFalse();
-        assertThat(rootNode.toString()).isEqualTo("{id=0, name=ROOT-" + classLoaderHashcode + ", ancestor={id=0}, descendantPlaylists=0, audioItems=0}");
+        assertThat(rootNode.toString()).isEqualTo("{id=0, name=ROOT-" + classLoaderHashcode + ", ancestor={id=-1}, descendantPlaylists=0, audioItems=0}");
 
         var p1d = AudioPlaylistDirectory.builder("P1D").build();
         assertThat(p1d.isDirectory()).isTrue();
@@ -61,12 +63,13 @@ class PlaylistNodeTest {
         assertThat(rootNode.getAttribute(UNIQUE_ID)).isEqualTo(rootNode.getUniqueId());
         assertThat(rootNode.getAttribute(SELF)).isEqualTo(rootNode);
         assertThat(rootNode.getAttribute(ANCESTOR)).isEqualTo(rootNode.getAncestor());
+        assertThrows(UnknownAttributeException.class, () -> rootNode.getAttribute(SomeAttribute.THING));
 
         assertThrows(UnsupportedOperationException.class, () -> rootNode.setName(""));
         assertThrows(UnsupportedOperationException.class, () -> rootNode.setAncestor(rootNode));
         assertThrows(UnsupportedOperationException.class, () -> rootNode.addAudioItems(null));
         var exception = assertThrows(UnknownAttributeException.class, () -> rootNode.getAttribute(StringAudioItemAttribute.TITLE));
-        assertThat(exception.getMessage()).isEqualTo("Unknown attribute TITLE provided for " + AudioPlaylistDirectory.class.getName() + "$1");
+        assertThat(exception.getMessage()).isEqualTo("Unknown attribute TITLE provided for " + AudioPlaylistDirectory.class.getName() + "$2");
     }
 
     @Test
@@ -121,7 +124,7 @@ class PlaylistNodeTest {
 
         playlistDirectory1.removePlaylist(playlist1);
         assertThat(toAudioItemsList((playlistDirectory1.audioItemsListIterator()))).containsExactlyElementsIn(audioItems2);
-        assertThat(playlist1.getAncestor()).isEqualTo(rootNode);
+        assertThat(playlist1.getAncestor()).isEqualTo(null);
 
         playlistDirectory1.clearAudioItemsFromPlaylists();
         assertThat(playlist2.isEmptyOfAudioItems()).isTrue();
@@ -148,5 +151,10 @@ class PlaylistNodeTest {
             list.add(listIterator.next());
         }
         return list;
+    }
+
+    private enum SomeAttribute implements EntityAttribute<String> {
+
+        THING;
     }
 }
