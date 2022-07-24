@@ -8,23 +8,23 @@ import java.util.Collection;
 /**
  * @author Octavio Calleya
  */
-public interface AudioPlaylist<I extends AudioItem> {
+public interface AudioPlaylist {
 
     String name();
 
-    AudioPlaylist<I> name(String name);
+    AudioPlaylist name(String name);
 
-    ImmutableCollection<I> audioItems();
+    ImmutableCollection<AudioItem> audioItems();
 
     boolean isEmpty();
 
-    AudioPlaylist<I> addAudioItems(Collection<I> audioItems);
+    AudioPlaylist addAudioItems(Collection<AudioItem> audioItems);
 
-    AudioPlaylist<I> removeAudioItems(Collection<I> audioItems);
+    AudioPlaylist removeAudioItems(Collection<? extends AudioItem> audioItems);
 
-    ImmutableSet<AudioPlaylist<I>> childPlaylists();
+    ImmutableSet<AudioPlaylist> childPlaylists();
 
-    AudioPlaylist<I> addChildPlaylist(AudioPlaylist<I> audioPlaylist);
+    AudioPlaylist addChildPlaylist(AudioPlaylist audioPlaylist);
 
-    AudioPlaylist<I> removeChildPlaylist(AudioPlaylist<I> audioPlaylist);
+    AudioPlaylist removeChildPlaylist(AudioPlaylist audioPlaylist);
 }

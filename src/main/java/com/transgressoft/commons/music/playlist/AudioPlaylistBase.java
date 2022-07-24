@@ -10,13 +10,13 @@ import java.util.*;
 /**
  * @author Octavio Calleya
  */
-public abstract class AudioPlaylistBase<I extends AudioItem> implements AudioPlaylist<I> {
+public abstract class AudioPlaylistBase<I extends AudioItem> implements AudioPlaylist {
 
     protected final String name;
     protected final Collection<I> audioItems;
-    protected final Set<AudioPlaylist<I>> childPlaylists;
+    protected final Set<AudioPlaylist> childPlaylists;
 
-    public AudioPlaylistBase(String name, Collection<I> audioItems, Set<AudioPlaylist<I>> childPlaylists) {
+    public AudioPlaylistBase(String name, Collection<I> audioItems, Set<AudioPlaylist> childPlaylists) {
         this.name = name;
         this.audioItems = audioItems;
         this.childPlaylists = childPlaylists;
@@ -40,12 +40,12 @@ public abstract class AudioPlaylistBase<I extends AudioItem> implements AudioPla
     }
 
     @Override
-    public ImmutableCollection<I> audioItems() {
+    public ImmutableCollection<AudioItem> audioItems() {
         return ImmutableList.copyOf(audioItems);
     }
 
     @Override
-    public ImmutableSet<AudioPlaylist<I>> childPlaylists() {
+    public ImmutableSet<AudioPlaylist> childPlaylists() {
         return ImmutableSet.copyOf(childPlaylists);
     }
 

@@ -8,7 +8,7 @@ import java.util.*;
 /**
  * @author Octavio Calleya
  */
-public abstract class AudioPlaylistRepositoryBase<P extends AudioPlaylist<AudioItem>> extends AbstractGraph<P> implements AudioPlaylistRepository<P> {
+public abstract class AudioPlaylistRepositoryBase<P extends AudioPlaylist> extends AbstractGraph<P> implements AudioPlaylistRepository<P> {
 
     protected final P ROOT_PLAYLIST;
 
@@ -69,7 +69,7 @@ public abstract class AudioPlaylistRepositoryBase<P extends AudioPlaylist<AudioI
     }
 
     @Override
-    public void removeAudioItems(Collection<AudioItem> tracks) {
+    public void removeAudioItems(Collection<? extends AudioItem> tracks) {
         playlistsTree.nodes().stream()
                 .filter(playlist -> ! playlist.childPlaylists().isEmpty())
                 .forEach(playlist -> playlist.removeAudioItems(tracks));

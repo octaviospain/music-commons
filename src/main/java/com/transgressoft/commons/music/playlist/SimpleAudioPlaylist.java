@@ -10,7 +10,7 @@ import java.util.*;
  */
 public class SimpleAudioPlaylist extends AudioPlaylistBase<AudioItem> {
 
-    public SimpleAudioPlaylist(String name, Collection<AudioItem> audioItems, Set<AudioPlaylist<AudioItem>> childPlaylists) {
+    public SimpleAudioPlaylist(String name, Collection<AudioItem> audioItems, Set<AudioPlaylist> childPlaylists) {
         super(name, audioItems, childPlaylists);
     }
 
@@ -23,12 +23,12 @@ public class SimpleAudioPlaylist extends AudioPlaylistBase<AudioItem> {
     }
 
     @Override
-    public SimpleAudioPlaylist name(String name) {
+    public AudioPlaylist name(String name) {
         return new SimpleAudioPlaylist(name, audioItems, childPlaylists);
     }
 
     @Override
-    public ImmutableSet<AudioPlaylist<AudioItem>> childPlaylists() {
+    public ImmutableSet<AudioPlaylist> childPlaylists() {
         return ImmutableSet.copyOf(childPlaylists);
     }
 
@@ -40,23 +40,23 @@ public class SimpleAudioPlaylist extends AudioPlaylistBase<AudioItem> {
     }
 
     @Override
-    public SimpleAudioPlaylist removeAudioItems(Collection<AudioItem> audioItems) {
+    public SimpleAudioPlaylist removeAudioItems(Collection<? extends AudioItem> audioItems) {
         Collection<AudioItem> list = Lists.newArrayList(this.audioItems);
         list.removeAll(audioItems);
         return new SimpleAudioPlaylist(name, list);
     }
 
     @Override
-    public SimpleAudioPlaylist addChildPlaylist(AudioPlaylist<AudioItem> audioPlaylist) {
-        Set<AudioPlaylist<AudioItem>> set = Sets.newHashSet(childPlaylists());
+    public SimpleAudioPlaylist addChildPlaylist(AudioPlaylist audioPlaylist) {
+        Set<AudioPlaylist> set = Sets.newHashSet(childPlaylists());
         set.add(audioPlaylist);
         return new SimpleAudioPlaylist(name, audioItems, set);
     }
 
     @Override
-    public SimpleAudioPlaylist removeChildPlaylist(AudioPlaylist<AudioItem> audioPlaylist) {
+    public SimpleAudioPlaylist removeChildPlaylist(AudioPlaylist audioPlaylist) {
         childPlaylists.remove(audioPlaylist);
-        Set<AudioPlaylist<AudioItem>> set = Sets.newHashSet(childPlaylists);
+        Set<AudioPlaylist> set = Sets.newHashSet(childPlaylists);
         set.add(audioPlaylist);
         return new SimpleAudioPlaylist(name, audioItems, set);
     }
