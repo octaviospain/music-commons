@@ -50,9 +50,21 @@ public class SimpleAudioPlaylist implements AudioPlaylist {
     }
 
     @Override
-    public AudioPlaylist addAudioItem(AudioItem audioItem) {
-        Collection<AudioItem> list = Lists.newArrayList(audioItems);
-        list.add(audioItem);
+    public boolean isEmpty() {
+        return audioItems.isEmpty();
+    }
+
+    @Override
+    public AudioPlaylist addAudioItems(Collection<AudioItem> audioItems) {
+        Collection<AudioItem> list = Lists.newArrayList(this.audioItems);
+        list.addAll(audioItems);
+        return new SimpleAudioPlaylist(name, list);
+    }
+
+    @Override
+    public AudioPlaylist removeAudioItems(Collection<AudioItem> audioItems) {
+        Collection<AudioItem> list = Lists.newArrayList(this.audioItems);
+        list.removeAll(audioItems);
         return new SimpleAudioPlaylist(name, list);
     }
 

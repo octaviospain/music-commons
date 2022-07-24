@@ -22,13 +22,16 @@ public class SimpleAudioItem implements AudioItem {
     private final short discNumber;
     private final float bpm;
     private final Duration duration;
+    private final int bitRate;
+    private final String encoder;
+    private final String encoding;
 
-    public static SimpleAudioItemBuilder builder(Path path, String name, Duration duration) {
-        return new SimpleAudioItemBuilder(path, name, duration);
+    public static SimpleAudioItemBuilder builder(Path path, String name, Duration duration, int bitRate) {
+        return new SimpleAudioItemBuilder(path, name, duration, bitRate);
     }
 
     public SimpleAudioItem(Path path, String name, Artist artist, Album album, Genre genre, String comments, short trackNumber,
-                           short discNumber, float bpm, Duration duration) {
+                           short discNumber, float bpm, Duration duration, int bitRate, String encoder, String encoding) {
         this.path = path;
         this.name = name;
         this.artist = artist;
@@ -39,6 +42,9 @@ public class SimpleAudioItem implements AudioItem {
         this.discNumber = discNumber;
         this.bpm = bpm;
         this.duration = duration;
+        this.bitRate = bitRate;
+        this.encoder = encoder;
+        this.encoding = encoding;
     }
 
     @Override
@@ -48,7 +54,7 @@ public class SimpleAudioItem implements AudioItem {
 
     @Override
     public AudioItem path(Path path) {
-        return new SimpleAudioItemBuilder(path, this).build();
+        return new SimpleAudioItemBuilder(path, name, duration, bitRate).build();
     }
 
     @Override
@@ -68,7 +74,7 @@ public class SimpleAudioItem implements AudioItem {
 
     @Override
     public AudioItem name(String name) {
-        return new SimpleAudioItemBuilder(name, this).build();
+        return new SimpleAudioItemBuilder(path, name, duration, bitRate).build();
     }
 
     @Override
@@ -78,7 +84,7 @@ public class SimpleAudioItem implements AudioItem {
 
     @Override
     public AudioItem artist(Artist artist) {
-        return new SimpleAudioItemBuilder(artist, this).build();
+        return new SimpleAudioItemBuilder(this).artist(artist).build();
     }
 
     @Override
@@ -88,7 +94,7 @@ public class SimpleAudioItem implements AudioItem {
 
     @Override
     public AudioItem album(Album album) {
-        return new SimpleAudioItemBuilder(album, this).build();
+        return new SimpleAudioItemBuilder(this).album(album).build();
     }
 
     @Override
@@ -98,7 +104,7 @@ public class SimpleAudioItem implements AudioItem {
 
     @Override
     public AudioItem genre(Genre genre) {
-        return new SimpleAudioItemBuilder(genre, this).build();
+        return new SimpleAudioItemBuilder(this).genre(genre).build();
     }
 
     @Override
@@ -108,12 +114,7 @@ public class SimpleAudioItem implements AudioItem {
 
     @Override
     public AudioItem comments(String comments) {
-        return new SimpleAudioItemBuilder(comments, this).build();
-    }
-
-    @Override
-    public long length() {
-        return path.toFile().length();
+        return new SimpleAudioItemBuilder(this).comments(comments).build();
     }
 
     @Override
@@ -149,6 +150,36 @@ public class SimpleAudioItem implements AudioItem {
     @Override
     public Duration duration() {
         return duration;
+    }
+
+    @Override
+    public long length() {
+        return path.toFile().length();
+    }
+
+    @Override
+    public int bitRate() {
+        return bitRate;
+    }
+
+    @Override
+    public String encoder() {
+        return encoder;
+    }
+
+    @Override
+    public AudioItem encoder(String encoder) {
+        return new SimpleAudioItemBuilder(this).encoder(encoder).build();
+    }
+
+    @Override
+    public String encoding() {
+        return encoding;
+    }
+
+    @Override
+    public AudioItem encoding(String encoding) {
+        return new SimpleAudioItemBuilder(this).encoding(encoding).build();
     }
 
     @Override
@@ -192,6 +223,7 @@ public class SimpleAudioItem implements AudioItem {
         protected final Path path;
         protected final String name;
         protected final Duration duration;
+        protected final int bitRate;
         protected Artist artist = SimpleArtist.UNKNOWN;
         protected Album album = new SimpleAlbum("");
         protected Genre genre = Genre.UNDEFINED;
@@ -199,18 +231,22 @@ public class SimpleAudioItem implements AudioItem {
         protected short trackNumber = - 1;
         protected short discNumber = - 1;
         protected float bpm = - 1;
+        protected String encoder = "";
+        protected String encoding = "";
 
-        public SimpleAudioItemBuilder(Path path, String name, Duration duration) {
+        public SimpleAudioItemBuilder(Path path, String name, Duration duration, int bitRate) {
             this.path = path;
             this.name = name;
             this.duration = duration;
+            this.bitRate = bitRate;
         }
 
-        protected SimpleAudioItemBuilder(Path path, String name, Duration duration, Artist artist, Album album, Genre genre, String comments,
-                                      short trackNumber, short discNumber, float bpm) {
+        protected SimpleAudioItemBuilder(Path path, String name, Duration duration, int bitRate, Artist artist, Album album, Genre genre, String comments,
+                                      short trackNumber, short discNumber, float bpm, String encoder, String encoding) {
             this.path = path;
             this.name = name;
             this.duration = duration;
+            this.bitRate = bitRate;
             this.artist = artist;
             this.album = album;
             this.genre = genre;
@@ -218,35 +254,14 @@ public class SimpleAudioItem implements AudioItem {
             this.trackNumber = trackNumber;
             this.discNumber = discNumber;
             this.bpm = bpm;
-        }
-
-        private SimpleAudioItemBuilder(Path path, AudioItem audioItem) {
-            this(path, audioItem.name(), audioItem.duration(), audioItem.artist(), audioItem.album(), audioItem.genre(),
-                 audioItem.comments(), audioItem.trackNumber(), audioItem.discNumber(), audioItem.bpm());
-        }
-
-        private SimpleAudioItemBuilder(String name, AudioItem audioItem) {
-            this(audioItem.path(), name, audioItem.duration(), audioItem.artist(), audioItem.album(), audioItem.genre(),
-                 audioItem.comments(), audioItem.trackNumber(), audioItem.discNumber(), audioItem.bpm());
-        }
-
-        private SimpleAudioItemBuilder(Artist artist, AudioItem audioItem) {
-            this(audioItem.path(), audioItem.name(), audioItem.duration(), artist, audioItem.album(), audioItem.genre(),
-                 audioItem.comments(), audioItem.trackNumber(), audioItem.discNumber(), audioItem.bpm());
-        }
-
-        private SimpleAudioItemBuilder(Album album, AudioItem audioItem) {
-            this(audioItem.path(), audioItem.name(), audioItem.duration(), audioItem.artist(), album, audioItem.genre(),
-                 audioItem.comments(), audioItem.trackNumber(), audioItem.discNumber(), audioItem.bpm());
-        }
-
-        private SimpleAudioItemBuilder(Genre genre, AudioItem audioItem) {
-            this(audioItem.path(), audioItem.name(), audioItem.duration(), audioItem.artist(), audioItem.album(), genre,
-                 audioItem.comments(), audioItem.trackNumber(), audioItem.discNumber(), audioItem.bpm());
+            this.encoder = encoder;
+            this.encoding = encoding;
         }
 
         private SimpleAudioItemBuilder(AudioItem audioItem) {
-            this(audioItem.path(), audioItem.name(), audioItem.duration());
+            this(audioItem.path(), audioItem.name(), audioItem.duration(), audioItem.bitRate(), audioItem.artist(), audioItem.album(),
+                 audioItem.genre(), audioItem.comments(), audioItem.trackNumber(), audioItem.discNumber(), audioItem.bpm(),
+                 audioItem.encoder(), audioItem.encoding());
         }
 
         public SimpleAudioItemBuilder artist(Artist artist) {
@@ -284,9 +299,19 @@ public class SimpleAudioItem implements AudioItem {
             return this;
         }
 
+        public SimpleAudioItemBuilder encoder(String encoder) {
+            this.encoder = encoder;
+            return this;
+        }
+
+        public SimpleAudioItemBuilder encoding(String encoding) {
+            this.encoding = encoding;
+            return this;
+        }
+
         @Override
         public SimpleAudioItem build() {
-            return new SimpleAudioItem(path, name, artist, album, genre, comments, trackNumber, discNumber, bpm, duration);
+            return new SimpleAudioItem(path, name, artist, album, genre, comments, trackNumber, discNumber, bpm, duration, bitRate, encoder, encoding);
         }
     }
 }

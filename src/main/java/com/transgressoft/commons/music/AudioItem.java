@@ -36,8 +36,6 @@ public interface AudioItem {
 
     AudioItem comments(String comments);
 
-    long length();
-
     short trackNumber();
 
     AudioItem trackNumber(short trackNumber);
@@ -51,4 +49,16 @@ public interface AudioItem {
     AudioItem bpm(float bpm);
 
     Duration duration();
+
+    String encoder();
+
+    AudioItem encoder(String encoder);
+
+    String encoding();
+
+    AudioItem encoding(String encoding);
+
+    long length();
+
+    int bitRate();
 }

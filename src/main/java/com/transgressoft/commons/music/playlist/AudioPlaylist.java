@@ -3,6 +3,8 @@ package com.transgressoft.commons.music.playlist;
 import com.google.common.collect.ImmutableCollection;
 import com.transgressoft.commons.music.AudioItem;
 
+import java.util.Collection;
+
 /**
  * @author Octavio Calleya
  */
@@ -14,7 +16,11 @@ public interface AudioPlaylist {
 
     ImmutableCollection<AudioItem> audioItems();
 
-    AudioPlaylist addAudioItem(AudioItem audioItem);
+    boolean isEmpty();
+
+    AudioPlaylist addAudioItems(Collection<AudioItem> audioItems);
+
+    AudioPlaylist removeAudioItems(Collection<AudioItem> audioItems);
 
     ImmutableCollection<AudioPlaylist> childPlaylists();
 

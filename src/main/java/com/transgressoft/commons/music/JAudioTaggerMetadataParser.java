@@ -23,18 +23,22 @@ public class JAudioTaggerMetadataParser implements AudioItemMetadataParser {
     public AudioItem parseAudioItem(Path audioItemPath) throws AudioItemManipulationException {
         LOG.debug("Parsing file {}", audioItemPath);
 
-        File audioItemFile = audioItemPath.toFile();
-        String extension = FilenameUtils.getExtension(audioItemFile.getName());
+        var audioItemFile = audioItemPath.toFile();
+        var extension = FilenameUtils.getExtension(audioItemFile.getName());
         SimpleAudioItem.SimpleAudioItemBuilder audioItemBuilder;
 
         try {
-            AudioFile audioFile = AudioFileIO.read(audioItemFile);
-            Tag tag = audioFile.getTag();
+            var audioFile = AudioFileIO.read(audioItemFile);
+            var tag = audioFile.getTag();
 
-            String name = tag.hasField(FieldKey.TITLE) ? tag.getFirst(FieldKey.TITLE) : "";
-            Duration duration = Duration.ofSeconds(audioFile.getAudioHeader().getTrackLength());
+            var name = tag.hasField(FieldKey.TITLE) ? tag.getFirst(FieldKey.TITLE) : "";
+            var audioHeader = audioFile.getAudioHeader();
+            var encoding = audioHeader.getEncodingType();
+            var duration = Duration.ofSeconds(audioHeader.getTrackLength());
+            var bitRate = getBitRate(audioHeader);
 
-            audioItemBuilder = SimpleAudioItem.builder(audioItemPath, name, duration);
+            audioItemBuilder = SimpleAudioItem.builder(audioItemPath, name, duration, bitRate);
+            audioItemBuilder.encoding(encoding);
 
             parseMetadata(audioItemBuilder, tag);
             parseAlbum(audioItemBuilder, extension, tag);
@@ -47,12 +51,22 @@ public class JAudioTaggerMetadataParser implements AudioItemMetadataParser {
         return audioItemBuilder.build();
     }
 
+    private int getBitRate(AudioHeader audioHeader) {
+        var bitRate = audioHeader.getBitRate();
+        if ("~".equals(bitRate.substring(0, 1))) {
+            return Integer.parseInt(bitRate.substring(1));
+        }
+        else {
+            return Integer.parseInt(bitRate);
+        }
+    }
+
     private void parseMetadata(SimpleAudioItem.SimpleAudioItemBuilder builder, Tag tag) {
         if (tag.hasField(FieldKey.ARTIST)) {
             if (tag.hasField(FieldKey.COUNTRY)) {
-                String country = tag.getFirst(FieldKey.COUNTRY);
-                List<CountryCode> possibleCountries = CountryCode.findByName(country);
-                CountryCode countryCode = possibleCountries.isEmpty() ? CountryCode.UNDEFINED : possibleCountries.get(0);
+                var country = tag.getFirst(FieldKey.COUNTRY);
+                var possibleCountries = CountryCode.findByName(country);
+                var countryCode = possibleCountries.isEmpty() ? CountryCode.UNDEFINED : possibleCountries.get(0);
                 builder.artist(new SimpleArtist(tag.getFirst(FieldKey.ARTIST), countryCode));
             } else {
                 builder.artist(new SimpleArtist(tag.getFirst(FieldKey.ARTIST)));
@@ -64,9 +78,12 @@ public class JAudioTaggerMetadataParser implements AudioItemMetadataParser {
         if (tag.hasField(FieldKey.COMMENT)) {
             builder.comments(tag.getFirst(FieldKey.COMMENT));
         }
+        if (tag.hasField(FieldKey.ENCODER)) {
+            builder.encoder(tag.getFirst(FieldKey.ENCODER));
+        }
         if (tag.hasField(FieldKey.BPM)) {
             try {
-                int bpm = Integer.parseInt(tag.getFirst(FieldKey.BPM));
+                var bpm = Integer.parseInt(tag.getFirst(FieldKey.BPM));
                 builder.bpm(bpm < 1 ? 0 : bpm);
             }
             catch (NumberFormatException e) {
@@ -74,7 +91,7 @@ public class JAudioTaggerMetadataParser implements AudioItemMetadataParser {
         }
         if (tag.hasField(FieldKey.DISC_NO)) {
             try {
-                short dn = Short.parseShort(tag.getFirst(FieldKey.DISC_NO));
+                var dn = Short.parseShort(tag.getFirst(FieldKey.DISC_NO));
                 builder.discNumber(dn < 1 ? 0 : dn);
             }
             catch (NumberFormatException e) {
@@ -82,7 +99,7 @@ public class JAudioTaggerMetadataParser implements AudioItemMetadataParser {
         }
         if (tag.hasField(FieldKey.TRACK)) {
             try {
-                short trackNumber = Short.parseShort(tag.getFirst(FieldKey.TRACK));
+                var trackNumber = Short.parseShort(tag.getFirst(FieldKey.TRACK));
                 builder.trackNumber(trackNumber < 1 ? 0 : trackNumber);
             }
             catch (NumberFormatException e) {
@@ -93,22 +110,22 @@ public class JAudioTaggerMetadataParser implements AudioItemMetadataParser {
     private void parseAlbum(SimpleAudioItem.SimpleAudioItemBuilder builder, String extension, Tag tag) {
         final Album album;
 
-        String albumName = "";
-        Artist albumArtist = SimpleArtist.UNKNOWN;
-        boolean isCompilation = false;
+        var albumName = "";
+        var albumArtist = SimpleArtist.UNKNOWN;
+        var isCompilation = false;
         short year = - 1;
-        Label label = SimpleLabel.UNKNOWN;
-        byte[] coverBytes = new byte[0];
+        var label = SimpleLabel.UNKNOWN;
+        var coverBytes = new byte[0];
 
         if (tag.hasField(FieldKey.ALBUM))
             albumName = tag.getFirst(FieldKey.ALBUM);
 
         if (tag.hasField(FieldKey.ALBUM_ARTIST)) {
-            String artistAlbumName = tag.getFirst(FieldKey.ALBUM_ARTIST);
+            var artistAlbumName = tag.getFirst(FieldKey.ALBUM_ARTIST);
             albumArtist = new SimpleArtist(artistAlbumName);
         }
         if (tag.hasField(FieldKey.GROUPING)) {
-            String labelName = tag.getFirst(FieldKey.GROUPING);
+            var labelName = tag.getFirst(FieldKey.GROUPING);
             label = new SimpleLabel(labelName);
         }
         if (tag.hasField(FieldKey.YEAR)) {
