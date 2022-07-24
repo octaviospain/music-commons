@@ -7,6 +7,8 @@ import net.transgressoft.commons.music.audio.AudioItem;
 import net.transgressoft.commons.query.BooleanQueryTerm;
 import net.transgressoft.commons.query.EntityAttribute;
 import net.transgressoft.commons.query.QueryEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
@@ -26,6 +28,8 @@ import static net.transgressoft.commons.music.playlist.PlaylistStringAttribute.N
 import static net.transgressoft.commons.music.playlist.PlaylistStringAttribute.UNIQUE_ID;
 
 class ImmutablePlaylist<I extends AudioItem> implements AudioPlaylist<I> {
+
+    private final Logger log = LoggerFactory.getLogger(getClass());
 
     private final int id;
     private final Set<I> audioItems;
@@ -71,7 +75,10 @@ class ImmutablePlaylist<I extends AudioItem> implements AudioPlaylist<I> {
     }
 
     protected void setName(String name) {
-        this.name = name;
+        if (! Objects.equal(this.name, name)) {
+            this.name = name;
+            log.info("Changed name of playlist with id {} from '{}' to '{}'", id, this.name, name);
+        }
     }
 
     @Override
@@ -85,15 +92,24 @@ class ImmutablePlaylist<I extends AudioItem> implements AudioPlaylist<I> {
     }
 
     protected void addAll(List<I> audioItems) {
-        this.audioItems.addAll(audioItems);
+        if (! audioItems.isEmpty()) {
+            this.audioItems.addAll(audioItems);
+            log.info("Added {} audio items to playlist '{}'", audioItems.size(), getName());
+        }
     }
 
     protected void removeAll(Collection<I> audioItems) {
-        audioItems.forEach(this.audioItems::remove);
+        if (! audioItems.isEmpty()) {
+            audioItems.forEach(this.audioItems::remove);
+            log.info("Removed {} audio items from playlist '{}'", audioItems.size(), getName());
+        }
     }
 
     protected void clear() {
-        this.audioItems.clear();
+        if (! this.audioItems.isEmpty()) {
+            this.audioItems.clear();
+            log.info("Playlist '{}' cleared", getName());
+        }
     }
 
     @Override

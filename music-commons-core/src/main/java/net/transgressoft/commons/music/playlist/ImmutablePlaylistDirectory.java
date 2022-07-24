@@ -3,12 +3,16 @@ package net.transgressoft.commons.music.playlist;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import net.transgressoft.commons.music.audio.AudioItem;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 class ImmutablePlaylistDirectory<I extends AudioItem> extends ImmutablePlaylist<I> implements AudioPlaylistDirectory<I> {
+
+    private final Logger log = LoggerFactory.getLogger(getClass());
 
     private final Set<AudioPlaylist<I>> descendantPlaylists;
 
@@ -23,11 +27,15 @@ class ImmutablePlaylistDirectory<I extends AudioItem> extends ImmutablePlaylist<
     }
 
     protected <N extends AudioPlaylist<I>> void addAll(Set<N> playlists) {
-        descendantPlaylists.addAll(playlists);
+        if (! playlists.isEmpty()) {
+            descendantPlaylists.addAll(playlists);
+            log.info("Added {} playlists to playlist directory '{}'", playlists.size(), getName());
+        }
     }
 
     protected <N extends AudioPlaylist<I>> void remove(N playlist) {
-        descendantPlaylists.removeIf(p -> p.equals(playlist));
+        if (descendantPlaylists.remove(playlist))
+            log.info("Playlist '{}' removed from playlist directory '{}'", playlist.getName(), getName());
     }
 
     @Override
