@@ -24,4 +24,3 @@ public interface AudioPlaylist<I extends AudioItem> {
 
     void clear();
 }
-

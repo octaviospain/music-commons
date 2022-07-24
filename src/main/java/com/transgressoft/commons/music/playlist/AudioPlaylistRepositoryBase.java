@@ -8,13 +8,14 @@ import java.util.*;
 /**
  * @author Octavio Calleya
  */
-public abstract class AudioPlaylistRepositoryBase<I extends AudioItem> implements AudioPlaylistRepository<I> {
+public abstract class AudioPlaylistRepositoryBase<I extends AudioItem, P extends AudioPlaylist<I>, F extends AudioPlaylistFolder<I>>
+        implements AudioPlaylistRepository<I, P, F> {
 
-    protected final AudioPlaylistFolder<I> rootPlaylist;
+    protected final F rootPlaylist;
 
     private MutableGraph<AudioPlaylist<I>> playlistsTree = GraphBuilder.directed().build();
 
-    protected AudioPlaylistRepositoryBase(AudioPlaylistFolder<I> rootPlaylist) {
+    protected AudioPlaylistRepositoryBase(F rootPlaylist) {
         this.rootPlaylist = rootPlaylist;
         playlistsTree.addNode(this.rootPlaylist);
     }
@@ -24,35 +25,36 @@ public abstract class AudioPlaylistRepositoryBase<I extends AudioItem> implement
         return playlistsTree;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public void addPlaylist(AudioPlaylistFolder<I> parentPlaylist, AudioPlaylist<I> playlist) {
+    public void addPlaylist(F parentPlaylist, P playlist) {
         playlistsTree.putEdge(parentPlaylist, playlist);
         parentPlaylist.includePlaylist(playlist);
         if (playlist instanceof AudioPlaylistFolder) {
-            AudioPlaylistFolder<I> playlistFolder = (AudioPlaylistFolder<I>) playlist;
-            addPlaylistsRecursively(playlistFolder, playlistFolder.includedPlaylists());
+            F playlistFolder = (F) playlist;
+            addPlaylistsRecursively(playlistFolder, (Collection<P>) playlistFolder.includedPlaylists());
         }
     }
 
     @Override
-    public void addFirstLevelPlaylist(AudioPlaylist<I> playlist) {
+    public void addFirstLevelPlaylist(P playlist) {
         addPlaylist(rootPlaylist, playlist);
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public void addPlaylistsRecursively(AudioPlaylistFolder<I> parent, Collection<AudioPlaylist<I>> playlists) {
+    public void addPlaylistsRecursively(F parent, Collection<P> playlists) {
         playlists.forEach(includedPlaylist -> {
             addPlaylist(parent, includedPlaylist);
             if (includedPlaylist instanceof AudioPlaylistFolder) {
-                AudioPlaylistFolder<I> playlistFolder = (AudioPlaylistFolder<I>) includedPlaylist;
-                addPlaylistsRecursively(playlistFolder, playlistFolder.includedPlaylists());
+                F playlistFolder = (F) includedPlaylist;
+                addPlaylistsRecursively(playlistFolder, (Collection<P>) playlistFolder.includedPlaylists());
             }
         });
     }
 
     @Override
-    public void deletePlaylist(AudioPlaylist<I> playlist) {
+    public void deletePlaylist(P playlist) {
         getParentPlaylist(playlist).ifPresent(parent -> {
             playlistsTree.removeEdge(parent, playlist);
             parent.includePlaylist(playlist);
@@ -61,8 +63,8 @@ public abstract class AudioPlaylistRepositoryBase<I extends AudioItem> implement
     }
 
     @Override
-    public void movePlaylist(AudioPlaylist<I> playlistToMove, AudioPlaylistFolder<I> destinationPlaylistFolder) {
-        Optional<AudioPlaylistFolder<I>> parentOfMovedPlaylist = getParentPlaylist(playlistToMove);
+    public void movePlaylist(P playlistToMove, F destinationPlaylistFolder) {
+        Optional<F> parentOfMovedPlaylist = getParentPlaylist(playlistToMove);
         parentOfMovedPlaylist.ifPresent(parent -> {
             playlistsTree.removeEdge(parent, playlistToMove);
             parent.includePlaylist(playlistToMove);
@@ -81,26 +83,27 @@ public abstract class AudioPlaylistRepositoryBase<I extends AudioItem> implement
         return playlistsTree.nodes().stream().anyMatch(playlist -> playlist.name().equals(playlistName));
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public Optional<AudioPlaylistFolder<I>> getParentPlaylist(AudioPlaylist<I> playlist) {
+    public Optional<F> getParentPlaylist(P playlist) {
         Optional<AudioPlaylist<I>> foundParentPlaylist = playlistsTree.predecessors(playlist).stream().findFirst();
 
-        Optional<AudioPlaylistFolder<I>> result = Optional.empty();
+        Optional<F> result = Optional.empty();
 
         if (foundParentPlaylist.isPresent()) {
             AudioPlaylist<I> found = foundParentPlaylist.get();
             if (! (found instanceof AudioPlaylistFolder)) {
                 throw new NullPointerException("Parent of the playlist should be an instance of AudioPlaylistFolder");
             } else {
-                return Optional.of((AudioPlaylistFolder<I>) found);
+                return Optional.of((F) found);
             }
         }
         return result;
     }
 
     @Override
-    public boolean isParentPlaylistRoot(AudioPlaylist<I> playlist) {
-        Optional<AudioPlaylistFolder<I>> parentPlaylist = getParentPlaylist(playlist);
+    public boolean isParentPlaylistRoot(P playlist) {
+        Optional<F> parentPlaylist = getParentPlaylist(playlist);
         return parentPlaylist.map(audioPlaylist -> audioPlaylist.equals(rootPlaylist)).orElse(false);
     }
 

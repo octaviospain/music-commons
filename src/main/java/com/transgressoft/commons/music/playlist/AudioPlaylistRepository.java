@@ -8,27 +8,27 @@ import java.util.*;
 /**
  * @author Octavio Calleya
  */
-public interface AudioPlaylistRepository<I extends AudioItem> {
+public interface AudioPlaylistRepository<I extends AudioItem, P extends AudioPlaylist<I>, F extends AudioPlaylistFolder<I>> {
 
    Graph<AudioPlaylist<I>> getPlaylistsTree();
 
-   void addPlaylist(AudioPlaylistFolder<I> parentPlaylist, AudioPlaylist<I> playlist);
+   void addPlaylist(F parentPlaylist, P playlist);
 
-   void addFirstLevelPlaylist(AudioPlaylist<I> playlist);
+   void addFirstLevelPlaylist(P playlist);
 
-   void addPlaylistsRecursively(AudioPlaylistFolder<I> parent, Collection<AudioPlaylist<I>> playlists);
+   void addPlaylistsRecursively(F parent, Collection<P> playlists);
 
-   void deletePlaylist(AudioPlaylist<I> playlist);
+   void deletePlaylist(P playlist);
 
-   void movePlaylist(AudioPlaylist<I> playlistToMove, AudioPlaylistFolder<I> destinationPlaylistFolder);
+   void movePlaylist(P playlistToMove, F destinationPlaylistFolder);
 
    void removeAudioItems(List<I> tracks);
 
    boolean containsPlaylist(String playlistName);
 
-   Optional<AudioPlaylistFolder<I>> getParentPlaylist(AudioPlaylist<I> playlist);
+   Optional<F> getParentPlaylist(P playlist);
 
-   boolean isParentPlaylistRoot(AudioPlaylist<I> playlist);
+   boolean isParentPlaylistRoot(P playlist);
 
    boolean isEmpty();
 
