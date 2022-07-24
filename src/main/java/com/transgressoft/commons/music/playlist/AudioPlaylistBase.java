@@ -45,6 +45,11 @@ public abstract class AudioPlaylistBase<I extends AudioItem> implements AudioPla
     }
 
     @Override
+    public ImmutableSet<AudioPlaylist<I>> childPlaylists() {
+        return ImmutableSet.copyOf(childPlaylists);
+    }
+
+    @Override
     public boolean isEmpty() {
         return audioItems.isEmpty();
     }
