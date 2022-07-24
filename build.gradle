@@ -1,8 +1,6 @@
-import org.gradle.api.JavaVersion
-
 plugins {
     id 'com.palantir.git-version' version '0.15.0'
-    id 'org.jetbrains.kotlin.jvm' version '1.7.0'
+    id 'org.jetbrains.kotlin.jvm' version '1.6.21'
 }
 
 group 'net.transgressoft'
@@ -30,14 +28,14 @@ subprojects {
     apply plugin: 'maven-publish'
 
     ext {
-        kotlinVersion = '1.7.0'
+        kotlinVersion = '1.6.21'
 
         // the password needs to be specified via command line
         repoPass = project.hasProperty('repoPass') ? project.getProperty('repoPass') : ''
     }
 
     dependencies {
-        implementation 'net.transgressoft:soft-query-api:0.33+'
+        implementation 'net.transgressoft:soft-query-api:0.34-SNAPSHOT'
         implementation platform('org.jetbrains.kotlin:kotlin-bom')
         implementation "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"

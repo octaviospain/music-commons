@@ -4,7 +4,6 @@ import be.tarsos.transcoder.DefaultAttributes
 import be.tarsos.transcoder.Transcoder
 import be.tarsos.transcoder.ffmpeg.EncoderException
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.query.EntityAttribute
 import net.transgressoft.commons.query.InMemoryRepository
 import org.apache.commons.io.FilenameUtils
 import java.io.File
@@ -17,48 +16,7 @@ import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.UnsupportedAudioFileException
 
-internal class ImmutableAudioWaveform (
-    override val id: Int,
-    override val amplitudes: FloatArray,
-    override val width: Int,
-    override val height: Int
-) : AudioWaveform {
-
-    private val attributeMap: Map<EntityAttribute<*>, Any> = mapOf()
-
-    override val uniqueId: String
-        get() {
-            val joiner = StringJoiner("-")
-            joiner.add(id.toString())
-            joiner.add(width.toString())
-            joiner.add(height.toString())
-            joiner.add(amplitudes.size.toString())
-            return joiner.toString()
-        }
-
-    override fun <A : EntityAttribute<V>, V> getAttribute(attribute: A): V {
-        return attributeMap[attribute] as V
-    }
-
-    override fun scale(width: Int, height: Int): AudioWaveform {
-        throw UnsupportedOperationException("Not implemented")
-        // TODO Do some math and figure out how to scale the amplitudes given the new width and height without processing again
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other == null || javaClass != other.javaClass) return false
-        val that = other as ImmutableAudioWaveform
-        return width == that.width && height == that.height &&
-                com.google.common.base.Objects.equal(amplitudes, that.amplitudes)
-    }
-
-    override fun hashCode(): Int {
-        return com.google.common.base.Objects.hashCode(width, height, amplitudes)
-    }
-}
-
-class AudioWaveformInMemoryRepository<W : AudioWaveform>(entitiesById: MutableMap<Int, W>) : InMemoryRepository<W>(entitiesById, null),
+open class AudioWaveformInMemoryRepository<W : AudioWaveform>(entitiesById: MutableMap<Int, W>) : InMemoryRepository<W>(entitiesById, null),
     AudioWaveformRepository<W> {
 
     companion object {
@@ -87,6 +45,13 @@ class AudioWaveformInMemoryRepository<W : AudioWaveform>(entitiesById: MutableMa
         return waveform
     }
 }
+
+internal class ImmutableAudioWaveform(
+    override val id: Int,
+    override val amplitudes: FloatArray,
+    override val width: Int,
+    override val height: Int,
+) : AudioWaveformBase(id, amplitudes, width, height)
 
 internal class AudioWaveformExtractor {
 

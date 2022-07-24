@@ -120,7 +120,7 @@ abstract class MusicLibraryBase<I : AudioItem, P : AudioPlaylist<I>, D : AudioPl
                 audioItemSubscription = null
                 log.error("Exception while subscribed to AudioItemEvents", throwable)
             }
-            addOnCompleteEventActions {
+            addOnCompleteEventAction {
                 audioItemSubscription?.cancel()
                 audioItemSubscription = null
 

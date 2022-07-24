@@ -87,7 +87,7 @@ public abstract class AudioPlaylistInMemoryRepositoryBase<I extends AudioItem, P
 
     protected abstract MP toMutablePlaylist(P playlistDirectory);
 
-    protected abstract Set<MutableAudioPlaylist<I>> toMutablePlaylists(Set<P> audioPlaylists);
+    protected abstract Set<MP> toMutablePlaylists(Set<P> audioPlaylists);
 
     protected abstract MD toMutableDirectory(D playlistDirectory);
 
