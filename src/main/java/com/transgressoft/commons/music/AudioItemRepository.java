@@ -12,4 +12,6 @@ public interface AudioItemRepository {
     Optional<AudioItem> findById(int id);
 
     ImmutableSet<AudioItem> audioCollection();
+
+    boolean isEmpty();
 }

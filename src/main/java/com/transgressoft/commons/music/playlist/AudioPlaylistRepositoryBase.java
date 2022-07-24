@@ -8,7 +8,7 @@ import java.util.*;
 /**
  * @author Octavio Calleya
  */
-public abstract class AudioPlaylistRepositoryBase<P extends AudioPlaylist> implements AudioPlaylistRepository<P> {
+public abstract class AudioPlaylistRepositoryBase<P extends AudioPlaylist<AudioItem>> extends AbstractGraph<P> implements AudioPlaylistRepository<P> {
 
     protected final P ROOT_PLAYLIST;
 
@@ -69,7 +69,7 @@ public abstract class AudioPlaylistRepositoryBase<P extends AudioPlaylist> imple
     }
 
     @Override
-    public void removeAudioItems(Collection<? extends AudioItem> tracks) {
+    public void removeAudioItems(Collection<AudioItem> tracks) {
         playlistsTree.nodes().stream()
                 .filter(playlist -> ! playlist.childPlaylists().isEmpty())
                 .forEach(playlist -> playlist.removeAudioItems(tracks));
@@ -100,5 +100,40 @@ public abstract class AudioPlaylistRepositoryBase<P extends AudioPlaylist> imple
     public void clear() {
         playlistsTree = GraphBuilder.directed().build();
         playlistsTree.addNode(ROOT_PLAYLIST);
+    }
+
+    @Override
+    public Set<P> nodes() {
+        return null;
+    }
+
+    @Override
+    public boolean isDirected() {
+        return true;
+    }
+
+    @Override
+    public boolean allowsSelfLoops() {
+        return false;
+    }
+
+    @Override
+    public ElementOrder<P> nodeOrder() {
+        return null;
+    }
+
+    @Override
+    public Set<P> adjacentNodes(P node) {
+        return null;
+    }
+
+    @Override
+    public Set<P> predecessors(P node) {
+        return null;
+    }
+
+    @Override
+    public Set<P> successors(P node) {
+        return null;
     }
 }
