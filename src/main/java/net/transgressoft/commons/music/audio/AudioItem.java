@@ -1,14 +1,24 @@
-package net.transgressoft.commons.music;
+package net.transgressoft.commons.music.audio;
 
 import com.google.common.collect.ImmutableSet;
+import net.transgressoft.commons.music.Album;
+import net.transgressoft.commons.music.Artist;
+import net.transgressoft.commons.music.Genre;
+import net.transgressoft.commons.query.QueryEntity;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.LocalDateTime;
 
 /**
  * @author Octavio Calleya
  */
-public interface AudioItem {
+public interface AudioItem extends QueryEntity<AudioItemAttribute<?>> {
+
+    interface Builder<E extends AudioItem> {
+
+        E build();
+    }
 
     Path path();
 
@@ -18,9 +28,9 @@ public interface AudioItem {
 
     String extension();
 
-    String name();
+    String title();
 
-    AudioItem name(String name);
+    AudioItem title(String name);
 
     Artist artist();
 
@@ -65,4 +75,12 @@ public interface AudioItem {
     long length();
 
     int bitRate();
+
+    short playCount();
+
+    AudioItem playCount(short playCount);
+
+    LocalDateTime dateOfInclusion();
+
+    LocalDateTime lastDateModified();
 }

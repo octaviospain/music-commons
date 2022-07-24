@@ -5,13 +5,13 @@ import com.google.common.base.Objects;
 /**
  * @author Octavio Calleya
  */
-public class SimpleAudioWaveform implements AudioWaveform {
+public class ImmutableAudioWaveform implements AudioWaveform {
 
     private final float[] amplitudes;
     private final int width;
     private final int height;
 
-    public SimpleAudioWaveform(float[] amplitudes, int width, int height) {
+    public ImmutableAudioWaveform(float[] amplitudes, int width, int height) {
         this.amplitudes = amplitudes;
         this.width = width;
         this.height = height;
@@ -33,7 +33,7 @@ public class SimpleAudioWaveform implements AudioWaveform {
     }
 
     @Override
-    public SimpleAudioWaveform scale(int width, int height) {
+    public ImmutableAudioWaveform scale(int width, int height) {
         throw new UnsupportedOperationException("Not implemented");
         // TODO Do some math and figure out how to scale the amplitudes given the new width and height without processing again
     }
@@ -42,7 +42,7 @@ public class SimpleAudioWaveform implements AudioWaveform {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        SimpleAudioWaveform that = (SimpleAudioWaveform) o;
+        ImmutableAudioWaveform that = (ImmutableAudioWaveform) o;
         return width == that.width &&
                 height == that.height &&
                 Objects.equal(amplitudes, that.amplitudes);

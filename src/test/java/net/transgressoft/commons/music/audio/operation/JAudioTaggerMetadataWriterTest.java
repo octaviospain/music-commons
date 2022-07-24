@@ -1,6 +1,13 @@
-package net.transgressoft.commons.music;
+package net.transgressoft.commons.music.audio.operation;
 
 import com.neovisionaries.i18n.CountryCode;
+import net.transgressoft.commons.music.Album;
+import net.transgressoft.commons.music.Artist;
+import net.transgressoft.commons.music.Genre;
+import net.transgressoft.commons.music.ImmutableAlbum;
+import net.transgressoft.commons.music.ImmutableArtist;
+import net.transgressoft.commons.music.ImmutableLabel;
+import net.transgressoft.commons.music.audio.AudioItem;
 import org.jaudiotagger.audio.AudioFile;
 import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.audio.wav.WavOptions;
@@ -69,7 +76,7 @@ class JAudioTaggerMetadataWriterTest {
         album = new ImmutableAlbum("Album", artist, false, (short) 1992, new ImmutableLabel("EMI", CountryCode.US), coverBytes);
 
         audioItem = mock(AudioItem.class);
-        when(audioItem.name()).thenReturn(name);
+        when(audioItem.title()).thenReturn(name);
         when(audioItem.artist()).thenReturn(artist);
         when(audioItem.album()).thenReturn(album);
         when(audioItem.comments()).thenReturn(comments);

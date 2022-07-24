@@ -1,5 +1,6 @@
-package net.transgressoft.commons.music;
+package net.transgressoft.commons.music.audio.operation;
 
+import net.transgressoft.commons.music.audio.AudioItem;
 import org.apache.commons.io.FileUtils;
 import org.jaudiotagger.audio.AudioFile;
 import org.jaudiotagger.audio.AudioFileIO;
@@ -80,7 +81,7 @@ public class JAudioTaggerMetadataWriter implements AudioItemMetadataWriter {
     }
 
     private void setTrackFieldsToTag(Tag tag, AudioItem audioItem) throws FieldDataInvalidException {
-        tag.setField(FieldKey.TITLE, audioItem.name());
+        tag.setField(FieldKey.TITLE, audioItem.title());
         tag.setField(FieldKey.ALBUM, audioItem.album().name());
         tag.setField(FieldKey.ALBUM_ARTIST, audioItem.album().albumArtist().name());
         tag.setField(FieldKey.ARTIST, audioItem.artist().name());

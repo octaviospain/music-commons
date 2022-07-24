@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music.playlist;
 
 import com.google.common.collect.ImmutableList;
-import net.transgressoft.commons.music.AudioItem;
+import net.transgressoft.commons.music.audio.AudioItem;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -15,14 +15,14 @@ import static org.mockito.Mockito.mock;
 /**
  * @author Octavio Calleya
  */
-class SimpleAudioPlaylistTest {
+class ImmutableAudioPlaylistTest {
 
     AudioPlaylist<AudioItem> playlist;
 
     @Test
     @DisplayName("AudioPlaylist properties")
     void playlistPropertiesTest() {
-        playlist = new SimpleAudioPlaylist("Hits");
+        playlist = new ImmutableAudioPlaylist("Hits");
 
         assertEquals("Hits", playlist.name());
         assertTrue(playlist.isEmpty());
@@ -32,24 +32,23 @@ class SimpleAudioPlaylistTest {
         AudioItem item3 = mock(AudioItem.class);
 
         ImmutableList<AudioItem> list = ImmutableList.of(item1, item2, item3);
-        playlist.addAudioItems(list);
-        playlist.name("Best hits");
+        playlist = (AudioPlaylist<AudioItem>) playlist.addAudioItems(list).name("Best hits");
 
         assertFalse(playlist.isEmpty());
         assertEquals(list, playlist.audioItems());
         assertEquals("Best hits", playlist.name());
 
-        playlist.removeAudioItems(Collections.singleton(item1));
+        playlist = playlist.removeAudioItems(Collections.singleton(item1));
         assertEquals(ImmutableList.of(item2, item3), playlist.audioItems());
 
-        AudioPlaylist<AudioItem> playlist2 = new SimpleAudioPlaylist("Hits");
+        AudioPlaylist<AudioItem> playlist2 = new ImmutableAudioPlaylist("Hits");
 
-        playlist.clear();
+        playlist = playlist.clear();
         assertTrue(playlist.isEmpty());
 
-        AudioPlaylist<AudioItem> playlist3 = new SimpleAudioPlaylist("Hits");
+        AudioPlaylist<AudioItem> playlist3 = new ImmutableAudioPlaylist("Hits");
         assertEquals(playlist3, playlist2);
 
-        assertEquals("SimpleAudioPlaylist{name=Hits}", playlist2.toString());
+        assertEquals("ImmutableAudioPlaylist{name=Hits}", playlist2.toString());
     }
 }

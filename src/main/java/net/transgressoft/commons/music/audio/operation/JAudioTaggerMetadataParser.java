@@ -1,6 +1,15 @@
-package net.transgressoft.commons.music;
+package net.transgressoft.commons.music.audio.operation;
 
 import com.neovisionaries.i18n.CountryCode;
+import net.transgressoft.commons.music.Album;
+import net.transgressoft.commons.music.Artist;
+import net.transgressoft.commons.music.Genre;
+import net.transgressoft.commons.music.ImmutableAlbum;
+import net.transgressoft.commons.music.ImmutableArtist;
+import net.transgressoft.commons.music.ImmutableLabel;
+import net.transgressoft.commons.music.Label;
+import net.transgressoft.commons.music.audio.AudioItem;
+import net.transgressoft.commons.music.audio.ImmutableAudioItem;
 import org.apache.commons.io.FilenameUtils;
 import org.jaudiotagger.audio.AudioFile;
 import org.jaudiotagger.audio.AudioFileIO;

@@ -29,12 +29,12 @@ public class InefficientAudioWaveformTool implements AudioWaveformTool<AudioWave
     private static final CopyOption[] TEMP_COPY_ATTRIBUTES = new CopyOption[]{COPY_ATTRIBUTES, REPLACE_EXISTING};
 
     @Override
-    public SimpleAudioWaveform extractWaveform(Path path) throws AudioWaveformProcessingException {
+    public ImmutableAudioWaveform extractWaveform(Path path) throws AudioWaveformProcessingException {
         return extractWaveform(path, DEFAULT_WIDTH, DEFAULT_HEIGHT);
     }
 
     @Override
-    public SimpleAudioWaveform extractWaveform(Path path, int width, int height) throws AudioWaveformProcessingException {
+    public ImmutableAudioWaveform extractWaveform(Path path, int width, int height) throws AudioWaveformProcessingException {
         if (! path.toFile().exists())
             throw new AudioWaveformProcessingException("File does not exist " + path);
 
@@ -55,15 +55,15 @@ public class InefficientAudioWaveformTool implements AudioWaveformTool<AudioWave
         }
     }
 
-    private SimpleAudioWaveform processWavFile(Path path, int width, int height) throws IOException, UnsupportedAudioFileException {
+    private ImmutableAudioWaveform processWavFile(Path path, int width, int height) throws IOException, UnsupportedAudioFileException {
         int[] audioPcm = getPulseCodeModulation(path.toFile(), height);
         float[] waveformAmplitudes = getWaveformAmplitudes(audioPcm, width);
-        return new SimpleAudioWaveform(waveformAmplitudes, width, height);
+        return new ImmutableAudioWaveform(waveformAmplitudes, width, height);
     }
 
-    private SimpleAudioWaveform processNonWavFile(Path path, int width, int height) throws IOException, EncoderException, UnsupportedAudioFileException {
+    private ImmutableAudioWaveform processNonWavFile(Path path, int width, int height) throws IOException, EncoderException, UnsupportedAudioFileException {
         File transcodedAudioFile = transcodeToWav(path);
-        SimpleAudioWaveform audioWaveform = processWavFile(transcodedAudioFile.toPath(), width, height);
+        ImmutableAudioWaveform audioWaveform = processWavFile(transcodedAudioFile.toPath(), width, height);
         Files.delete(transcodedAudioFile.toPath());
         return audioWaveform;
     }

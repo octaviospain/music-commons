@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music.playlist;
 
 import com.google.common.collect.ImmutableCollection;
-import net.transgressoft.commons.music.AudioItem;
+import net.transgressoft.commons.music.audio.AudioItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +39,7 @@ public abstract class PlaylistExportToolBase<T extends PlaylistTree<? extends Au
             }
         }
 
-        for (PlaylistTree<? extends AudioItem> subPlaylistTree : playlistTree.subPlaylistTrees()) {
+        for (PlaylistTree<? extends AudioItem> subPlaylistTree : playlistTree.includedPlaylistTrees()) {
             String playlistFolderName = subPlaylistTree.name();
             Path createdDirectory = path.resolve(playlistFolderName);
             File folderFile = createdDirectory.toFile();
@@ -88,7 +88,7 @@ public abstract class PlaylistExportToolBase<T extends PlaylistTree<? extends Au
                 printWriter.println("#EXTALB:" + audioItem.album());
                 printWriter.println("#EXTART:" + audioItem.artist());
                 printWriter.print("#EXTINF:" + audioItem.duration().getSeconds());
-                printWriter.println("," + audioItem.name());
+                printWriter.println("," + audioItem.title());
 
                 Path parent = playlistPath.getParent();
                 Path trackPath = parent.relativize(audioItem.path());

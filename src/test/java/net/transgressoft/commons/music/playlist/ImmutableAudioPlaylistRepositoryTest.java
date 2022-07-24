@@ -9,12 +9,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * @author Octavio Calleya
  */
-class SimpleAudioPlaylistRepositoryTest {
+class ImmutableAudioPlaylistRepositoryTest {
 
     @Test
     @DisplayName("Addition and deletion of nested playlists")
     void additionAndDeletionOfPlaylistsTest() {
         SimpleAudioPlaylistRepository audioPlaylistRepository = new SimpleAudioPlaylistRepository();
-        assertEquals(new SimplePlaylistTree("ROOT_PLAYLIST"), audioPlaylistRepository.getRootPlaylistTree());
+        assertEquals(new ImmutablePlaylistTree("ROOT_PLAYLIST"), audioPlaylistRepository.getRootPlaylistTree());
     }
 }

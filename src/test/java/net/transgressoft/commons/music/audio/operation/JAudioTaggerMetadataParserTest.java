@@ -1,5 +1,7 @@
-package net.transgressoft.commons.music;
+package net.transgressoft.commons.music.audio.operation;
 
+import net.transgressoft.commons.music.Genre;
+import net.transgressoft.commons.music.audio.AudioItem;
 import org.apache.commons.io.FileUtils;
 import org.jaudiotagger.audio.AudioFile;
 import org.jaudiotagger.audio.AudioFileIO;
@@ -131,7 +133,7 @@ class JAudioTaggerMetadataParserTest {
 
     void assertAudioItem(AudioItem audioItem, Path path) {
         assertEquals(path, audioItem.path());
-        assertEquals(name, audioItem.name());
+        assertEquals(name, audioItem.title());
         assertEquals(album, audioItem.album().name());
         assertEquals(albumArtist, audioItem.album().albumArtist().name());
         assertEquals(artist, audioItem.artist().name());

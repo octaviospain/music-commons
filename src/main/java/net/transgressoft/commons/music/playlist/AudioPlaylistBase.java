@@ -3,19 +3,18 @@ package net.transgressoft.commons.music.playlist;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
-import net.transgressoft.commons.music.AudioItem;
+import net.transgressoft.commons.music.audio.AudioItem;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 /**
  * @author Octavio Calleya
  */
 public abstract class AudioPlaylistBase<I extends AudioItem> implements AudioPlaylist<I> {
 
-    private String name;
-    private List<I> audioItems;
+    private final String name;
+    private final List<I> audioItems;
 
     protected AudioPlaylistBase(String name, List<I> audioItems) {
         this.name = name;
@@ -28,11 +27,6 @@ public abstract class AudioPlaylistBase<I extends AudioItem> implements AudioPla
     }
 
     @Override
-    public void name(String name) {
-        this.name = name;
-    }
-
-    @Override
     public ImmutableList<I> audioItems() {
         return ImmutableList.copyOf(audioItems);
     }
@@ -40,21 +34,6 @@ public abstract class AudioPlaylistBase<I extends AudioItem> implements AudioPla
     @Override
     public boolean isEmpty() {
         return audioItems.isEmpty();
-    }
-
-    @Override
-    public void addAudioItems(List<I> audioItems) {
-        this.audioItems.addAll(audioItems);
-    }
-
-    @Override
-    public boolean removeAudioItems(Set<I> audioItems) {
-        return this.audioItems.removeAll(audioItems);
-    }
-
-    @Override
-    public void clear() {
-        audioItems.clear();
     }
 
     @SuppressWarnings ("unchecked")
@@ -78,4 +57,3 @@ public abstract class AudioPlaylistBase<I extends AudioItem> implements AudioPla
                 .toString();
     }
 }
-

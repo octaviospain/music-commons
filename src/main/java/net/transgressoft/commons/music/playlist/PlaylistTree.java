@@ -1,47 +1,37 @@
 package net.transgressoft.commons.music.playlist;
 
 import com.google.common.collect.ImmutableSet;
-import net.transgressoft.commons.music.AudioItem;
+import net.transgressoft.commons.music.audio.AudioItem;
 
 import java.util.Optional;
-import java.util.Set;
 
 /**
+ * Represents a data object that contains a collection of {@link AudioItem}s and also
+ * a collection of {@link PlaylistTree} itself.
+ *
  * @author Octavio Calleya
  */
-public interface PlaylistTree<I extends AudioItem> {
+public interface PlaylistTree<I extends AudioItem> extends PlaylistItem<I> {
 
-    String name();
+    PlaylistTree<I> addPlaylist(AudioPlaylist<I> playlist);
 
-    void name(String name);
+    PlaylistTree<I> removeAudioPlaylist(AudioPlaylist<I> playlist);
 
-    boolean addPlaylist(AudioPlaylist<I> playlist);
-
-    boolean removePlaylist(AudioPlaylist<I> playlist);
-
-    boolean addPlaylistTree(PlaylistTree<I> playlistTree);
+    PlaylistTree<I> addPlaylistTree(PlaylistTree<I> playlistTree);
 
     ImmutableSet<AudioPlaylist<I>> audioPlaylists();
 
-    ImmutableSet<PlaylistTree<I>> subPlaylistTrees();
+    ImmutableSet<PlaylistTree<I>> includedPlaylistTrees();
 
-    boolean removePlaylistTree(PlaylistTree<I> playlistTree);
+    PlaylistTree<I> removePlaylistTree(PlaylistTree<I> playlistTree);
 
     Optional<PlaylistTree<I>> findParentPlaylist(String playlistName);
 
-    Optional<AudioPlaylist<I>> findPlaylistByName(String playlistName);
+    Optional<AudioPlaylist<I>> findAudioPlaylistByName(String playlistName);
 
     Optional<PlaylistTree<I>> findPlaylistTreeByName(String playlistName);
 
-    void movePlaylist(AudioPlaylist<I> playlist, PlaylistTree<I> targetPlaylistTree);
+    PlaylistTree<I> clearIncludedPlaylistTrees();
 
-    void movePlaylistTree(PlaylistTree<I> subPlaylistTree, PlaylistTree<I> targetPlaylistTree);
-
-    void clearPlaylistTrees();
-
-    void clearPlaylists();
-
-    ImmutableSet<AudioItem> audioItems();
-
-    boolean removeAudioItems(Set<I> audioItems);
+    PlaylistTree<I> clearPlaylists();
 }

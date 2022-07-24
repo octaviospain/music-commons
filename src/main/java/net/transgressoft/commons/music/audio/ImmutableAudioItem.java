@@ -1,4 +1,4 @@
-package net.transgressoft.commons.music;
+package net.transgressoft.commons.music.audio;
 
 import com.google.common.base.CharMatcher;
 import com.google.common.base.MoreObjects;
@@ -6,19 +6,39 @@ import com.google.common.base.Objects;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import net.transgressoft.commons.music.Album;
+import net.transgressoft.commons.music.Artist;
+import net.transgressoft.commons.music.Genre;
+import net.transgressoft.commons.music.ImmutableAlbum;
+import net.transgressoft.commons.music.ImmutableArtist;
+import net.transgressoft.commons.music.ImmutableLabel;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.text.WordUtils;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+
+import static java.util.Objects.requireNonNull;
+import static net.transgressoft.commons.music.audio.AudioItemStringAttribute.*;
+import static net.transgressoft.commons.music.audio.DurationAudioItemAttribute.DURATION;
+import static net.transgressoft.commons.music.audio.FloatAudioItemAttribute.BPM;
+import static net.transgressoft.commons.music.audio.IntegerAudioItemAttribute.BITRATE;
+import static net.transgressoft.commons.music.audio.LocalDateTimeAudioItemAttribute.DATE_OF_INCLUSION;
+import static net.transgressoft.commons.music.audio.LocalDateTimeAudioItemAttribute.LAST_DATE_MODIFIED;
+import static net.transgressoft.commons.music.audio.PathAudioItemAttribute.PATH;
+import static net.transgressoft.commons.music.audio.ShortAudioItemAttribute.*;
 
 /**
  * @author Octavio Calleya
@@ -26,7 +46,7 @@ import java.util.stream.Stream;
 public class ImmutableAudioItem implements AudioItem {
 
     private final Path path;
-    private final String name;
+    private final String title;
     private final Artist artist;
     private final ImmutableSet<String> artistsInvolved;
     private final Album album;
@@ -40,15 +60,27 @@ public class ImmutableAudioItem implements AudioItem {
     private final int bitRate;
     private final String encoder;
     private final String encoding;
+    private final short playCount;
+    private final LocalDateTime dateOfInclusion;
+    private final LocalDateTime lastDateModified;
+
+    private final AudioItemAttributeSet attributeSet;
 
     public static ImmutableAudioItemBuilder builder(Path path, String name, Duration duration, int bitRate) {
-        return new ImmutableAudioItemBuilder(path, name, duration, bitRate);
+        requireNonNull(path);
+        requireNonNull(name);
+        requireNonNull(duration);
+
+        var dateOfInclusion = LocalDateTime.now();
+        return new ImmutableAudioItemBuilder(path, name, duration, bitRate, dateOfInclusion, dateOfInclusion);
     }
 
-    public ImmutableAudioItem(Path path, String name, Artist artist, ImmutableSet<String> artistsInvolved, Album album, Genre genre, String comments, short trackNumber,
-                              short discNumber, float bpm, Duration duration, int bitRate, String encoder, String encoding) {
+    protected ImmutableAudioItem(Path path, String title, Artist artist, ImmutableSet<String> artistsInvolved, Album album, Genre genre,
+                                 String comments, short trackNumber, short discNumber, float bpm, Duration duration, int bitRate, String encoder,
+                                 String encoding, short playCount, LocalDateTime dateOfInclusion,
+                                 LocalDateTime lastDateModified) {
         this.path = path;
-        this.name = name;
+        this.title = title;
         this.artist = artist;
         this.artistsInvolved = artistsInvolved;
         this.album = album;
@@ -61,6 +93,26 @@ public class ImmutableAudioItem implements AudioItem {
         this.bitRate = bitRate;
         this.encoder = encoder;
         this.encoding = encoding;
+        this.playCount = playCount;
+        this.dateOfInclusion = dateOfInclusion;
+        this.lastDateModified = lastDateModified;
+
+        attributeSet = new ImmutableAudioItemAttributeSet();
+    }
+
+    @Override
+    public int id() {
+        return hashCode();
+    }
+
+    @Override
+    public String uniqueId() {
+        return new StringJoiner("-")
+                .add(fileName().replaceAll(" ", "_"))
+                .add(title)
+                .add(duration.toString())
+                .add(String.valueOf(bitRate()))
+                .toString();
     }
 
     @Override
@@ -70,7 +122,7 @@ public class ImmutableAudioItem implements AudioItem {
 
     @Override
     public AudioItem path(Path path) {
-        return new ImmutableAudioItemBuilder(path, name, duration, bitRate).build();
+        return new ImmutableAudioItemBuilder(path, title, duration, bitRate, dateOfInclusion, LocalDateTime.now()).build();
     }
 
     @Override
@@ -84,13 +136,13 @@ public class ImmutableAudioItem implements AudioItem {
     }
 
     @Override
-    public String name() {
-        return name;
+    public String title() {
+        return title;
     }
 
     @Override
-    public AudioItem name(String name) {
-        return new ImmutableAudioItemBuilder(path, name, duration, bitRate).build();
+    public AudioItem title(String title) {
+        return new ImmutableAudioItemBuilder(path, title, duration, bitRate, dateOfInclusion, LocalDateTime.now()).build();
     }
 
     @Override
@@ -204,15 +256,40 @@ public class ImmutableAudioItem implements AudioItem {
     }
 
     @Override
+    public short playCount() {
+        return playCount;
+    }
+
+    @Override
+    public AudioItem playCount(short playCount) {
+        return new ImmutableAudioItemBuilder(this).playCount(playCount).build();
+    }
+
+    @Override
+    public LocalDateTime dateOfInclusion() {
+        return dateOfInclusion;
+    }
+
+    @Override
+    public LocalDateTime lastDateModified() {
+        return lastDateModified;
+    }
+
+    @Override
+    public AudioItemAttributeSet attributes() {
+        return attributeSet;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        ImmutableAudioItem that = (ImmutableAudioItem) o;
+        var that = (ImmutableAudioItem) o;
         return trackNumber == that.trackNumber &&
                 discNumber == that.discNumber &&
                 Float.compare(that.bpm, bpm) == 0 &&
                 Objects.equal(path, that.path) &&
-                Objects.equal(name, that.name) &&
+                Objects.equal(title, that.title) &&
                 Objects.equal(artist, that.artist) &&
                 Objects.equal(album, that.album) &&
                 genre == that.genre &&
@@ -222,34 +299,43 @@ public class ImmutableAudioItem implements AudioItem {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(path, name, artist, album, genre, comments, trackNumber, discNumber, bpm, duration);
+        return Objects.hashCode(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                 .add("path", path)
-                .add("name", name)
+                .add("name", title)
                 .add("artist", artist)
                 .toString();
     }
 
-    public interface Builder<E extends AudioItem> {
-
-        E build();
-    }
-
     public static class ImmutableAudioItemBuilder implements Builder<AudioItem> {
 
+        public static final Map<AudioItemAttribute<?>, Object> defaultValues;
         private static final Map<Pattern, Pattern> artistsRegexMap;
 
         static {
-            Pattern endsWithRemix = Pattern.compile("[(|\\[](\\s*(&?\\s*(\\w+)\\s+)+(?i)(remix))[)|\\]]");
-            Pattern startsWithRemixBy = Pattern.compile("[(|\\[](?i)(remix)(\\s+)(?i)(by)(.+)[)|\\]]");
-            Pattern hasFt = Pattern.compile("[(|\\[|\\s](?i)(ft) (.+)");
-            Pattern hasFeat = Pattern.compile("[(|\\[|\\s](?i)(feat) (.+)");
-            Pattern hasFeaturing = Pattern.compile("[(|\\[|\\s](?i)(featuring) (.+)");
-            Pattern startsWithWith = Pattern.compile("[(|\\[](?i)(with) (.+)[)|\\]]");
+            defaultValues =
+                    ImmutableMap.<AudioItemAttribute<?>, Object>builder()
+                            .put(ARTIST, ImmutableArtist.UNKNOWN_ARTIST)
+                            .put(ALBUM, ImmutableAlbum.UNKNOWN_ALBUM)
+                            .put(GENRE, Genre.UNDEFINED)
+                            .put(COMMENTS, "")
+                            .put(ARTISTS_INVOLVED, Collections.emptyList())
+                            .put(LABEL, ImmutableLabel.UNKNOWN)
+                            .put(TRACK_NUMBER, (short) -1)
+                            .put(DISC_NUMBER, (short) -1)
+                            .put(BPM, -1f)
+                            .build();
+
+            var endsWithRemix = Pattern.compile("[(|\\[](\\s*(&?\\s*(\\w+)\\s+)+(?i)(remix))[)|\\]]");
+            var startsWithRemixBy = Pattern.compile("[(|\\[](?i)(remix)(\\s+)(?i)(by)(.+)[)|\\]]");
+            var hasFt = Pattern.compile("[(|\\[|\\s](?i)(ft) (.+)");
+            var hasFeat = Pattern.compile("[(|\\[|\\s](?i)(feat) (.+)");
+            var hasFeaturing = Pattern.compile("[(|\\[|\\s](?i)(featuring) (.+)");
+            var startsWithWith = Pattern.compile("[(|\\[](?i)(with) (.+)[)|\\]]");
 
             artistsRegexMap = ImmutableMap.<Pattern, Pattern>builder()
                     .put(Pattern.compile(" (?i)(remix)"), endsWithRemix)
@@ -263,25 +349,31 @@ public class ImmutableAudioItem implements AudioItem {
         protected final String name;
         protected final Duration duration;
         protected final int bitRate;
-        protected Artist artist = ImmutableArtist.UNKNOWN_ARTIST;
-        protected Album album = new ImmutableAlbum("");
-        protected Genre genre = Genre.UNDEFINED;
-        protected String comments = "";
-        protected short trackNumber = -1;
-        protected short discNumber = -1;
-        protected float bpm = -1;
+        protected Artist artist = (Artist) defaultValues.get(ARTIST);
+        protected Album album = (Album) defaultValues.get(ALBUM);
+        protected Genre genre = (Genre) defaultValues.get(GENRE);
+        protected String comments = (String) defaultValues.get(COMMENTS);
+        protected short trackNumber = (short) defaultValues.get(TRACK_NUMBER);
+        protected short discNumber = (short) defaultValues.get(DISC_NUMBER);
+        protected float bpm = (float) defaultValues.get(BPM);
         protected String encoder = "";
         protected String encoding = "";
+        protected short playCount = 0;
+        protected LocalDateTime dateOfInclusion;
+        protected LocalDateTime lastDateModified;
 
-        protected ImmutableAudioItemBuilder(Path path, String name, Duration duration, int bitRate) {
+        protected ImmutableAudioItemBuilder(Path path, String name, Duration duration, int bitRate, LocalDateTime dateOfInclusion, LocalDateTime lastDateModified) {
             this.path = path;
             this.name = name;
             this.duration = duration;
             this.bitRate = bitRate;
+            this.dateOfInclusion = dateOfInclusion;
+            this.lastDateModified = lastDateModified;
         }
 
         protected ImmutableAudioItemBuilder(Path path, String name, Duration duration, int bitRate, Artist artist, Album album, Genre genre, String comments,
-                                            short trackNumber, short discNumber, float bpm, String encoder, String encoding) {
+                                            short trackNumber, short discNumber, float bpm, String encoder, String encoding, short playCount,
+                                            LocalDateTime dateOfInclusion, LocalDateTime lastDateModified) {
             this.path = path;
             this.name = name;
             this.duration = duration;
@@ -295,18 +387,21 @@ public class ImmutableAudioItem implements AudioItem {
             this.bpm = bpm;
             this.encoder = encoder;
             this.encoding = encoding;
+            this.playCount = playCount;
+            this.dateOfInclusion = dateOfInclusion;
+            this.lastDateModified = lastDateModified;
         }
 
         private ImmutableAudioItemBuilder(AudioItem audioItem) {
-            this(audioItem.path(), audioItem.name(), audioItem.duration(), audioItem.bitRate(), audioItem.artist(), audioItem.album(),
+            this(audioItem.path(), audioItem.title(), audioItem.duration(), audioItem.bitRate(), audioItem.artist(), audioItem.album(),
                  audioItem.genre(), audioItem.comments(), audioItem.trackNumber(), audioItem.discNumber(), audioItem.bpm(),
-                 audioItem.encoder(), audioItem.encoding());
+                 audioItem.encoder(), audioItem.encoding(), audioItem.playCount(), audioItem.dateOfInclusion(), LocalDateTime.now());
         }
 
         /**
          * Returns the names of the artists that are involved in the fields of an {@link AudioItem},
          * that is, every artist that could appear in the {@link AudioItem#artist} variable,
-         * or {@link Album#albumArtist} or in the {@link AudioItem#name}.
+         * or {@link Album#albumArtist} or in the {@link AudioItem#title}.
          *
          * <h3>Example</h3>
          *
@@ -321,15 +416,15 @@ public class ImmutableAudioItem implements AudioItem {
          *      [David Meiser, Black Asteroid, Tiga, Adam Beyer, Ida Engberg]
          *   }</pre>
          *
-         * @param title The title of an audio item
-         * @param artistName The artist name of an audio item
+         * @param title           The title of an audio item
+         * @param artistName      The artist name of an audio item
          * @param albumArtistName The album artist name of an audio item
          *
          * @return An {@code ImmutableSet} object with the names of the artists
          */
         public static ImmutableSet<String> getArtistsNamesInvolved(String title, String artistName, String albumArtistName) {
             Set<String> artistsInvolved = new HashSet<>();
-            List<String> albumArtistNames = Splitter.on(CharMatcher.anyOf(",&")).trimResults().omitEmptyStrings().splitToList(albumArtistName);
+            var albumArtistNames = Splitter.on(CharMatcher.anyOf(",&")).trimResults().omitEmptyStrings().splitToList(albumArtistName);
             artistsInvolved.addAll(albumArtistNames);
             artistsInvolved.addAll(getNamesInArtist(artistName));
             artistsInvolved.addAll(getNamesInTitle(title));
@@ -365,7 +460,7 @@ public class ImmutableAudioItem implements AudioItem {
             if (splittedNames.isPresent())
                 artistsInvolved = ImmutableSet.copyOf(splittedNames.get());
             else {
-                String cleanedArtist = artistName.replaceAll("(?i)(feat)(\\.|\\s+)", ",").replaceAll("(?i)(ft)(\\.|\\s+)", ",");
+                var cleanedArtist = artistName.replaceAll("(?i)(feat)(\\.|\\s+)", ",").replaceAll("(?i)(ft)(\\.|\\s+)", ",");
                 artistsInvolved = ImmutableSet.copyOf(Splitter.on(CharMatcher.anyOf(",&"))
                                                               .trimResults()
                                                               .omitEmptyStrings()
@@ -390,7 +485,7 @@ public class ImmutableAudioItem implements AudioItem {
          * @return An {@link ImmutableSet} with the artists found
          */
         private static Set<String> getNamesInTitle(String title) {
-            Set<String> artistsInsideParenthesis = new HashSet<>();
+            var artistsInsideParenthesis = new HashSet<String>();
             for (Map.Entry<Pattern, Pattern> regex : artistsRegexMap.entrySet()) {
                 Pattern keyPattern = regex.getKey();
                 Matcher matcher = regex.getValue().matcher(title);
@@ -456,9 +551,14 @@ public class ImmutableAudioItem implements AudioItem {
             return this;
         }
 
+        public ImmutableAudioItemBuilder playCount(short playCount) {
+            this.playCount = playCount;
+            return this;
+        }
+
         @Override
         public ImmutableAudioItem build() {
-            ImmutableSet<String> artistsNamesInvolved = getArtistsNamesInvolved(name, artist.name(), album.albumArtist().name());
+            var artistsNamesInvolved = getArtistsNamesInvolved(name, artist.name(), album.albumArtist().name());
             return new ImmutableAudioItem(path,
                                           beautifyName(),
                                           artist,
@@ -472,17 +572,62 @@ public class ImmutableAudioItem implements AudioItem {
                                           duration,
                                           bitRate,
                                           encoder,
-                                          encoding);
+                                          encoding,
+                                          playCount,
+                                          dateOfInclusion,
+                                          lastDateModified);
         }
 
         private String beautifyName() {
             return name.replaceAll("\\s+", " ")
-                    .replaceAll(" (?i)(remix)"," Remix")
-                    .replaceAll("(?i)(remix)(\\s+)(?i)(by) ","Remix by ")
-                    .replaceAll("(?i)(ft)(\\.|\\s) ","ft ")
-                    .replaceAll("(?i)(feat)(\\.|\\s) ","feat ")
+                    .replaceAll(" (?i)(remix)", " Remix")
+                    .replaceAll("(?i)(remix)(\\s+)(?i)(by) ", "Remix by ")
+                    .replaceAll("(?i)(ft)(\\.|\\s) ", "ft ")
+                    .replaceAll("(?i)(feat)(\\.|\\s) ", "feat ")
                     .replaceAll("(?i)(featuring) ", "featuring ")
                     .replaceAll("(?i)(with) ", "with ");
+        }
+    }
+
+    protected class ImmutableAudioItemAttributeSet implements AudioItemAttributeSet {
+
+        private final ImmutableMap<AudioItemAttribute<?>, Object> queryAttributes;
+
+        protected ImmutableAudioItemAttributeSet() {
+            queryAttributes = ImmutableMap.<AudioItemAttribute<?>, Object>builder()
+                    .put(PATH, path.toString())
+                    .put(TITLE, title)
+                    .put(ARTIST, artist.name())
+                    .put(ARTISTS_INVOLVED, artistsInvolved.toString())
+                    .put(ALBUM, album.name())
+                    .put(YEAR, album.year())
+                    .put(GENRE, genre.name())
+                    .put(COMMENTS, comments)
+                    .put(TRACK_NUMBER, trackNumber)
+                    .put(DISC_NUMBER, discNumber)
+                    .put(BPM, bpm)
+                    .put(DURATION, duration)
+                    .put(BITRATE, bitRate)
+                    .put(ENCODER, encoder)
+                    .put(ENCODING, encoder)
+                    .put(PLAY_COUNT, playCount)
+                    .put(DATE_OF_INCLUSION, dateOfInclusion)
+                    .put(LAST_DATE_MODIFIED, lastDateModified)
+                    .build();
+        }
+
+        protected ImmutableMap<AudioItemAttribute<?>, Object> attributes() {
+            return queryAttributes;
+        }
+
+        @Override
+        public <V> V get(AudioItemAttribute<?> attribute, Class<V> valueClass) {
+            return valueClass.cast(queryAttributes.get(attribute));
+        }
+
+        @Override
+        public Iterator<Map.Entry<AudioItemAttribute<?>, Object>> iterator() {
+            return queryAttributes.entrySet().iterator();
         }
     }
 }

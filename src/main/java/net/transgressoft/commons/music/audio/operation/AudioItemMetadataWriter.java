@@ -1,4 +1,6 @@
-package net.transgressoft.commons.music;
+package net.transgressoft.commons.music.audio.operation;
+
+import net.transgressoft.commons.music.audio.AudioItem;
 
 /**
  * @author Octavio Calleya

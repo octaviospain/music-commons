@@ -1,27 +1,19 @@
 package net.transgressoft.commons.music.playlist;
 
-import com.google.common.collect.ImmutableList;
-import net.transgressoft.commons.music.AudioItem;
+import net.transgressoft.commons.music.audio.AudioItem;
 
 import java.util.List;
-import java.util.Set;
 
 /**
+ * Represents a mutable data object that stores a collection of {@link AudioItem}s.
+ *
  * @author Octavio Calleya
  */
-public interface AudioPlaylist<I extends AudioItem> {
-
-    String name();
-
-    void name(String name);
-
-    ImmutableList<I> audioItems();
+public interface AudioPlaylist<I extends AudioItem> extends PlaylistItem<I> {
 
     boolean isEmpty();
 
-    void addAudioItems(List<I> audioItems);
+    AudioPlaylist<I> addAudioItems(List<I> audioItems);
 
-    boolean removeAudioItems(Set<I> audioItems);
-
-    void clear();
+    AudioPlaylist<I> clear();
 }

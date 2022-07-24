@@ -1,6 +1,6 @@
 package net.transgressoft.commons.music.playlist;
 
-import net.transgressoft.commons.music.AudioItem;
+import net.transgressoft.commons.music.audio.AudioItem;
 
 /**
  * @author Octavio Calleya
@@ -12,7 +12,7 @@ public abstract class AudioPlaylistRepositoryBase<I extends AudioItem, P extends
 
     @SuppressWarnings ("unchecked")
     protected AudioPlaylistRepositoryBase() {
-        this((T) new SimplePlaylistTree("ROOT_PLAYLIST"));
+        this((T) new ImmutablePlaylistTree("ROOT_PLAYLIST"));
     }
 
     protected AudioPlaylistRepositoryBase(T playlistTree) {
