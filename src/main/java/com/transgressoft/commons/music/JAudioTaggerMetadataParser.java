@@ -111,7 +111,7 @@ public class JAudioTaggerMetadataParser implements AudioItemMetadataParser {
         final Album album;
 
         String albumName = "";
-        Artist albumArtist = SimpleArtist.UNKNOWN;
+        Artist albumArtist = SimpleArtist.UNKNOWN_ARTIST;
         boolean isCompilation = false;
         short year = - 1;
         Label label = SimpleLabel.UNKNOWN;

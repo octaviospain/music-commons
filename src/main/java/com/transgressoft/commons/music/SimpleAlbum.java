@@ -17,6 +17,8 @@ public class SimpleAlbum implements Album {
     private final Label label;
     private final byte[] coverBytes;
 
+    public static final Album UNKNOWN_ALBUM = new SimpleAlbum("");
+
     public SimpleAlbum(String name, Artist albumArtist, boolean isCompilation, short year, Label label, byte[] coverBytes) {
         this.name = name;
         this.albumArtist = albumArtist;
@@ -33,25 +35,25 @@ public class SimpleAlbum implements Album {
         this.isCompilation = isCompilation;
         this.year = year;
         this.label = label;
-        this.coverBytes = new byte[0];
+        this.coverBytes = null;
     }
 
     public SimpleAlbum(String name, short year) {
         this.name = name;
-        this.albumArtist = SimpleArtist.UNKNOWN;
+        this.albumArtist = SimpleArtist.UNKNOWN_ARTIST;
         this.isCompilation = false;
         this.year = year;
         this.label = new SimpleLabel("", CountryCode.UNDEFINED);
-        this.coverBytes = new byte[0];
+        this.coverBytes = null;
     }
 
     public SimpleAlbum(String name) {
         this.name = name;
-        this.albumArtist = SimpleArtist.UNKNOWN;
+        this.albumArtist = SimpleArtist.UNKNOWN_ARTIST;
         this.isCompilation = false;
-        this.year = -1;
+        this.year = - 1;
         this.label = new SimpleLabel("", CountryCode.UNDEFINED);
-        this.coverBytes = new byte[0];
+        this.coverBytes = null;
     }
 
     @Override

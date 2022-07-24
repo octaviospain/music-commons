@@ -11,7 +11,7 @@ public class SimpleArtist implements Artist {
     private final String name;
     private final CountryCode countryCode;
 
-    public static final Artist UNKNOWN = new SimpleArtist("");
+    public static final Artist UNKNOWN_ARTIST = new SimpleArtist("");
 
     public SimpleArtist(String name, CountryCode countryCode) {
         this.name = name;

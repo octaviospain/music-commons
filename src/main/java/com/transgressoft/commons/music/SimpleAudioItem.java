@@ -224,7 +224,7 @@ public class SimpleAudioItem implements AudioItem {
         protected final String name;
         protected final Duration duration;
         protected final int bitRate;
-        protected Artist artist = SimpleArtist.UNKNOWN;
+        protected Artist artist = SimpleArtist.UNKNOWN_ARTIST;
         protected Album album = new SimpleAlbum("");
         protected Genre genre = Genre.UNDEFINED;
         protected String comments = "";
