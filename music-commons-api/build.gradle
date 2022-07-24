@@ -6,7 +6,7 @@ group = 'net.transgressoft'
 version gitVersion()
 description = 'Transgressoft Music Commons - API'
 
-project.tasks["sonarqube"].dependsOn "compileJava"
+project.tasks['sonarqube'].dependsOn 'compileJava'
 
 publishing {
     publications {
@@ -20,19 +20,19 @@ publishing {
             artifact javadocJar
 
             pom {
-                name = "music-commons-api"
+                name = 'music-commons-api'
                 description = 'Transgressoft Music Commons - AI'
                 licenses {
                     license {
-                        name = "GNU General Public License v3"
-                        url = "https://www.gnu.org/licenses/gpl-3.0.en.html"
+                        name = 'GNU General Public License v3'
+                        url = 'https://www.gnu.org/licenses/gpl-3.0.en.html'
                     }
                 }
                 developers {
                     developer {
-                        id = "octaviospain"
-                        name = "Octavio Calleya García"
-                        email = "octaviospain@gmail.com"
+                        id = 'octaviospain'
+                        name = 'Octavio Calleya García'
+                        email = 'octaviospain@gmail.com'
                     }
                 }
             }
@@ -43,7 +43,7 @@ publishing {
         maven {
             credentials {
                 username = 'admin'
-                password = 'nexus2885mwggyk'
+                password = project.repoPass
             }
             mavenContent {
                 snapshotsOnly()
@@ -56,7 +56,7 @@ publishing {
         maven {
             credentials {
                 username = 'admin'
-                password = 'nexus2885mwggyk'
+                password = project.repoPass
             }
             mavenContent {
                 releasesOnly()

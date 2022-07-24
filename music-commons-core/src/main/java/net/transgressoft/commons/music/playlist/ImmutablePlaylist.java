@@ -11,6 +11,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -75,7 +80,7 @@ class ImmutablePlaylist<I extends AudioItem> implements AudioPlaylist<I> {
     }
 
     protected void setName(String name) {
-        if (! Objects.equal(this.name, name)) {
+        if (!Objects.equal(this.name, name)) {
             this.name = name;
             LOG.debug("Changed name of playlist with id {} from '{}' to '{}'", id, this.name, name);
         }
@@ -91,22 +96,22 @@ class ImmutablePlaylist<I extends AudioItem> implements AudioPlaylist<I> {
         return false;
     }
 
-    protected void addAll(List<I> audioItems) {
-        if (! audioItems.isEmpty()) {
+    protected void addAll(Collection<I> audioItems) {
+        if (!audioItems.isEmpty()) {
             this.audioItems.addAll(audioItems);
             LOG.debug("Added audio items to playlist '{}': {}", getName(), audioItems);
         }
     }
 
     protected void removeAll(Collection<I> audioItems) {
-        if (! audioItems.isEmpty()) {
+        if (!audioItems.isEmpty()) {
             audioItems.forEach(this.audioItems::remove);
             LOG.debug("Removed audio items from playlist '{}': {}", getName(), audioItems);
         }
     }
 
     protected void clear() {
-        if (! this.audioItems.isEmpty()) {
+        if (!this.audioItems.isEmpty()) {
             this.audioItems.clear();
             LOG.debug("Playlist '{}' cleared", getName());
         }
@@ -126,8 +131,34 @@ class ImmutablePlaylist<I extends AudioItem> implements AudioPlaylist<I> {
                 .anyMatch(queryPredicate::apply);
     }
 
-
     @Override
+    public void exportToM3uFile(Path destinationPath) throws IOException {
+        if (destinationPath.toFile().exists()) {
+            LOG.debug("Destination file already exists: {}", destinationPath);
+        } else {
+            Files.createFile(destinationPath);
+            try (PrintWriter printWriter = new PrintWriter(destinationPath.toFile(), StandardCharsets.UTF_8.name())) {
+                printPlaylist(printWriter, destinationPath);
+            }
+        }
+    }
+
+    protected void printPlaylist(PrintWriter printWriter, Path playlistPath) {
+        LOG.info("Writing playlist '{}' to file {}", name, playlistPath);
+        printWriter.println("#EXTM3U");
+        audioItems.forEach(audioItem -> {
+            printWriter.println("#EXTALB:" + audioItem.album());
+            printWriter.println("#EXTART:" + audioItem.artist());
+            printWriter.print("#EXTINF:" + audioItem.duration().getSeconds());
+            printWriter.println("," + audioItem.title());
+
+            Path parent = playlistPath.getParent();
+            Path trackPath = parent.relativize(audioItem.path());
+
+            printWriter.println(trackPath);
+        });
+    }
+
     public <A extends EntityAttribute<V>, V> V getAttribute(A attribute) throws UnknownAttributeException {
         return (V) Optional.ofNullable(attributes.get(attribute))
                 .map(Supplier::get)

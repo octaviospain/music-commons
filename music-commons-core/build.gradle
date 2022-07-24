@@ -6,7 +6,7 @@ group = 'net.transgressoft'
 version gitVersion()
 description = 'Transgressoft Music Commons - Core'
 
-project.tasks["sonarqube"].dependsOn "compileJava"
+project.tasks['sonarqube'].dependsOn 'compileJava'
 
 dependencies {
     implementation 'be.tarsos:transcoder:1.2'
@@ -21,6 +21,7 @@ dependencies {
     testImplementation 'com.google.truth:truth:1.1.3'
     testImplementation 'ch.qos.logback:logback-core:1.3.0-alpha5'
     testImplementation 'org.mockito:mockito-core:4.6.1'
+    testImplementation 'org.mockito:mockito-junit-jupiter:4.6.1'
     testImplementation(platform('org.junit:junit-bom:5.9.0-M1'))
     testImplementation('org.junit.jupiter:junit-jupiter')
 
@@ -39,19 +40,19 @@ publishing {
             artifact javadocJar
 
             pom {
-                name = "music-commons-core"
+                name = 'music-commons-core'
                 description = 'Transgressoft Music Commons - Core'
                 licenses {
                     license {
-                        name = "GNU General Public License v3"
-                        url = "https://www.gnu.org/licenses/gpl-3.0.en.html"
+                        name = 'GNU General Public License v3'
+                        url = 'https://www.gnu.org/licenses/gpl-3.0.en.html'
                     }
                 }
                 developers {
                     developer {
-                        id = "octaviospain"
-                        name = "Octavio Calleya García"
-                        email = "octaviospain@gmail.com"
+                        id = 'octaviospain'
+                        name = 'Octavio Calleya García'
+                        email = 'octaviospain@gmail.com'
                     }
                 }
             }
@@ -62,7 +63,7 @@ publishing {
         maven {
             credentials {
                 username = 'admin'
-                password = 'nexus2885mwggyk'
+                password = project.repoPass
             }
             mavenContent {
                 snapshotsOnly()
@@ -75,7 +76,7 @@ publishing {
         maven {
             credentials {
                 username = 'admin'
-                password = 'nexus2885mwggyk'
+                password = project.repoPass
             }
             mavenContent {
                 releasesOnly()

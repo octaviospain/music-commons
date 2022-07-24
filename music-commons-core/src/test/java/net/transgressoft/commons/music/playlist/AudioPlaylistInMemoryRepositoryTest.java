@@ -41,9 +41,10 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
     void searchOperationsTest() throws Exception {
         audioPlaylistRepository = new AudioPlaylistInMemoryRepository<>();
 
-        var rock = audioPlaylistRepository.createPlaylist("Rock", List.of(
+        var rockAudioItems = List.of(
                 createTestAudioItem("50s Rock hit 1", Duration.ofSeconds(60)),
-                createTestAudioItem("50s Rock hit 2 my fav", Duration.ofSeconds(230))));
+                createTestAudioItem("50s Rock hit 2 my fav", Duration.ofSeconds(230)));
+        var rock = audioPlaylistRepository.createPlaylist("Rock", rockAudioItems);
         assertThat(audioPlaylistRepository.findSinglePlaylistByName(rock.getName()).orElseThrow()).isEqualTo(rock);
         var playlistsThatContainsAllAudioItemsWith50sInTitle =
                 audioPlaylistRepository.search(QueryPredicate.of(SELF.audioItemsAllMatch(TITLE.contains("50s"))));
@@ -94,6 +95,12 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
         var playlistsThatContainsAudioItemsWithDurationBelow60 =
                 audioPlaylistRepository.search(QueryPredicate.of(SELF.audioItemsAnyMatch(DURATION.isShorterThan(Duration.ofSeconds(61)))));
         assertThat(playlistsThatContainsAudioItemsWithDurationBelow60).containsExactly(rock, fifties);
+
+        audioPlaylistRepository.removeAudioItemsFromPlaylist(fiftiesItems, fifties);
+        assertThat(audioPlaylistRepository.findById(fifties.id()).get().audioItems()).isEmpty();
+
+        audioPlaylistRepository.removeAudioItems(rockAudioItems);
+        assertThat(audioPlaylistRepository.findById(rock.id()).get().audioItems()).isEmpty();
 
         audioPlaylistRepository.clear();
         assertThat(audioPlaylistRepository).isEmpty();

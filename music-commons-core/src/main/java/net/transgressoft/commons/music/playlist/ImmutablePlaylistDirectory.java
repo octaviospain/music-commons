@@ -6,6 +6,12 @@ import net.transgressoft.commons.music.audio.AudioItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -18,7 +24,7 @@ class ImmutablePlaylistDirectory<I extends AudioItem> extends ImmutablePlaylist<
 
     protected <N extends AudioPlaylist<I>> ImmutablePlaylistDirectory(int id, String name, List<I> audioItems, Set<N> playlists) {
         super(id, name, audioItems);
-        descendantPlaylists= new ConcurrentSkipListSet<>(playlists);
+        descendantPlaylists = new ConcurrentSkipListSet<>(playlists);
     }
 
     @Override
@@ -45,6 +51,40 @@ class ImmutablePlaylistDirectory<I extends AudioItem> extends ImmutablePlaylist<
     @Override
     public boolean isDirectory() {
         return true;
+    }
+
+    @Override
+    public void exportToM3uFile(Path destinationPath) throws IOException {
+        if (destinationPath.toFile().exists()) {
+            LOG.debug("Destination file already exists: {}", destinationPath);
+        } else {
+            Files.createFile(destinationPath);
+            printDescendantPlaylistsToM3uFile(destinationPath);
+
+            if (!descendantPlaylists.isEmpty()) {
+
+                Path playlistDirectoryPath = destinationPath.resolve(getName());
+                File playlistDirectoryFile = playlistDirectoryPath.toFile();
+
+                if (!playlistDirectoryPath.toFile().exists()) {
+                    Files.createDirectory(playlistDirectoryFile.toPath());
+                    for (AudioPlaylist<I> playlist : descendantPlaylists) {
+                        playlist.exportToM3uFile(playlistDirectoryPath.resolve(playlist.getName()));
+                    }
+                }
+            }
+        }
+    }
+
+    private void printDescendantPlaylistsToM3uFile(Path playlistFolderPath) throws IOException {
+        try (PrintWriter printWriter = new PrintWriter(playlistFolderPath.toString(), StandardCharsets.UTF_8.name())) {
+            printWriter.println("#EXTM3U");
+            descendantPlaylists.forEach(playlist -> {
+                Path descendantPlaylistPath = playlistFolderPath.getParent().relativize(playlistFolderPath.resolve(playlist.getName()));
+                printWriter.println(descendantPlaylistPath);
+                super.printPlaylist(printWriter, playlistFolderPath);
+            });
+        }
     }
 
     @Override

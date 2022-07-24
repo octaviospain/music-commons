@@ -1,3 +1,4 @@
 rootProject.name = 'music-commons'
-include "music-commons-api"
-include "music-commons-core"
+
+include 'music-commons-api'
+include 'music-commons-core'

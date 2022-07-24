@@ -31,7 +31,7 @@ class MutablePlaylistDirectory<I extends AudioItem> extends ImmutablePlaylistDir
     }
 
     @Override
-    public void addAudioItems(List<I> audioItems) {
+    public void addAudioItems(Collection<I> audioItems) {
         super.addAll(audioItems);
     }
 

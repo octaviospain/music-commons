@@ -72,6 +72,8 @@ public interface AudioItem extends QueryEntity {
 
     AudioItem playCount(short playCount);
 
+    AudioItem incrementPlayCount();
+
     LocalDateTime dateOfInclusion();
 
     LocalDateTime lastDateModified();

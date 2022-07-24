@@ -4,6 +4,7 @@ import net.transgressoft.commons.music.audio.AudioItem;
 import net.transgressoft.commons.query.Repository;
 import net.transgressoft.commons.query.RepositoryException;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -29,7 +30,7 @@ public interface AudioPlaylistRepository<I extends AudioItem, N extends AudioPla
      * @param audioItems
      * @param playlist
      */
-    void addAudioItemsToPlaylist(List<I> audioItems, N playlist);
+    void addAudioItemsToPlaylist(Collection<I> audioItems, N playlist);
 
     /**
      * Precondition, <tt>playlist</tt> and <tt>directory</tt> exist in the <tt>AudioPlaylistRepository</tt>.
@@ -39,6 +40,17 @@ public interface AudioPlaylistRepository<I extends AudioItem, N extends AudioPla
      * @param directory
      */
     void addPlaylistsToDirectory(Set<N> playlist, D directory);
+
+    /**
+     * Precondition, <tt>playlist</tt> exist in the <tt>AudioPlaylistRepository</tt>.
+     * Otherwise, no action is performed.
+     *
+     * @param audioItems
+     * @param playlist
+     */
+    void removeAudioItemsFromPlaylist(Collection<I> audioItems, N playlist);
+
+    void removeAudioItems(Collection<I> audioItems);
 
     /**
      * Precondition, <tt>playlistToMove</tt> and <tt>destinationPlaylist</tt> exist in the <tt>AudioPlaylistRepository</tt>.

@@ -1,9 +1,11 @@
 package net.transgressoft.commons.music.waveform;
 
+import net.transgressoft.commons.query.QueryEntity;
+
 /**
  * @author Octavio Calleya
  */
-public interface AudioWaveform {
+public interface AudioWaveform extends QueryEntity {
 
     int width();
 

@@ -9,23 +9,17 @@ import net.transgressoft.commons.query.BooleanQueryTerm;
 import net.transgressoft.commons.query.EntityAttribute;
 import net.transgressoft.commons.query.InMemoryRepository;
 import net.transgressoft.commons.query.RepositoryException;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static net.transgressoft.commons.music.playlist.PlaylistStringAttribute.NAME;
 
+@SuppressWarnings("unchecked")
 public class AudioPlaylistInMemoryRepository<I extends AudioItem, P extends AudioPlaylist<I>, D extends AudioPlaylistDirectory<I>,
         MP extends MutableAudioPlaylist<I>, MD extends MutableAudioPlaylistDirectory<I>> implements AudioPlaylistRepository<I, P, D> {
 
@@ -43,8 +37,8 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, P extends Audi
     }
 
     protected AudioPlaylistInMemoryRepository(Map<Integer, MP> playlistsById, Map<Integer, MD> directoriesByID) {
-      playlists = new InMemoryRepository<>(playlistsById);
-      directories = new InMemoryRepository<>(directoriesByID);
+        playlists = new InMemoryRepository<>(playlistsById);
+        directories = new InMemoryRepository<>(directoriesByID);
     }
 
     @Override
@@ -54,7 +48,7 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, P extends Audi
     }
 
     @Override
-    public void addAll(Set<P> playlists) {
+    public void addAll(Set<? extends P> playlists) {
         Objects.requireNonNull(playlists);
         playlists.forEach(this::add);
     }
@@ -108,7 +102,7 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, P extends Audi
     }
 
     @Override
-    public void removeAll(Set<P> entities) {
+    public void removeAll(Set<? extends P> entities) {
         Objects.requireNonNull(entities);
         removeRecursive(entities);
     }
@@ -120,7 +114,7 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, P extends Audi
         playlistsMultiMap.clear();
     }
 
-    private void removeRecursive(Set<P> mutablePlaylistNodes) {
+    private void removeRecursive(Set<? extends P> mutablePlaylistNodes) {
         for (P p : mutablePlaylistNodes) {
             playlistsMultiMap.asMap().remove(p.getUniqueId());
             if (p.isDirectory()) {
@@ -270,7 +264,7 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, P extends Audi
     }
 
     @Override
-    public void addAudioItemsToPlaylist(List<I> audioItems, P playlist) {
+    public void addAudioItemsToPlaylist(Collection<I> audioItems, P playlist) {
         Objects.requireNonNull(audioItems);
         Objects.requireNonNull(playlist);
 
@@ -333,6 +327,17 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, P extends Audi
         } else {
             return Optional.empty();
         }
+    }
+
+    @Override
+    public void removeAudioItemsFromPlaylist(Collection<I> audioItems, P playlist) {
+        findByIdInternal(playlist.id()).ifPresent(p -> p.removeAudioItems(audioItems));
+    }
+
+    @Override
+    public void removeAudioItems(Collection<I> audioItems) {
+        playlists.forEach(p -> p.removeAudioItems(audioItems));
+        directories.forEach(d -> d.removeAudioItems(audioItems));
     }
 
     @Override

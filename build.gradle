@@ -1,7 +1,6 @@
-import org.gradle.api.tasks.compile.JavaCompile
-
 plugins {
     id 'com.palantir.git-version' version '0.15.0'
+    id 'org.jetbrains.kotlin.jvm' version '1.7.0'
 }
 
 group 'net.transgressoft'
@@ -13,10 +12,19 @@ gradle.projectsEvaluated {
     }
 }
 
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+}
+
 subprojects {
     apply plugin: 'java'
     apply plugin: 'java-library'
     apply plugin: 'jacoco'
+    apply plugin: 'kotlin'
     apply plugin: 'maven-publish'
 
     ext {
@@ -31,7 +39,7 @@ subprojects {
     repositories {
         mavenCentral()
         maven {
-            url "http://nexus.pipon.xxx/repository/maven-public/"
+            url 'http://nexus.pipon.xxx/repository/maven-public/'
             allowInsecureProtocol true
         }
     }
@@ -43,7 +51,7 @@ subprojects {
     }
 
     plugins.withType(JacocoPlugin) {
-        tasks["test"].finalizedBy 'jacocoTestReport'
+        tasks['test'].finalizedBy 'jacocoTestReport'
     }
 
     jacocoTestReport {
@@ -64,17 +72,10 @@ subprojects {
         javadoc.options.addStringOption('Xdoclint:none', '-quiet')
     }
 
-    tasks.withType(JavaCompile) {
-//        options.compilerArgs += '--enable-preview'
-    }
-    tasks.withType(Test) {
-//        jvmArgs += "--enable-preview"
-    }
-
     test {
         useJUnitPlatform()
         testLogging {
-            events "passed", "skipped", "failed"
+            events 'passed', 'skipped', 'failed'
         }
     }
 }

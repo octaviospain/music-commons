@@ -31,7 +31,7 @@ class MutablePlaylist<I extends AudioItem> extends ImmutablePlaylist<I> implemen
     }
 
     @Override
-    public void addAudioItems(List<I> audioItems) {
+    public void addAudioItems(Collection<I> audioItems) {
         requireNonNull(audioItems);
         super.addAll(audioItems);
     }
