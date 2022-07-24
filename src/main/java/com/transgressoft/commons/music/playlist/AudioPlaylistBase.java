@@ -17,11 +17,7 @@ public abstract class AudioPlaylistBase<I extends AudioItem> implements AudioPla
 
     protected AudioPlaylistBase(String name, List<I> audioItems) {
         this.name = name;
-        this.audioItems = audioItems;
-    }
-
-    protected AudioPlaylistBase(String name) {
-        this(name, Collections.emptyList());
+        this.audioItems = new ArrayList<>(audioItems);
     }
 
     @Override
@@ -50,8 +46,8 @@ public abstract class AudioPlaylistBase<I extends AudioItem> implements AudioPla
     }
 
     @Override
-    public void removeAudioItems(List<I> audioItems) {
-        this.audioItems.removeAll(audioItems);
+    public boolean removeAudioItems(Set<I> audioItems) {
+        return this.audioItems.removeAll(audioItems);
     }
 
     @Override
@@ -67,10 +63,7 @@ public abstract class AudioPlaylistBase<I extends AudioItem> implements AudioPla
      */
     @Override
     public int compareTo(AudioPlaylist<I> playlist) {
-        if (Objects.equal(name, playlist.name()))
-            return audioItems.size() - playlist.audioItems().size();
-        else
-            return name.compareTo(playlist.name());
+        return playlist.name().compareTo(name);
     }
 
     @SuppressWarnings ("unchecked")
@@ -79,13 +72,12 @@ public abstract class AudioPlaylistBase<I extends AudioItem> implements AudioPla
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         AudioPlaylist<I> that = (AudioPlaylist<I>) o;
-        return Objects.equal(name, that.name()) &&
-                Objects.equal(audioItems, that.audioItems());
+        return Objects.equal(name, that.name());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(name, audioItems);
+        return Objects.hashCode(name);
     }
 
     @Override

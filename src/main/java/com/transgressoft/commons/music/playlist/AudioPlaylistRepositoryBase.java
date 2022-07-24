@@ -1,123 +1,27 @@
 package com.transgressoft.commons.music.playlist;
 
-import com.google.common.graph.*;
 import com.transgressoft.commons.music.AudioItem;
-
-import java.util.*;
 
 /**
  * @author Octavio Calleya
  */
-public abstract class AudioPlaylistRepositoryBase<I extends AudioItem, P extends AudioPlaylist<I>, F extends AudioPlaylistFolder<I>>
-        implements AudioPlaylistRepository<I, P, F> {
+public abstract class AudioPlaylistRepositoryBase<I extends AudioItem, P extends AudioPlaylist<I>, T extends PlaylistTree<I>>
+        implements AudioPlaylistRepository<I, P, T> {
 
-    private final F rootPlaylist;
+    private final T playlistTree;
 
-    private MutableGraph<AudioPlaylist<I>> playlistsTree = GraphBuilder.directed().build();
-
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings ("unchecked")
     protected AudioPlaylistRepositoryBase() {
-        rootPlaylist = (F) new SimpleAudioPlaylistFolder("ROOT");
-        playlistsTree.addNode(rootPlaylist);
+        this((T) new SimplePlaylistTree("ROOT_PLAYLIST"));
+    }
+
+    protected AudioPlaylistRepositoryBase(T playlistTree) {
+        this.playlistTree = playlistTree;
     }
 
     @Override
-    public void addToFirstLevel(P playlist) {
-        add(playlist, rootPlaylist);
+    public T getRootPlaylistTree() {
+        return playlistTree;
     }
 
-    @SuppressWarnings("unchecked")
-    @Override
-    public void add(P playlist, F playlistFolder) {
-        if (! playlistsTree.nodes().contains(playlistFolder))
-            playlistsTree.putEdge(rootPlaylist, playlistFolder);
-
-        playlistsTree.putEdge(playlistFolder, playlist);
-
-        //  Includes the playlist into its parent playlist folder to ensure consistency
-        //  If it was already included, nothing changes because the underlying data structure is a Set,
-        //  assuming that implementation of equals() and hashCode() is consistent.
-        playlistFolder.includePlaylist(playlist);
-
-        if (playlist instanceof AudioPlaylistFolder) {
-            F audioPlaylistFolder = (F) playlist;
-            add(audioPlaylistFolder, (Collection<P>) audioPlaylistFolder.includedPlaylists());
-        }
-    }
-
-    @Override
-    public void add(F parent, Collection<P> playlists) {
-        playlists.forEach(includedPlaylist ->
-            add(includedPlaylist, parent));
-    }
-
-    @Override
-    public void delete(P playlist) {
-        getParentPlaylist(playlist).ifPresent(parent -> {
-            playlistsTree.removeEdge(parent, playlist);
-            parent.removeIncludedPlaylist(playlist);
-        });
-        playlistsTree.removeNode(playlist);
-    }
-
-    @Override
-    public void move(P playlistToMove, F destinationPlaylistFolder) {
-        Optional<F> parentOfMovedPlaylist = getParentPlaylist(playlistToMove);
-        parentOfMovedPlaylist.ifPresent(oldPlaylistFolder -> {
-            playlistsTree.removeEdge(oldPlaylistFolder, playlistToMove);
-            oldPlaylistFolder.removeIncludedPlaylist(playlistToMove);
-            playlistsTree.putEdge(destinationPlaylistFolder, playlistToMove);
-            destinationPlaylistFolder.includePlaylist(playlistToMove);
-        });
-    }
-
-    @Override
-    public void removeAudioItems(List<I> tracks) {
-        playlistsTree.nodes().forEach(playlist -> playlist.removeAudioItems(tracks));
-    }
-
-    @Override
-    public boolean contains(String playlistName) {
-        return playlistsTree.nodes().stream().anyMatch(playlist -> playlist.name().equals(playlistName));
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public Optional<F> getParentPlaylist(P playlist) {
-        Optional<AudioPlaylist<I>> foundParentPlaylist = playlistsTree.predecessors(playlist).stream().findFirst();
-
-        Optional<F> result = Optional.empty();
-
-        if (foundParentPlaylist.isPresent()) {
-            AudioPlaylist<I> found = foundParentPlaylist.get();
-            if (! (found instanceof AudioPlaylistFolder)) {
-                throw new NullPointerException("Parent of the playlist should be an instance of AudioPlaylistFolder");
-            } else {
-                return Optional.of((F) found);
-            }
-        }
-        return result;
-    }
-
-    @Override
-    public ImmutableGraph<AudioPlaylist<I>> getPlaylistTree() {
-        return ImmutableGraph.copyOf(playlistsTree);
-    }
-
-    @Override
-    public boolean isParentPlaylistRoot(P playlist) {
-        Optional<F> parentPlaylist = getParentPlaylist(playlist);
-        return parentPlaylist.map(audioPlaylist -> audioPlaylist.equals(rootPlaylist)).orElse(false);
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return playlistsTree.nodes().size() == 1  && playlistsTree.nodes().contains(rootPlaylist);
-    }
-
-    @Override
-    public void clear() {
-        playlistsTree = GraphBuilder.directed().build();
-        playlistsTree.addNode(rootPlaylist);
-    }
 }

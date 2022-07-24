@@ -7,51 +7,55 @@ import org.slf4j.*;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
-import java.util.Collection;
+import java.util.Set;
 
 /**
- * @author Octavio Calleya  
+ * @author Octavio Calleya
  */
-public abstract class PlaylistExportToolBase<P extends AudioPlaylist<? extends AudioItem>> implements PlaylistExportTool<P> {
+public abstract class PlaylistExportToolBase<T extends PlaylistTree<? extends AudioItem>> implements PlaylistExportTool<T> {
 
     private final Logger LOG = LoggerFactory.getLogger(getClass().getName());
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings ("unchecked")
     @Override
-    public void exportPlaylistsAsM3u(Collection<P> playlists, Path folder) throws ExportException {
-        for (P playlist : playlists) {
+    public void exportPlaylistsAsM3u(T playlistTree, Path path) throws ExportException {
+        for (AudioPlaylist<? extends AudioItem> playlist : playlistTree.audioPlaylists()) {
             String playlistFileName = getPlaylistM3uName(playlist.name());
+            LOG.info("Exporting playlist {} to {}", playlist.name(), path);
+
             try {
-                if (playlist instanceof AudioPlaylistFolder) {
-                    AudioPlaylistFolder<AudioItem> audioPlaylistFolder = (AudioPlaylistFolder<AudioItem>) playlist;
-
-                    Path createdDirectory = folder.resolve(audioPlaylistFolder.name());
-                    File folderFile = createdDirectory.toFile();
-
-                    if (folderFile.exists())
-                        LOG.debug("Folder {} already exists", folderFile.getAbsolutePath());
-                    else
-                        createdDirectory = Files.createDirectory(folderFile.toPath());
-
-                    if (! createdDirectory.toFile().exists())
-                        throw new ExportException("Folder was not created");
-                    else {
-                        Path playlistFolderName = folder.resolve(playlistFileName);
-                        printContainedPlaylistsInFolderPlaylist((Collection<P>) audioPlaylistFolder.includedPlaylists(), createdDirectory, playlistFolderName);
-                        exportPlaylistsAsM3u((Collection<P>) audioPlaylistFolder.includedPlaylists(), folderFile.toPath());
-                    }
+                if (path.resolve(playlistFileName).toFile().exists()) {
+                    LOG.debug("Playlist {} already exists", playlistFileName);
                 } else {
-                    LOG.info("Exporting playlist {} to {}", playlist.name(), folder);
+                    printPlaylist(playlist, Files.createFile(path.resolve(playlistFileName)));
+                }
+            }
+            catch (IOException exception) {
+                throw new ExportException("Error exporting playlist " + playlist.toString(), exception);
+            }
+        }
 
-                    if (folder.resolve(playlistFileName).toFile().exists()) {
-                        LOG.debug("Playlist {} already exists", playlistFileName);
-                    } else {
-                        printPlaylist(playlist, Files.createFile(folder.resolve(playlistFileName)));
-                    }
+        for (PlaylistTree<? extends AudioItem> subPlaylistTree : playlistTree.subPlaylistTrees()) {
+            String playlistFolderName = subPlaylistTree.name();
+            Path createdDirectory = path.resolve(playlistFolderName);
+            File folderFile = createdDirectory.toFile();
+
+            try {
+                if (folderFile.exists())
+                    LOG.debug("Folder {} already exists", folderFile.getAbsolutePath());
+                else
+                    createdDirectory = Files.createDirectory(folderFile.toPath());
+
+                if (! createdDirectory.toFile().exists())
+                    throw new ExportException("Folder was not created");
+                else {
+                    Path playlistFolderPath = path.resolve(playlistFolderName);
+                    printContainedPlaylistsInFolderPlaylist(subPlaylistTree.audioPlaylists(), createdDirectory, playlistFolderPath);
+                    exportPlaylistsAsM3u((T) subPlaylistTree, folderFile.toPath());
                 }
             }
             catch (IOException | ExportException exception) {
-                throw new ExportException("Error exporting playlist " + playlist.toString(), exception);
+                throw new ExportException("Error exporting playlist " + playlistFolderName, exception);
             }
         }
     }
@@ -60,7 +64,7 @@ public abstract class PlaylistExportToolBase<P extends AudioPlaylist<? extends A
         return playlistName + ".m3u";
     }
 
-    private void printContainedPlaylistsInFolderPlaylist(Collection<P> playlists, Path folder, Path playlistFolderPath) throws IOException {
+    private void printContainedPlaylistsInFolderPlaylist(Set<? extends AudioPlaylist<? extends AudioItem>> playlists, Path folder, Path playlistFolderPath) throws IOException {
         try (PrintWriter printWriter = new PrintWriter(playlistFolderPath.toString(), StandardCharsets.UTF_8.name())) {
             printWriter.println("#EXTM3U");
             playlists.forEach(playlist -> {
@@ -71,10 +75,10 @@ public abstract class PlaylistExportToolBase<P extends AudioPlaylist<? extends A
         }
     }
 
-    protected void printPlaylist(P audioPlaylist, Path playlistsPath) throws IOException {
+    protected void printPlaylist(AudioPlaylist<? extends AudioItem> audioPlaylist, Path playlistPath) throws IOException {
         ImmutableCollection<? extends AudioItem> tracks = audioPlaylist.audioItems();
-        try (PrintWriter printWriter = new PrintWriter(playlistsPath.toFile(), StandardCharsets.UTF_8.name())) {
-            LOG.info("Creating playlist folder {}", playlistsPath);
+        try (PrintWriter printWriter = new PrintWriter(playlistPath.toFile(), StandardCharsets.UTF_8.name())) {
+            LOG.info("Creating playlist folder {}", playlistPath);
             printWriter.println("#EXTM3U");
             for (AudioItem audioItem : tracks) {
                 printWriter.println("#EXTALB:" + audioItem.album());
@@ -82,7 +86,7 @@ public abstract class PlaylistExportToolBase<P extends AudioPlaylist<? extends A
                 printWriter.print("#EXTINF:" + audioItem.duration().getSeconds());
                 printWriter.println("," + audioItem.name());
 
-                Path parent = playlistsPath.getParent();
+                Path parent = playlistPath.getParent();
                 Path trackPath = parent.relativize(audioItem.path());
 
                 printWriter.println(trackPath.toString());

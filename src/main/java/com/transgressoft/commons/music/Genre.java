@@ -5,9 +5,15 @@ package com.transgressoft.commons.music;
  */
 public enum Genre {
 
+    ROCK,
     UNDEFINED;
 
     public static Genre parseGenre(String value) {
+        for (Genre genre : Genre.values()) {
+            if (genre.name().equalsIgnoreCase(value.replace(" ", "_")))
+                return genre;
+        }
+
         return UNDEFINED;
     }
 
@@ -19,6 +25,8 @@ public enum Genre {
         for (int c = 1; c < replaced.toCharArray().length; c++)
             if (replaced.charAt(c - 1) == ' ' || replaced.charAt(c - 1) == ',')
                 capitalized[c] = Character.toTitleCase(replaced.charAt(c));
+            else
+                capitalized[c] = Character.toLowerCase(replaced.charAt(c));
 
         return new String(capitalized);
     }

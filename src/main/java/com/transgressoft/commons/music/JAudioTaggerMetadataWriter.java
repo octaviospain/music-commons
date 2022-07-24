@@ -5,8 +5,10 @@ import org.jaudiotagger.audio.*;
 import org.jaudiotagger.audio.exceptions.*;
 import org.jaudiotagger.audio.wav.WavOptions;
 import org.jaudiotagger.tag.*;
+import org.jaudiotagger.tag.flac.FlacTag;
 import org.jaudiotagger.tag.id3.ID3v24Tag;
 import org.jaudiotagger.tag.images.*;
+import org.jaudiotagger.tag.mp4.Mp4Tag;
 import org.jaudiotagger.tag.wav.*;
 import org.slf4j.*;
 
@@ -26,13 +28,8 @@ public class JAudioTaggerMetadataWriter implements AudioItemMetadataWriter {
         File audioFile = audioItem.path().toFile();
         try {
             AudioFile audio = AudioFileIO.read(audioFile);
-            String format = audio.getAudioHeader().getFormat();
-            if (format.startsWith("WAV")) {
-                WavTag wavTag = new WavTag(WavOptions.READ_ID3_ONLY);
-                wavTag.setID3Tag(new ID3v24Tag());
-                wavTag.setInfoTag(new WavInfoTag());
-                audio.setTag(wavTag);
-            }
+            Tag emptyTag = createEmptyTag(audio.getAudioHeader().getFormat());
+            audio.setTag(emptyTag);
             setTrackFieldsToTag(audio.getTag(), audioItem);
             audio.commit();
             LOG.debug("AudioItem {} written to file {}", audioItem, audioFile.getAbsolutePath());
@@ -48,21 +45,50 @@ public class JAudioTaggerMetadataWriter implements AudioItemMetadataWriter {
         }
     }
 
-    private void setTrackFieldsToTag(Tag tag, AudioItem serializableAudioItem) throws FieldDataInvalidException {
-        tag.setField(FieldKey.TITLE, serializableAudioItem.name());
-        tag.setField(FieldKey.ALBUM, serializableAudioItem.album().name());
-        tag.setField(FieldKey.ALBUM_ARTIST, serializableAudioItem.album().albumArtist().name());
-        tag.setField(FieldKey.ARTIST, serializableAudioItem.artist().name());
-        tag.setField(FieldKey.GENRE, serializableAudioItem.genre().name());
-        tag.setField(FieldKey.COMMENT, serializableAudioItem.comments());
-        tag.setField(FieldKey.GROUPING, serializableAudioItem.album().label().name());
-        tag.setField(FieldKey.TRACK, Integer.toString(serializableAudioItem.trackNumber()));
-        tag.deleteField(FieldKey.TRACK_TOTAL);
-        tag.setField(FieldKey.DISC_NO, Integer.toString(serializableAudioItem.discNumber()));
-        tag.deleteField(FieldKey.DISC_TOTAL);
-        tag.setField(FieldKey.YEAR, Integer.toString(serializableAudioItem.album().year()));
-        tag.setField(FieldKey.BPM, Float.toString(serializableAudioItem.bpm()));
-        tag.setField(FieldKey.IS_COMPILATION, Boolean.toString(serializableAudioItem.album().isCompilation()));
+    private Tag createEmptyTag(String format) {
+        if (format.startsWith("Wav")) {
+            WavTag wavTag = new WavTag(WavOptions.READ_ID3_ONLY);
+            wavTag.setID3Tag(new ID3v24Tag());
+            wavTag.setInfoTag(new WavInfoTag());
+            return wavTag;
+        } else if (format.startsWith("Mp3")) {
+            Tag tag = new ID3v24Tag();
+            tag.getArtworkList().clear();
+            return tag;
+        } else if (format.startsWith("Flac")) {
+            Tag tag = new FlacTag();
+            tag.getArtworkList().clear();
+            return tag;
+        } else if (format.startsWith("Aac")) {
+            Tag tag = new Mp4Tag();
+            tag.getArtworkList().clear();
+            return tag;
+        } else {
+            return new WavInfoTag();
+        }
+    }
+
+    private void setTrackFieldsToTag(Tag tag, AudioItem audioItem) throws FieldDataInvalidException {
+        tag.setField(FieldKey.TITLE, audioItem.name());
+        tag.setField(FieldKey.ALBUM, audioItem.album().name());
+        tag.setField(FieldKey.ALBUM_ARTIST, audioItem.album().albumArtist().name());
+        tag.setField(FieldKey.ARTIST, audioItem.artist().name());
+        tag.setField(FieldKey.GENRE, audioItem.genre().name());
+        tag.setField(FieldKey.COMMENT, audioItem.comments());
+        tag.setField(FieldKey.GROUPING, audioItem.album().label().name());
+        tag.setField(FieldKey.TRACK, Integer.toString(audioItem.trackNumber()));
+        tag.setField(FieldKey.DISC_NO, Integer.toString(audioItem.discNumber()));
+        tag.setField(FieldKey.YEAR, Integer.toString(audioItem.album().year()));
+        tag.setField(FieldKey.IS_COMPILATION, Boolean.toString(audioItem.album().isCompilation()));
+        tag.setField(FieldKey.ENCODER, audioItem.encoder());
+
+        String bpmString = Float.toString(audioItem.bpm());
+        if (tag instanceof Mp4Tag) {
+            int indexOfDot = bpmString.indexOf('.');
+            tag.setField(FieldKey.BPM, bpmString.substring(0, indexOfDot));
+        } else {
+            tag.setField(FieldKey.BPM, bpmString);
+        }
     }
 
     private void overwriteCoverImage(AudioItem audioItem, File file, byte[] coverBytes) throws AudioItemManipulationException {

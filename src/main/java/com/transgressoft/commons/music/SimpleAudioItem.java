@@ -213,7 +213,7 @@ public class SimpleAudioItem implements AudioItem {
                 .toString();
     }
 
-    public static interface Builder<E extends AudioItem>  {
+    public interface Builder<E extends AudioItem>  {
 
         E build();
     }
@@ -234,7 +234,7 @@ public class SimpleAudioItem implements AudioItem {
         protected String encoder = "";
         protected String encoding = "";
 
-        public SimpleAudioItemBuilder(Path path, String name, Duration duration, int bitRate) {
+        protected SimpleAudioItemBuilder(Path path, String name, Duration duration, int bitRate) {
             this.path = path;
             this.name = name;
             this.duration = duration;

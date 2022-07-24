@@ -2,7 +2,7 @@ package com.transgressoft.commons.music.playlist;
 
 import com.transgressoft.commons.music.AudioItem;
 
-import java.util.List;
+import java.util.*;
 
 /**
  * @author Octavio Calleya
@@ -14,6 +14,6 @@ public class SimpleAudioPlaylist extends AudioPlaylistBase<AudioItem> {
     }
 
     public SimpleAudioPlaylist(String name) {
-        super(name);
+        super(name, Collections.emptyList());
     }
 }
