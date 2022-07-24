@@ -2,7 +2,7 @@ package com.transgressoft.commons.music.playlist;
 
 import com.google.common.base.Objects;
 import com.google.common.base.*;
-import com.google.common.collect.*;
+import com.google.common.collect.ImmutableList;
 import com.transgressoft.commons.music.AudioItem;
 
 import java.util.*;
@@ -14,20 +14,14 @@ public class SimpleAudioPlaylist implements AudioPlaylist<AudioItem> {
 
     private String name;
     private List<AudioItem> audioItems;
-    private Set<AudioPlaylist<AudioItem>> includedPlaylists;
-
-    public SimpleAudioPlaylist(String name, List<AudioItem> audioItems, Set<AudioPlaylist<AudioItem>> includedPlaylists) {
-        this.name = name;
-        this.audioItems = audioItems;
-        this.includedPlaylists = includedPlaylists;
-    }
 
     public SimpleAudioPlaylist(String name, List<AudioItem> audioItems) {
-        this(name, audioItems, Collections.emptySet());
+        this.name = name;
+        this.audioItems = audioItems;
     }
 
     public SimpleAudioPlaylist(String name) {
-        this(name, Collections.emptyList(), Collections.emptySet());
+        this(name, Collections.emptyList());
     }
 
     @Override
@@ -61,33 +55,17 @@ public class SimpleAudioPlaylist implements AudioPlaylist<AudioItem> {
     }
 
     @Override
-    public ImmutableSet<AudioPlaylist<AudioItem>> includedPlaylists() {
-        return ImmutableSet.copyOf(includedPlaylists);
-    }
-
-    @Override
-    public void includePlaylist(AudioPlaylist<AudioItem> audioPlaylist) {
-        includedPlaylists.add(audioPlaylist);
-    }
-
-    @Override
-    public void removeIncludedPlaylist(AudioPlaylist<AudioItem> audioPlaylist) {
-        includedPlaylists.remove(audioPlaylist);
-    }
-
-    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         SimpleAudioPlaylist that = (SimpleAudioPlaylist) o;
         return com.google.common.base.Objects.equal(name, that.name) &&
-                com.google.common.base.Objects.equal(audioItems, that.audioItems) &&
-                com.google.common.base.Objects.equal(includedPlaylists, that.includedPlaylists);
+                com.google.common.base.Objects.equal(audioItems, that.audioItems);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(name, audioItems, includedPlaylists);
+        return Objects.hashCode(name, audioItems);
     }
 
     @Override

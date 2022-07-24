@@ -5,9 +5,9 @@ import com.transgressoft.commons.music.AudioItem;
 /**
  * @author Octavio Calleya
  */
-public class SimpleAudioPlaylistRepository extends AudioPlaylistRepositoryBase<AudioPlaylist<AudioItem>, AudioItem> {
+public class SimpleAudioPlaylistRepository extends AudioPlaylistRepositoryBase<AudioItem> {
 
     public SimpleAudioPlaylistRepository() {
-        super(new SimpleAudioPlaylist("ROOT"));
+        super(new SimpleAudioPlaylistFolder("ROOT"));
     }
 }

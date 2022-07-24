@@ -1,6 +1,6 @@
 package com.transgressoft.commons.music.playlist;
 
-import com.google.common.collect.*;
+import com.google.common.collect.ImmutableList;
 import com.transgressoft.commons.music.AudioItem;
 
 import java.util.List;
@@ -21,11 +21,5 @@ public interface AudioPlaylist<I extends AudioItem> {
     void addAudioItems(List<I> audioItems);
 
     void removeAudioItems(List<I> audioItems);
-
-    ImmutableSet<AudioPlaylist<AudioItem>> includedPlaylists();
-
-    void includePlaylist(AudioPlaylist<I> audioPlaylist);
-
-    void removeIncludedPlaylist(AudioPlaylist<I> audioPlaylist);
 }
 
