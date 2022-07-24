@@ -2,7 +2,7 @@ package net.transgressoft.commons.music.audio;
 
 import net.transgressoft.commons.query.ShortAttribute;
 
-public enum ShortAudioItemAttribute implements AudioItemAttribute<Short>, ShortAttribute<AudioItem, AudioItemAttribute<?>, Short> {
+public enum ShortAudioItemAttribute implements AudioItemAttribute<Short>, ShortAttribute {
 
     YEAR,
     TRACK_NUMBER,

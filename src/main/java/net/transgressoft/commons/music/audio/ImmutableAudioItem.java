@@ -12,6 +12,7 @@ import net.transgressoft.commons.music.Genre;
 import net.transgressoft.commons.music.ImmutableAlbum;
 import net.transgressoft.commons.music.ImmutableArtist;
 import net.transgressoft.commons.music.ImmutableLabel;
+import net.transgressoft.commons.query.EntityAttribute;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.text.WordUtils;
 
@@ -20,7 +21,6 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -64,7 +64,7 @@ public class ImmutableAudioItem implements AudioItem {
     private final LocalDateTime dateOfInclusion;
     private final LocalDateTime lastDateModified;
 
-    private final AudioItemAttributeSet attributeSet;
+    private final Map<AudioItemAttribute<?>, Object> attributes;
 
     public static ImmutableAudioItemBuilder builder(Path path, String name, Duration duration, int bitRate) {
         requireNonNull(path);
@@ -97,7 +97,26 @@ public class ImmutableAudioItem implements AudioItem {
         this.dateOfInclusion = dateOfInclusion;
         this.lastDateModified = lastDateModified;
 
-        attributeSet = new ImmutableAudioItemAttributeSet();
+        attributes = ImmutableMap.<AudioItemAttribute<?>, Object>builder()
+                .put(PATH, path.toString())
+                .put(TITLE, title)
+                .put(ARTIST, artist.name())
+                .put(ARTISTS_INVOLVED, artistsInvolved.toString())
+                .put(ALBUM, album.name())
+                .put(YEAR, album.year())
+                .put(GENRE, genre.name())
+                .put(COMMENTS, comments)
+                .put(TRACK_NUMBER, trackNumber)
+                .put(DISC_NUMBER, discNumber)
+                .put(BPM, bpm)
+                .put(DURATION, duration)
+                .put(BITRATE, bitRate)
+                .put(ENCODER, encoder)
+                .put(ENCODING, encoder)
+                .put(PLAY_COUNT, playCount)
+                .put(DATE_OF_INCLUSION, dateOfInclusion)
+                .put(LAST_DATE_MODIFIED, lastDateModified)
+                .build();
     }
 
     @Override
@@ -108,7 +127,7 @@ public class ImmutableAudioItem implements AudioItem {
     @Override
     public String uniqueId() {
         return new StringJoiner("-")
-                .add(fileName().replaceAll(" ", "_"))
+                .add(fileName().replace(' ', '_'))
                 .add(title)
                 .add(duration.toString())
                 .add(String.valueOf(bitRate()))
@@ -276,8 +295,9 @@ public class ImmutableAudioItem implements AudioItem {
     }
 
     @Override
-    public AudioItemAttributeSet attributes() {
-        return attributeSet;
+    @SuppressWarnings("unchecked")
+    public <A extends EntityAttribute<V>, V> V getAttribute(A attribute) {
+        return (V) attributes.get(attribute);
     }
 
     @Override
@@ -398,6 +418,78 @@ public class ImmutableAudioItem implements AudioItem {
                  audioItem.encoder(), audioItem.encoding(), audioItem.playCount(), audioItem.dateOfInclusion(), LocalDateTime.now());
         }
 
+        public ImmutableAudioItemBuilder artist(Artist artist) {
+            this.artist = artist;
+            return this;
+        }
+
+        public ImmutableAudioItemBuilder album(Album album) {
+            this.album = album;
+            return this;
+        }
+
+        public ImmutableAudioItemBuilder genre(Genre genre) {
+            this.genre = genre;
+            return this;
+        }
+
+        public ImmutableAudioItemBuilder comments(String comments) {
+            this.comments = comments;
+            return this;
+        }
+
+        public ImmutableAudioItemBuilder trackNumber(short trackNumber) {
+            this.trackNumber = trackNumber;
+            return this;
+        }
+
+        public ImmutableAudioItemBuilder discNumber(short discNumber) {
+            this.discNumber = discNumber;
+            return this;
+        }
+
+        public ImmutableAudioItemBuilder bpm(float bpm) {
+            this.bpm = bpm;
+            return this;
+        }
+
+        public ImmutableAudioItemBuilder encoder(String encoder) {
+            this.encoder = encoder;
+            return this;
+        }
+
+        public ImmutableAudioItemBuilder encoding(String encoding) {
+            this.encoding = encoding;
+            return this;
+        }
+
+        public ImmutableAudioItemBuilder playCount(short playCount) {
+            this.playCount = playCount;
+            return this;
+        }
+
+        @Override
+        public ImmutableAudioItem build() {
+            var artistsNamesInvolved = getArtistsNamesInvolved(name, artist.name(), album.albumArtist().name());
+            return new ImmutableAudioItem(path,
+                                          beautifyName(),
+                                          artist,
+                                          artistsNamesInvolved,
+                                          album,
+                                          genre,
+                                          comments.replaceAll("\\s+", " "),
+                                          trackNumber,
+                                          discNumber,
+                                          bpm,
+                                          duration,
+                                          bitRate,
+                                          encoder,
+                                          encoding,
+                                          playCount,
+                                          dateOfInclusion,
+                                          lastDateModified);
+        }
+
         /**
          * Returns the names of the artists that are involved in the fields of an {@link AudioItem},
          * that is, every artist that could appear in the {@link AudioItem#artist} variable,
@@ -506,78 +598,6 @@ public class ImmutableAudioItem implements AudioItem {
             return artistsInsideParenthesis;
         }
 
-        public ImmutableAudioItemBuilder artist(Artist artist) {
-            this.artist = artist;
-            return this;
-        }
-
-        public ImmutableAudioItemBuilder album(Album album) {
-            this.album = album;
-            return this;
-        }
-
-        public ImmutableAudioItemBuilder genre(Genre genre) {
-            this.genre = genre;
-            return this;
-        }
-
-        public ImmutableAudioItemBuilder comments(String comments) {
-            this.comments = comments;
-            return this;
-        }
-
-        public ImmutableAudioItemBuilder trackNumber(short trackNumber) {
-            this.trackNumber = trackNumber;
-            return this;
-        }
-
-        public ImmutableAudioItemBuilder discNumber(short discNumber) {
-            this.discNumber = discNumber;
-            return this;
-        }
-
-        public ImmutableAudioItemBuilder bpm(float bpm) {
-            this.bpm = bpm;
-            return this;
-        }
-
-        public ImmutableAudioItemBuilder encoder(String encoder) {
-            this.encoder = encoder;
-            return this;
-        }
-
-        public ImmutableAudioItemBuilder encoding(String encoding) {
-            this.encoding = encoding;
-            return this;
-        }
-
-        public ImmutableAudioItemBuilder playCount(short playCount) {
-            this.playCount = playCount;
-            return this;
-        }
-
-        @Override
-        public ImmutableAudioItem build() {
-            var artistsNamesInvolved = getArtistsNamesInvolved(name, artist.name(), album.albumArtist().name());
-            return new ImmutableAudioItem(path,
-                                          beautifyName(),
-                                          artist,
-                                          artistsNamesInvolved,
-                                          album,
-                                          genre,
-                                          comments.replaceAll("\\s+", " "),
-                                          trackNumber,
-                                          discNumber,
-                                          bpm,
-                                          duration,
-                                          bitRate,
-                                          encoder,
-                                          encoding,
-                                          playCount,
-                                          dateOfInclusion,
-                                          lastDateModified);
-        }
-
         private String beautifyName() {
             return name.replaceAll("\\s+", " ")
                     .replaceAll(" (?i)(remix)", " Remix")
@@ -586,48 +606,6 @@ public class ImmutableAudioItem implements AudioItem {
                     .replaceAll("(?i)(feat)(\\.|\\s) ", "feat ")
                     .replaceAll("(?i)(featuring) ", "featuring ")
                     .replaceAll("(?i)(with) ", "with ");
-        }
-    }
-
-    protected class ImmutableAudioItemAttributeSet implements AudioItemAttributeSet {
-
-        private final ImmutableMap<AudioItemAttribute<?>, Object> queryAttributes;
-
-        protected ImmutableAudioItemAttributeSet() {
-            queryAttributes = ImmutableMap.<AudioItemAttribute<?>, Object>builder()
-                    .put(PATH, path.toString())
-                    .put(TITLE, title)
-                    .put(ARTIST, artist.name())
-                    .put(ARTISTS_INVOLVED, artistsInvolved.toString())
-                    .put(ALBUM, album.name())
-                    .put(YEAR, album.year())
-                    .put(GENRE, genre.name())
-                    .put(COMMENTS, comments)
-                    .put(TRACK_NUMBER, trackNumber)
-                    .put(DISC_NUMBER, discNumber)
-                    .put(BPM, bpm)
-                    .put(DURATION, duration)
-                    .put(BITRATE, bitRate)
-                    .put(ENCODER, encoder)
-                    .put(ENCODING, encoder)
-                    .put(PLAY_COUNT, playCount)
-                    .put(DATE_OF_INCLUSION, dateOfInclusion)
-                    .put(LAST_DATE_MODIFIED, lastDateModified)
-                    .build();
-        }
-
-        protected ImmutableMap<AudioItemAttribute<?>, Object> attributes() {
-            return queryAttributes;
-        }
-
-        @Override
-        public <V> V get(AudioItemAttribute<?> attribute, Class<V> valueClass) {
-            return valueClass.cast(queryAttributes.get(attribute));
-        }
-
-        @Override
-        public Iterator<Map.Entry<AudioItemAttribute<?>, Object>> iterator() {
-            return queryAttributes.entrySet().iterator();
         }
     }
 }

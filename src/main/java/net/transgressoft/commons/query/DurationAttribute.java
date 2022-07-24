@@ -2,23 +2,13 @@ package net.transgressoft.commons.query;
 
 import java.time.Duration;
 
-public interface DurationAttribute<E extends QueryEntity<A>, A extends EntityAttribute<?>, V> extends EntityAttribute<V> {
+public interface DurationAttribute extends EntityAttribute<Duration> {
 
-    default BinaryQueryTermBase<E, A, Duration, Duration> lessThan(Duration duration) {
-        return new BinaryQueryTermBase<>((A) this, duration) {
-            @Override
-            public boolean apply(Duration attributeValue) {
-                return attributeValue.compareTo(duration) < 0;
-            }
-        };
+    default <E extends QueryEntity> QueryFunction<E>  isShorterThan(Duration duration) {
+        return queryEntity -> queryEntity.getAttribute(this).compareTo(duration) < 0;
     }
 
-    default BinaryQueryTermBase<E, A, Duration, Duration> longerThan(Duration duration) {
-        return new BinaryQueryTermBase<>((A) this, duration) {
-            @Override
-            public boolean apply(Duration attributeValue) {
-                return attributeValue.compareTo(duration) > 0;
-            }
-        };
+    default <E extends QueryEntity> QueryFunction<E>  isLongerThan(Duration duration) {
+        return queryEntity -> queryEntity.getAttribute(this).compareTo(duration) > 0;
     }
 }

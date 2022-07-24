@@ -1,26 +1,18 @@
 package net.transgressoft.commons.query;
 
 import java.nio.file.Path;
-import java.util.Objects;
 
-public interface PathAttribute<E extends QueryEntity<A>, A extends EntityAttribute<?>, V> extends EntityAttribute<V> {
+public interface PathAttribute extends EntityAttribute<Path> {
 
-    default BinaryQueryTermBase<E, A, Path, Path> equals(Path path) {
-        return new BinaryQueryTermBase<>((A) this, path) {
-            @Override
-            public boolean apply(Path attributeValue) {
-                return Objects.equals(path, attributeValue);
-            }
-        };
-    }
+    default <E extends QueryEntity> QueryFunction<E> contains(String string) {
+        return queryEntity ->
+                queryEntity.getAttribute(this).toAbsolutePath().toString()
+                        .contains(string);
+}
 
-    default BinaryQueryTermBase<E, A, Path, Path> notEquals(Path path) {
-        return new BinaryQueryTermBase<>((A) this, path) {
-            @Override
-            public boolean apply(Path attributeValue) {
-                return !Objects.equals(path, attributeValue);
-            }
-        };
-
+    default <E extends QueryEntity> QueryFunction<E> notContains(String string) {
+        return queryEntity ->
+                ! queryEntity.getAttribute(this).toAbsolutePath().toString()
+                        .contains(string);
     }
 }

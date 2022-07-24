@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 /**
  * @author Octavio Calleya
  */
-public interface AudioItem extends QueryEntity<AudioItemAttribute<?>> {
+public interface AudioItem extends QueryEntity {
 
     interface Builder<E extends AudioItem> {
 

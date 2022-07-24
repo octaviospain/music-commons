@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
@@ -90,7 +89,7 @@ class ImmutableAudioItemTest {
         assertEquals(encoder, audioItem.encoder());
         assertEquals(playCount, audioItem.playCount());
 
-        assertEquals(path.toString(), audioItem.attributes().get(PATH, String.class));
+        assertEquals(path.toString(), audioItem.getAttribute(PATH));
 
         audioItem = audioItem.comments("modified");
 

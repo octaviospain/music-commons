@@ -2,7 +2,7 @@ package net.transgressoft.commons.music.audio;
 
 import net.transgressoft.commons.query.IntegerAttribute;
 
-public enum IntegerAudioItemAttribute implements AudioItemAttribute<Integer>, IntegerAttribute<AudioItem, AudioItemAttribute<?>, Integer> {
+public enum IntegerAudioItemAttribute implements AudioItemAttribute<Integer>, IntegerAttribute {
 
     BITRATE
 }

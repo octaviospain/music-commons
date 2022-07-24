@@ -1,10 +1,10 @@
 package net.transgressoft.commons.query;
 
-public interface QueryEntity<A extends EntityAttribute<?>> {
+public interface QueryEntity {
 
     int id();
 
     String uniqueId();
 
-    AttributeSet<A> attributes();
+    <A extends EntityAttribute<V>, V> V getAttribute(A attribute);
 }
