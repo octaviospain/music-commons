@@ -10,13 +10,13 @@ import java.util.*;
  */
 public abstract class AudioPlaylistRepositoryBase<I extends AudioItem> implements AudioPlaylistRepository<I> {
 
-    protected final AudioPlaylistFolder<I> ROOT_PLAYLIST;
+    protected final AudioPlaylistFolder<I> rootPlaylist;
 
     private MutableGraph<AudioPlaylist<I>> playlistsTree = GraphBuilder.directed().build();
 
     protected AudioPlaylistRepositoryBase(AudioPlaylistFolder<I> rootPlaylist) {
-        ROOT_PLAYLIST = rootPlaylist;
-        playlistsTree.addNode(ROOT_PLAYLIST);
+        this.rootPlaylist = rootPlaylist;
+        playlistsTree.addNode(this.rootPlaylist);
     }
 
     @Override
@@ -36,7 +36,7 @@ public abstract class AudioPlaylistRepositoryBase<I extends AudioItem> implement
 
     @Override
     public void addFirstLevelPlaylist(AudioPlaylist<I> playlist) {
-        addPlaylist(ROOT_PLAYLIST, playlist);
+        addPlaylist(rootPlaylist, playlist);
     }
 
     @SuppressWarnings("unchecked")
@@ -101,17 +101,17 @@ public abstract class AudioPlaylistRepositoryBase<I extends AudioItem> implement
     @Override
     public boolean isParentPlaylistRoot(AudioPlaylist<I> playlist) {
         Optional<AudioPlaylistFolder<I>> parentPlaylist = getParentPlaylist(playlist);
-        return parentPlaylist.map(audioPlaylist -> audioPlaylist.equals(ROOT_PLAYLIST)).orElse(false);
+        return parentPlaylist.map(audioPlaylist -> audioPlaylist.equals(rootPlaylist)).orElse(false);
     }
 
     @Override
     public boolean isEmpty() {
-        return playlistsTree.nodes().size() == 1  && playlistsTree.nodes().contains(ROOT_PLAYLIST);
+        return playlistsTree.nodes().size() == 1  && playlistsTree.nodes().contains(rootPlaylist);
     }
 
     @Override
     public void clear() {
         playlistsTree = GraphBuilder.directed().build();
-        playlistsTree.addNode(ROOT_PLAYLIST);
+        playlistsTree.addNode(rootPlaylist);
     }
 }

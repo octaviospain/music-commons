@@ -21,5 +21,7 @@ public interface AudioPlaylist<I extends AudioItem> {
     void addAudioItems(List<I> audioItems);
 
     void removeAudioItems(List<I> audioItems);
+
+    void clear();
 }
 

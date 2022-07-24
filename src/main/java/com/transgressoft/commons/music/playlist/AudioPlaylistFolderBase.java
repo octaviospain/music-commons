@@ -48,6 +48,11 @@ public abstract class AudioPlaylistFolderBase<I extends AudioItem> extends Audio
         includedPlaylists.remove(audioPlaylist);
     }
 
+    @Override
+    public void clearIncludedPlaylists() {
+        includedPlaylists.clear();
+    }
+
     @Override   // TODO remove when supporting adding items besides playlists
     public ImmutableList<I> audioItems() {
         return itemsIncludedFromAllPlaylists();
@@ -69,6 +74,7 @@ public abstract class AudioPlaylistFolderBase<I extends AudioItem> extends Audio
         includedPlaylists.forEach(playlist -> playlist.removeAudioItems(audioItems));
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

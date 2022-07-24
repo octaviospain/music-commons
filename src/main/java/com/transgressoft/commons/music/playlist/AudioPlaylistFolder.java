@@ -16,6 +16,8 @@ public interface AudioPlaylistFolder<I extends AudioItem> extends AudioPlaylist<
 
     void removeIncludedPlaylist(AudioPlaylist<I> audioPlaylist);
 
+    void clearIncludedPlaylists();
+
     ImmutableList<I> itemsIncludedFromAllPlaylists();
 
     void removeItemsFromIncludedPlaylists(List<I> audioItems);

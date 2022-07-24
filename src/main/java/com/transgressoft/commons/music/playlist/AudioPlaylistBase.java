@@ -55,6 +55,12 @@ public abstract class AudioPlaylistBase<I extends AudioItem> implements AudioPla
     }
 
     @Override
+    public void clear() {
+        audioItems.clear();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
