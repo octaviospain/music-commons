@@ -63,7 +63,7 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
         var sixties = audioPlaylistRepository.createPlaylistDirectory("60s");
         assertThat(sixties.descendantPlaylists()).isEmpty();
         assertThat(audioPlaylistRepository.numberOfPlaylistDirectories()).isEqualTo(2);
-        assertThat(audioPlaylistRepository.findByUniqueId(sixties.id() + "-D-" + sixties.getName())).isEqualTo(Optional.of(sixties));
+        assertThat(audioPlaylistRepository.findByUniqueId(sixties.getId() + "-D-" + sixties.getName())).isEqualTo(Optional.of(sixties));
 
         var bestHits = audioPlaylistRepository.createPlaylistDirectory("Best hits");
         audioPlaylistRepository.addPlaylistsToDirectory(Set.of(fifties, sixties), bestHits);
@@ -75,13 +75,13 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
         assertThat(audioPlaylistRepository.search(UNIQUE_ID.contains("favorites"))).containsExactly(thisWeeksFavorites);
         assertThat(audioPlaylistRepository.size()).isEqualTo(6);
 
-        audioPlaylistRepository.add(bestHits, thisWeeksFavorites);
+        audioPlaylistRepository.addAll(Set.of(bestHits, thisWeeksFavorites));
         assertThat(audioPlaylistRepository.size()).isEqualTo(6);
 
         assertThat(audioPlaylistRepository.search(SELF.isNotDirectory())).containsExactly(rock, pop, thisWeeksFavorites);
         assertThat(audioPlaylistRepository.search(SELF.isDirectory())).containsExactly(fifties, sixties, bestHits);
 
-        rock = audioPlaylistRepository.findById(rock.id()).orElseThrow();
+        rock = audioPlaylistRepository.findById(rock.getId()).orElseThrow();
         fifties = audioPlaylistRepository.findSingleDirectoryByName(fifties.getName()).orElseThrow();
         var fiftiesItems =
                 List.of(createTestAudioItem("50s hit", Duration.ofSeconds(30)),
@@ -97,10 +97,10 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
         assertThat(playlistsThatContainsAudioItemsWithDurationBelow60).containsExactly(rock, fifties);
 
         audioPlaylistRepository.removeAudioItemsFromPlaylist(fiftiesItems, fifties);
-        assertThat(audioPlaylistRepository.findById(fifties.id()).get().audioItems()).isEmpty();
+        assertThat(audioPlaylistRepository.findById(fifties.getId()).get().audioItems()).isEmpty();
 
         audioPlaylistRepository.removeAudioItems(rockAudioItems);
-        assertThat(audioPlaylistRepository.findById(rock.id()).get().audioItems()).isEmpty();
+        assertThat(audioPlaylistRepository.findById(rock.getId()).get().audioItems()).isEmpty();
 
         audioPlaylistRepository.clear();
         assertThat(audioPlaylistRepository).isEmpty();
@@ -177,11 +177,11 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
         audioPlaylistRepository.movePlaylist(newPlaylist, newPlaylistDirectory);
 
         assertThat(audioPlaylistRepository.size()).isEqualTo(2);
-        assertThat(audioPlaylistRepository.findByUniqueId(newPlaylist.id() + "-New playlist").orElseThrow()).isEqualTo(newPlaylist);
+        assertThat(audioPlaylistRepository.findByUniqueId(newPlaylist.getId() + "-New playlist").orElseThrow()).isEqualTo(newPlaylist);
         assertThat(audioPlaylistRepository.findByAttribute(NAME, "New playlist")).containsExactly(newPlaylist, newPlaylistDirectory);
         assertThat(audioPlaylistRepository.findAllByName("New playlist")).containsExactly(newPlaylistDirectory, newPlaylist);
 
-        audioPlaylistRepository.remove(newPlaylist, newPlaylistDirectory);
+        assertThat(audioPlaylistRepository.removeAll(Set.of(newPlaylist, newPlaylistDirectory))).isTrue();
 
         assertThat(audioPlaylistRepository.isEmpty()).isTrue();
     }
@@ -200,7 +200,7 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
         var rock = mock(ImmutablePlaylist.class);
         when(rock.getName()).thenReturn("Best hits - Rock");
         when(rock.isDirectory()).thenReturn(false);
-        audioPlaylistRepository.add(bestHits, rock);
+        audioPlaylistRepository.addAll(Set.<AudioPlaylist<AudioItem>>of(bestHits, rock));
         assertThat(audioPlaylistRepository).hasSize(3);
 
         var ninaSimoneDiscography = mock(ImmutablePlaylistDirectory.class);
@@ -213,7 +213,7 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
         when(beatlesDiscography.getName()).thenReturn("The Beatles' discography");
         when(beatlesDiscography.isDirectory()).thenReturn(true);
         when(beatlesDiscography.descendantPlaylists()).thenReturn(Set.of(revolver));
-        audioPlaylistRepository.add(ninaSimoneDiscography, beatlesDiscography);
+        audioPlaylistRepository.addAll(Set.<AudioPlaylist<AudioItem>>of(ninaSimoneDiscography, beatlesDiscography));
 
         assertThat(audioPlaylistRepository).hasSize(5);
         assertThat(audioPlaylistRepository.findSingleDirectoryByName(beatlesDiscography.getName()).orElseThrow().descendantPlaylists())

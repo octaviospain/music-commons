@@ -60,14 +60,14 @@ class ImmutablePlaylist<I extends AudioItem> implements AudioPlaylist<I> {
     }
 
     @Override
-    public int id() {
+    public int getId() {
         return id;
     }
 
     @Override
     public String getUniqueId() {
         var stringJoiner = new StringJoiner("-")
-                .add(String.valueOf(id()));
+                .add(String.valueOf(getId()));
         if (isDirectory()) {
             stringJoiner.add("D");
         }
@@ -175,12 +175,12 @@ class ImmutablePlaylist<I extends AudioItem> implements AudioPlaylist<I> {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         var that = (ImmutablePlaylist<I>) o;
-        return Objects.equal(id(), that.id());
+        return Objects.equal(getId(), that.getId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(id());
+        return Objects.hashCode(getId());
     }
 
     @Override

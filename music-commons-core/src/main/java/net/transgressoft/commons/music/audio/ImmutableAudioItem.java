@@ -96,7 +96,7 @@ class ImmutableAudioItem implements AudioItem, Comparable<AudioItem> {
     }
 
     @Override
-    public int id() {
+    public int getId() {
         return getUniqueId().hashCode();
     }
 

@@ -1,12 +1,13 @@
-package net.transgressoft.commons.music.event;
+package net.transgressoft.commons.music.audio;
 
-import net.transgressoft.commons.music.audio.AudioItem;
+
+import net.transgressoft.commons.query.QueryEvent;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow.Publisher;
 import java.util.function.Supplier;
 
-public interface MusicLibraryEventDispatcher<I extends AudioItem> extends Publisher<Integer> {
+public interface AudioItemEventDispatcher<I extends AudioItem> extends Publisher<QueryEvent<? extends I>> {
 
     default CompletableFuture<I> onPlay(Supplier<I> runnable) {
         return CompletableFuture.supplyAsync(runnable);

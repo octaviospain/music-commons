@@ -74,18 +74,18 @@ class MutablePlaylistDirectory<I extends AudioItem> extends ImmutablePlaylistDir
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         var that = (MutablePlaylistDirectory<I>) o;
-        return Objects.equal(getName(), that.getName()) && Objects.equal(id(), that.id());
+        return Objects.equal(getName(), that.getName()) && Objects.equal(getId(), that.getId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(getName(), id());
+        return Objects.hashCode(getName(), getId());
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("id", id())
+                .add("id", getId())
                 .add("name", getName())
                 .add("descendantPlaylists", descendantPlaylists().size())
                 .add("audioItems", audioItems().size())

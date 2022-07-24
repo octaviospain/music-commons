@@ -44,7 +44,7 @@ public class ImmutableAudioWaveform implements AudioWaveform {
     }
 
     @Override
-    public int id() {
+    public int getId() {
         return id;
     }
 

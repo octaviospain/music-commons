@@ -15,8 +15,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Flow;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -37,9 +35,10 @@ class MusicLibraryTest {
     @Test
     @DisplayName("Music api test")
     void musicApiTest() throws Exception {
+        when(audioItemRepository.iterator()).thenReturn(Collections.emptyIterator());
+
         musicLibrary = new DefaultMusicLibrary<>(audioItemRepository, audioPlaylistRepository, audioWaveformRepository);
 
-        musicLibrary.audioItems();
         verify(audioItemRepository).iterator();
 
         musicLibrary.deleteAudioItems(Collections.singleton(mock(AudioItem.class)));

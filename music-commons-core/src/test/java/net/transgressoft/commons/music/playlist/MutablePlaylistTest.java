@@ -20,7 +20,7 @@ class MutablePlaylistTest extends MusicLibraryTestBase {
     void mutableAudioPlaylistTest() {
         var playlist1 = new MutablePlaylist<>(1, "Playlist1");
 
-        assertThat(playlist1.id()).isEqualTo(1);
+        assertThat(playlist1.getId()).isEqualTo(1);
         assertThat(playlist1.isDirectory()).isFalse();
         assertThat(playlist1.getName()).isEqualTo("Playlist1");
         assertThat(playlist1.getUniqueId()).isEqualTo("1-Playlist1");

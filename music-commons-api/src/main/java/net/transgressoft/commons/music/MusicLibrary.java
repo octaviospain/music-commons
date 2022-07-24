@@ -4,16 +4,14 @@ import net.transgressoft.commons.music.audio.AudioItem;
 import net.transgressoft.commons.music.playlist.AudioPlaylist;
 import net.transgressoft.commons.music.playlist.AudioPlaylistDirectory;
 import net.transgressoft.commons.music.waveform.AudioWaveform;
-import net.transgressoft.commons.music.waveform.AudioWaveformProcessingException;
 
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 public interface MusicLibrary<I extends AudioItem, P extends AudioPlaylist<I>, D extends AudioPlaylistDirectory<I>> {
 
-    Iterator<I> audioItems();
+    Set<String> artists();
 
     void deleteAudioItems(Set<I> audioItems);
 
@@ -37,5 +35,5 @@ public interface MusicLibrary<I extends AudioItem, P extends AudioPlaylist<I>, D
 
     void movePlaylist(P playlist, D playlistDirectory);
 
-     CompletableFuture<AudioWaveform> getOrCreateWaveformAsync(I audioItem, short width, short height) throws AudioWaveformProcessingException;
+    CompletableFuture<AudioWaveform> getOrCreateWaveformAsync(I audioItem, short width, short height);
 }

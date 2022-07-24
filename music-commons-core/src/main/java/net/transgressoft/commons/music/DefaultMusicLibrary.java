@@ -9,32 +9,48 @@ import net.transgressoft.commons.music.waveform.AudioWaveform;
 import net.transgressoft.commons.music.waveform.AudioWaveformProcessingException;
 import net.transgressoft.commons.music.waveform.ImmutableAudioWaveform;
 import net.transgressoft.commons.query.Repository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
-import java.util.Iterator;
+import java.util.HashSet;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.Flow.Subscription;
 
 public class DefaultMusicLibrary<I extends AudioItem, P extends AudioPlaylist<I>, D extends AudioPlaylistDirectory<I>, W extends AudioWaveform>
         implements MusicLibrary<I, P, D> {
 
-    private final AudioItemRepository<I> audioItemRepository;
+    private static final Logger LOG = LoggerFactory.getLogger(DefaultMusicLibrary.class);
+
     private final AudioPlaylistRepository<I, P, D> audioPlaylistRepository;
+    private final AudioItemRepository<I> audioItemRepository;
     private final Repository<W> waveformRepository;
+
+    private final Set<String> artists = new HashSet<>();
+
+    private Subscription audioItemSubscription;
 
     public DefaultMusicLibrary(AudioItemRepository<I> audioItemRepository,
                                AudioPlaylistRepository<I, P, D> audioPlaylistRepository,
                                Repository<W> waveformRepository) {
+        Objects.requireNonNull(audioItemRepository);
+        Objects.requireNonNull(audioPlaylistRepository);
+        Objects.requireNonNull(waveformRepository);
+
         this.audioItemRepository = audioItemRepository;
         this.audioPlaylistRepository = audioPlaylistRepository;
         this.waveformRepository = waveformRepository;
+
+        audioItemRepository.iterator().forEachRemaining(audioItem -> artists.addAll(audioItem.artistsInvolved()));
     }
 
     @Override
-    public Iterator<I> audioItems() {
-        return audioItemRepository.iterator();
+    public Set<String> artists() {
+        return artists;
     }
 
     @Override
@@ -42,7 +58,7 @@ public class DefaultMusicLibrary<I extends AudioItem, P extends AudioPlaylist<I>
         audioItemRepository.removeAll(audioItems);
         audioPlaylistRepository.removeAudioItems(audioItems);
         audioItems.stream()
-                .map(AudioItem::id)
+                .map(AudioItem::getId)
                 .map(waveformRepository::findById)
                 .filter(Optional::isPresent)
                 .forEach(waveform -> waveformRepository.remove(waveform.get()));
@@ -64,12 +80,12 @@ public class DefaultMusicLibrary<I extends AudioItem, P extends AudioPlaylist<I>
     }
 
     @Override
-    public CompletableFuture<AudioWaveform> getOrCreateWaveformAsync(I audioItem, short width, short height) throws AudioWaveformProcessingException {
-        return waveformRepository.findById(audioItem.id())
+    public CompletableFuture<AudioWaveform> getOrCreateWaveformAsync(I audioItem, short width, short height) {
+        return waveformRepository.findById(audioItem.getId())
                 .<CompletableFuture<AudioWaveform>>map(CompletableFuture::completedFuture)
                 .orElseGet(() -> CompletableFuture.supplyAsync(() -> {
                     try {
-                        return ImmutableAudioWaveform.create(audioItem.id(), audioItem.path(), width, height);
+                        return ImmutableAudioWaveform.create(audioItem.getId(), audioItem.path(), width, height);
                     }
                     catch (AudioWaveformProcessingException exception) {
                         throw new CompletionException(exception);

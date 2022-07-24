@@ -6,8 +6,8 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 
@@ -16,16 +16,8 @@ import static java.util.Objects.requireNonNull;
  */
 public class AudioItemInMemoryRepository<I extends AudioItem> extends InMemoryRepository<I> implements AudioItemRepository<I> {
 
-    protected AudioItemInMemoryRepository(Map<Integer, I> audioItemsById) {
-        super(audioItemsById);
-    }
-
-    public AudioItemInMemoryRepository() {
-        this(Collections.emptyList());
-    }
-
     public AudioItemInMemoryRepository(Collection<I> audioItems) {
-        super(audioItems);
+        super(audioItems.stream().collect(Collectors.toMap(AudioItem::getId, Function.identity())), null);
     }
 
     @Override
