@@ -14,7 +14,7 @@ class AudioItemInMemoryRepositoryTest extends MusicLibraryTestBase {
     @Test
     @DisplayName("Create repository and new item")
     void createRepositoryAndNewItemTest() {
-        var audioItemRepository = new AudioItemInMemoryRepository(createTestAudioItemsSet(10));
+        var audioItemRepository = new AudioItemInMemoryRepository<>(createTestAudioItemsSet(10));
         assertThat(audioItemRepository).hasSize(10);
 
         var audioItem = audioItemRepository.create(Path.of("home", "music"), "New song", Duration.ofSeconds(120), 320).build();

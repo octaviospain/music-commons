@@ -13,9 +13,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -32,12 +34,18 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
     private final AtomicInteger idCounter = new AtomicInteger(1);
     private final Set<Integer> idSet = new HashSet<>();
 
-    private final InMemoryRepository<MutableAudioPlaylist<I>> playlists = new InMemoryRepository<>();
-    private final InMemoryRepository<MutableAudioPlaylistDirectory<I>> directories = new InMemoryRepository<>();
+    private final InMemoryRepository<MutableAudioPlaylist<I>> playlists;
+    private final InMemoryRepository<MutableAudioPlaylistDirectory<I>> directories;
     private final Multimap<String, String> playlistsMultiMap = MultimapBuilder.treeKeys().treeSetValues().build();
 
     public AudioPlaylistInMemoryRepository() {
-        super();
+        this(new HashMap<>(), new HashMap<>());
+    }
+
+    protected AudioPlaylistInMemoryRepository(Map<Integer, MutableAudioPlaylist<I>> playlistsById,
+                                              Map<Integer, MutableAudioPlaylistDirectory<I>> directoriesByID) {
+      playlists = new InMemoryRepository<>(playlistsById);
+      directories = new InMemoryRepository<>(directoriesByID);
     }
 
     @Override
@@ -184,7 +192,7 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
     }
 
     @Override
-    @SuppressWarnings("unstable")
+    @SuppressWarnings("UnstableApiUsage")
     public Iterator<N> iterator() {
         var setBuilder = ImmutableSet.<N>builderWithExpectedSize(playlists.size() + directories.size());
         playlists.forEach(p -> setBuilder.add(toImmutablePlaylist(p)));
