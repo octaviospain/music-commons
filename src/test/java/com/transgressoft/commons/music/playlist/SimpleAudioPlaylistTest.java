@@ -40,14 +40,12 @@ class SimpleAudioPlaylistTest {
         assertEquals(ImmutableList.of(item2, item3), playlist.audioItems());
 
         AudioPlaylist<AudioItem> playlist2 = new SimpleAudioPlaylist("Hits");
-        assertTrue(playlist.compareTo(playlist2) > 0);
 
         playlist.clear();
         assertTrue(playlist.isEmpty());
 
         AudioPlaylist<AudioItem> playlist3 = new SimpleAudioPlaylist("Hits");
         assertEquals(playlist3, playlist2);
-        assertEquals(0, playlist2.compareTo(playlist3));
 
         assertEquals("SimpleAudioPlaylist{name=Hits}", playlist2.toString());
     }

@@ -55,17 +55,6 @@ public abstract class AudioPlaylistBase<I extends AudioItem> implements AudioPla
         audioItems.clear();
     }
 
-    /**
-     * Compares first by name and then by number of audio items.
-     *
-     * @param playlist  The {@link AudioPlaylist} to compare against this object
-     * @return          The result of the comparison
-     */
-    @Override
-    public int compareTo(AudioPlaylist<I> playlist) {
-        return playlist.name().compareTo(name);
-    }
-
     @SuppressWarnings ("unchecked")
     @Override
     public boolean equals(Object o) {

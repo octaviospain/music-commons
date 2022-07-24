@@ -63,7 +63,7 @@ publishing {
                 developers {
                     developer {
                         id = "octaviospain"
-                        name = "Octavio Calleya"
+                        name = "Octavio Calleya García"
                         email = "octaviospain@gmail.com"
                     }
                 }
