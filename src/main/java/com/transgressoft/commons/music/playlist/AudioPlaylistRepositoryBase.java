@@ -63,9 +63,9 @@ public abstract class AudioPlaylistRepositoryBase<I extends AudioItem, P extends
     @Override
     public void move(P playlistToMove, F destinationPlaylistFolder) {
         Optional<F> parentOfMovedPlaylist = getParentPlaylist(playlistToMove);
-        parentOfMovedPlaylist.ifPresent(parent -> {
-            playlistsTree.removeEdge(parent, playlistToMove);
-            parent.includePlaylist(playlistToMove);
+        parentOfMovedPlaylist.ifPresent(oldPlaylistFolder -> {
+            playlistsTree.removeEdge(oldPlaylistFolder, playlistToMove);
+            oldPlaylistFolder.removeIncludedPlaylist(playlistToMove);
             playlistsTree.putEdge(destinationPlaylistFolder, playlistToMove);
             destinationPlaylistFolder.includePlaylist(playlistToMove);
         });
