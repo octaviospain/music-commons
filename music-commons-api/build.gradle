@@ -1,5 +1,3 @@
-import org.gradle.api.JavaVersion
-
 plugins {
     id 'org.sonarqube' version '3.3'
 }
@@ -18,6 +16,8 @@ publishing {
             version version
 
             from components.java
+            artifact sourceJar
+            artifact javadocJar
 
             pom {
                 name = "music-commons-api"
@@ -45,9 +45,25 @@ publishing {
                 username = 'admin'
                 password = 'nexus2885mwggyk'
             }
+            mavenContent {
+                snapshotsOnly()
+            }
 
-            name = 'pi-repo'
-            url = 'http://nexus.pipon.xxx/repository/maven-releases/'
+            name 'pi-repo-snapshots'
+            url 'http://nexus.pipon.xxx/repository/maven-snapshots/'
+            allowInsecureProtocol = true
+        }
+        maven {
+            credentials {
+                username = 'admin'
+                password = 'nexus2885mwggyk'
+            }
+            mavenContent {
+                releasesOnly()
+            }
+
+            name 'pi-repo-releases'
+            url 'http://nexus.pipon.xxx/repository/maven-releases/'
             allowInsecureProtocol = true
         }
     }

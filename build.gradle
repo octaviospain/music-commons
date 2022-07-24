@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.compile.JavaCompile
+
 plugins {
     id 'com.palantir.git-version' version '0.15.0'
 }
@@ -5,21 +7,38 @@ plugins {
 group 'net.transgressoft'
 version gitVersion()
 
+gradle.projectsEvaluated {
+    tasks.withType(JavaCompile){
+        options.compilerArgs << "-Xlint:unchecked"
+    }
+}
+
 subprojects {
     apply plugin: 'java'
     apply plugin: 'java-library'
     apply plugin: 'jacoco'
     apply plugin: 'maven-publish'
 
+    ext {
+        // the password needs to be specified via command line
+        repoPass = project.hasProperty('repoPass') ? project.getProperty('repoPass') : ''
+    }
+
     dependencies {
-        implementation 'net.transgressoft:soft-query-api:0.19'
+        implementation 'net.transgressoft:soft-query-api:0.+'
     }
 
     repositories {
         mavenCentral()
         maven {
             url "http://nexus.pipon.xxx/repository/maven-public/"
-            allowInsecureProtocol = true
+            allowInsecureProtocol true
+        }
+    }
+
+    configurations.all {
+        resolutionStrategy {
+            cacheChangingModulesFor 0, 'seconds'
         }
     }
 
@@ -29,13 +48,27 @@ subprojects {
 
     jacocoTestReport {
         reports {
-            xml.enabled true
+            xml.required.set true
         }
     }
 
-    task sourceJar(type: Jar) {
-        from sourceSets.main.allJava
-        archiveClassifier = "sources"
+    task sourceJar(type: Jar, dependsOn: classes) {
+        classifier 'sources'
+        from sourceSets.main.allSource
+        from sourceSets.main.output
+    }
+
+    task javadocJar(type: Jar, dependsOn: javadoc) {
+        classifier 'javadoc'
+        from javadoc.destinationDir
+        javadoc.options.addStringOption('Xdoclint:none', '-quiet')
+    }
+
+    tasks.withType(JavaCompile) {
+//        options.compilerArgs += '--enable-preview'
+    }
+    tasks.withType(Test) {
+//        jvmArgs += "--enable-preview"
     }
 
     test {
@@ -44,13 +77,6 @@ subprojects {
             events "passed", "skipped", "failed"
         }
     }
-
-//tasks.withType(JavaCompile) {
-//    options.compilerArgs += '--enable-preview'
-//}
-//tasks.withType(Test) {
-//    jvmArgs += "--enable-preview"
-//}
 }
 
 project('music-commons-api') {

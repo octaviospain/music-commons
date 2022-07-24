@@ -242,15 +242,13 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, P extends Audi
 
     @Override
     public P createPlaylist(String name, List<I> audioItems) throws RepositoryException {
-        var searchResult = playlists.search(NAME.equalsTo(name));
+        var searchResult = findSinglePlaylistByName(name);
         if (searchResult.isEmpty()) {
             var playlist = (MP) new MutablePlaylist<>(getNewId(), name, audioItems);
             playlists.add(playlist);
             return toImmutablePlaylist(playlist);
-        } else if (searchResult.size() == 1) {
-            throw new RepositoryException("Playlist with name '" + name + "' already exists");
         } else {
-            throw new IllegalStateException("Found more than 1 playlist by name '" + name + "': " + searchResult);
+            throw new RepositoryException("Playlist with name '" + name + "' already exists");
         }
     }
 
@@ -261,15 +259,13 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, P extends Audi
 
     @Override
     public D createPlaylistDirectory(String name, List<I> audioItems) throws RepositoryException {
-        var searchResult = directories.search(NAME.equalsTo(name));
+        var searchResult = findSingleDirectoryByName(name);
         if (searchResult.isEmpty()) {
             var playlistDirectory = (MD) new MutablePlaylistDirectory<>(getNewId(), name, audioItems);
             directories.add(playlistDirectory);
             return (D) toImmutablePlaylistDirectory(playlistDirectory);
-        } else if (searchResult.size() == 1) {
-            throw new RepositoryException("Playlist with name '" + name + "' already exists");
         } else {
-            throw new IllegalStateException("Found more than 1 playlist by name '" + name + "': " + searchResult);
+            throw new RepositoryException("Playlist with name '" + name + "' already exists");
         }
     }
 
