@@ -4,24 +4,22 @@ import net.transgressoft.commons.music.audio.AudioItem;
 
 public interface AudioItemPlayer {
 
+    enum Status {
+
+        UNKNOWN, READY, PAUSED, PLAYING, STOPPED, STALLED, HALTED, DISPOSED
+    }
+
     void play(AudioItem audioItem);
 
     void pause();
 
     void stop();
 
-    PlayerStatus status();
+    Status status();
 
     void setVolume(double value);
 
     void seek(int seconds);
 
     void onFinish(Runnable value);
-
-    String[] supportedAudioFileFormatTypes();
-}
-
-enum PlayerStatus {
-
-    UNKNOWN, READY, PAUSED, PLAYING, STOPPED;
 }
