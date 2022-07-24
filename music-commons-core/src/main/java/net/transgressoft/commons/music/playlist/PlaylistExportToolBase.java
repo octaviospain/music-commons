@@ -22,7 +22,7 @@ class PlaylistExportToolBase implements PlaylistExportTool {
     @Override
     public <P extends AudioPlaylist<? extends AudioItem>> void exportPlaylistAsM3u(P playlist, Path path) throws ExportException {
         String playlistFileName = getPlaylistM3uName(playlist.getName());
-        LOG.info("Exporting playlist {} to {}", playlist.getName(), path);
+        LOG.debug("Exporting playlist {} to {}", playlist.getName(), path);
 
         try {
             if (path.resolve(playlistFileName).toFile().exists()) {
@@ -80,7 +80,7 @@ class PlaylistExportToolBase implements PlaylistExportTool {
 
     protected void printPlaylist(AudioPlaylist<? extends AudioItem> playlist, Path playlistPath) throws IOException {
         try (PrintWriter printWriter = new PrintWriter(playlistPath.toFile(), StandardCharsets.UTF_8.name())) {
-            LOG.info("Creating playlist folder {}", playlistPath);
+            LOG.debug("Creating playlist folder {}", playlistPath);
             printWriter.println("#EXTM3U");
             playlist.audioItems().forEach(audioItem -> {
                 printWriter.println("#EXTALB:" + audioItem.album());

@@ -28,13 +28,13 @@ class ImmutablePlaylistDirectory<I extends AudioItem> extends ImmutablePlaylist<
 
     protected <N extends AudioPlaylist<I>> void addAll(Set<N> playlists) {
         if (descendantPlaylists.addAll(playlists)) {
-            LOG.info("Added playlists to playlist directory '{}': {}", getName(), playlists);
+            LOG.debug("Added playlists to playlist directory '{}': {}", getName(), playlists);
         }
     }
 
     protected <N extends AudioPlaylist<I>> void removeAll(Set<N> playlists) {
         if (descendantPlaylists.removeAll(playlists))
-            LOG.info("Playlists removed from playlist directory '{}': {}", getName(), playlists);
+            LOG.debug("Playlists removed from playlist directory '{}': {}", getName(), playlists);
     }
 
     @Override

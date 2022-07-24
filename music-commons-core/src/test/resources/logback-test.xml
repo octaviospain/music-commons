@@ -1,13 +1,13 @@
 <configuration>
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <pattern>%-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
-    <logger name="org.jaudiotagger" level="OFF" />
-    <logger name="be.tarsos.transcoder" level="OFF" />
+    <logger name="org.jaudiotagger.audio.flac" level="WARN" />
+    <logger name="be.tarsos.transcoder" level="WARN" />
 
-    <root level="info">
+    <root level="">
         <appender-ref ref="STDOUT" />
     </root>
 </configuration>

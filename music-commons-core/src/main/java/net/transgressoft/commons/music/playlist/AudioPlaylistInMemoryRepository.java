@@ -310,7 +310,7 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
                     playlistsMultiMap.put(playlistDirectory.getUniqueId(), playlist.getUniqueId());
                     playlistDirectory.addPlaylists(playlist);
 
-                    LOG.info("Playlist '{}' moved to '{}'", playlistToMove.getName(), destinationPlaylist.getName());
+                    LOG.debug("Playlist '{}' moved to '{}'", playlistToMove.getName(), destinationPlaylist.getName());
                 }));
     }
 
