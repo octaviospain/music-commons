@@ -1,8 +1,8 @@
 package net.transgressoft.commons.music;
 
 import net.transgressoft.commons.music.audio.AudioItem;
-import net.transgressoft.commons.music.playlist.AudioPlaylistDirectory;
 import net.transgressoft.commons.music.playlist.AudioPlaylist;
+import net.transgressoft.commons.music.playlist.AudioPlaylistDirectory;
 
 import java.util.Set;
 

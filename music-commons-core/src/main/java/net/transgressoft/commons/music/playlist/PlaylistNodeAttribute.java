@@ -4,7 +4,7 @@ import net.transgressoft.commons.music.audio.AudioItem;
 import net.transgressoft.commons.query.BooleanQueryTerm;
 import net.transgressoft.commons.query.EntityAttribute;
 
-public enum PlaylistNodeAttribute implements EntityAttribute<MutablePlaylist<AudioItem>> {
+public enum PlaylistNodeAttribute implements EntityAttribute<MutableAudioPlaylist<AudioItem>> {
 
     SELF;
 

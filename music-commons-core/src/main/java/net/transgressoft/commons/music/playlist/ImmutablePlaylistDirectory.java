@@ -4,7 +4,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import net.transgressoft.commons.music.audio.AudioItem;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -12,14 +11,6 @@ import java.util.concurrent.ConcurrentSkipListSet;
 class ImmutablePlaylistDirectory<I extends AudioItem> extends ImmutablePlaylist<I> implements AudioPlaylistDirectory<I> {
 
     private final Set<AudioPlaylist<I>> descendantPlaylists;
-
-    protected ImmutablePlaylistDirectory(int id, String name) {
-        this(id, name, Collections.emptyList());
-    }
-
-    protected ImmutablePlaylistDirectory(int id, String name, List<I> audioItems) {
-        this(id, name, audioItems, Collections.emptySet());
-    }
 
     protected <N extends AudioPlaylist<I>> ImmutablePlaylistDirectory(int id, String name, List<I> audioItems, Set<N> playlists) {
         super(id, name, audioItems);
@@ -29,6 +20,14 @@ class ImmutablePlaylistDirectory<I extends AudioItem> extends ImmutablePlaylist<
     @Override
     public <N extends AudioPlaylist<I>> boolean containsPlaylist(N playlist) {
         return descendantPlaylists.contains(playlist);
+    }
+
+    protected <N extends AudioPlaylist<I>> void addAll(Set<N> playlists) {
+        descendantPlaylists.addAll(playlists);
+    }
+
+    protected <N extends AudioPlaylist<I>> void remove(N playlist) {
+        descendantPlaylists.removeIf(p -> p.equals(playlist));
     }
 
     @Override

@@ -4,16 +4,14 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import net.transgressoft.commons.music.audio.AudioItem;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
 
 import static java.util.Objects.requireNonNull;
 
-class MutablePlaylistDirectory<I extends AudioItem> extends MutablePlaylist<I> implements MutableAudioPlaylistDirectory<I> {
-
-    private final Set<AudioPlaylist<I>> descendantPlaylists;
+class MutablePlaylistDirectory<I extends AudioItem> extends ImmutablePlaylistDirectory<I> implements MutableAudioPlaylistDirectory<I> {
 
     protected MutablePlaylistDirectory(int id, String name) {
         this(id, name, Collections.emptyList());
@@ -24,13 +22,31 @@ class MutablePlaylistDirectory<I extends AudioItem> extends MutablePlaylist<I> i
     }
 
     protected <N extends AudioPlaylist<I>> MutablePlaylistDirectory(int id, String name, List<I> audioItems, Set<N> playlists) {
-        super(id, name, audioItems);
-        descendantPlaylists= new ConcurrentSkipListSet<>(playlists);
+        super(id, name, audioItems, playlists);
     }
 
     @Override
-    @SafeVarargs
-    public final <N extends AudioPlaylist<I>> void addPlaylist(N... playlists) {
+    public void setName(String name) {
+        super.setName(name);
+    }
+
+    @Override
+    public void addAudioItems(List<I> audioItems) {
+        super.addAll(audioItems);
+    }
+
+    @Override
+    public void removeAudioItems(Collection<I> audioItems) {
+        super.removeAll(audioItems);
+    }
+
+    @Override
+    public void clearAudioItems() {
+        super.clear();
+    }
+
+    @Override
+    public <N extends AudioPlaylist<I>> void addPlaylist(N... playlists) {
         requireNonNull(playlists);
         addAllPlaylists(Set.of(playlists));
     }
@@ -38,27 +54,12 @@ class MutablePlaylistDirectory<I extends AudioItem> extends MutablePlaylist<I> i
     @Override
     public <N extends AudioPlaylist<I>> void addAllPlaylists(Set<N> playlists) {
         requireNonNull(playlists);
-        descendantPlaylists.addAll(playlists);
+        super.addAll(playlists);
     }
 
     @Override
     public <N extends AudioPlaylist<I>> void removePlaylist(N playlist) {
-        descendantPlaylists.removeIf(p -> p.equals(playlist));
-    }
-
-    @Override
-    public <N extends AudioPlaylist<I>> boolean containsPlaylist(N playlist) {
-        return descendantPlaylists.contains(playlist);
-    }
-
-    @Override
-    public <N extends AudioPlaylist<I>> Set<N> descendantPlaylists() {
-        return (Set<N>) descendantPlaylists;
-    }
-
-    @Override
-    public boolean isDirectory() {
-        return true;
+        super.remove(playlist);
     }
 
     @Override
@@ -79,7 +80,7 @@ class MutablePlaylistDirectory<I extends AudioItem> extends MutablePlaylist<I> i
         return MoreObjects.toStringHelper(this)
                 .add("id", id())
                 .add("name", getName())
-                .add("descendantPlaylists", descendantPlaylists.size())
+                .add("descendantPlaylists", descendantPlaylists().size())
                 .add("audioItems", audioItems().size())
                 .toString();
     }

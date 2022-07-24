@@ -2,6 +2,7 @@ package net.transgressoft.commons.music.playlist;
 
 import net.transgressoft.commons.music.audio.AudioItem;
 import net.transgressoft.commons.query.Repository;
+import net.transgressoft.commons.query.RepositoryException;
 
 import java.util.List;
 import java.util.Optional;
@@ -13,13 +14,13 @@ import java.util.Set;
 public interface AudioPlaylistRepository<I extends AudioItem, N extends AudioPlaylist<I>, D extends AudioPlaylistDirectory<I>>
         extends Repository<N> {
 
-    N createPlaylist(String name);
+    N createPlaylist(String name) throws RepositoryException;
 
-    N createPlaylist(String name, List<I> audioItems);
+    N createPlaylist(String name, List<I> audioItems) throws RepositoryException;
 
-    D createPlaylistDirectory(String name);
+    D createPlaylistDirectory(String name) throws RepositoryException;
 
-    D createPlaylistDirectory(String name, List<I> audioItems);
+    D createPlaylistDirectory(String name, List<I> audioItems) throws RepositoryException;
 
     /**
      * Precondition, <tt>playlist</tt> exist in the <tt>AudioPlaylistRepository</tt>.

@@ -28,6 +28,13 @@ public class AudioItemInMemoryRepository extends InMemoryRepository<AudioItem> i
         requireNonNull(title);
         requireNonNull(duration);
 
-        return new ImmutableAudioItemBuilder(path, title, duration, bitRate, LocalDateTime.now());
+        return new ImmutableAudioItemBuilder(path, title, duration, bitRate, LocalDateTime.now()) {
+            @Override
+            public ImmutableAudioItem build() {
+                var audioItem = super.build();
+                add(audioItem);
+                return audioItem;
+            }
+        };
     }
 }

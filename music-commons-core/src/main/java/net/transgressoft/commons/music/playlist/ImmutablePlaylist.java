@@ -111,7 +111,6 @@ class ImmutablePlaylist<I extends AudioItem> implements AudioPlaylist<I> {
     }
 
 
-    @SuppressWarnings("unchecked")
     @Override
     public <A extends EntityAttribute<V>, V> V getAttribute(A attribute) throws UnknownAttributeException {
         return (V) Optional.ofNullable(attributes.get(attribute))
@@ -124,12 +123,11 @@ class ImmutablePlaylist<I extends AudioItem> implements AudioPlaylist<I> {
         return Comparator.comparing(QueryEntity::getUniqueId, String.CASE_INSENSITIVE_ORDER).compare(this, object);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        MutablePlaylist<I> that = (MutablePlaylist<I>) o;
+        var that = (ImmutablePlaylist<I>) o;
         return Objects.equal(id(), that.id());
     }
 

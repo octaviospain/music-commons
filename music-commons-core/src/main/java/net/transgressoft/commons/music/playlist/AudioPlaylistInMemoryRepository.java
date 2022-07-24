@@ -8,36 +8,33 @@ import net.transgressoft.commons.music.audio.AudioItem;
 import net.transgressoft.commons.query.BooleanQueryTerm;
 import net.transgressoft.commons.query.EntityAttribute;
 import net.transgressoft.commons.query.InMemoryRepository;
-import net.transgressoft.commons.query.QueryEntity;
 import net.transgressoft.commons.query.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-@SuppressWarnings({"unchecked", "UnstableApiUsage"})
+import static net.transgressoft.commons.music.playlist.PlaylistStringAttribute.NAME;
+
 public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends AudioPlaylist<I>, D extends AudioPlaylistDirectory<I>>
         implements AudioPlaylistRepository<I, N, D> {
 
     private static final Logger LOG = LoggerFactory.getLogger(AudioPlaylistInMemoryRepository.class);
 
-    private static final String FOUND_MORE_THAN_EXPECTED_BY_NAME_MESSAGE = "Found several playlists when searching single by name '%s': %s";
-
     private static final AtomicInteger idCounter = new AtomicInteger(0);
+    private static final Set<Integer> idSet = new HashSet<>();
 
     private final InMemoryRepository<MutableAudioPlaylist<I>> playlists = new InMemoryRepository<>();
     private final InMemoryRepository<MutableAudioPlaylistDirectory<I>> directories = new InMemoryRepository<>();
-    private final Multimap<MutableAudioPlaylistDirectory<I>, MutableAudioPlaylist<I>> playlistsMultiMap = MultimapBuilder.treeKeys().treeSetValues().build();
+    private final Multimap<String, String> playlistsMultiMap = MultimapBuilder.treeKeys().treeSetValues().build();
 
     public AudioPlaylistInMemoryRepository() {
         super();
@@ -55,43 +52,40 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
         playlists.forEach(this::add);
     }
 
-    private MutableAudioPlaylistDirectory<I> toMutableDirectory(D playlistDirectory) {
-        return new MutablePlaylistDirectory<>(playlistDirectory.id(), playlistDirectory.getName(), playlistDirectory.audioItems(), playlistDirectory.descendantPlaylists());
-    }
-
-    private MutableAudioPlaylist<I> toMutablePlaylist(AudioPlaylist<I> playlistDirectory) {
-        return new MutablePlaylist<>(playlistDirectory.id(), playlistDirectory.getName(), playlistDirectory.audioItems());
-    }
-
-    private Set<MutableAudioPlaylist<I>> toMutablePlaylist(Set<N> audioPlaylists) {
-        return audioPlaylists.stream()
-                .map(e -> {
-                    if (e.isDirectory() && e instanceof AudioPlaylistDirectory dir) {
-                        return new MutablePlaylistDirectory<I>(dir.id(), dir.getName(), dir.audioItems(), dir.descendantPlaylists());
-                    } else {
-                        return new MutablePlaylist<>(e.id(), e.getName(), e.audioItems());
-                    }
-                })
-                .collect(Collectors.toSet());
-    }
-
     private void add(N playlist) {
         if (playlist.isDirectory()) {
-            if (directories.findById(playlist.id()).isEmpty()) {
+            if (directories.findByAttribute(NAME, playlist.getName()).isEmpty()) {
                 var mutableDirectory = toMutableDirectory((D) playlist);
                 directories.add(mutableDirectory);
                 addRecursive(mutableDirectory, mutableDirectory.descendantPlaylists());
             }
         } else {
-            if (playlists.findById(playlist.id()).isEmpty()) {
-                playlists.add(toMutablePlaylist(playlist));
+            if (playlists.findByAttribute(NAME, playlist.getName()).isEmpty()) {
+                playlists.add(toMutablePlaylists(playlist));
             }
         }
     }
 
+    private int getNewId() {
+        int id;
+        do {
+            id = idCounter.getAndIncrement();
+        } while (idSet.contains(id));
+        idSet.add(id);
+        return id;
+    }
+
+    private MutableAudioPlaylist<I> toMutablePlaylists(N playlistDirectory) {
+        return new MutablePlaylist<>(getNewId(), playlistDirectory.getName(), playlistDirectory.audioItems());
+    }
+
+    private MutableAudioPlaylistDirectory<I> toMutableDirectory(D playlistDirectory) {
+        return new MutablePlaylistDirectory<>(getNewId(), playlistDirectory.getName(), playlistDirectory.audioItems(), toMutablePlaylists(playlistDirectory.descendantPlaylists()));
+    }
+
     private void addRecursive(MutableAudioPlaylistDirectory<I> parent, Set<MutableAudioPlaylist<I>> mutablePlaylistNodes) {
         for (MutableAudioPlaylist<I> playlist : mutablePlaylistNodes) {
-            playlistsMultiMap.put(parent, playlist);
+            playlistsMultiMap.put(parent.getUniqueId(), playlist.getUniqueId());
             add((N) playlist);
         }
     }
@@ -114,7 +108,7 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
 
     private void removeRecursive(Set<N> mutablePlaylistNodes) {
         for (N p : mutablePlaylistNodes) {
-            playlistsMultiMap.asMap().remove(p);
+            playlistsMultiMap.asMap().remove(p.getUniqueId());
             if (p.isDirectory()) {
                 removeRecursive(findDirectory(p.id()).descendantPlaylists());
             }
@@ -125,65 +119,51 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
 
     @Override
     public List<N> search(BooleanQueryTerm<N> booleanQueryTerm) {
-        var foundPlaylists = playlists.search((BooleanQueryTerm<MutableAudioPlaylist<I>>) booleanQueryTerm).stream()
-                .map(obj -> (N) obj)
-                .toList();
-        var foundDirectories = directories.search((BooleanQueryTerm<MutableAudioPlaylistDirectory<I>>) booleanQueryTerm).stream()
-                .map(obj -> (N) obj)
-                .toList();
-        var result = new ArrayList<N>();
-        result.addAll(foundPlaylists);
-        result.addAll(foundDirectories);
-        return result;
+        return ImmutableList.<N>builder()
+                .addAll(playlists.search((BooleanQueryTerm<MutableAudioPlaylist<I>>) booleanQueryTerm).stream()
+                                .map(this::toImmutablePlaylist)
+                                .toList())
+                .addAll(directories.search((BooleanQueryTerm<MutableAudioPlaylistDirectory<I>>) booleanQueryTerm).stream()
+                                .map(this::toImmutablePlaylistDirectory)
+                                .toList()).build();
     }
 
     @Override
     public Optional<N> findById(int id) {
-        var pId = playlists.findById(id).orElse(null);
-        var dId = directories.findById(id).orElse(null);
-        return selectExistingFromPair(pId, dId);
+        return findByIdInternal(id).map(this::toImmutablePlaylist);
     }
 
-    private Optional<N> selectExistingFromPair(MutableAudioPlaylist<I> pId, MutableAudioPlaylistDirectory<I> dId) {
-        if (pId != null && dId != null)
-            throw new IllegalStateException("Found 2 playlists with the same id: " + pId + ", " + dId);
-        else
-            return pId != null ? Optional.of((N) pId) : Optional.ofNullable((N) dId);
+    private Optional<MutableAudioPlaylist<I>> findByIdInternal(int id) {
+        return playlists.findById(id).or(() -> directories.findById(id));
     }
 
     @Override
     public Optional<N> findByUniqueId(String id) {
-        var pId = playlists.findByUniqueId(id).orElse(null);
-        var dId = directories.findByUniqueId(id).orElse(null);
-        return selectExistingFromPair(pId, dId);
+        return playlists.findByUniqueId(id)
+                .map(this::toImmutablePlaylist)
+                .or(() -> directories.findByUniqueId(id).map(this::toImmutablePlaylistDirectory));
     }
 
     @Override
     public <A extends EntityAttribute<V>, V> List<N> findByAttribute(A a, V v) {
-        var foundPlaylists = playlists.findByAttribute(a, v).stream()
-                .map(obj -> (N) obj)
-                .toList();
-        var foundDirectories = directories.findByAttribute(a, v).stream()
-                .map(obj -> (N) obj)
-                .toList();
-        foundPlaylists.addAll(foundDirectories);
-        return foundPlaylists;
+        return ImmutableList.<N>builder()
+                .addAll(playlists.findByAttribute(a, v).stream()
+                                .map(this::toImmutablePlaylist)
+                                .toList())
+                .addAll(directories.findByAttribute(a, v).stream()
+                                .map(this::toImmutablePlaylistDirectory)
+                                .toList()).build();
     }
 
     @Override
     public <A extends EntityAttribute<V>, V> Optional<N> findSingleByAttribute(A a, V v) throws RepositoryException {
-        var pId = playlists.findSingleByAttribute(a, v).orElse(null);
-        var dId = directories.findSingleByAttribute(a, v).orElse(null);
-        return selectExistingFromPair(pId, dId);
-    }
+        var foundPlaylist = playlists.findSingleByAttribute(a, v).orElse(null);
+        var foundDirectory = directories.findSingleByAttribute(a, v).orElse(null);
+        if (foundPlaylist != null && foundDirectory != null)
+            throw new RepositoryException("Found 2 entities with the same attribute: [" + foundPlaylist + ", " + foundDirectory + "]");
 
-    @Override
-    public <A extends EntityAttribute<V>, V, X extends QueryEntity> Optional<X> findSingleByAttribute(A a, V v, Class<X> clazz) throws RepositoryException {
-        if (clazz.equals(MutablePlaylist.class))
-            return playlists.findSingleByAttribute(a, v, clazz);
-        else if (clazz.equals(MutablePlaylistDirectory.class))
-            return directories.findSingleByAttribute(a, v, clazz);
-        else return Optional.empty();
+        return foundPlaylist != null ?
+                Optional.of(toImmutablePlaylist(foundPlaylist)) : Optional.ofNullable(toImmutablePlaylistDirectory(foundDirectory));
     }
 
     @Override
@@ -204,13 +184,30 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
         return setBuilder.build().iterator();
     }
 
-    private N toImmutablePlaylist(MutableAudioPlaylist<I> mutablePlaylist) {
-        return (N) new ImmutablePlaylist<>(mutablePlaylist.id(), mutablePlaylist.getName(), mutablePlaylist.audioItems());
+    private N toImmutablePlaylist(MutableAudioPlaylist<I> audioPlaylist) {
+        return (N) new ImmutablePlaylist<>(audioPlaylist.id(), audioPlaylist.getName(), audioPlaylist.audioItems());
     }
 
-    private N toImmutablePlaylistDirectory(MutableAudioPlaylistDirectory<I> mutablePlaylistDirectory) {
-        return (N) new ImmutablePlaylistDirectory<>(mutablePlaylistDirectory.id(), mutablePlaylistDirectory.getName(),
-                                                    mutablePlaylistDirectory.audioItems(), mutablePlaylistDirectory.descendantPlaylists());
+    private N toImmutablePlaylist(N audioPlaylist) {
+        return (N) new ImmutablePlaylist<>(audioPlaylist.id(), audioPlaylist.getName(), audioPlaylist.audioItems());
+    }
+
+    private N toImmutablePlaylistDirectory(MutableAudioPlaylistDirectory<I> playlistDirectory) {
+        return playlistDirectory == null ? null :
+                (N) new ImmutablePlaylistDirectory<>(playlistDirectory.id(), playlistDirectory.getName(), playlistDirectory.audioItems(),
+                                                     toImmutablePlaylistDirectories(playlistDirectory.descendantPlaylists()));
+    }
+
+    private N toImmutablePlaylistDirectory(D playlistDirectory) {
+        return playlistDirectory == null ? null :
+                (N) new ImmutablePlaylistDirectory<>(playlistDirectory.id(), playlistDirectory.getName(), playlistDirectory.audioItems(),
+                                                     toImmutablePlaylistDirectories(playlistDirectory.descendantPlaylists()));
+    }
+
+    private Set<N> toImmutablePlaylistDirectories(Set<N> audioPlaylists) {
+        return audioPlaylists.stream()
+                .map(p -> p.isDirectory() ? toImmutablePlaylistDirectory((D) p) : toImmutablePlaylist(p))
+                .collect(Collectors.toSet());
     }
 
     @Override
@@ -224,35 +221,41 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
     }
 
     @Override
-    public N createPlaylist(String name) {
+    public N createPlaylist(String name) throws RepositoryException {
         return createPlaylist(name, Collections.emptyList());
     }
 
     @Override
-    public N createPlaylist(String name, List<I> audioItems) {
-        return (N) playlists.search(PlaylistStringAttribute.NAME.equalsTo(name)).stream()
-                .findAny()
-                .orElseGet(() -> {
-                    var playlist = new MutablePlaylist<>(idCounter.getAndIncrement(), name, audioItems);
-                    playlists.add(playlist);
-                    return playlist;
-                });
+    public N createPlaylist(String name, List<I> audioItems) throws RepositoryException {
+        var searchResult = playlists.search(NAME.equalsTo(name));
+        if (searchResult.isEmpty()) {
+            var playlist = new MutablePlaylist<>(getNewId(), name, audioItems);
+            playlists.add(playlist);
+            return toImmutablePlaylist(playlist);
+        } else if (searchResult.size() == 1) {
+            throw new RepositoryException("Playlist with name '" + name + "' already exists");
+        } else {
+            throw new IllegalStateException("Found more than 1 playlist by name '" + name + "': " + searchResult);
+        }
     }
 
     @Override
-    public D createPlaylistDirectory(String name) {
+    public D createPlaylistDirectory(String name) throws RepositoryException {
         return createPlaylistDirectory(name, Collections.emptyList());
     }
 
     @Override
-    public D createPlaylistDirectory(String name, List<I> audioItems) {
-        return (D) directories.search(PlaylistStringAttribute.NAME.equalsTo(name)).stream()
-                .findAny()
-                .orElseGet(() -> {
-                    var playlistDirectory = new MutablePlaylistDirectory<>(idCounter.getAndIncrement(), name, audioItems);
-                    directories.add(playlistDirectory);
-                    return playlistDirectory;
-                });
+    public D createPlaylistDirectory(String name, List<I> audioItems) throws RepositoryException {
+        var searchResult = directories.search(NAME.equalsTo(name));
+        if (searchResult.isEmpty()) {
+            var playlistDirectory = new MutablePlaylistDirectory<>(getNewId(), name, audioItems);
+            directories.add(playlistDirectory);
+            return (D) toImmutablePlaylistDirectory(playlistDirectory);
+        } else if (searchResult.size() == 1) {
+            throw new RepositoryException("Playlist with name '" + name + "' already exists");
+        } else {
+            throw new IllegalStateException("Found more than 1 playlist by name '" + name + "': " + searchResult);
+        }
     }
 
     @Override
@@ -261,6 +264,7 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
         Objects.requireNonNull(playlist);
 
         playlists.findById(playlist.id())
+                .or(() -> directories.findById(playlist.id()))
                 .ifPresent(p -> p.addAudioItems(audioItems));
     }
 
@@ -269,13 +273,26 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
         Objects.requireNonNull(playlistsToAdd);
         Objects.requireNonNull(directory);
 
-        var mutablePlaylists = toMutablePlaylist(playlistsToAdd);
+        var mutablePlaylists = toMutablePlaylists(playlistsToAdd);
 
         directories.findById(directory.id())
                 .ifPresent(d -> {
                     d.addAllPlaylists(mutablePlaylists);
-                    playlistsMultiMap.putAll(d, mutablePlaylists);
+                    playlistsMultiMap.putAll(d.getUniqueId(), mutablePlaylists.stream().map(MutableAudioPlaylist::getUniqueId).collect(Collectors.toSet()));
                 });
+    }
+
+    private Set<MutableAudioPlaylist<I>> toMutablePlaylists(Set<N> audioPlaylists) {
+        return audioPlaylists.stream()
+                .map(e -> {
+                    if (e.isDirectory()) {
+                        AudioPlaylistDirectory<I> dir = (AudioPlaylistDirectory<I>) e;
+                        return new MutablePlaylistDirectory<>(dir.id(), dir.getName(), dir.audioItems(), dir.descendantPlaylists());
+                    } else {
+                        return new MutablePlaylist<>(e.id(), e.getName(), e.audioItems());
+                    }
+                })
+                .collect(Collectors.toSet());
     }
 
     @Override
@@ -283,27 +300,24 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
         Objects.requireNonNull(playlistToMove);
         Objects.requireNonNull(destinationPlaylist);
 
-        findById(playlistToMove.id())
-                .map(MutableAudioPlaylist.class::cast)
-                .ifPresent(_playlistToMove -> {
-                    directories.findById(destinationPlaylist.id()).ifPresent(_destinationPlaylist -> {
-                        ancestor(playlistToMove).ifPresent(ancestor -> {
-                            playlistsMultiMap.remove(ancestor, _playlistToMove);
-                            ancestor.removePlaylist(_playlistToMove);
-                        });
-                        playlistsMultiMap.put(_destinationPlaylist, _playlistToMove);
-                        _destinationPlaylist.addPlaylist(_playlistToMove);
-
-                        LOG.info("Playlist '{}' moved to '{}'", playlistToMove.getName(), destinationPlaylist.getName());
+        findByIdInternal(playlistToMove.id())
+                .ifPresent(playlist -> directories.findById(destinationPlaylist.id()).ifPresent(playlistDirectory -> {
+                    ancestor(playlistToMove).ifPresent(ancestor -> {
+                        playlistsMultiMap.remove(ancestor.getUniqueId(), playlist.getUniqueId());
+                        ancestor.removePlaylist(playlist);
                     });
-                });
+                    playlistsMultiMap.put(playlistDirectory.getUniqueId(), playlist.getUniqueId());
+                    playlistDirectory.addPlaylist(playlist);
+
+                    LOG.info("Playlist '{}' moved to '{}'", playlistToMove.getName(), destinationPlaylist.getName());
+                }));
     }
 
     private Optional<MutableAudioPlaylistDirectory<I>> ancestor(N playlistNode) {
-        if (playlistsMultiMap.containsValue(playlistNode)) {
+        if (playlistsMultiMap.containsValue(playlistNode.getUniqueId())) {
             return playlistsMultiMap.entries().stream()
-                    .filter(entry -> playlistNode.equals(entry.getValue()))
-                    .map(Map.Entry::getKey)
+                    .filter(entry -> playlistNode.getUniqueId().equals(entry.getValue()))
+                    .map(entry -> directories.findByUniqueId(entry.getKey()).get())
                     .findFirst();
         } else {
             return Optional.empty();
@@ -314,36 +328,33 @@ public class AudioPlaylistInMemoryRepository<I extends AudioItem, N extends Audi
     public List<N> findAllByName(String name) {
         Objects.requireNonNull(name);
         return ImmutableList.<N>builder()
-                .addAll((Iterable<? extends N>) playlists.findByAttribute(PlaylistStringAttribute.NAME, name))
-                .addAll((Iterable<? extends N>) directories.findByAttribute(PlaylistStringAttribute.NAME, name))
-                .build();
+                .addAll(playlists.findByAttribute(NAME, name).stream()
+                                .map(this::toImmutablePlaylist)
+                                .collect(Collectors.toSet()))
+                .addAll(directories.findByAttribute(NAME, name).stream()
+                                .map(this::toImmutablePlaylistDirectory)
+                                .collect(Collectors.toSet())).build();
     }
 
     @Override
     public Optional<N> findSinglePlaylistByName(String name) {
         Objects.requireNonNull(name);
-
-        var allByName = findAllByName(name);
-        if (allByName.isEmpty()) {
-            return Optional.empty();
-        } else if (allByName.size() > 1) {
-            throw new IllegalStateException(String.format(FOUND_MORE_THAN_EXPECTED_BY_NAME_MESSAGE, name, allByName));
-        } else {
-            return Optional.of(allByName.get(0));
+        try {
+            return playlists.findSingleByAttribute(NAME, name).map(this::toImmutablePlaylist);
+        }
+        catch (RepositoryException exception) {
+            throw new IllegalStateException(exception);
         }
     }
 
     @Override
     public Optional<D> findSingleDirectoryByName(String name) {
         Objects.requireNonNull(name);
-
-        var allByName = findAllByName(name);
-        if (allByName.isEmpty()) {
-            return Optional.empty();
-        } else if (allByName.size() > 1) {
-            throw new IllegalStateException(String.format(FOUND_MORE_THAN_EXPECTED_BY_NAME_MESSAGE, name, allByName));
-        } else {
-            return (Optional<D>) Optional.of(allByName.get(0));
+        try {
+            return directories.findSingleByAttribute(NAME, name).map(playlistDirectory -> (D) toImmutablePlaylistDirectory(playlistDirectory));
+        }
+        catch (RepositoryException exception) {
+            throw new IllegalStateException(exception);
         }
     }
 
