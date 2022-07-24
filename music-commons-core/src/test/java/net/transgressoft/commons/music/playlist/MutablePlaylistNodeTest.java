@@ -65,11 +65,14 @@ class MutablePlaylistNodeTest extends MusicLibraryTestBase {
         var audioItems = createTestAudioItemsSet(5);
         var p1 = new MutablePlaylist<>(10, "p1", audioItems);
         var p2 = new MutablePlaylist<>(11, "p2");
-        var d1 = new MutablePlaylistDirectory<>(12, "d1");
+        var d1 = new MutablePlaylistDirectory<>(12, "d1", Collections.singletonList(createTestAudioItem("One")));
 
         directory1.addPlaylists(p1, p2, d1);
         assertThat(directory1.descendantPlaylists()).hasSize(3);
         assertThat(directory1.containsPlaylist(d1)).isTrue();
+
+        d1.clearAudioItems();
+        assertThat(d1.audioItems()).isEmpty();
 
         var directory2 = new MutablePlaylistDirectory<>(1, "Directory1");
         assertThat(directory1).isEqualTo(directory2);
