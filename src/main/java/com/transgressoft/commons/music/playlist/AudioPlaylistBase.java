@@ -59,14 +59,28 @@ public abstract class AudioPlaylistBase<I extends AudioItem> implements AudioPla
         audioItems.clear();
     }
 
-    @SuppressWarnings("unchecked")
+    /**
+     * Compares first by name and then by number of audio items.
+     *
+     * @param playlist  The {@link AudioPlaylist} to compare against this object
+     * @return          The result of the comparison
+     */
+    @Override
+    public int compareTo(AudioPlaylist<I> playlist) {
+        if (Objects.equal(name, playlist.name()))
+            return audioItems.size() - playlist.audioItems().size();
+        else
+            return name.compareTo(playlist.name());
+    }
+
+    @SuppressWarnings ("unchecked")
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         AudioPlaylist<I> that = (AudioPlaylist<I>) o;
-        return com.google.common.base.Objects.equal(name, that.name()) &&
-                com.google.common.base.Objects.equal(audioItems, that.audioItems());
+        return Objects.equal(name, that.name()) &&
+                Objects.equal(audioItems, that.audioItems());
     }
 
     @Override

@@ -8,7 +8,7 @@ import java.util.List;
 /**
  * @author Octavio Calleya
  */
-public interface AudioPlaylist<I extends AudioItem> {
+public interface AudioPlaylist<I extends AudioItem> extends Comparable<AudioPlaylist<I>> {
 
     String name();
 

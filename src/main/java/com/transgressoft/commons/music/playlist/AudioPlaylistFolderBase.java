@@ -74,6 +74,31 @@ public abstract class AudioPlaylistFolderBase<I extends AudioItem> extends Audio
         includedPlaylists.forEach(playlist -> playlist.removeAudioItems(audioItems));
     }
 
+    /**
+     * Compares first by name, then by number of audio items, and finally by number of included playlists
+     *
+     * @param playlist  The {@link AudioPlaylist} to compare against this object
+     * @return          The result of the comparison
+     */
+    @Override
+    public int compareTo(AudioPlaylist<I> playlist) {
+        int result;
+        if (Objects.equal(name(), playlist.name())) {
+            if (audioItems().size() - playlist.audioItems().size() == 0) {
+                if (playlist instanceof AudioPlaylistFolder) {
+                    result = includedPlaylists.size() - ((AudioPlaylistFolder<I>) playlist).includedPlaylists().size();
+                } else {
+                    result = includedPlaylists.size();
+                }
+            } else {
+                result = audioItems().size() - playlist.audioItems().size();
+            }
+        } else {
+            result = name().compareTo(playlist.name());
+        }
+        return result;
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public boolean equals(Object o) {
@@ -95,6 +120,7 @@ public abstract class AudioPlaylistFolderBase<I extends AudioItem> extends Audio
         return MoreObjects.toStringHelper(this)
                 .add("name", name())
                 .add("includedPlaylists", includedPlaylists.size())
+                .add("audioItemsFromAllPlaylists", itemsIncludedFromAllPlaylists().size())
                 .toString();
     }
 }
