@@ -10,7 +10,7 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Iterator;
+import java.util.Set;
 
 /**
  * @author Octavio Calleya
@@ -20,7 +20,7 @@ class PlaylistExportToolBase implements PlaylistExportTool {
     private static final Logger LOG = LoggerFactory.getLogger(PlaylistExportToolBase.class);
 
     @Override
-    public <P extends MutablePlaylistNode<? extends AudioItem>> void exportPlaylistAsM3u(P playlist, Path path) throws ExportException {
+    public <P extends AudioPlaylist<? extends AudioItem>> void exportPlaylistAsM3u(P playlist, Path path) throws ExportException {
         String playlistFileName = getPlaylistM3uName(playlist.getName());
         LOG.info("Exporting playlist {} to {}", playlist.getName(), path);
 
@@ -37,12 +37,10 @@ class PlaylistExportToolBase implements PlaylistExportTool {
     }
 
     @Override
-    public <D extends MutablePlaylistDirectory<? extends AudioItem>> void exportPlaylistDirectoryAsM3u(D playlistNode, Path path) throws ExportException {
+    public <D extends AudioPlaylistDirectory<? extends AudioItem>> void exportPlaylistDirectoryAsM3u(D playlistNode, Path path) throws ExportException {
         exportPlaylistAsM3u(playlistNode, path);
 
-        var playlistIterator = playlistNode.descendantPlaylistsIterator();
-        while (playlistIterator.hasNext()) {
-            var playlist = playlistIterator.next();
+        for (AudioPlaylist<? extends AudioItem> playlist : playlistNode.descendantPlaylists()) {
             if (playlist.isDirectory()) {
                 exportPlaylistDirectory((MutablePlaylistDirectory<?>) playlist, path);
             } else {
@@ -67,7 +65,7 @@ class PlaylistExportToolBase implements PlaylistExportTool {
             else {
                 Path playlistFolderPath = path.resolve(playlistFolderName);
 
-                printDescendantPlaylists(playlistDirectory.descendantPlaylistsIterator(), createdDirectory, playlistFolderPath);
+                printDescendantPlaylists(playlistDirectory.descendantPlaylists(), createdDirectory, playlistFolderPath);
                 exportPlaylistAsM3u(playlistDirectory, folderFile.toPath());
             }
         }
@@ -80,11 +78,11 @@ class PlaylistExportToolBase implements PlaylistExportTool {
         return playlistName + ".m3u";
     }
 
-    protected void printPlaylist(MutablePlaylistNode<? extends AudioItem> playlist, Path playlistPath) throws IOException {
+    protected void printPlaylist(AudioPlaylist<? extends AudioItem> playlist, Path playlistPath) throws IOException {
         try (PrintWriter printWriter = new PrintWriter(playlistPath.toFile(), StandardCharsets.UTF_8.name())) {
             LOG.info("Creating playlist folder {}", playlistPath);
             printWriter.println("#EXTM3U");
-            playlist.audioItemsListIterator().forEachRemaining(audioItem -> {
+            playlist.audioItems().forEach(audioItem -> {
                 printWriter.println("#EXTALB:" + audioItem.album());
                 printWriter.println("#EXTART:" + audioItem.artist());
                 printWriter.print("#EXTINF:" + audioItem.duration().getSeconds());
@@ -98,10 +96,10 @@ class PlaylistExportToolBase implements PlaylistExportTool {
         }
     }
 
-    private void printDescendantPlaylists(Iterator<? extends MutablePlaylistNode<? extends AudioItem>> playlistsIterator, Path folder, Path playlistFolderPath) throws IOException {
+    private void printDescendantPlaylists(Set<? extends AudioPlaylist<? extends AudioItem>> playlists, Path folder, Path playlistFolderPath) throws IOException {
         try (PrintWriter printWriter = new PrintWriter(playlistFolderPath.toString(), StandardCharsets.UTF_8.name())) {
             printWriter.println("#EXTM3U");
-            playlistsIterator.forEachRemaining(playlist -> {
+            playlists.forEach(playlist -> {
                 String playlistM3uName = getPlaylistM3uName(playlist.getName());
                 Path innerPlaylistRelativePath = playlistFolderPath.getParent().relativize(folder.resolve(playlistM3uName));
                 printWriter.println(innerPlaylistRelativePath);

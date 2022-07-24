@@ -3,13 +3,13 @@ package net.transgressoft.commons.music.playlist;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.UnmodifiableListIterator;
 import net.transgressoft.commons.music.audio.AudioItem;
 import net.transgressoft.commons.query.BooleanQueryTerm;
 import net.transgressoft.commons.query.EntityAttribute;
 import net.transgressoft.commons.query.QueryEntity;
 
 import javax.annotation.Nonnull;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -21,41 +21,18 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
-import static net.transgressoft.commons.music.playlist.PlaylistNodeAttribute.ANCESTOR;
 import static net.transgressoft.commons.music.playlist.PlaylistNodeAttribute.SELF;
 import static net.transgressoft.commons.music.playlist.PlaylistStringAttribute.NAME;
 import static net.transgressoft.commons.music.playlist.PlaylistStringAttribute.UNIQUE_ID;
 
-/**
- * Base implementation of a {@code PlaylistNode}. All attributes are mutable but intend to be thread-safe, <tt>id</tt> is inmutable.
- *
- * @param <I> The type of the entities listed in the playlist node.
- */
-abstract class MutablePlaylistNodeBase<I extends AudioItem> implements MutablePlaylistNode<I> {
+class ImmutablePlaylist<I extends AudioItem> implements AudioPlaylist<I> {
 
     private final int id;
     private final Set<I> audioItems;
     private final Map<EntityAttribute<?>, Supplier<Object>> attributes;
-    private MutablePlaylistDirectory<I> ancestor;
-
     private String name;
 
-    protected MutablePlaylistNodeBase(int id, String name, MutablePlaylistDirectory<I> ancestor, List<I> audioItems) {
-        requireNonNull(name);
-        requireNonNull(ancestor);
-        requireNonNull(audioItems);
-
-        this.id = id;
-        this.ancestor = ancestor;
-        this.name = name;
-
-        this.audioItems = new ConcurrentSkipListSet<>(audioItems);
-        this.attributes = new ConcurrentHashMap<>();
-        initializeAttributeMap();
-    }
-
-    // Only for NullAudioPlaylistNode
-    MutablePlaylistNodeBase(int id, String name, List<I> audioItems) {
+    protected ImmutablePlaylist(int id, String name, List<I> audioItems) {
         requireNonNull(name);
         requireNonNull(audioItems);
 
@@ -71,22 +48,11 @@ abstract class MutablePlaylistNodeBase<I extends AudioItem> implements MutablePl
         attributes.put(NAME, this::getName);
         attributes.put(UNIQUE_ID, this::getUniqueId);
         attributes.put(SELF, () -> this);
-        attributes.put(ANCESTOR, this::getAncestor);
     }
 
     @Override
     public int id() {
         return id;
-    }
-
-    @Override
-    public MutablePlaylistDirectory<I> getAncestor() {
-        return ancestor;
-    }
-
-    @Override
-    public void setAncestor(MutablePlaylistDirectory<I> ancestor) {
-        this.ancestor = ancestor;
     }
 
     @Override
@@ -104,44 +70,30 @@ abstract class MutablePlaylistNodeBase<I extends AudioItem> implements MutablePl
         return name;
     }
 
-    @Override
-    public void setName(String name) {
-        requireNonNull(name);
+    protected void setName(String name) {
         this.name = name;
     }
 
     @Override
-    public void addAudioItems(List<I> audioItems) {
-        requireNonNull(audioItems);
+    public List<I> audioItems() {
+        return ImmutableList.copyOf(audioItems);
+    }
+
+    @Override
+    public boolean isDirectory() {
+        return false;
+    }
+
+    protected void addAll(List<I> audioItems) {
         this.audioItems.addAll(audioItems);
     }
 
-    @Override
-    public void removeAudioItems(Set<I> audioItems) {
-        requireNonNull(audioItems);
-        this.audioItems.removeAll(audioItems);
+    protected void removeAll(Collection<I> audioItems) {
+        audioItems.forEach(this.audioItems::remove);
     }
 
-    @Override
-    public int numberOfAudioItems() {
-        return this.audioItems.size();
-    }
-
-    @Override
-    public UnmodifiableListIterator<I> audioItemsListIterator() {
-        return ImmutableList.copyOf(audioItems).listIterator();
-    }
-
-    @Override
-    public void clearAudioItems() {
-        audioItems.clear();
-    }
-
-
-
-    @Override
-    public boolean isEmptyOfAudioItems() {
-        return audioItems.isEmpty();
+    protected void clear() {
+        this.audioItems.clear();
     }
 
     @Override
@@ -158,6 +110,7 @@ abstract class MutablePlaylistNodeBase<I extends AudioItem> implements MutablePl
                 .anyMatch(queryPredicate::apply);
     }
 
+
     @SuppressWarnings("unchecked")
     @Override
     public <A extends EntityAttribute<V>, V> V getAttribute(A attribute) throws UnknownAttributeException {
@@ -167,7 +120,7 @@ abstract class MutablePlaylistNodeBase<I extends AudioItem> implements MutablePl
     }
 
     @Override
-    public int compareTo(@Nonnull QueryEntity object) {
+    public int compareTo(@Nonnull AudioPlaylist<I> object) {
         return Comparator.comparing(QueryEntity::getUniqueId, String.CASE_INSENSITIVE_ORDER).compare(this, object);
     }
 
@@ -176,7 +129,7 @@ abstract class MutablePlaylistNodeBase<I extends AudioItem> implements MutablePl
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        MutablePlaylistNodeBase<I> that = (MutablePlaylistNodeBase<I>) o;
+        MutablePlaylist<I> that = (MutablePlaylist<I>) o;
         return Objects.equal(id(), that.id());
     }
 
@@ -190,8 +143,8 @@ abstract class MutablePlaylistNodeBase<I extends AudioItem> implements MutablePl
         return MoreObjects.toStringHelper(this)
                 .add("id", id)
                 .add("name", name)
-                .add("ancestor", "{id=" + getAncestor().id() + "}")
                 .add("audioItems", audioItems.size())
+                .omitNullValues()
                 .toString();
     }
 }

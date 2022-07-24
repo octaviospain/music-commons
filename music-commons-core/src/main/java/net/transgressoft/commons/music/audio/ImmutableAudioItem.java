@@ -12,6 +12,7 @@ import javax.annotation.Nonnull;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.StringJoiner;
 
@@ -27,7 +28,7 @@ import static net.transgressoft.commons.music.audio.StringAudioItemAttribute.*;
 /**
  * @author Octavio Calleya
  */
-class ImmutableAudioItem implements AudioItem {
+class ImmutableAudioItem implements AudioItem, Comparable<AudioItem> {
 
     private final Path path;
     private final String title;
@@ -307,7 +308,7 @@ class ImmutableAudioItem implements AudioItem {
     }
 
     @Override
-    public int compareTo(@Nonnull QueryEntity o) {
-        return hashCode() - o.hashCode();
+    public int compareTo(@Nonnull AudioItem object) {
+        return Comparator.comparing(QueryEntity::getUniqueId, String.CASE_INSENSITIVE_ORDER).compare(this, object);
     }
 }

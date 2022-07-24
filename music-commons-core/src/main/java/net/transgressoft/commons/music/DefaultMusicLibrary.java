@@ -3,17 +3,17 @@ package net.transgressoft.commons.music;
 import net.transgressoft.commons.music.audio.AudioItem;
 import net.transgressoft.commons.music.audio.AudioItemInMemoryRepository;
 import net.transgressoft.commons.music.audio.AudioItemRepository;
+import net.transgressoft.commons.music.playlist.AudioPlaylistDirectory;
 import net.transgressoft.commons.music.playlist.AudioPlaylistInMemoryRepository;
+import net.transgressoft.commons.music.playlist.AudioPlaylist;
 import net.transgressoft.commons.music.playlist.AudioPlaylistRepository;
-import net.transgressoft.commons.music.playlist.MutablePlaylistDirectory;
-import net.transgressoft.commons.music.playlist.MutablePlaylistNode;
 
 import java.util.Set;
 
 public class DefaultMusicLibrary implements MusicLibrary {
 
     private final AudioItemRepository audioItemRepository = new AudioItemInMemoryRepository();
-    private final AudioPlaylistRepository audioPlaylistRepository = new AudioPlaylistInMemoryRepository();
+    private final AudioPlaylistRepository<AudioItem, AudioPlaylist<AudioItem>, AudioPlaylistDirectory<AudioItem>> audioPlaylistRepository = new AudioPlaylistInMemoryRepository<>();
 
     public DefaultMusicLibrary() {
 
@@ -35,12 +35,12 @@ public class DefaultMusicLibrary implements MusicLibrary {
     }
 
     @Override
-    public <I extends AudioItem, P extends MutablePlaylistNode<I>> MusicLibrary addAudioItemToPlaylist(I audioItems, P playlist) {
+    public <I extends AudioItem, P extends AudioPlaylist<I>> MusicLibrary addAudioItemToPlaylist(I audioItems, P playlist) {
         return null;
     }
 
     @Override
-    public <I extends AudioItem, P extends MutablePlaylistNode<I>, D extends MutablePlaylistDirectory<I>> MusicLibrary movePlaylist(P playlist, D playlistDirectory) {
+    public <I extends AudioItem, P extends AudioPlaylist<I>, D extends AudioPlaylistDirectory<I>> MusicLibrary movePlaylist(P playlist, D playlistDirectory) {
         return null;
     }
 }

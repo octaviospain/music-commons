@@ -9,6 +9,8 @@ import java.util.List;
 
 public class AudioItemTestFactory {
 
+    private static final Path DEFAULT_PATH = Path.of("Music");
+    private static final Duration DEFAULT_DURATION = Duration.ofSeconds(32);
     private int testCounter = 1;
 
     private Path getPath(int i) {
@@ -29,9 +31,15 @@ public class AudioItemTestFactory {
                 .build();
     }
 
-    public AudioItem createTestAudioItem(String path, String name, Duration duration) {
+    public AudioItem createTestAudioItem(String name) {
         testCounter++;
-        return new ImmutableAudioItemBuilder(Path.of(path), name, duration, 320, LocalDateTime.now())
+        return new ImmutableAudioItemBuilder(DEFAULT_PATH, name, DEFAULT_DURATION, 320, LocalDateTime.now())
+                .build();
+    }
+
+    public AudioItem createTestAudioItem(String name, Duration duration) {
+        testCounter++;
+        return new ImmutableAudioItemBuilder(DEFAULT_PATH, name, duration, 320, LocalDateTime.now())
                 .build();
     }
 

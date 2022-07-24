@@ -2,25 +2,58 @@ package net.transgressoft.commons.music.playlist;
 
 import net.transgressoft.commons.music.audio.AudioItem;
 import net.transgressoft.commons.query.Repository;
-import net.transgressoft.commons.query.RepositoryException;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * @author Octavio Calleya
  */
-public interface AudioPlaylistRepository extends Repository<MutablePlaylistNode<AudioItem>> {
+public interface AudioPlaylistRepository<I extends AudioItem, N extends AudioPlaylist<I>, D extends AudioPlaylistDirectory<I>>
+        extends Repository<N> {
 
-    AudioPlaylistBuilder<MutableAudioPlaylist<AudioItem>, AudioItem> createPlaylist(String name);
+    N createPlaylist(String name);
 
-    AudioPlaylistDirectoryBuilder<MutablePlaylistDirectory<AudioItem>, AudioItem> createPlaylistDirectory(String name);
+    N createPlaylist(String name, List<I> audioItems);
 
-    List<MutablePlaylistNode<AudioItem>> findAllByName(String name);
+    D createPlaylistDirectory(String name);
 
-    Optional<MutableAudioPlaylist<AudioItem>> findSinglePlaylistByName(String name) throws RepositoryException;
+    D createPlaylistDirectory(String name, List<I> audioItems);
 
-    Optional<MutablePlaylistDirectory<AudioItem>> findSingleDirectoryByName(String name) throws RepositoryException;
+    /**
+     * Precondition, <tt>playlist</tt> exist in the <tt>AudioPlaylistRepository</tt>.
+     * Otherwise, no action is performed.
+     *
+     * @param playlist
+     */
+    void addAudioItemsToPlaylist(List<I> audioItems, N playlist);
 
-    <P extends MutablePlaylistNode<AudioItem>, D extends MutablePlaylistDirectory<AudioItem>> void movePlaylist(P playlistToMove, D destinationPlaylist) throws RepositoryException;
+    /**
+     * Precondition, <tt>playlist</tt> and <tt>directory</tt> exist in the <tt>AudioPlaylistRepository</tt>.
+     * Otherwise, no action is performed.
+     *
+     * @param playlist
+     * @param directory
+     */
+    void addPlaylistsToDirectory(Set<N> playlist, D directory);
+
+    /**
+     * Precondition, <tt>playlistToMove</tt> and <tt>destinationPlaylist</tt> exist in the <tt>AudioPlaylistRepository</tt>.
+     * Otherwise, no action is performed.
+     *
+     * @param playlistToMove
+     * @param destinationPlaylist
+     */
+    void movePlaylist(N playlistToMove, D destinationPlaylist);
+
+    List<N> findAllByName(String name);
+
+    Optional<N> findSinglePlaylistByName(String name);
+
+    Optional<D> findSingleDirectoryByName(String name);
+
+    int numberOfPlaylists();
+
+    int numberOfPlaylistDirectories();
 }
