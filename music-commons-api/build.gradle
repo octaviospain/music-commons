@@ -1,0 +1,54 @@
+import org.gradle.api.JavaVersion
+
+plugins {
+    id 'org.sonarqube' version '3.3'
+}
+
+group = 'net.transgressoft'
+version gitVersion()
+description = 'Transgressoft Music Commons - API'
+
+project.tasks["sonarqube"].dependsOn "compileJava"
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId group
+            artifactId 'music-commons-api'
+            version version
+
+            from components.java
+
+            pom {
+                name = "music-commons-api"
+                description = 'Transgressoft Music Commons - AI'
+                licenses {
+                    license {
+                        name = "GNU General Public License v3"
+                        url = "https://www.gnu.org/licenses/gpl-3.0.en.html"
+                    }
+                }
+                developers {
+                    developer {
+                        id = "octaviospain"
+                        name = "Octavio Calleya García"
+                        email = "octaviospain@gmail.com"
+                    }
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            credentials {
+                username = 'admin'
+                password = 'nexus2885mwggyk'
+            }
+
+            name = 'pi-repo'
+            url = 'http://nexus.pipon.xxx/repository/maven-releases/'
+            allowInsecureProtocol = true
+        }
+    }
+}
