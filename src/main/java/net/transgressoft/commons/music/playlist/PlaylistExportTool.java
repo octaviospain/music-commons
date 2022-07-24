@@ -7,7 +7,9 @@ import java.nio.file.Path;
 /**
  * @author Octavio Calleya
  */
-public interface PlaylistExportTool<T extends PlaylistTree<? extends AudioItem>> {
+public interface PlaylistExportTool<T extends PlaylistNode<? extends AudioItem>> {
 
-    void exportPlaylistsAsM3u(T playlistTree, Path path) throws ExportException;
+    void exportPlaylistAsM3u(T playlistNode, Path path) throws ExportException;
+
+    void exportPlaylistDirectoryAsM3u(T playlistNode, Path path) throws ExportException;
 }

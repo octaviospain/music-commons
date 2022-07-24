@@ -77,7 +77,7 @@ class InMemoryRepositoryTest {
                 .forEach(personEntity -> {
                     assertThat(personEntity).isNotNull();
                     assertThat(personEntity.height).isNotNaN();
-                    assertThat(personEntity.uniqueId()).isNotEmpty();
+                    assertThat(personEntity.getUniqueId()).isNotEmpty();
                 });
 
         repository2.removeAll(Set.of(entity, entity2));
@@ -94,17 +94,23 @@ class InMemoryRepositoryTest {
     @DisplayName("Search operations")
     void searchOperationsTest() {
         var repository = new PersonRepository(Collections.singleton(entity));
-        QueryFunction<PersonEntity> query = BREATH_DURATION.isShorterThan(Duration.ofSeconds(500));
-        List<PersonEntity> list = repository.search(query);
+        QueryPredicate query = QueryPredicate.of(BREATH_DURATION.isShorterThan(Duration.ofSeconds(500)));
+        var list = repository.search(query);
         assertThat(list).containsExactly(entity);
 
+        query = query.and(HEIGHT.isGreaterThan(1.70f));
+        list = repository.search(query);
+        assertThat(list).containsExactly(entity);
 
+        query = query.and(NAME.contains("Kenobi"));
+        list = repository.search(query);
+        assertThat(list).isEmpty();
     }
 
     @Test
     @DisplayName("Iterator operations")
     void iteratorOperationsTest() {
-
+        // TODO concurrent operations on the repository iterator
     }
 
     private static class PersonRepository extends InMemoryRepository<PersonEntity> {

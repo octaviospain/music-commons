@@ -1,11 +1,13 @@
 package net.transgressoft.commons.query;
 
-import java.util.Iterator;
+import com.google.common.collect.UnmodifiableListIterator;
+import net.transgressoft.commons.query.attribute.EntityAttribute;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-public interface Repository<E extends QueryEntity> {
+public interface Repository<E extends QueryEntity> extends Iterable<E> {
 
     void add(E entity);
 
@@ -15,7 +17,7 @@ public interface Repository<E extends QueryEntity> {
 
     void removeAll(Set<E> entities);
 
-    List<E> search(QueryFunction<E> query);
+    List<E> search(QueryPredicate<E> query);
 
     Optional<E> findById(int id);
 
@@ -27,5 +29,5 @@ public interface Repository<E extends QueryEntity> {
 
     boolean isEmpty();
 
-    Iterator<E> iterator();
+    UnmodifiableListIterator<E> iterator();
 }

@@ -12,10 +12,12 @@ import net.transgressoft.commons.music.Genre;
 import net.transgressoft.commons.music.ImmutableAlbum;
 import net.transgressoft.commons.music.ImmutableArtist;
 import net.transgressoft.commons.music.ImmutableLabel;
-import net.transgressoft.commons.query.EntityAttribute;
+import net.transgressoft.commons.query.QueryEntity;
+import net.transgressoft.commons.query.attribute.EntityAttribute;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.text.WordUtils;
 
+import javax.annotation.Nonnull;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -31,14 +33,14 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
-import static net.transgressoft.commons.music.audio.AudioItemStringAttribute.*;
-import static net.transgressoft.commons.music.audio.DurationAudioItemAttribute.DURATION;
-import static net.transgressoft.commons.music.audio.FloatAudioItemAttribute.BPM;
-import static net.transgressoft.commons.music.audio.IntegerAudioItemAttribute.BITRATE;
-import static net.transgressoft.commons.music.audio.LocalDateTimeAudioItemAttribute.DATE_OF_INCLUSION;
-import static net.transgressoft.commons.music.audio.LocalDateTimeAudioItemAttribute.LAST_DATE_MODIFIED;
-import static net.transgressoft.commons.music.audio.PathAudioItemAttribute.PATH;
-import static net.transgressoft.commons.music.audio.ShortAudioItemAttribute.*;
+import static net.transgressoft.commons.music.audio.attribute.DurationAudioItemAttribute.DURATION;
+import static net.transgressoft.commons.music.audio.attribute.ShortAudioItemAttribute.*;
+import static net.transgressoft.commons.music.audio.attribute.StringAudioItemAttribute.*;
+import static net.transgressoft.commons.music.audio.attribute.FloatAudioItemAttribute.BPM;
+import static net.transgressoft.commons.music.audio.attribute.IntegerAudioItemAttribute.BITRATE;
+import static net.transgressoft.commons.music.audio.attribute.LocalDateTimeAudioItemAttribute.DATE_OF_INCLUSION;
+import static net.transgressoft.commons.music.audio.attribute.LocalDateTimeAudioItemAttribute.LAST_DATE_MODIFIED;
+import static net.transgressoft.commons.music.audio.attribute.PathAudioItemAttribute.PATH;
 
 /**
  * @author Octavio Calleya
@@ -64,15 +66,15 @@ public class ImmutableAudioItem implements AudioItem {
     private final LocalDateTime dateOfInclusion;
     private final LocalDateTime lastDateModified;
 
-    private final Map<AudioItemAttribute<?>, Object> attributes;
+    private final Map<EntityAttribute<?>, Object> attributes;
 
-    public static ImmutableAudioItemBuilder builder(Path path, String name, Duration duration, int bitRate) {
+    public static ImmutableAudioItemBuilder builder(Path path, String title, Duration duration, int bitRate) {
         requireNonNull(path);
-        requireNonNull(name);
+        requireNonNull(title);
         requireNonNull(duration);
 
         var dateOfInclusion = LocalDateTime.now();
-        return new ImmutableAudioItemBuilder(path, name, duration, bitRate, dateOfInclusion, dateOfInclusion);
+        return new ImmutableAudioItemBuilder(path, title, duration, bitRate, dateOfInclusion, dateOfInclusion);
     }
 
     protected ImmutableAudioItem(Path path, String title, Artist artist, ImmutableSet<String> artistsInvolved, Album album, Genre genre,
@@ -97,7 +99,7 @@ public class ImmutableAudioItem implements AudioItem {
         this.dateOfInclusion = dateOfInclusion;
         this.lastDateModified = lastDateModified;
 
-        attributes = ImmutableMap.<AudioItemAttribute<?>, Object>builder()
+        attributes = ImmutableMap.<EntityAttribute<?>, Object>builder()
                 .put(PATH, path.toString())
                 .put(TITLE, title)
                 .put(ARTIST, artist.name())
@@ -121,11 +123,11 @@ public class ImmutableAudioItem implements AudioItem {
 
     @Override
     public int id() {
-        return hashCode();
+        return getUniqueId().hashCode();
     }
 
     @Override
-    public String uniqueId() {
+    public String getUniqueId() {
         return new StringJoiner("-")
                 .add(fileName().replace(' ', '_'))
                 .add(title)
@@ -331,14 +333,19 @@ public class ImmutableAudioItem implements AudioItem {
                 .toString();
     }
 
+    @Override
+    public int compareTo(@Nonnull QueryEntity o) {
+        return hashCode() - o.hashCode();
+    }
+
     public static class ImmutableAudioItemBuilder implements Builder<AudioItem> {
 
-        public static final Map<AudioItemAttribute<?>, Object> defaultValues;
+        public static final Map<EntityAttribute<?>, Object> defaultValues;
         private static final Map<Pattern, Pattern> artistsRegexMap;
 
         static {
             defaultValues =
-                    ImmutableMap.<AudioItemAttribute<?>, Object>builder()
+                    ImmutableMap.<EntityAttribute<?>, Object>builder()
                             .put(ARTIST, ImmutableArtist.UNKNOWN_ARTIST)
                             .put(ALBUM, ImmutableAlbum.UNKNOWN_ALBUM)
                             .put(GENRE, Genre.UNDEFINED)
@@ -366,7 +373,7 @@ public class ImmutableAudioItem implements AudioItem {
         }
 
         protected final Path path;
-        protected final String name;
+        protected final String title;
         protected final Duration duration;
         protected final int bitRate;
         protected Artist artist = (Artist) defaultValues.get(ARTIST);
@@ -382,20 +389,20 @@ public class ImmutableAudioItem implements AudioItem {
         protected LocalDateTime dateOfInclusion;
         protected LocalDateTime lastDateModified;
 
-        protected ImmutableAudioItemBuilder(Path path, String name, Duration duration, int bitRate, LocalDateTime dateOfInclusion, LocalDateTime lastDateModified) {
+        protected ImmutableAudioItemBuilder(Path path, String title, Duration duration, int bitRate, LocalDateTime dateOfInclusion, LocalDateTime lastDateModified) {
             this.path = path;
-            this.name = name;
+            this.title = title;
             this.duration = duration;
             this.bitRate = bitRate;
             this.dateOfInclusion = dateOfInclusion;
             this.lastDateModified = lastDateModified;
         }
 
-        protected ImmutableAudioItemBuilder(Path path, String name, Duration duration, int bitRate, Artist artist, Album album, Genre genre, String comments,
+        protected ImmutableAudioItemBuilder(Path path, String title, Duration duration, int bitRate, Artist artist, Album album, Genre genre, String comments,
                                             short trackNumber, short discNumber, float bpm, String encoder, String encoding, short playCount,
                                             LocalDateTime dateOfInclusion, LocalDateTime lastDateModified) {
             this.path = path;
-            this.name = name;
+            this.title = title;
             this.duration = duration;
             this.bitRate = bitRate;
             this.artist = artist;
@@ -470,7 +477,7 @@ public class ImmutableAudioItem implements AudioItem {
 
         @Override
         public ImmutableAudioItem build() {
-            var artistsNamesInvolved = getArtistsNamesInvolved(name, artist.name(), album.albumArtist().name());
+            var artistsNamesInvolved = getArtistsNamesInvolved(title, artist.name(), album.albumArtist().name());
             return new ImmutableAudioItem(path,
                                           beautifyName(),
                                           artist,
@@ -599,7 +606,7 @@ public class ImmutableAudioItem implements AudioItem {
         }
 
         private String beautifyName() {
-            return name.replaceAll("\\s+", " ")
+            return title.replaceAll("\\s+", " ")
                     .replaceAll(" (?i)(remix)", " Remix")
                     .replaceAll("(?i)(remix)(\\s+)(?i)(by) ", "Remix by ")
                     .replaceAll("(?i)(ft)(\\.|\\s) ", "ft ")

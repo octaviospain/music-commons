@@ -1,21 +1,25 @@
 package net.transgressoft.commons.query;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.UnmodifiableListIterator;
+import net.transgressoft.commons.query.attribute.EntityAttribute;
+
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.toConcurrentMap;
 import static java.util.stream.Collectors.toMap;
 
 public class InMemoryRepository<E extends QueryEntity> implements Repository<E> {
 
-    private final Map<Integer, E> entitiesById;
+    private final ConcurrentMap<Integer, E> entitiesById;
 
     public InMemoryRepository() {
         this(Collections.emptyList());
@@ -23,49 +27,49 @@ public class InMemoryRepository<E extends QueryEntity> implements Repository<E> 
 
     public InMemoryRepository(Collection<E> entities) {
         Objects.requireNonNull(entities);
-        entitiesById = entities.stream().collect(toMap(E::id, Function.identity()));
+        entitiesById = entities.stream().collect(toConcurrentMap(E::id, Function.identity()));
     }
 
     @Override
-    public synchronized void add(E entity) {
+    public void add(E entity) {
         Objects.requireNonNull(entity);
         entitiesById.put(entity.id(), entity);
     }
 
     @Override
-    public synchronized void addAll(List<E> entities) {
+    public void addAll(List<E> entities) {
         Objects.requireNonNull(entities);
         entitiesById.putAll(entities.stream().collect(toMap(E::id, Function.identity())));
     }
 
     @Override
-    public synchronized void remove(E entity) {
+    public void remove(E entity) {
         Objects.requireNonNull(entity);
         entitiesById.remove(entity.id());
     }
 
     @Override
-    public synchronized void removeAll(Set<E> entities) {
+    public void removeAll(Set<E> entities) {
         entitiesById.values().removeAll(entities);
     }
 
     @Override
-    public synchronized List<E> search(QueryFunction<E> query) {
+    public List<E> search(QueryPredicate<E> query) {
         return entitiesById.values().stream()
                 .filter(query::apply)
                 .collect(Collectors.toUnmodifiableList());
     }
 
     @Override
-    public synchronized Optional<E> findById(int id) {
+    public Optional<E> findById(int id) {
         return Optional.ofNullable(entitiesById.get(id));
     }
 
     @Override
-    public synchronized Optional<E> findByUniqueId(String uniqueId) {
+    public Optional<E> findByUniqueId(String uniqueId) {
         Objects.requireNonNull(uniqueId);
         return entitiesById.values().stream()
-                .filter(entity -> entity.uniqueId().equals(uniqueId))
+                .filter(entity -> entity.getUniqueId().equals(uniqueId))
                 .findAny();
     }
 
@@ -87,15 +91,17 @@ public class InMemoryRepository<E extends QueryEntity> implements Repository<E> 
         return entitiesById.size();
     }
 
-    @Override //TODO can be improved ensuring immutability of the collection overriding the Iterator methods
-    public synchronized Iterator<E> iterator() {
-        return entitiesById.values().iterator();
+    @Override
+    public UnmodifiableListIterator<E> iterator() {
+        return ImmutableList.copyOf(entitiesById.values()).listIterator();
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         InMemoryRepository<?> that = (InMemoryRepository<?>) o;
         return Objects.equals(entitiesById, that.entitiesById);
     }

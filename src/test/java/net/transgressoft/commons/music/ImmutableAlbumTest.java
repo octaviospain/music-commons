@@ -6,8 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.google.common.truth.Truth.assertThat;
 
 /**
  * @author Octavio Calleya
@@ -24,22 +23,22 @@ class ImmutableAlbumTest {
                                           new ImmutableArtist("Queen"),
                                           false, (short) 1975, ImmutableLabel.UNKNOWN, bytes);
 
-        assertTrue(album.compareTo(album2) < 0);
+        assertThat(album.compareTo(album2)).isLessThan(0);
 
         Album album3 = new ImmutableAlbum("A night at the opera",
                                           new ImmutableArtist("Queen"),
                                           false, (short) 1975, ImmutableLabel.UNKNOWN, bytes);
 
-        assertEquals(album2.compareTo(album3), 0);
-        assertTrue(album2.equals(album3));
-        assertEquals("ImmutableAlbum{name=A night at the opera, albumArtist=ImmutableArtist{name=, countryCode=UNDEFINED}," +
-                             " isCompilation=false, year=1975, label=ImmutableLabel{name=, countryCode=UNDEFINED}}",
-                     album.toString());
+        assertThat(album2.compareTo(album3)).isEqualTo(0);
+        assertThat(album2).isEqualTo(album3);
+        assertThat("ImmutableAlbum{name=A night at the opera, albumArtist=ImmutableArtist{name=, countryCode=UNDEFINED}," +
+                           " isCompilation=false, year=1975, label=ImmutableLabel{name=, countryCode=UNDEFINED}}")
+                .isEqualTo(album.toString());
 
         Album album4 = new ImmutableAlbum("A night at the opera",
                                           new ImmutableArtist("Queen"),
                                           false, (short) 1975, new ImmutableLabel("EMI"), bytes);
 
-        assertTrue(album3.compareTo(album4) < 0);
+        assertThat(album3.compareTo(album4)).isLessThan(0);
     }
 }

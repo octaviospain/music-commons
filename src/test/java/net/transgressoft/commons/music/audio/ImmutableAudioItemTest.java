@@ -18,7 +18,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
-import static net.transgressoft.commons.music.audio.PathAudioItemAttribute.PATH;
+import static net.transgressoft.commons.music.audio.attribute.PathAudioItemAttribute.PATH;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -89,7 +89,7 @@ class ImmutableAudioItemTest {
         assertEquals(encoder, audioItem.encoder());
         assertEquals(playCount, audioItem.playCount());
 
-        assertEquals(path.toString(), audioItem.getAttribute(PATH));
+        assertEquals(path.toString(), String.valueOf(audioItem.getAttribute(PATH)));
 
         audioItem = audioItem.comments("modified");
 

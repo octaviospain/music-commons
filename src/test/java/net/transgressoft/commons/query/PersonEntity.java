@@ -1,8 +1,19 @@
 package net.transgressoft.commons.query;
 
+import net.transgressoft.commons.query.attribute.DurationAttribute;
+import net.transgressoft.commons.query.attribute.EntityAttribute;
+import net.transgressoft.commons.query.attribute.FloatAttribute;
+import net.transgressoft.commons.query.attribute.IntegerAttribute;
+import net.transgressoft.commons.query.attribute.LocalDateTimeAttribute;
+import net.transgressoft.commons.query.attribute.PathAttribute;
+import net.transgressoft.commons.query.attribute.ShortAttribute;
+import net.transgressoft.commons.query.attribute.StringAttribute;
+import org.jetbrains.annotations.NotNull;
+
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Objects;
 
@@ -17,7 +28,7 @@ public class PersonEntity implements QueryEntity {
     Path userHome;
     Duration breathDuration;
 
-    HashMap<PersonAttribute<?>, Object> attributes;
+    HashMap<EntityAttribute<?>, Object> attributes;
 
     public PersonEntity(int id, String name, float height, short numberOfInterests, int money, LocalDateTime birthDate,
                         Path userHome, Duration breathDuration) {
@@ -46,7 +57,7 @@ public class PersonEntity implements QueryEntity {
     }
 
     @Override
-    public String uniqueId() {
+    public String getUniqueId() {
         return id + "-" + name + "-" + height;
     }
 
@@ -79,36 +90,37 @@ public class PersonEntity implements QueryEntity {
     public int hashCode() {
         return Objects.hash(id, name, height, numberOfInterests, money, birthDate, userHome, breathDuration, attributes);
     }
+
+    @Override
+    public int compareTo(@NotNull QueryEntity o) {
+        return Comparator.comparing(QueryEntity::getUniqueId, String.CASE_INSENSITIVE_ORDER).compare(this, o);
+    }
 }
 
-interface PersonAttribute<V> extends EntityAttribute<V> {
-
-}
-
-enum PersonStringAttribute implements PersonAttribute<String>, StringAttribute {
+enum PersonStringAttribute implements StringAttribute {
     NAME
 }
 
-enum PersonFloatAttribute implements PersonAttribute<Float>, FloatAttribute {
+enum PersonFloatAttribute implements FloatAttribute {
     HEIGHT
 }
 
-enum PersonShortAttribute implements PersonAttribute<Short>, ShortAttribute {
+enum PersonShortAttribute implements ShortAttribute {
     INTERESTS
 }
 
-enum PersonIntegerAttribute implements PersonAttribute<Integer>, IntegerAttribute {
+enum PersonIntegerAttribute implements IntegerAttribute {
     MONEY
 }
 
-enum PersonLocalDateTimeAttribute implements PersonAttribute<LocalDateTime>, LocalDateTimeAttribute {
+enum PersonLocalDateTimeAttribute implements LocalDateTimeAttribute {
     BIRTH_DATE
 }
 
-enum PersonPathAttribute implements PersonAttribute<Path>, PathAttribute {
+enum PersonPathAttribute implements PathAttribute {
     USER_HOME
 }
 
-enum PersonDurationAttribute implements PersonAttribute<Duration>, DurationAttribute {
+enum PersonDurationAttribute implements DurationAttribute {
     BREATH_DURATION
 }
