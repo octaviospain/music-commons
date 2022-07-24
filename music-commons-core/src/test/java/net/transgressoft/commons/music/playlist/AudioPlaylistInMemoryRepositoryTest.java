@@ -39,7 +39,7 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
     @Test
     @DisplayName("Mixed playlists hierarchy structure and audio items search")
     void searchOperationsTest() throws Exception {
-        audioPlaylistRepository = new AudioPlaylistInMemoryRepository<>();
+        audioPlaylistRepository = new AudioPlaylistInMemoryRepository();
 
         var rockAudioItems = List.of(
                 createTestAudioItem("50s Rock hit 1", Duration.ofSeconds(60)),
@@ -114,7 +114,7 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
     @Test
     @DisplayName("Move playlists in the hierarchy")
     void movePlaylists() throws Exception {
-        audioPlaylistRepository = new AudioPlaylistInMemoryRepository<>();
+        audioPlaylistRepository = new AudioPlaylistInMemoryRepository();
 
         var rock = audioPlaylistRepository.createPlaylist("Rock");
         assertThat(audioPlaylistRepository.findSingleByAttribute(NAME, rock.getName()).orElseThrow())
@@ -161,7 +161,7 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
     @Test
     @DisplayName("Create playlists with existing name")
     void createPlaylistWitExistingNameTest() throws Exception {
-        audioPlaylistRepository = new AudioPlaylistInMemoryRepository<>();
+        audioPlaylistRepository = new AudioPlaylistInMemoryRepository();
 
         var newPlaylistDirectory = audioPlaylistRepository.createPlaylistDirectory("New playlist");
         assertThat(assertThrows(RepositoryException.class, () -> audioPlaylistRepository.createPlaylistDirectory("New playlist")))
@@ -189,7 +189,7 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
     @Test
     @DisplayName("Add playlists not created with the repository")
     void addPlaylistsNotCreatedWithTheRepositoryTest() throws Exception {
-        audioPlaylistRepository = new AudioPlaylistInMemoryRepository<>();
+        audioPlaylistRepository = new AudioPlaylistInMemoryRepository();
         audioPlaylistRepository.createPlaylist("Best hits");
         audioPlaylistRepository.createPlaylistDirectory("Nina Simone discography");
         assertThat(audioPlaylistRepository).hasSize(2);

@@ -2,6 +2,9 @@ package net.transgressoft.commons.music.audio;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class AudioItemTestUtil {
 
@@ -21,5 +24,9 @@ public class AudioItemTestUtil {
 
     protected List<AudioItem> createTestAudioItemsSet(int size) {
         return audioItemTestFactory.createTestAudioItemsList(size);
+    }
+
+    protected Map<Integer, AudioItem> createTestAudioItemsMap(int size) {
+        return createTestAudioItemsSet(size).stream().collect(Collectors.toMap(AudioItem::getId, Function.identity()));
     }
 }

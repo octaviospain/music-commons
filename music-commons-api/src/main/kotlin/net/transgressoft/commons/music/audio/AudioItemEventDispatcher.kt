@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.query.EntityEvent
-import net.transgressoft.commons.query.EventType
+import net.transgressoft.commons.event.EntityEvent
+import net.transgressoft.commons.event.EventType
 import net.transgressoft.commons.query.QueryEntity
 import java.util.concurrent.Flow.Publisher
 

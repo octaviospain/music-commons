@@ -1,23 +1,20 @@
-package net.transgressoft.commons.music;
+package net.transgressoft.commons.music
 
-import net.transgressoft.commons.music.audio.AudioItem;
-import net.transgressoft.commons.music.playlist.AudioPlaylist;
-import net.transgressoft.commons.music.playlist.AudioPlaylistDirectory;
-import net.transgressoft.commons.music.waveform.AudioWaveform;
-import net.transgressoft.commons.query.EntityEvent;
+import net.transgressoft.commons.event.QueryEntitySubscriber
+import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.playlist.AudioPlaylist
+import net.transgressoft.commons.music.playlist.AudioPlaylistDirectory
+import net.transgressoft.commons.music.waveform.AudioWaveform
+import java.util.concurrent.CompletableFuture
 
-import java.util.Collection;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Flow.Subscriber;
+interface StandardMusicLibrary : MusicLibrary<AudioItem, AudioPlaylist<AudioItem>, AudioPlaylistDirectory<AudioItem>, AudioWaveform>
 
-public interface MusicLibrary<I extends AudioItem, P extends AudioPlaylist<I>, D extends AudioPlaylistDirectory<I>> extends Subscriber<EntityEvent<? extends I>> {
+interface MusicLibrary<I : AudioItem, P : AudioPlaylist<I>, D : AudioPlaylistDirectory<I>, W : AudioWaveform> {
 
-    Set<String> artists();
+    val audioItemSubscriber: QueryEntitySubscriber<I>
 
-    short audioItemPlayCount(I audioItem);
-
-    void deleteAudioItems(Set<I> audioItems);
+    fun artists(): Set<String?>
+    fun deleteAudioItems(audioItems: Set<I>)
 
     /**
      * Precondition, <tt>playlist</tt> exist in the <tt>AudioPlaylistRepository</tt>.
@@ -26,7 +23,7 @@ public interface MusicLibrary<I extends AudioItem, P extends AudioPlaylist<I>, D
      * @param audioItems
      * @param playlist
      */
-    void addAudioItemsToPlaylist(Collection<I> audioItems, P playlist);
+    fun addAudioItemsToPlaylist(audioItems: Collection<I>, playlist: P)
 
     /**
      * Precondition, <tt>playlist</tt> exist in the <tt>AudioPlaylistRepository</tt>.
@@ -35,9 +32,7 @@ public interface MusicLibrary<I extends AudioItem, P extends AudioPlaylist<I>, D
      * @param audioItems
      * @param playlist
      */
-    void removeAudioItemsFromPlaylist(Collection<I> audioItems, P playlist);
-
-    void movePlaylist(P playlist, D playlistDirectory);
-
-    CompletableFuture<AudioWaveform> getOrCreateWaveformAsync(I audioItem, short width, short height);
+    fun removeAudioItemsFromPlaylist(audioItems: Collection<I>, playlist: P)
+    fun movePlaylist(playlist: P, playlistDirectory: D)
+    fun getOrCreateWaveformAsync(audioItem: I, width: Short, height: Short): CompletableFuture<W>
 }

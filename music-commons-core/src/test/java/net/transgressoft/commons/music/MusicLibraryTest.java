@@ -6,7 +6,7 @@ import net.transgressoft.commons.music.playlist.AudioPlaylist;
 import net.transgressoft.commons.music.playlist.AudioPlaylistDirectory;
 import net.transgressoft.commons.music.playlist.AudioPlaylistRepository;
 import net.transgressoft.commons.music.waveform.AudioWaveform;
-import net.transgressoft.commons.query.Repository;
+import net.transgressoft.commons.music.waveform.AudioWaveformRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,21 +23,24 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class MusicLibraryTest {
 
-    MusicLibrary<AudioItem, AudioPlaylist<AudioItem>, AudioPlaylistDirectory<AudioItem>> musicLibrary;
+    MusicLibrary<AudioItem, AudioPlaylist<AudioItem>, AudioPlaylistDirectory<AudioItem>, AudioWaveform> musicLibrary;
 
     @Mock
     AudioItemRepository<AudioItem> audioItemRepository;
     @Mock
     AudioPlaylistRepository<AudioItem, AudioPlaylist<AudioItem>, AudioPlaylistDirectory<AudioItem>> audioPlaylistRepository;
     @Mock
-    Repository<AudioWaveform> audioWaveformRepository;
+    AudioWaveformRepository<AudioWaveform> audioWaveformRepository;
 
     @Test
     @DisplayName("Music api test")
     void musicApiTest() throws Exception {
         when(audioItemRepository.iterator()).thenReturn(Collections.emptyIterator());
 
-        musicLibrary = new DefaultMusicLibrary<>(audioItemRepository, audioPlaylistRepository, audioWaveformRepository);
+        musicLibrary = StandardMusicLibraryKt.builder().withAudioItemRepository(audioItemRepository)
+                .withPlaylistRepository(audioPlaylistRepository)
+                .withWaveformRepository(audioWaveformRepository)
+                .build();
 
         verify(audioItemRepository).iterator();
 

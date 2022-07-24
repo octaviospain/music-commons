@@ -1,43 +1,42 @@
 package net.transgressoft.commons.music.audio;
 
-import net.transgressoft.commons.query.InMemoryRepository;
+import net.transgressoft.commons.event.QueryEventDispatcher;
 
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.HashMap;
+import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
 
-/**
- * @author Octavio Calleya
- */
-public class AudioItemInMemoryRepository<I extends AudioItem> extends InMemoryRepository<I> implements AudioItemRepository<I> {
+public class AudioItemInMemoryRepository extends AudioItemInMemoryRepositoryBase<AudioItem> {
 
-    public AudioItemInMemoryRepository(Collection<I> audioItems) {
-        super(audioItems.stream().collect(Collectors.toMap(AudioItem::getId, Function.identity())), null);
+    public AudioItemInMemoryRepository(Map<Integer, AudioItem> audioItems) {
+        super(audioItems);
+    }
+
+    public AudioItemInMemoryRepository(QueryEventDispatcher<AudioItem> eventDispatcher) {
+        this(new HashMap<>(), eventDispatcher);
+    }
+
+    public AudioItemInMemoryRepository(Map<Integer, AudioItem> audioItems, QueryEventDispatcher<AudioItem> eventDispatcher) {
+        super(audioItems, eventDispatcher);
     }
 
     @Override
-    public AudioItemBuilder<I> create(Path path, String title, Duration duration, int bitRate) {
+    public AudioItemBuilder<AudioItem> create(Path path, String title, Duration duration, int bitRate) {
         requireNonNull(path);
         requireNonNull(title);
         requireNonNull(duration);
 
-        return new ImmutableAudioItemBuilder<>(path, title, duration, bitRate, LocalDateTime.now()) {
+        return new ImmutableAudioItemBuilder(path, title, duration, bitRate, LocalDateTime.now()) {
             @Override
-            public I build() {
+            public AudioItem build() {
                 var audioItem = super.build();
                 add(audioItem);
                 return audioItem;
             }
         };
-    }
-
-    @Override
-    public boolean containsAudioItemWithArtist(String artistName) {
-        return !findByAttribute(StringAudioItemAttribute.ARTISTS_INVOLVED, artistName).isEmpty();
     }
 }
