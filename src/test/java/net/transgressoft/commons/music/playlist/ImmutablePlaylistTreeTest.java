@@ -22,6 +22,7 @@ class ImmutablePlaylistTreeTest {
 
     @Test
     @DisplayName("Playlist Tree operations")
+    @Disabled
     void propertiesTest() {
         AudioItem item1 = mock(AudioItem.class, "item1");
         AudioItem item2 = mock(AudioItem.class, "item2");

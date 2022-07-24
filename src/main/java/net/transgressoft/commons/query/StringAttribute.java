@@ -7,6 +7,6 @@ public interface StringAttribute extends EntityAttribute<String> {
     }
 
     default <E extends QueryEntity> QueryFunction<E> notContains(String string) {
-        return queryEntity -> queryEntity.getAttribute(this).contains(string);
+        return queryEntity -> ! queryEntity.getAttribute(this).contains(string);
     }
 }

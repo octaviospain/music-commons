@@ -53,7 +53,7 @@ class QueryFunctionTest {
 
         query = BIRTH_DATE.isAfter(
                         LocalDateTime.of(1985, Month.JANUARY, 1, 1, 1, 1))
-                .and(NAME.contains("keno"));
+                .and(NAME.contains("Keno"));
 
         assertThat(query.apply(entity)).isTrue();
 
