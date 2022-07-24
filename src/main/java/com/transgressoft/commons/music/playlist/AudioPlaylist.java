@@ -14,15 +14,15 @@ public interface AudioPlaylist {
 
     AudioPlaylist name(String name);
 
-    ImmutableCollection<AudioItem> audioItems();
+    ImmutableCollection<? extends AudioItem> audioItems();
 
     boolean isEmpty();
 
-    AudioPlaylist addAudioItems(Collection<AudioItem> audioItems);
+    AudioPlaylist addAudioItems(Collection<? extends AudioItem> audioItems);
 
-    AudioPlaylist removeAudioItems(Collection<AudioItem> audioItems);
+    AudioPlaylist removeAudioItems(Collection<? extends AudioItem> audioItems);
 
-    ImmutableCollection<AudioPlaylist> childPlaylists();
+    ImmutableCollection<? extends AudioPlaylist> childPlaylists();
 
     AudioPlaylist addChildPlaylist(AudioPlaylist audioPlaylist);
 

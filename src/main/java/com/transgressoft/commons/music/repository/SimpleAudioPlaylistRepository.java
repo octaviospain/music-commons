@@ -39,7 +39,7 @@ public class SimpleAudioPlaylistRepository implements AudioPlaylistRepository {
     }
 
     @Override
-    public void addPlaylistsRecursively(AudioPlaylist parent, Collection<AudioPlaylist> playlists) {
+    public void addPlaylistsRecursively(AudioPlaylist parent, Collection<? extends AudioPlaylist> playlists) {
         playlists.forEach(childPlaylist -> {
             addPlaylist(parent, childPlaylist);
             if (! childPlaylist.childPlaylists().isEmpty())
@@ -68,7 +68,7 @@ public class SimpleAudioPlaylistRepository implements AudioPlaylistRepository {
     }
 
     @Override
-    public void removeAudioItems(Collection<AudioItem> tracks) {
+    public void removeAudioItems(Collection<? extends AudioItem> tracks) {
         playlistsTree.nodes().stream()
                 .filter(playlist -> ! playlist.childPlaylists().isEmpty())
                 .forEach(playlist -> playlist.removeAudioItems(tracks));

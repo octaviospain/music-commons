@@ -11,19 +11,19 @@ import java.util.*;
  */
 public interface AudioPlaylistRepository {
 
-   Graph<AudioPlaylist> getPlaylistsTree();     // TODO replace by ImmutableGraph or remove
+   Graph<AudioPlaylist> getPlaylistsTree();
 
    void addPlaylist(AudioPlaylist parentPlaylist, AudioPlaylist playlist);
 
    void addPlaylistToRoot(AudioPlaylist playlist);
 
-   void addPlaylistsRecursively(AudioPlaylist parent, Collection<AudioPlaylist> playlists);
+   void addPlaylistsRecursively(AudioPlaylist parent, Collection<? extends AudioPlaylist> playlists);
 
    void deletePlaylist(AudioPlaylist playlist);
 
    void movePlaylist(AudioPlaylist movedPlaylist, AudioPlaylist targetFolder);
 
-   void removeAudioItems(Collection<AudioItem> tracks);
+   void removeAudioItems(Collection<? extends AudioItem> tracks);
 
    boolean containsPlaylist(String playlistName);
 

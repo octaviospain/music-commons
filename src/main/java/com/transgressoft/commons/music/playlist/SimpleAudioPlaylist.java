@@ -55,14 +55,14 @@ public class SimpleAudioPlaylist implements AudioPlaylist {
     }
 
     @Override
-    public AudioPlaylist addAudioItems(Collection<AudioItem> audioItems) {
+    public AudioPlaylist addAudioItems(Collection<? extends AudioItem> audioItems) {
         Collection<AudioItem> list = Lists.newArrayList(this.audioItems);
         list.addAll(audioItems);
         return new SimpleAudioPlaylist(name, list);
     }
 
     @Override
-    public AudioPlaylist removeAudioItems(Collection<AudioItem> audioItems) {
+    public AudioPlaylist removeAudioItems(Collection<? extends AudioItem> audioItems) {
         Collection<AudioItem> list = Lists.newArrayList(this.audioItems);
         list.removeAll(audioItems);
         return new SimpleAudioPlaylist(name, list);
