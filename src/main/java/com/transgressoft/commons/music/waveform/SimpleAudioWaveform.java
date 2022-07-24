@@ -17,18 +17,22 @@ public class SimpleAudioWaveform implements AudioWaveform {
         this.height = height;
     }
 
+    @Override
     public int width() {
         return width;
     }
 
+    @Override
     public int height() {
         return height;
     }
 
+    @Override
     public float[] amplitudes() {
         return amplitudes;
     }
 
+    @Override
     public SimpleAudioWaveform scale(int width, int height) {
         throw new UnsupportedOperationException("Not implemented");
         // TODO Do some math and figure out how to scale the amplitudes given the new width and height without processing again

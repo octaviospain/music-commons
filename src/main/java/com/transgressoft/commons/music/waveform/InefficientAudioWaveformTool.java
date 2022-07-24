@@ -13,7 +13,7 @@ import static java.nio.file.StandardCopyOption.*;
 /**
  * @author Octavio Calleya
  */
-public class InefficientAudioWaveformTool implements AudioWaveformTool {
+public class InefficientAudioWaveformTool implements AudioWaveformTool<SimpleAudioWaveform> {
 
     private static final int DEFAULT_WIDTH = 500;
     private static final int DEFAULT_HEIGHT = 100;
