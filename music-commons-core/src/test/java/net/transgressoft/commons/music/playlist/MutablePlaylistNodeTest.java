@@ -3,7 +3,7 @@ package net.transgressoft.commons.music.playlist;
 import net.transgressoft.commons.music.MusicLibraryTestBase;
 import net.transgressoft.commons.music.audio.AudioItem;
 import net.transgressoft.commons.music.audio.AudioItemTestFactory;
-import net.transgressoft.commons.music.audio.attribute.StringAudioItemAttribute;
+import net.transgressoft.commons.music.audio.StringAudioItemAttribute;
 import net.transgressoft.commons.query.EntityAttribute;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

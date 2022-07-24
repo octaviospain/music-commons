@@ -1,11 +1,11 @@
 package net.transgressoft.commons.music.playlist;
 
-import com.google.common.collect.UnmodifiableListIterator;
 import net.transgressoft.commons.music.audio.AudioItem;
 import net.transgressoft.commons.query.BooleanQueryTerm;
 import net.transgressoft.commons.query.QueryEntity;
 
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Set;
 
 public interface MutablePlaylistNode<I extends AudioItem> extends QueryEntity {
@@ -26,7 +26,7 @@ public interface MutablePlaylistNode<I extends AudioItem> extends QueryEntity {
 
     void removeAudioItems(Set<I> audioItems);
 
-    UnmodifiableListIterator<I> audioItemsListIterator();
+    ListIterator<I> audioItemsListIterator();
 
     void clearAudioItems();
 

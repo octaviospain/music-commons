@@ -20,10 +20,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static net.transgressoft.commons.music.audio.attribute.FloatAudioItemAttribute.BPM;
-import static net.transgressoft.commons.music.audio.attribute.ShortAudioItemAttribute.DISC_NUMBER;
-import static net.transgressoft.commons.music.audio.attribute.ShortAudioItemAttribute.TRACK_NUMBER;
-import static net.transgressoft.commons.music.audio.attribute.StringAudioItemAttribute.*;
+import static net.transgressoft.commons.music.audio.FloatAudioItemAttribute.BPM;
+import static net.transgressoft.commons.music.audio.ShortAudioItemAttribute.DISC_NUMBER;
+import static net.transgressoft.commons.music.audio.ShortAudioItemAttribute.TRACK_NUMBER;
+import static net.transgressoft.commons.music.audio.StringAudioItemAttribute.*;
 
 class ImmutableAudioItemBuilder implements AudioItemBuilder<AudioItem> {
 
@@ -76,7 +76,7 @@ class ImmutableAudioItemBuilder implements AudioItemBuilder<AudioItem> {
     protected LocalDateTime dateOfInclusion;
     protected LocalDateTime lastDateModified;
 
-    protected ImmutableAudioItemBuilder(Path path, String title, Duration duration, int bitRate, LocalDateTime dateOfInclusion) {
+    public ImmutableAudioItemBuilder(Path path, String title, Duration duration, int bitRate, LocalDateTime dateOfInclusion) {
         this.path = path;
         this.title = title;
         this.duration = duration;

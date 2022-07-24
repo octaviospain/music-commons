@@ -1,11 +1,11 @@
 package net.transgressoft.commons.music.audio;
 
-import com.google.common.collect.ImmutableSet;
 import net.transgressoft.commons.query.QueryEntity;
 
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Set;
 
 /**
  * @author Octavio Calleya
@@ -28,7 +28,7 @@ public interface AudioItem extends QueryEntity {
 
     AudioItem artist(Artist artist);
 
-    ImmutableSet<String> artistsInvolved();
+    Set<String> artistsInvolved();
 
     Album album();
 

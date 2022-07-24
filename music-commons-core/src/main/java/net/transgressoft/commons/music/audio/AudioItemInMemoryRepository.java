@@ -14,6 +14,10 @@ import static java.util.Objects.requireNonNull;
  */
 public class AudioItemInMemoryRepository extends InMemoryRepository<AudioItem> implements AudioItemRepository {
 
+    public AudioItemInMemoryRepository() {
+        super();
+    }
+
     public AudioItemInMemoryRepository(Collection<AudioItem> entities) {
         super(entities);
     }

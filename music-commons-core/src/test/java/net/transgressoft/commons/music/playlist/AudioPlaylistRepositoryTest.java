@@ -13,8 +13,8 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.truth.Truth.assertThat;
-import static net.transgressoft.commons.music.audio.attribute.DurationAudioItemAttribute.DURATION;
-import static net.transgressoft.commons.music.audio.attribute.StringAudioItemAttribute.TITLE;
+import static net.transgressoft.commons.music.audio.DurationAudioItemAttribute.DURATION;
+import static net.transgressoft.commons.music.audio.StringAudioItemAttribute.TITLE;
 import static net.transgressoft.commons.music.playlist.PlaylistNodeAttribute.SELF;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 

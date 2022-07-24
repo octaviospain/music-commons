@@ -30,4 +30,8 @@ public enum PlaylistNodeAttribute implements EntityAttribute<MutablePlaylistNode
     public BooleanQueryTerm<MutablePlaylistNode<AudioItem>> audioItemsAllMatch(BooleanQueryTerm<AudioItem> queryPredicate) {
         return queryEntity -> queryEntity.getAttribute(SELF).audioItemsAllMatch(queryPredicate);
     }
+
+    public BooleanQueryTerm<MutablePlaylistNode<AudioItem>> audioItemsAllMatchingTitle(BooleanQueryTerm<AudioItem> queryPredicate) {
+        return queryEntity -> queryEntity.getAttribute(SELF).audioItemsAllMatch(queryPredicate);
+    }
 }

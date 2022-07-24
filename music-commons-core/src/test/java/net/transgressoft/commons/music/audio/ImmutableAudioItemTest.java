@@ -11,7 +11,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
-import static net.transgressoft.commons.music.audio.attribute.PathAudioItemAttribute.PATH;
+import static net.transgressoft.commons.music.audio.PathAudioItemAttribute.PATH;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**

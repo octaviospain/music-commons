@@ -1,22 +1,20 @@
 package net.transgressoft.commons.music;
 
 import net.transgressoft.commons.music.audio.AudioItem;
+import net.transgressoft.commons.music.playlist.MutablePlaylistDirectory;
 import net.transgressoft.commons.music.playlist.MutablePlaylistNode;
 
-import java.util.Collection;
 import java.util.Set;
 
 public interface MusicLibrary {
 
-    MusicLibrary addAudio(Set<AudioItem> audioItems);
+    <I extends AudioItem> MusicLibrary addAudioItems(Set<I> audioItems);
 
-    Set<AudioItem> audioItems();
+    <I extends AudioItem> Iterable<I> audioItems();
 
-    MusicLibrary deleteAudio(Set<AudioItem> audioItems);
+    <I extends AudioItem> MusicLibrary deleteAudioItems(Set<I> audioItems);
 
-    MusicLibrary addAudioToPlaylist(Set<AudioItem> audioItems, MutablePlaylistNode<AudioItem> playlist);
+    <I extends AudioItem, P extends MutablePlaylistNode<I>> MusicLibrary addAudioItemToPlaylist(I audioItems, P playlist);
 
-    MusicLibrary addPlaylistToAnother(MutablePlaylistNode<AudioItem> playlist, MutablePlaylistNode<AudioItem> playlistDirectory);
-
-    MusicLibrary deleteAudioFromPlaylists(Set<AudioItem> audioItems, Collection<MutablePlaylistNode<AudioItem>> playlists);
+    <I extends AudioItem, P extends MutablePlaylistNode<I>, D extends MutablePlaylistDirectory<I>> MusicLibrary movePlaylist(P playlist, D playlistDirectory);
 }

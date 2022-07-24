@@ -15,14 +15,14 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.StringJoiner;
 
-import static net.transgressoft.commons.music.audio.attribute.DurationAudioItemAttribute.DURATION;
-import static net.transgressoft.commons.music.audio.attribute.FloatAudioItemAttribute.BPM;
-import static net.transgressoft.commons.music.audio.attribute.IntegerAudioItemAttribute.BITRATE;
-import static net.transgressoft.commons.music.audio.attribute.LocalDateTimeAudioItemAttribute.DATE_OF_INCLUSION;
-import static net.transgressoft.commons.music.audio.attribute.LocalDateTimeAudioItemAttribute.LAST_DATE_MODIFIED;
-import static net.transgressoft.commons.music.audio.attribute.PathAudioItemAttribute.PATH;
-import static net.transgressoft.commons.music.audio.attribute.ShortAudioItemAttribute.*;
-import static net.transgressoft.commons.music.audio.attribute.StringAudioItemAttribute.*;
+import static net.transgressoft.commons.music.audio.DurationAudioItemAttribute.DURATION;
+import static net.transgressoft.commons.music.audio.FloatAudioItemAttribute.BPM;
+import static net.transgressoft.commons.music.audio.IntegerAudioItemAttribute.BITRATE;
+import static net.transgressoft.commons.music.audio.LocalDateTimeAudioItemAttribute.DATE_OF_INCLUSION;
+import static net.transgressoft.commons.music.audio.LocalDateTimeAudioItemAttribute.LAST_DATE_MODIFIED;
+import static net.transgressoft.commons.music.audio.PathAudioItemAttribute.PATH;
+import static net.transgressoft.commons.music.audio.ShortAudioItemAttribute.*;
+import static net.transgressoft.commons.music.audio.StringAudioItemAttribute.*;
 
 /**
  * @author Octavio Calleya
