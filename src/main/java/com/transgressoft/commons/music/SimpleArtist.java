@@ -34,6 +34,12 @@ public class SimpleArtist implements Artist {
     }
 
     @Override
+    public int compareTo(Artist other) {
+        int result = name.compareTo(other.name());
+        return result == 0 ? countryCode.compareTo(other.countryCode()) : result;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;

@@ -5,7 +5,7 @@ import com.neovisionaries.i18n.CountryCode;
 /**
  * @author Octavio Calleya
  */
-public interface Artist {
+public interface Artist extends Comparable<Artist> {
 
     String name();
 
