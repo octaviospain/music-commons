@@ -9,6 +9,7 @@ import net.transgressoft.commons.query.BooleanQueryTerm;
 import net.transgressoft.commons.query.EntityAttribute;
 import net.transgressoft.commons.query.InMemoryRepository;
 import net.transgressoft.commons.query.RepositoryException;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,11 +50,16 @@ public abstract class AudioPlaylistInMemoryRepositoryBase<I extends AudioItem, P
     @Override
     public boolean add(P playlist) {
         Objects.requireNonNull(playlist);
-        return addAll(Collections.singleton(playlist));
+        return addOrReplaceAll(Collections.singleton(playlist));
     }
 
     @Override
-    public boolean addAll(Set<? extends P> playlists) {
+    public boolean addOrReplace(@NotNull P playlist) {
+        return addOrReplaceAll(Set.of(playlist));
+    }
+
+    @Override
+    public boolean addOrReplaceAll(Set<? extends P> playlists) {
         Objects.requireNonNull(playlists);
         AtomicBoolean added = new AtomicBoolean(false);
         playlists.forEach(playlist -> added.set(added.get() || addInternal(playlist)));
@@ -136,7 +142,25 @@ public abstract class AudioPlaylistInMemoryRepositoryBase<I extends AudioItem, P
     }
 
     @Override
+    public boolean contains(int id) {
+        var existsIdInPlaylists = playlists.contains(id);
+        var existsIdInDirectories = directories.contains(id);
+        assert !(existsIdInPlaylists && existsIdInDirectories) : "same id exists in playlists and directories: " + id;
+
+        return existsIdInPlaylists || existsIdInDirectories;
+    }
+
+    @Override
+    public boolean contains(@NotNull BooleanQueryTerm<P> booleanQueryTerm) {
+        var existsIdInPlaylists = playlists.contains((BooleanQueryTerm<MP>) booleanQueryTerm);
+        var existsIdInDirectories = directories.contains((BooleanQueryTerm<MD>) booleanQueryTerm);
+        return existsIdInPlaylists || existsIdInDirectories;
+    }
+
+    @NotNull
+    @Override
     public List<P> search(BooleanQueryTerm<P> booleanQueryTerm) {
+        Objects.requireNonNull(booleanQueryTerm);
         return ImmutableList.<P>builder()
                 .addAll(playlists.search((BooleanQueryTerm<MP>) booleanQueryTerm).stream()
                                 .map(this::toImmutablePlaylist)
@@ -146,8 +170,9 @@ public abstract class AudioPlaylistInMemoryRepositoryBase<I extends AudioItem, P
                                 .toList()).build();
     }
 
+    @NotNull
     @Override
-    public Optional<P> findById(Integer id) {
+    public Optional<P> findById(int id) {
         return findByIdInternal(id).map(this::toImmutablePlaylist);
     }
 
@@ -155,15 +180,17 @@ public abstract class AudioPlaylistInMemoryRepositoryBase<I extends AudioItem, P
         return playlists.findById(id).or(() -> (Optional<? extends MP>) directories.findById(id));
     }
 
+    @NotNull
     @Override
-    public Optional<P> findByUniqueId(String id) {
+    public Optional<P> findByUniqueId(@NotNull String id) {
         return playlists.findByUniqueId(id)
                 .map(this::toImmutablePlaylist)
                 .or(() -> directories.findByUniqueId(id).map(this::toImmutablePlaylistDirectory));
     }
 
+    @NotNull
     @Override
-    public <A extends EntityAttribute<V>, V> List<P> findByAttribute(A a, V v) {
+    public <A extends EntityAttribute<V>, V> List<P> findByAttribute(@NotNull A a, V v) {
         return ImmutableList.<P>builder()
                 .addAll(playlists.findByAttribute(a, v).stream()
                                 .map(this::toImmutablePlaylist)
@@ -174,7 +201,7 @@ public abstract class AudioPlaylistInMemoryRepositoryBase<I extends AudioItem, P
     }
 
     @Override
-    public <A extends EntityAttribute<V>, V> Optional<P> findSingleByAttribute(A a, V v) throws RepositoryException {
+    public <A extends EntityAttribute<V>, V> Optional<P> findSingleByAttribute(@NotNull A a, V v) throws RepositoryException {
         var foundPlaylist = playlists.findSingleByAttribute(a, v).orElse(null);
         var foundDirectory = directories.findSingleByAttribute(a, v).orElse(null);
         if (foundPlaylist != null && foundDirectory != null)
@@ -215,11 +242,15 @@ public abstract class AudioPlaylistInMemoryRepositoryBase<I extends AudioItem, P
 
     @Override
     public P createPlaylist(String name) throws RepositoryException {
+        Objects.requireNonNull(name);
         return createPlaylist(name, Collections.emptyList());
     }
 
     @Override
     public P createPlaylist(String name, List<I> audioItems) throws RepositoryException {
+        Objects.requireNonNull(name);
+        Objects.requireNonNull(audioItems);
+
         var searchResult = findSinglePlaylistByName(name);
         if (searchResult.isEmpty()) {
             var playlist = (MP) new MutablePlaylist<>(getNewId(), name, audioItems);
@@ -232,11 +263,15 @@ public abstract class AudioPlaylistInMemoryRepositoryBase<I extends AudioItem, P
 
     @Override
     public D createPlaylistDirectory(String name) throws RepositoryException {
+        Objects.requireNonNull(name);
         return createPlaylistDirectory(name, Collections.emptyList());
     }
 
     @Override
     public D createPlaylistDirectory(String name, List<I> audioItems) throws RepositoryException {
+        Objects.requireNonNull(name);
+        Objects.requireNonNull(audioItems);
+
         var searchResult = findSingleDirectoryByName(name);
         if (searchResult.isEmpty()) {
             var playlistDirectory = (MD) new MutablePlaylistDirectory<>(getNewId(), name, audioItems);

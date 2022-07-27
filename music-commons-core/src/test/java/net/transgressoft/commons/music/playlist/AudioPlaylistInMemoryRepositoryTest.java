@@ -75,7 +75,7 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
         assertThat(audioPlaylistRepository.search(UNIQUE_ID.contains("favorites"))).containsExactly(thisWeeksFavorites);
         assertThat(audioPlaylistRepository.size()).isEqualTo(6);
 
-        audioPlaylistRepository.addAll(Set.of(bestHits, thisWeeksFavorites));
+        audioPlaylistRepository.addOrReplaceAll(Set.of(bestHits, thisWeeksFavorites));
         assertThat(audioPlaylistRepository.size()).isEqualTo(6);
 
         assertThat(audioPlaylistRepository.search(SELF.isNotDirectory())).containsExactly(rock, pop, thisWeeksFavorites);
@@ -200,7 +200,7 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
         var rock = mock(ImmutablePlaylist.class);
         when(rock.getName()).thenReturn("Best hits - Rock");
         when(rock.isDirectory()).thenReturn(false);
-        audioPlaylistRepository.addAll(Set.<AudioPlaylist<AudioItem>>of(bestHits, rock));
+        audioPlaylistRepository.addOrReplaceAll(Set.<AudioPlaylist<AudioItem>>of(bestHits, rock));
         assertThat(audioPlaylistRepository).hasSize(3);
 
         var ninaSimoneDiscography = mock(ImmutablePlaylistDirectory.class);
@@ -213,7 +213,7 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
         when(beatlesDiscography.getName()).thenReturn("The Beatles' discography");
         when(beatlesDiscography.isDirectory()).thenReturn(true);
         when(beatlesDiscography.descendantPlaylists()).thenReturn(Set.of(revolver));
-        audioPlaylistRepository.addAll(Set.<AudioPlaylist<AudioItem>>of(ninaSimoneDiscography, beatlesDiscography));
+        audioPlaylistRepository.addOrReplaceAll(Set.<AudioPlaylist<AudioItem>>of(ninaSimoneDiscography, beatlesDiscography));
 
         assertThat(audioPlaylistRepository).hasSize(5);
         assertThat(audioPlaylistRepository.findSingleDirectoryByName(beatlesDiscography.getName()).orElseThrow().descendantPlaylists())

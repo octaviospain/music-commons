@@ -4,6 +4,8 @@ public interface AudioItemBuilder<E extends AudioItem> {
 
     E build();
 
+    AudioItemBuilder<E> id(int id);
+
     AudioItemBuilder<E> artist(Artist artist);
 
     AudioItemBuilder<E> album(Album album);

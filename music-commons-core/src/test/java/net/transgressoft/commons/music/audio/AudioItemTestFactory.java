@@ -27,19 +27,17 @@ public class AudioItemTestFactory {
 
     public AudioItem createTestAudioItem() {
         int i = testCounter++;
-        return new ImmutableAudioItemBuilder(getPath(i), getName(i), getDuration(i), 320, LocalDateTime.now())
+        return new ImmutableAudioItemBuilder(i, getPath(i), getName(i), getDuration(i), 320, LocalDateTime.now())
                 .build();
     }
 
     public AudioItem createTestAudioItem(String name) {
-        testCounter++;
-        return new ImmutableAudioItemBuilder(DEFAULT_PATH, name, DEFAULT_DURATION, 320, LocalDateTime.now())
+        return new ImmutableAudioItemBuilder(testCounter++, DEFAULT_PATH, name, DEFAULT_DURATION, 320, LocalDateTime.now())
                 .build();
     }
 
     public AudioItem createTestAudioItem(String name, Duration duration) {
-        testCounter++;
-        return new ImmutableAudioItemBuilder(DEFAULT_PATH, name, duration, 320, LocalDateTime.now())
+        return new ImmutableAudioItemBuilder(testCounter++, DEFAULT_PATH, name, duration, 320, LocalDateTime.now())
                 .build();
     }
 

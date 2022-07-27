@@ -9,7 +9,7 @@ sealed class AudioItemEventType {
 
     enum class Type(override val code: Int) : EventType {
         PLAYED(301) {
-            override fun <E : QueryEntity> new(entities: Collection<E>): EntityEvent<out E> = Played(entities =  entities)
+            override fun <E : QueryEntity> of(entities: Collection<E>): EntityEvent<out E> = Played(entities =  entities)
         }
     }
 

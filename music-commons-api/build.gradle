@@ -50,8 +50,7 @@ publishing {
             }
 
             name 'pi-repo-snapshots'
-            url 'http://nexus.pipon.xxx/repository/maven-snapshots/'
-            allowInsecureProtocol = true
+            url 'https://nexus.transgressoft.net/repository/maven-snapshots/'
         }
         maven {
             credentials {
@@ -63,8 +62,7 @@ publishing {
             }
 
             name 'pi-repo-releases'
-            url 'http://nexus.pipon.xxx/repository/maven-releases/'
-            allowInsecureProtocol = true
+            url 'https://nexus.transgressoft.net/repository/maven-releases/'
         }
     }
 }

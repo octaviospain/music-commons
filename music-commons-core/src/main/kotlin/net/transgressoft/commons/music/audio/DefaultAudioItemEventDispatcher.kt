@@ -7,14 +7,14 @@ import net.transgressoft.commons.music.audio.AudioItemEventType.Type.PLAYED
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class DefaultAudioItemEventDispatcher(
+class DefaultAudioItemEventDispatcher<I : AudioItem>(
     executor: ExecutorService = Executors.newCachedThreadPool(),
     activatedEvents: Array<EventType> = arrayOf(CREATE, READ, UPDATE, DELETE, PLAYED),
-) : DefaultQueryEventDispatcher<AudioItem>(executor, activatedEvents), AudioItemEventDispatcher<AudioItem> {
+) : DefaultQueryEventDispatcher<I>(executor, activatedEvents), AudioItemEventDispatcher<I> {
 
-    override fun putPlayedEvent(entities: Collection<AudioItem>) {
+    override fun putPlayedEvent(entities: Collection<I>) {
         if (activatedEvents.contains(PLAYED)) {
-            executor.execute { subscribers.forEach { it.onNext(PLAYED.new(entities)) } }
+            executor.execute { subscribers.forEach { it.onNext(PLAYED.of(entities)) } }
         }
     }
 }

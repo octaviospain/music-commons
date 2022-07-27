@@ -5,12 +5,14 @@ import com.google.common.base.Objects;
 import com.neovisionaries.i18n.CountryCode;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * @author Octavio Calleya
  */
-public class ImmutableAlbum implements Album {
+class ImmutableAlbum implements Album {
 
     private final String name;
     private final Artist albumArtist;
@@ -69,6 +71,11 @@ public class ImmutableAlbum implements Album {
     @Override
     public Artist albumArtist() {
         return albumArtist;
+    }
+
+    @Override
+    public Set<AudioItem> audioItems() {
+        return Collections.emptySet();
     }
 
     @Override

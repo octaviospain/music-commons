@@ -13,13 +13,15 @@ public interface AudioItemPlayer {
 
     void pause();
 
+    void resume();
+
     void stop();
 
     Status status();
 
     void setVolume(double value);
 
-    void seek(int seconds);
+    void seek(double milliSeconds);
 
     void onFinish(Runnable value);
 }

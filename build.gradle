@@ -35,7 +35,7 @@ subprojects {
     }
 
     dependencies {
-        implementation 'net.transgressoft:soft-query-api:0.34-SNAPSHOT'
+        implementation 'net.transgressoft:soft-query-api:0.37-SNAPSHOT'
         implementation platform('org.jetbrains.kotlin:kotlin-bom')
         implementation "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
@@ -44,8 +44,7 @@ subprojects {
     repositories {
         mavenCentral()
         maven {
-            url 'http://nexus.pipon.xxx/repository/maven-public/'
-            allowInsecureProtocol true
+            url 'https://nexus.transgressoft.net/repository/maven-public/'
         }
     }
 

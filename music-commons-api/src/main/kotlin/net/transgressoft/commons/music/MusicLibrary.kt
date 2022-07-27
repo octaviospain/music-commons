@@ -13,7 +13,8 @@ interface MusicLibrary<I : AudioItem, P : AudioPlaylist<I>, D : AudioPlaylistDir
 
     val audioItemSubscriber: QueryEntitySubscriber<I>
 
-    fun artists(): Set<String?>
+    fun artists(): Set<String>
+
     fun deleteAudioItems(audioItems: Set<I>)
 
     /**

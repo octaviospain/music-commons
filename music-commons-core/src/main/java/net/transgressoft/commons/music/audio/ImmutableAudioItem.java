@@ -31,6 +31,7 @@ import static net.transgressoft.commons.music.audio.StringAudioItemAttribute.*;
  */
 class ImmutableAudioItem implements AudioItem, Comparable<AudioItem> {
 
+    private final int id;
     private final Path path;
     private final String title;
     private final Artist artist;
@@ -51,9 +52,10 @@ class ImmutableAudioItem implements AudioItem, Comparable<AudioItem> {
 
     private final Map<EntityAttribute<?>, Object> attributes;
 
-    protected ImmutableAudioItem(Path path, String title, Artist artist, Set<String> artistsInvolved, Album album, Genre genre,
+    protected ImmutableAudioItem(int id, Path path, String title, Artist artist, Set<String> artistsInvolved, Album album, Genre genre,
                                  String comments, short trackNumber, short discNumber, float bpm, Duration duration, int bitRate, String encoder,
                                  String encoding, LocalDateTime dateOfInclusion, LocalDateTime lastDateModified) {
+        this.id = id;
         this.path = path;
         this.title = title;
         this.artist = artist;
@@ -94,7 +96,7 @@ class ImmutableAudioItem implements AudioItem, Comparable<AudioItem> {
 
     @Override
     public int getId() {
-        return getUniqueId().hashCode();
+        return id;
     }
 
     @Override
@@ -114,7 +116,7 @@ class ImmutableAudioItem implements AudioItem, Comparable<AudioItem> {
 
     @Override
     public AudioItem path(Path path) {
-        return new ImmutableAudioItemBuilder(path, title, duration, bitRate, dateOfInclusion, LocalDateTime.now()).build();
+        return new ImmutableAudioItemBuilder(id, path, title, duration, bitRate, dateOfInclusion, LocalDateTime.now()).build();
     }
 
     @Override
@@ -134,7 +136,7 @@ class ImmutableAudioItem implements AudioItem, Comparable<AudioItem> {
 
     @Override
     public AudioItem title(String title) {
-        return new ImmutableAudioItemBuilder(path, title, duration, bitRate, dateOfInclusion, LocalDateTime.now()).build();
+        return new ImmutableAudioItemBuilder(id, path, title, duration, bitRate, dateOfInclusion, LocalDateTime.now()).build();
     }
 
     @Override

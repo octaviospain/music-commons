@@ -60,6 +60,7 @@ public abstract class AudioItemBuilderBase<I extends AudioItem> implements Audio
                 .put(Pattern.compile("(?i)(with) "), startsWithWith).build();
     }
 
+    protected int id;
     protected final Path path;
     protected final String title;
     protected final Duration duration;
@@ -76,7 +77,8 @@ public abstract class AudioItemBuilderBase<I extends AudioItem> implements Audio
     protected LocalDateTime dateOfInclusion;
     protected LocalDateTime lastDateModified;
 
-    protected AudioItemBuilderBase(Path path, String title, Duration duration, int bitRate, LocalDateTime dateOfInclusion) {
+    protected AudioItemBuilderBase(int id, Path path, String title, Duration duration, int bitRate, LocalDateTime dateOfInclusion) {
+        this.id = id;
         this.path = path;
         this.title = title;
         this.duration = duration;
@@ -85,7 +87,8 @@ public abstract class AudioItemBuilderBase<I extends AudioItem> implements Audio
         this.lastDateModified = dateOfInclusion;
     }
 
-    protected AudioItemBuilderBase(Path path, String title, Duration duration, int bitRate, LocalDateTime dateOfInclusion, LocalDateTime lastDateModified) {
+    protected AudioItemBuilderBase(int id, Path path, String title, Duration duration, int bitRate, LocalDateTime dateOfInclusion, LocalDateTime lastDateModified) {
+        this.id = id;
         this.path = path;
         this.title = title;
         this.duration = duration;
@@ -94,9 +97,10 @@ public abstract class AudioItemBuilderBase<I extends AudioItem> implements Audio
         this.lastDateModified = lastDateModified;
     }
 
-    protected AudioItemBuilderBase(Path path, String title, Duration duration, int bitRate, Artist artist, Album album, Genre genre, String comments,
+    protected AudioItemBuilderBase(int id, Path path, String title, Duration duration, int bitRate, Artist artist, Album album, Genre genre, String comments,
                                         short trackNumber, short discNumber, float bpm, String encoder, String encoding,
                                         LocalDateTime dateOfInclusion, LocalDateTime lastDateModified) {
+        this.id = id;
         this.path = path;
         this.title = title;
         this.duration = duration;
@@ -115,9 +119,15 @@ public abstract class AudioItemBuilderBase<I extends AudioItem> implements Audio
     }
 
     AudioItemBuilderBase(AudioItem audioItem) {
-        this(audioItem.path(), audioItem.title(), audioItem.duration(), audioItem.bitRate(), audioItem.artist(), audioItem.album(),
+        this(audioItem.getId(), audioItem.path(), audioItem.title(), audioItem.duration(), audioItem.bitRate(), audioItem.artist(), audioItem.album(),
              audioItem.genre(), audioItem.comments(), audioItem.trackNumber(), audioItem.discNumber(), audioItem.bpm(),
              audioItem.encoder(), audioItem.encoding(), audioItem.dateOfInclusion(), LocalDateTime.now());
+    }
+
+    @Override
+    public AudioItemBuilder<I> id(int id) {
+        this.id = id;
+        return this;
     }
 
     @Override
