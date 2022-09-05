@@ -70,31 +70,31 @@ class ImmutableAudioItem implements AudioItem, Comparable<AudioItem> {
 
     protected ImmutableAudioItem(int id, AudioItemAttributes attributes) {
         this.id = id;
-        this.attributes = attributes;
-        this.path = attributes.get(PATH);
-        this.title = attributes.get(TITLE);
-        this.artist = attributes.get(ARTIST);
-        this.album = attributes.get(ALBUM);
-        this.genre = Genre.parseGenre(attributes.get(GENRE_NAME));
-        this.comments = attributes.get(COMMENTS);
-        this.trackNumber = attributes.get(TRACK_NUMBER);
-        this.discNumber = attributes.get(DISC_NUMBER);
-        this.bpm = attributes.get(BPM);
-        this.duration = attributes.get(DURATION);
-        this.bitRate = attributes.get(BITRATE);
-        this.encoder = attributes.get(ENCODER);
-        this.encoding = attributes.get(ENCODING);
-        attributes.set(LABEL_NAME, album.label().name());
-        attributes.set(YEAR, album.year());
-        attributes.set(ALBUM_ARTIST, album.albumArtist());
-        attributes.set(ARTISTS_INVOLVED, getArtistsNamesInvolved(title, artist.name(), album.albumArtist().name()));
-        this.artistsInvolved = attributes.get(ARTISTS_INVOLVED);
+        this.attributes = attributes.copy();
+        this.path = this.attributes.get(PATH);
+        this.title = this.attributes.get(TITLE);
+        this.artist = this.attributes.get(ARTIST);
+        this.album = this.attributes.get(ALBUM);
+        this.genre = Genre.parseGenre(this.attributes.get(GENRE_NAME));
+        this.comments = this.attributes.get(COMMENTS);
+        this.trackNumber = this.attributes.get(TRACK_NUMBER);
+        this.discNumber = this.attributes.get(DISC_NUMBER);
+        this.bpm = this.attributes.get(BPM);
+        this.duration = this.attributes.get(DURATION);
+        this.bitRate = this.attributes.get(BITRATE);
+        this.encoder = this.attributes.get(ENCODER);
+        this.encoding = this.attributes.get(ENCODING);
+        this.attributes.set(LABEL_NAME, album.label().name());
+        this.attributes.set(YEAR, album.year());
+        this.attributes.set(ALBUM_ARTIST, album.albumArtist());
+        this.attributes.set(ARTISTS_INVOLVED, getArtistsNamesInvolved(title, artist.name(), album.albumArtist().name()));
+        this.artistsInvolved = this.attributes.get(ARTISTS_INVOLVED);
 
         var now = LocalDateTime.now();
-        attributes.putIfAbsent(DATE_OF_CREATION, now);
-        this.dateOfCreation = attributes.get(DATE_OF_CREATION);
-        attributes.set(LAST_DATE_MODIFIED, now);
-        this.lastDateModified = attributes.get(LAST_DATE_MODIFIED);
+        this.attributes.putIfAbsent(DATE_OF_CREATION, now);
+        this.dateOfCreation = this.attributes.get(DATE_OF_CREATION);
+        this.attributes.set(LAST_DATE_MODIFIED, now);
+        this.lastDateModified = this.attributes.get(LAST_DATE_MODIFIED);
     }
 
     @Override

@@ -4,7 +4,7 @@ import net.transgressoft.commons.query.EntityAttribute
 import java.nio.file.Paths
 import java.time.Duration
 
-class SimpleAudioItemAttributes (private val attributes: MutableMap<EntityAttribute<*>, Any> = emptyAttributes()): AudioItemAttributes {
+class SimpleAudioItemAttributes (internal val attributes: MutableMap<EntityAttribute<*>, Any> = emptyAttributes()): AudioItemAttributes {
 
     override fun <V : Any> get(attribute: EntityAttribute<V>): V {
         return attributes[attribute] as V
@@ -23,6 +23,8 @@ class SimpleAudioItemAttributes (private val attributes: MutableMap<EntityAttrib
         map[a1] = v1
         return SimpleAudioItemAttributes(map)
     }
+
+    override fun copy(): AudioItemAttributes = SimpleAudioItemAttributes(HashMap(attributes))
 }
 
 private fun emptyAttributes(): MutableMap<EntityAttribute<*>, Any> {

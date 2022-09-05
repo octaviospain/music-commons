@@ -14,13 +14,9 @@ class AudioItemInMemoryRepository (
         requireNotNull(path)
         require(!Files.notExists(path)) { "File " + path.toAbsolutePath() + " does not exist" }
 
-        val audioItem = readAudioItem(path)
+        val audioItemAttributes = JAudioTaggerMetadataReader().readAudioItem(path)
+        val audioItem = ImmutableAudioItem(newId(), audioItemAttributes)
         add(audioItem)
         return audioItem
-    }
-
-    @Throws(AudioItemManipulationException::class)
-    private fun readAudioItem(path: Path?): AudioItem {
-        return JAudioTaggerMetadataReader().readAudioItem(path!!)
     }
 }

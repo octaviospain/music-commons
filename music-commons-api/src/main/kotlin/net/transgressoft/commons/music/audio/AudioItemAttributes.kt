@@ -7,4 +7,5 @@ interface AudioItemAttributes {
     operator fun <V : Any> set(attribute: EntityAttribute<V>, value: V)
     fun <V : Any> putIfAbsent(attribute: EntityAttribute<V>, value: V)
     fun <V : Any> modifiedCopy(a1: EntityAttribute<V>, v1: V): AudioItemAttributes
+    fun copy() : AudioItemAttributes
 }

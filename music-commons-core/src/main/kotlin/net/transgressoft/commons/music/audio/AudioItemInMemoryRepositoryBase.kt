@@ -233,20 +233,22 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem> protected construc
         private val errorMessage = "Error parsing file {}: "
 
         @Throws(AudioItemManipulationException::class)
-        fun readAudioItem(audioItemPath: Path): AudioItem {
+        fun readAudioItem(audioItemPath: Path): AudioItemAttributes {
             log.debug("Parsing file {}", audioItemPath)
 
-            val attributes = SimpleAudioItemAttributes()
+            val result : AudioItemAttributes = try {
 
-            val audioItemFile = audioItemPath.toFile()
-            val extension = FilenameUtils.getExtension(audioItemFile.name)
-            try {
+                val attributes = SimpleAudioItemAttributes()
+
+                val audioItemFile = audioItemPath.toFile()
+                val extension = FilenameUtils.getExtension(audioItemFile.name)
                 val audioFile = AudioFileIO.read(audioItemFile)
                 val tag = audioFile.tag
                 val title = if (tag.hasField(FieldKey.TITLE)) tag.getFirst(FieldKey.TITLE) else ""
                 val audioHeader = audioFile.audioHeader
                 val duration = Duration.ofSeconds(audioHeader.trackLength.toLong())
                 val bitRate = getBitRate(audioHeader)
+
                 readMetadata(attributes, tag)
                 readAlbum(attributes, extension, tag)
 
@@ -256,16 +258,20 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem> protected construc
                 attributes[BITRATE] = bitRate
                 attributes[DATE_OF_CREATION] = LocalDateTime.now()
                 attributes[ENCODING] = audioHeader.encodingType
+                attributes
             } catch (exception: Exception) {
                 when (exception) {
                     is CannotReadException, is ReadOnlyFileException, is TagException, is InvalidAudioFrameException -> {
                         log.debug(errorMessage, audioItemPath, exception)
                         throw AudioItemManipulationException("Error parsing file $audioItemPath", exception)
                     }
+                    else -> {
+                        throw exception
+                    }
                 }
             }
 
-            return ImmutableAudioItem(newId(), attributes)
+            return result
         }
 
         private fun getBitRate(audioHeader: AudioHeader): Int {
