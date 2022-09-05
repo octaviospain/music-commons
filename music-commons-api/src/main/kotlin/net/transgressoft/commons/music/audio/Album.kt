@@ -1,0 +1,15 @@
+package net.transgressoft.commons.music.audio
+
+import java.util.*
+
+/**
+ * @author Octavio Calleya
+ */
+interface Album : Comparable<Album> {
+    val name: String
+    val albumArtist: Artist
+    val isCompilation: Boolean
+    val year: Short?
+    val label: Label
+    val coverImage: Optional<ByteArray>
+}

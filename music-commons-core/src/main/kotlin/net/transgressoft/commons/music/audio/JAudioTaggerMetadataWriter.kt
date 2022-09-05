@@ -1,0 +1,121 @@
+package net.transgressoft.commons.music.audio
+
+import mu.KotlinLogging
+import org.apache.commons.io.FileUtils
+import org.jaudiotagger.audio.AudioFileIO
+import org.jaudiotagger.audio.wav.WavOptions
+import org.jaudiotagger.tag.FieldDataInvalidException
+import org.jaudiotagger.tag.FieldKey
+import org.jaudiotagger.tag.Tag
+import org.jaudiotagger.tag.flac.FlacTag
+import org.jaudiotagger.tag.id3.ID3v24Tag
+import org.jaudiotagger.tag.images.ArtworkFactory
+import org.jaudiotagger.tag.mp4.Mp4Tag
+import org.jaudiotagger.tag.wav.WavInfoTag
+import org.jaudiotagger.tag.wav.WavTag
+import java.io.File
+import java.io.IOException
+
+/**
+ * @author Octavio Calleya
+ */
+internal class JAudioTaggerMetadataWriter : AudioItemMetadataWriter {
+    
+    private val logger = KotlinLogging.logger {}
+    
+    @Throws(AudioItemManipulationException::class)
+    override fun writeMetadata(serializableAudioItem: AudioItem) {
+        logger.debug { "Writing AudioItem to file ${serializableAudioItem.path()}" }
+
+        val audioFile = serializableAudioItem.path().toFile()
+        try {
+            val audio = AudioFileIO.read(audioFile)
+            val emptyTag = createEmptyTag(audio.audioHeader.format)
+            audio.tag = emptyTag
+            setTrackFieldsToTag(audio.tag, serializableAudioItem)
+            audio.commit()
+            logger.debug { "AudioItem $serializableAudioItem written to file ${audioFile.absolutePath}" }
+
+            serializableAudioItem.album().coverImage.ifPresent {
+                overwriteCoverImage(serializableAudioItem, audioFile, it)
+            }
+        } catch (exception: Exception) {
+            val errorText = "Error writing metadata of ${serializableAudioItem.path()}"
+            logger.error(errorText, exception)
+            throw AudioItemManipulationException(errorText, exception)
+        }
+    }
+
+    private fun createEmptyTag(format: String): Tag {
+        return when {
+            format.startsWith("Wav") -> {
+                val wavTag = WavTag(WavOptions.READ_ID3_ONLY)
+                wavTag.iD3Tag = ID3v24Tag()
+                wavTag.infoTag = WavInfoTag()
+                wavTag
+            }
+            format.startsWith("Mp3") -> {
+                val tag: Tag = ID3v24Tag()
+                tag.artworkList.clear()
+                tag
+            }
+            format.startsWith("Flac") -> {
+                val tag: Tag = FlacTag()
+                tag.artworkList.clear()
+                tag
+            }
+            format.startsWith("Aac") -> {
+                val tag: Tag = Mp4Tag()
+                tag.artworkList.clear()
+                tag
+            }
+            else -> WavInfoTag()
+        }
+    }
+
+    @Throws(FieldDataInvalidException::class)
+    private fun setTrackFieldsToTag(tag: Tag, audioItem: AudioItem) {
+        tag.setField(FieldKey.TITLE, audioItem.title())
+        tag.setField(FieldKey.ALBUM, audioItem.album().name)
+        tag.setField(FieldKey.ALBUM_ARTIST, audioItem.album().albumArtist.name)
+        tag.setField(FieldKey.ARTIST, audioItem.artist().name)
+        tag.setField(FieldKey.GENRE, audioItem.genre().name)
+        tag.setField(FieldKey.COMMENT, audioItem.comments())
+        tag.setField(FieldKey.GROUPING, audioItem.album().label.name)
+        tag.setField(FieldKey.TRACK, audioItem.trackNumber().toInt().toString())
+        tag.setField(FieldKey.DISC_NO, audioItem.discNumber().toInt().toString())
+        audioItem.album().year?.let { tag.setField(FieldKey.YEAR, ) }
+        tag.setField(FieldKey.IS_COMPILATION, audioItem.album().isCompilation.toString())
+        tag.setField(FieldKey.ENCODER, audioItem.encoder())
+        val bpmString = audioItem.bpm().toString()
+        if (tag is Mp4Tag) {
+            val indexOfDot = bpmString.indexOf('.')
+            tag.setField(FieldKey.BPM, bpmString.substring(0, indexOfDot))
+        } else {
+            tag.setField(FieldKey.BPM, bpmString)
+        }
+    }
+
+    @Throws(AudioItemManipulationException::class)
+    private fun overwriteCoverImage(audioItem: AudioItem, file: File, coverBytes: ByteArray) {
+        logger.debug { "Writing cover image on file ${file.absolutePath}" }
+        val tempCoverFile: File
+        try {
+            tempCoverFile = File.createTempFile("tempCover_" + file.name, ".tmp")
+            FileUtils.writeByteArrayToFile(tempCoverFile, coverBytes)
+            tempCoverFile.deleteOnExit()
+            val audioFile = AudioFileIO.read(file)
+            val cover = ArtworkFactory.createArtworkFromFile(tempCoverFile)
+            val tag = audioFile.tag
+            tag.deleteArtworkField()
+            tag.addField(cover)
+            audioFile.commit()
+
+            logger.debug { "Cover image of AudioItem $audioItem written to file $file"}
+        } catch (exception: IOException) {
+            val errorText = "Error writing cover image of ${file.name}"
+            logger.error(errorText, exception)
+            throw AudioItemManipulationException(errorText, exception)
+        }
+    }
+}

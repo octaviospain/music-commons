@@ -6,7 +6,7 @@ import java.nio.file.Path
 interface AudioItemRepository<I : AudioItem> : Repository<I> {
 
     @Throws(AudioItemManipulationException::class)
-    fun createFromFile(path: Path?): AudioItem?
+    fun createFromFile(path: Path): AudioItem
 
     fun containsAudioItemWithArtist(artistName: String): Boolean
 

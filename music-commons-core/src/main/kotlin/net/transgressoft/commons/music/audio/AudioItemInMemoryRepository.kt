@@ -10,8 +10,7 @@ class AudioItemInMemoryRepository (
 ) : AudioItemInMemoryRepositoryBase<AudioItem>(audioItems, eventDispatcher) {
 
     @Throws(AudioItemManipulationException::class)
-    override fun createFromFile(path: Path?): AudioItem {
-        requireNotNull(path)
+    override fun createFromFile(path: Path): AudioItem {
         require(!Files.notExists(path)) { "File " + path.toAbsolutePath() + " does not exist" }
 
         val audioItemAttributes = JAudioTaggerMetadataReader().readAudioItem(path)
