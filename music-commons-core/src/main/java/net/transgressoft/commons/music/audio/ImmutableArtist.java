@@ -66,7 +66,7 @@ public class ImmutableArtist implements Artist {
     public String toString() {
         return MoreObjects.toStringHelper(this)
                 .add("name", name)
-                .add("countryCode", countryCode.getAlpha2())
+                .add("countryCode", countryCode.name())
                 .toString();
     }
 }

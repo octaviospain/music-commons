@@ -8,7 +8,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static com.google.common.truth.Truth.assertThat;
-import static net.transgressoft.commons.music.audio.StringAudioItemAttribute.TITLE;
+import static net.transgressoft.commons.music.audio.AudioItemStringAttribute.TITLE;
 
 /**
  * @author Octavio Calleya

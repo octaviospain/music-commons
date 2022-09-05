@@ -52,7 +52,7 @@ public class ImmutableLabel implements Label {
     public String toString() {
         return MoreObjects.toStringHelper(this)
                 .add("name", name)
-                .add("countryCode", countryCode)
+                .add("countryCode", countryCode.name())
                 .toString();
     }
 }

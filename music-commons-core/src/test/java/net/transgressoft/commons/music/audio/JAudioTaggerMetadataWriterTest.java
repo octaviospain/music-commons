@@ -20,10 +20,10 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.nio.file.Files;
 import java.time.Duration;
-import java.util.Arrays;
+import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -39,7 +39,7 @@ class JAudioTaggerMetadataWriterTest {
     static File testCover;
     static AudioItem audioItem;
 
-    static String name = "Name";
+    static String title = "Name";
     static Artist artist = new ImmutableArtist("Artist", CountryCode.UK);
     static byte[] coverBytes;
     static Album album;
@@ -66,10 +66,16 @@ class JAudioTaggerMetadataWriterTest {
         testCover = new File(JAudioTaggerMetadataWriterTest.class.getResource("/testfiles/cover.jpg").toURI());
 
         coverBytes = Files.readAllBytes(testCover.toPath());
-        album = new ImmutableAlbum("Album", artist, false, (short) 1992, new ImmutableLabel("EMI", CountryCode.US), coverBytes);
+        album = mock(Album.class);
+        when(album.name()).thenReturn("Album");
+        when(album.albumArtist()).thenReturn(artist);
+        when(album.isCompilation()).thenReturn(false);
+        when(album.year()).thenReturn((short) 1992);
+        when(album.label()).thenReturn(new ImmutableLabel("EMI", CountryCode.US));
+        when(album.coverImage()).thenReturn(Optional.of(coverBytes));
 
         audioItem = mock(AudioItem.class);
-        when(audioItem.title()).thenReturn(name);
+        when(audioItem.title()).thenReturn(title);
         when(audioItem.artist()).thenReturn(artist);
         when(audioItem.album()).thenReturn(album);
         when(audioItem.comments()).thenReturn(comments);
@@ -149,7 +155,7 @@ class JAudioTaggerMetadataWriterTest {
         tag = audioFile.getTag();
         Artwork coverOnFile = audioFile.getTag().getFirstArtwork();
 
-        assertEquals(name, tag.getFirst(FieldKey.TITLE));
+        assertEquals(title, tag.getFirst(FieldKey.TITLE));
         assertEquals(album.name(), tag.getFirst(FieldKey.ALBUM));
         assertEquals(artist.name(), tag.getFirst(FieldKey.ALBUM_ARTIST));
         assertEquals(artist.name(), tag.getFirst(FieldKey.ARTIST));
@@ -161,7 +167,7 @@ class JAudioTaggerMetadataWriterTest {
         assertEquals(bpm, Float.parseFloat(tag.getFirst(FieldKey.BPM)));
         assertEquals(album.isCompilation(), Boolean.valueOf(tag.getFirst(FieldKey.IS_COMPILATION)));
         assertEquals(encoder, tag.getFirst(FieldKey.ENCODER));
-        assertTrue(Arrays.equals(coverBytes, coverOnFile.getBinaryData()));
+        assertArrayEquals(coverBytes, coverOnFile.getBinaryData());
     }
 
     void clearMp3FileMetadata() throws Exception {

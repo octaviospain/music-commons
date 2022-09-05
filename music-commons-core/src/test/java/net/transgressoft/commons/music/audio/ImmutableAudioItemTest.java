@@ -2,6 +2,9 @@ package net.transgressoft.commons.music.audio;
 
 import com.google.common.collect.ImmutableSet;
 import com.neovisionaries.i18n.CountryCode;
+import net.transgressoft.commons.query.EntityAttribute;
+import org.apache.commons.text.WordUtils;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -10,48 +13,92 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
-import static net.transgressoft.commons.music.audio.PathAudioItemAttribute.PATH;
+import static com.google.common.truth.Truth.assertThat;
+import static net.transgressoft.commons.music.audio.AlbumAttribute.ALBUM;
+import static net.transgressoft.commons.music.audio.ArtistAttribute.ALBUM_ARTIST;
+import static net.transgressoft.commons.music.audio.ArtistAttribute.ARTIST;
+import static net.transgressoft.commons.music.audio.AudioItemDurationAttribute.DURATION;
+import static net.transgressoft.commons.music.audio.AudioItemFloatAttribute.BPM;
+import static net.transgressoft.commons.music.audio.AudioItemIntegerAttribute.BITRATE;
+import static net.transgressoft.commons.music.audio.AudioItemPathAttribute.PATH;
+import static net.transgressoft.commons.music.audio.AudioItemShortAttribute.DISC_NUMBER;
+import static net.transgressoft.commons.music.audio.AudioItemShortAttribute.TRACK_NUMBER;
+import static net.transgressoft.commons.music.audio.AudioItemStringAttribute.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * @author Octavio Calleya
  */
 class ImmutableAudioItemTest {
 
-    AudioItem audioItem;
-
     int id = 9;
     Path path = Path.of("testfiles", "testeable.mp3");
     String title = "Yesterday";
     Duration duration = Duration.ofMinutes(2);
     int bitRate = 320;
-    Artist artist = new ImmutableArtist("The Beatles", CountryCode.UK);
+    String artistName = "The Beatles";
     Label label = new ImmutableLabel("EMI", CountryCode.US);
-    Album album = new ImmutableAlbum("Help!", artist, false, (short) 1965, label);
-    int bpm = 120;
+    String albumName = "Help!";
+    String albumArtistName = "The Beatles";
+    boolean isCompilation = false;
+    short year = 1965;
+    float bpm = 120;
     short trackNumber = 13;
     short discNumber = 1;
     String comments = "Best song ever!";
     Genre genre = Genre.ROCK;
     String encoding = "Lame MP3";
     String encoder = "transgressoft";
+    
+    AudioItemAttributes attributes;
+    Artist artist;
+    Album album;
+    Artist albumArtist;
 
+    @BeforeEach
+    void beforeEach() {
+        artist = mock(Artist.class);
+        when(artist.name()).thenReturn(artistName);
+        when(artist.countryCode()).thenReturn(CountryCode.UK.name());
+        when(artist.toString()).thenReturn("ImmutableArtist{name=The Beatles, countryCode=UK}");
+
+        albumArtist = mock(Artist.class);
+        when(albumArtist.name()).thenReturn(albumArtistName);
+        when(albumArtist.countryCode()).thenReturn(CountryCode.UK.name());
+
+        album = mock(Album.class);
+        when(album.name()).thenReturn(albumName);
+        when(album.albumArtist()).thenReturn(albumArtist);
+        when(album.label()).thenReturn(label);
+        when(album.year()).thenReturn(year);
+        when(album.isCompilation()).thenReturn(isCompilation);
+        
+        Map<EntityAttribute<?>, Object> map = new HashMap<>();
+        map.put(TITLE, title);
+        map.put(PATH, path);
+        map.put(DURATION, duration);
+        map.put(ALBUM, album);
+        map.put(ARTIST, artist);
+        map.put(BPM, bpm);
+        map.put(TRACK_NUMBER, trackNumber);
+        map.put(DISC_NUMBER, discNumber);
+        map.put(COMMENTS, comments);
+        map.put(GENRE_NAME, genre.name());
+        map.put(BITRATE, bitRate);
+        map.put(ENCODING, encoding);
+        map.put(ENCODER, encoder); 
+        attributes = new SimpleAudioItemAttributes(map);
+    }
+    
     @Test
     @DisplayName("AudioItem properties")
     void propertiesTest() {
-        audioItem =
-                new ImmutableAudioItemBuilder(9, path, title, duration, bitRate, LocalDateTime.now())
-                        .album(album)
-                        .artist(artist)
-                        .bpm(bpm)
-                        .trackNumber(trackNumber)
-                        .discNumber(discNumber)
-                        .comments(comments)
-                        .genre(genre)
-                        .encoding(encoding)
-                        .encoder(encoder)
-                        .build();
+        AudioItem audioItem = new ImmutableAudioItem(id, attributes);
 
         LocalDateTime dateOfInclusion = audioItem.dateOfInclusion();
         LocalDateTime lastDateModified = audioItem.lastDateModified();
@@ -94,96 +141,125 @@ class ImmutableAudioItemTest {
         assertNotEquals(label, audioItem.album().label());
         assertEquals("ImmutableLabel{name=New label, countryCode=UNDEFINED}", label.toString());
 
-        AudioItem modifiedAlbum = audioItem
-                .title("Other title").album(new ImmutableAlbum("Other album", new ImmutableArtist("Other artist"), true, (short) 1999, ImmutableLabel.UNKNOWN))
+        var newAlbum = mock(Album.class);
+        when(newAlbum.name()).thenReturn("OtherAlbum");
+        when(newAlbum.albumArtist()).thenReturn(new ImmutableArtist("Other artist"));
+        when(newAlbum.isCompilation()).thenReturn(true);
+        when(newAlbum.year()).thenReturn((short) 1999);
+        when(newAlbum.label()).thenReturn(ImmutableLabel.UNKNOWN);
+
+        AudioItem audioItemWithmodifiedAlbum = audioItem
+                .title("Other title").album(newAlbum)
                 .encoder("New encoder").encoding("New encoding")
                 .bpm(128);
 
-        assertEquals("Other Artist", modifiedAlbum.album().albumArtist().name());
-        assertEquals("Other title", modifiedAlbum.title());
-        assertNotEquals(audioItem, modifiedAlbum);
-        assertTrue(modifiedAlbum.album().isCompilation());
-        assertEquals("New encoder", modifiedAlbum.encoder());
-        assertEquals("New encoding", modifiedAlbum.encoding());
-        assertEquals(128, modifiedAlbum.bpm());
+        assertEquals("Other Artist", audioItemWithmodifiedAlbum.album().albumArtist().name());
+        assertEquals("Other title", audioItemWithmodifiedAlbum.title());
+        assertNotEquals(audioItem, audioItemWithmodifiedAlbum);
+        assertTrue(audioItemWithmodifiedAlbum.album().isCompilation());
+        assertEquals("New encoder", audioItemWithmodifiedAlbum.encoder());
+        assertEquals("New encoding", audioItemWithmodifiedAlbum.encoding());
+        assertEquals(128, audioItemWithmodifiedAlbum.bpm());
         assertEquals(0, audioItem.length());
 
-        modifiedAlbum = modifiedAlbum.genre(Genre.UNDEFINED).album(ImmutableAlbum.UNKNOWN_ALBUM).comments("Modified");
+        var unknownAlbum = mock(Album.class);
+        when(unknownAlbum.name()).thenReturn("");
+        when(unknownAlbum.albumArtist()).thenReturn(ImmutableArtist.UNKNOWN_ARTIST);
+        when(unknownAlbum.isCompilation()).thenReturn(true);
+        when(unknownAlbum.year()).thenReturn((short) 1999);
+        when(unknownAlbum.label()).thenReturn(ImmutableLabel.UNKNOWN);
 
-        assertNotEquals(audioItem.artist(), modifiedAlbum.artist());
-        assertEquals(ImmutableAlbum.UNKNOWN_ALBUM, modifiedAlbum.album());
-        assertEquals(Genre.UNDEFINED, modifiedAlbum.genre());
-        assertEquals("Modified", modifiedAlbum.comments());
-        assertEquals(ImmutableArtist.UNKNOWN_ARTIST, modifiedAlbum.artist());
+        var modifiedAudioItem = audioItemWithmodifiedAlbum.genre(Genre.UNDEFINED)
+                .album(unknownAlbum)
+                .comments("Modified");
 
-        modifiedAlbum = modifiedAlbum.artist(ImmutableArtist.UNKNOWN_ARTIST)
+        assertEquals(audioItem.artist(), modifiedAudioItem.artist());
+        assertThat(modifiedAudioItem.album().name()).isEmpty();
+        assertEquals(Genre.UNDEFINED, modifiedAudioItem.genre());
+        assertEquals("Modified", modifiedAudioItem.comments());
+        assertEquals(artist, modifiedAudioItem.artist());
+
+        modifiedAudioItem = modifiedAudioItem.artist(ImmutableArtist.UNKNOWN_ARTIST)
                 .path(Path.of("/moved/song.mp3")).discNumber((short) 2).trackNumber((short) 3);
 
-        assertEquals("/moved/song.mp3", modifiedAlbum.path().toString());
-        assertEquals(2, modifiedAlbum.discNumber());
-        assertEquals(3, modifiedAlbum.trackNumber());
-
-        assertTrue(audioItem.artist().compareTo(modifiedAlbum.artist()) > 0);
+        assertEquals("/moved/song.mp3", modifiedAudioItem.path().toString());
+        assertEquals(2, modifiedAudioItem.discNumber());
+        assertEquals(3, modifiedAudioItem.trackNumber());
     }
 
     @Nested
     @DisplayName("Artists involved")
     class artistsInvolved {
 
+        AudioItem audioItem;
+        ImmutableSet<String> expectedArtists;
+
+        private void initAudioItemAndExpectedArtists(String title, String artistString, String albumArtistString, String... expectedArtist) {
+            var newAttributes = attributes.modifiedCopy(TITLE, title);
+
+            var artist = mock(Artist.class);
+            when(artist.name()).thenReturn(beautifyName(artistString));
+
+            var albumArtist = mock(Artist.class);
+            when(albumArtist.name()).thenReturn(albumArtistString);
+
+            var album = mock(Album.class);
+            when(album.albumArtist()).thenReturn(albumArtist);
+            when(album.label()).thenReturn(label);
+            when(album.year()).thenReturn(year);
+            when(album.name()).thenReturn(albumName);
+            when(album.isCompilation()).thenReturn(isCompilation);
+
+            newAttributes.set(ARTIST, artist);
+            newAttributes.set(ALBUM, album);
+            newAttributes.set(ALBUM_ARTIST, albumArtist);
+            audioItem = new ImmutableAudioItem(1, newAttributes);
+            expectedArtists = ImmutableSet.<String>builder().add(expectedArtist).build();
+        }
+
+        private String beautifyName(String name) {
+            return WordUtils.capitalize(name)
+                    .replaceAll("\\s+", " ")
+                    .replaceAll(" (?i)(vs)(\\.|\\s)", " vs ")
+                    .replaceAll(" (?i)(versus) ", " versus ");
+        }
+
         @Nested
         @DisplayName("In artist field")
         class namesInArtistField {
 
-            AudioItem audioItem;
-            ImmutableSet<String> expectedArtists;
-
-            private void initTrackWithArtistAndResult(String artistString, String... expectedArtist) {
-                audioItem = new ImmutableAudioItemBuilder(id, path, title, duration, bitRate, LocalDateTime.now(), LocalDateTime.now())
-                        .album(ImmutableAlbum.UNKNOWN_ALBUM)
-                        .artist(new ImmutableArtist(artistString))
-                        .bpm(bpm)
-                        .trackNumber(trackNumber)
-                        .discNumber(discNumber)
-                        .comments(comments)
-                        .genre(genre)
-                        .encoding(encoding)
-                        .encoder(encoder)
-                        .build();
-                expectedArtists = ImmutableSet.<String>builder().add(expectedArtist).build();
-            }
-
             @Test
             @DisplayName("One name")
             void oneNameInArtist() {
-                initTrackWithArtistAndResult("Dvs1", "Dvs1");
+                initAudioItemAndExpectedArtists(title, "Dvs1", "", "Dvs1");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("One name with trail spaces")
             void oneNameWithSpacesInArtist() {
-                initTrackWithArtistAndResult("Adam Beyer    ", "Adam Beyer");
+                initAudioItemAndExpectedArtists(title, "Adam Beyer    ", "", "Adam Beyer");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("One name with spaces in between words")
             void oneNameWithLeadingSpacesInArtist() {
-                initTrackWithArtistAndResult("Adam      Beyer", "Adam Beyer");
+                initAudioItemAndExpectedArtists(title, "Adam      Beyer", "", "Adam Beyer");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("One name with leading and trailing spaces")
             void oneNameWthLeadingAndTrailingSpacesInArtist() {
-                initTrackWithArtistAndResult("   Adam Beyer    ", "Adam Beyer");
+                initAudioItemAndExpectedArtists(title, "   Adam Beyer    ", "", "Adam Beyer");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("One name with leading and trailing spaces")
             void oneNameWthLeadingTrailingAndBetweenSpacesInArtist() {
-                initTrackWithArtistAndResult("   Adam    Beyer    ", "Adam Beyer");
+                initAudioItemAndExpectedArtists(title, "   Adam    Beyer    ","", "Adam Beyer");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
@@ -194,43 +270,42 @@ class ImmutableAudioItemTest {
                 @Test
                 @DisplayName("Two names")
                 void twoNamesCommaSeparated() {
-                    initTrackWithArtistAndResult("adam Beyer, ida engberg", "Adam Beyer", "Ida Engberg");
+                    initAudioItemAndExpectedArtists(title, "adam Beyer, ida engberg", "", "Adam Beyer", "Ida Engberg");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Two names with trailing spaces")
                 void twoNamesCommaSeparatedWithTrailingSpaces() {
-                    initTrackWithArtistAndResult("Adam Beyer  , Ida Engberg   ", "Adam Beyer", "Ida Engberg");
+                    initAudioItemAndExpectedArtists(title, "Adam Beyer  , Ida Engberg   ", "", "Adam Beyer", "Ida Engberg");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Two names with leading spaces")
                 void twoNamesCommaSeparatedWithLeadingSpaces() {
-                    initTrackWithArtistAndResult("Adam    Beyer, Ida   Engberg", "Adam Beyer", "Ida Engberg");
+                    initAudioItemAndExpectedArtists(title, "Adam    Beyer, Ida   Engberg", "", "Adam Beyer", "Ida Engberg");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Three names")
                 void threeNamesCommaSeparated() {
-                    initTrackWithArtistAndResult("Adam Beyer, Ida Engberg, UMEK", "Adam Beyer", "Ida Engberg", "UMEK");
+                    initAudioItemAndExpectedArtists(title, "Adam Beyer, Ida Engberg, UMEK", "", "Adam Beyer", "Ida Engberg", "UMEK");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Three names with leading and trailing spaces")
                 void threeNamesCommaWithLeadingAndTrailingSpacesSeparated() {
-                    initTrackWithArtistAndResult("Adam    Beyer  ,   Ida  Engberg ,   UMEK ", "Adam Beyer", "Ida Engberg",
-                                                 "UMEK");
+                    initAudioItemAndExpectedArtists(title, "Adam    Beyer  ,   Ida  Engberg ,   UMEK ", "", "Adam Beyer", "Ida Engberg", "UMEK");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Two repeated names")
                 void twoNamesRepeatedCommaSeparated() {
-                    initTrackWithArtistAndResult("Adam Beyer, Adam Beyer", "Adam Beyer");
+                    initAudioItemAndExpectedArtists(title, "Adam Beyer, Adam Beyer", "", "Adam Beyer");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
             }
@@ -242,36 +317,36 @@ class ImmutableAudioItemTest {
                 @Test
                 @DisplayName("Two names")
                 void twoNamesAndpersandSeparated() {
-                    initTrackWithArtistAndResult("Adam Beyer & Ida Engberg", "Adam Beyer", "Ida Engberg");
+                    initAudioItemAndExpectedArtists(title, "Adam Beyer & Ida Engberg", "", "Adam Beyer", "Ida Engberg");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Two names with leading and trailing spaces")
                 void twoNamesAndpersandWithSpacesSeparated() {
-                    initTrackWithArtistAndResult("Adam   Beyer  &     Ida Engberg ", "Adam Beyer", "Ida Engberg");
+                    initAudioItemAndExpectedArtists(title, "Adam   Beyer  &     Ida Engberg ", "", "Adam Beyer", "Ida Engberg");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Three names")
                 void threeNamesAndpersandSeparated() {
-                    initTrackWithArtistAndResult("Adam Beyer & Ida Engberg & UMEK", "Adam Beyer", "Ida Engberg", "UMEK");
+                    initAudioItemAndExpectedArtists(title, "Adam Beyer & Ida Engberg & UMEK", "", "Adam Beyer", "Ida Engberg", "UMEK");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Three names with leading and trailing spaces")
                 void threeNamesAndpersandWithSpacesSeparated() {
-                    initTrackWithArtistAndResult("adam   beyer  & ida  engberg &  uMEK ", "Adam Beyer", "Ida Engberg",
-                                                 "UMEK");
+                    initAudioItemAndExpectedArtists(title, "adam   beyer  & ida  engberg &  uMEK ", "", "Adam Beyer", "Ida Engberg",
+                                                    "UMEK");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Two repeated names")
                 void twoNamesRepeatedAnpersandSeparated() {
-                    initTrackWithArtistAndResult("Adam Beyer & Adam Beyer", "Adam Beyer");
+                    initAudioItemAndExpectedArtists(title, "Adam Beyer & Adam Beyer", "", "Adam Beyer");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
             }
@@ -283,21 +358,21 @@ class ImmutableAudioItemTest {
                 @Test
                 @DisplayName("Two names")
                 void twoNamesvsSeparated() {
-                    initTrackWithArtistAndResult("Adam Beyer vs Ida Engberg", "Adam Beyer", "Ida Engberg");
+                    initAudioItemAndExpectedArtists(title, "Adam Beyer vs Ida Engberg", "", "Adam Beyer", "Ida Engberg");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Three names")
                 void threeNamesVsSeparated() {
-                    initTrackWithArtistAndResult("Adam Beyer vs Ida Engberg VS UMEK", "Adam Beyer", "Ida Engberg", "UMEK");
+                    initAudioItemAndExpectedArtists(title, "Adam Beyer vs Ida Engberg VS UMEK", "", "Adam Beyer", "Ida Engberg", "UMEK");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Two repeated names")
                 void twoNamesRepeatedVsSeparated() {
-                    initTrackWithArtistAndResult("Adam Beyer vs Adam Beyer", "Adam Beyer");
+                    initAudioItemAndExpectedArtists(title, "Adam Beyer vs Adam Beyer", "", "Adam Beyer");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
             }
@@ -309,22 +384,22 @@ class ImmutableAudioItemTest {
                 @Test
                 @DisplayName("Two names")
                 void twoNamesVersusSeparated() {
-                    initTrackWithArtistAndResult("Adam Beyer versus Ida Engberg", "Adam Beyer", "Ida Engberg");
+                    initAudioItemAndExpectedArtists(title, "Adam Beyer versus Ida Engberg", "", "Adam Beyer", "Ida Engberg");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Three names")
                 void threeNamesVersusSeparated() {
-                    initTrackWithArtistAndResult("adam Beyer versus Ida Engberg Versus umek", "Adam Beyer",
-                                                 "Ida Engberg", "Umek");
+                    initAudioItemAndExpectedArtists(title, "adam Beyer versus Ida Engberg Versus umek", "", "Adam Beyer",
+                                                    "Ida Engberg", "Umek");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Two repeated names")
                 void twoNamesRepeatedVersusSeparated() {
-                    initTrackWithArtistAndResult("Adam Beyer versus Adam Beyer", "Adam Beyer");
+                    initAudioItemAndExpectedArtists(title, "Adam Beyer versus Adam Beyer", "", "Adam Beyer");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
             }
@@ -336,22 +411,22 @@ class ImmutableAudioItemTest {
                 @Test
                 @DisplayName("Two names")
                 void twoNamesVsDotSeparated() {
-                    initTrackWithArtistAndResult("Adam Beyer vs. Ida Engberg", "Adam Beyer", "Ida Engberg");
+                    initAudioItemAndExpectedArtists(title, "Adam Beyer vs. Ida Engberg", "", "Adam Beyer", "Ida Engberg");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Three names")
                 void threeNamesVsDotSeparated() {
-                    initTrackWithArtistAndResult("Adam Beyer vs. Ida Engberg Vs. UMEK", "Adam Beyer",
-                                                 "Ida Engberg", "UMEK");
+                    initAudioItemAndExpectedArtists(title, "Adam Beyer vs. Ida Engberg Vs. UMEK", "", "Adam Beyer",
+                                                    "Ida Engberg", "UMEK");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Two repeated names")
                 void twoNamesRepeatedVsDotSeparated() {
-                    initTrackWithArtistAndResult("Adam Beyer Vs. Adam Beyer", "Adam Beyer");
+                    initAudioItemAndExpectedArtists(title, "Adam Beyer Vs. Adam Beyer", "", "Adam Beyer");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
             }
@@ -363,14 +438,14 @@ class ImmutableAudioItemTest {
                 @Test
                 @DisplayName("Two names feat. separated")
                 void twoNamesFeatDotSeparated() {
-                    initTrackWithArtistAndResult("Benny Benassi Feat. Gary Go", "Benny Benassi", "Gary Go");
+                    initAudioItemAndExpectedArtists(title, "Benny Benassi Feat. Gary Go", "", "Benny Benassi", "Gary Go");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Two names Feat separated")
                 void twoNamesFeatSeparated() {
-                    initTrackWithArtistAndResult("Dragon Ash Feat Rappagariya", "Dragon Ash", "Rappagariya");
+                    initAudioItemAndExpectedArtists(title, "Dragon Ash Feat Rappagariya", "", "Dragon Ash", "Rappagariya");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
             }
@@ -382,14 +457,14 @@ class ImmutableAudioItemTest {
                 @Test
                 @DisplayName("Two names ft. separated")
                 void twoNamesFeatSeparated() {
-                    initTrackWithArtistAndResult("Ludacris Ft. Shawnna", "Ludacris", "Shawnna");
+                    initAudioItemAndExpectedArtists(title, "Ludacris Ft. Shawnna", "", "Ludacris", "Shawnna");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Two names ft separated")
                 void twoNamesFeatDotSeparated() {
-                    initTrackWithArtistAndResult("Ludacris Ft Shawnna", "Ludacris", "Shawnna");
+                    initAudioItemAndExpectedArtists(title, "Ludacris Ft Shawnna", "", "Ludacris", "Shawnna");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
             }
@@ -401,31 +476,31 @@ class ImmutableAudioItemTest {
                 @Test
                 @DisplayName("Three names")
                 void threeNamesCommaAndpersandSeparated() {
-                    initTrackWithArtistAndResult("Adam Beyer, Ida Engberg & Ansome", "Adam Beyer", "Ida Engberg", "Ansome");
+                    initAudioItemAndExpectedArtists(title, "Adam Beyer, Ida Engberg & Ansome", "", "Adam Beyer", "Ida Engberg", "Ansome");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Four names")
                 void fourNamesCommaAndpersandSeparated() {
-                    initTrackWithArtistAndResult("Adam beyer & Ida engberg, UMEK & ansome", "Adam Beyer", "Ida Engberg",
-                                                 "UMEK", "Ansome");
+                    initAudioItemAndExpectedArtists(title, "Adam beyer & Ida engberg, UMEK & ansome", "", "Adam Beyer", "Ida Engberg",
+                                                    "UMEK", "Ansome");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Five names")
                 void fiveNamesCommaAndpersandSeparated() {
-                    initTrackWithArtistAndResult("Adam Beyer & UMEK, Showtek, Ansome & Ida Engberg", "Adam Beyer",
-                                                 "Ida Engberg", "UMEK", "Showtek", "Ansome");
+                    initAudioItemAndExpectedArtists(title, "Adam Beyer & UMEK, Showtek, Ansome & Ida Engberg", "", "Adam Beyer",
+                                                    "Ida Engberg", "UMEK", "Showtek", "Ansome");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Five name with leading and trailing spaces")
                 void fiveNamesCommaAndpersandWithSpacesTest() {
-                    initTrackWithArtistAndResult(" Adam  Beyer , UMEK  & Showtek , Ansome   & Ida   Engberg ", "Adam Beyer",
-                                                 "Ida Engberg", "UMEK", "Showtek", "Ansome");
+                    initAudioItemAndExpectedArtists(title, " Adam  Beyer , UMEK  & Showtek , Ansome   & Ida   Engberg ", "", "Adam Beyer",
+                                                    "Ida Engberg", "UMEK", "Showtek", "Ansome");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
             }
@@ -437,138 +512,120 @@ class ImmutableAudioItemTest {
                 @Test
                 @DisplayName("Three names with & and Ft. separated")
                 void threeNamesWithFtDotAnpersandSeparated() {
-                    initTrackWithArtistAndResult("Laidback Luke Feat. Chuckie & Martin Solveig", "Laidback Luke",
-                                                 "Chuckie", "Martin Solveig");
+                    initAudioItemAndExpectedArtists(title, "Laidback Luke Feat. Chuckie & Martin Solveig", "", "Laidback Luke",
+                                                    "Chuckie", "Martin Solveig");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
 
                 @Test
                 @DisplayName("Three names with & and Ft separated")
                 void threeNamesWithFtAnpersandSeparated() {
-                    initTrackWithArtistAndResult("Laidback Luke Feat Chuckie & Martin Solveig", "Laidback Luke",
-                                                 "Chuckie", "Martin Solveig");
+                    initAudioItemAndExpectedArtists(title, "Laidback Luke Feat Chuckie & Martin Solveig", "", "Laidback Luke",
+                                                    "Chuckie", "Martin Solveig");
                     assertEquals(expectedArtists, audioItem.artistsInvolved());
                 }
             }
         }
 
         @Nested
-        @DisplayName("In name field")
-        class artistsInNameField {
-
-            AudioItem audioItem;
-            ImmutableSet<String> expectedArtists;
-
-            private void initializeWithNameAndResult(String name, String... expectedArtist) {
-                audioItem = new ImmutableAudioItemBuilder(id, path, name, duration, bitRate, LocalDateTime.now(), LocalDateTime.now())
-                        .album(ImmutableAlbum.UNKNOWN_ALBUM)
-                        .artist(ImmutableArtist.UNKNOWN_ARTIST)
-                        .bpm(bpm)
-                        .trackNumber(trackNumber)
-                        .discNumber(discNumber)
-                        .comments(comments)
-                        .genre(genre)
-                        .encoding(encoding)
-                        .encoder(encoder)
-                        .build();
-                expectedArtists = ImmutableSet.<String>builder().add(expectedArtist).build();
-            }
+        @DisplayName("In title field")
+        class namesInTitleField {
 
             @Test
             @DisplayName("Just the track name")
             void justTheTrackName() {
-                initializeWithNameAndResult("Nothing Left Part 1");
+                initAudioItemAndExpectedArtists("Nothing Left Part 1", "", "");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Original mix")
             void originalMix() {
-                initializeWithNameAndResult("Song name (Original Mix)");
+                initAudioItemAndExpectedArtists("Song title (Original Mix)", "", "");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Edit version")
             void editVersion() {
-                initializeWithNameAndResult("Song name (Special time edit)");
+                initAudioItemAndExpectedArtists("Song title (Special time edit)", "", "");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Ends with 'Remix'")
             void endsWithRemix() {
-                initializeWithNameAndResult("Song name (adam beyer Remix)", "Adam Beyer");
+                initAudioItemAndExpectedArtists("Song title (adam beyer Remix)", "", "", "Adam Beyer");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Has 'Remix' with useless spaces")
             void hasRemixWithUselessSpaces() {
-                initializeWithNameAndResult(" Song   name ( Adam   Beyer  Remix)", "Adam Beyer");
+                initAudioItemAndExpectedArtists(" Song   name ( Adam   Beyer  Remix)", "", "", "Adam Beyer");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Has 'Remix by'")
             void hasRemixBy() {
-                initializeWithNameAndResult("Song name (Remix by Adam Beyer)", "Adam Beyer");
+                initAudioItemAndExpectedArtists("Song title (Remix by Adam Beyer)", "", "", "Adam Beyer");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Starts with 'Remix by' with useless spaces")
             void hasRemixByWithUselessSpaces() {
-                initializeWithNameAndResult("Song   name  (Remix    by  Adam   Beyer)", "Adam Beyer");
+                initAudioItemAndExpectedArtists("Song   name  (Remix    by  Adam   Beyer)", "", "", "Adam Beyer");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Has 'Ft' outside parenthesis")
             void hasFt() {
-                initializeWithNameAndResult("Song name ft Adam Beyer", "Adam Beyer");
+                initAudioItemAndExpectedArtists("Song title ft Adam Beyer", "", "", "Adam Beyer");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Has 'Ft' inside parenthesis")
             void hasFtInsideParenthesis() {
-                initializeWithNameAndResult("Song name (ft Adam Beyer)", "Adam Beyer");
+                initAudioItemAndExpectedArtists("Song title (ft Adam Beyer)", "", "", "Adam Beyer");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Has 'Feat' outside parenthesis")
             void hasFeat() {
-                initializeWithNameAndResult("Song name feat Adam Beyer", "Adam Beyer");
+                initAudioItemAndExpectedArtists("Song title feat Adam Beyer", "", "", "Adam Beyer");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Has 'Feat' inside parenthesis")
             void hasFeatInsideParenthesis() {
-                initializeWithNameAndResult("Song name (feat Adam Beyer)", "Adam Beyer");
+                initAudioItemAndExpectedArtists("Song title (feat Adam Beyer)", "", "", "Adam Beyer");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Has 'featuring' ouside parenthesis")
             void hasFeaturing() {
-                initializeWithNameAndResult("Song name featuring Adam Beyer", "Adam Beyer");
+                initAudioItemAndExpectedArtists("Song title featuring Adam Beyer", "", "", "Adam Beyer");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Has 'featuring' inside parenthesis")
             void hasFeaturingInsideParenthesis() {
-                initializeWithNameAndResult("Song name (featuring Adam Beyer)", "Adam Beyer");
+                initAudioItemAndExpectedArtists("Song title (featuring Adam Beyer)", "", "", "Adam Beyer");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Has 'With'")
             void hasWith() {
-                initializeWithNameAndResult("Song name (With Adam Beyer)", "Adam Beyer");
+                initAudioItemAndExpectedArtists("Song title (With Adam Beyer)", "", "", "Adam Beyer");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
@@ -576,139 +633,102 @@ class ImmutableAudioItemTest {
             @DisplayName("Has 'ft' and ending by 'Remix'")
             @Disabled("User should put the extra artist in the artist field, separated by a comma")
             void twoArtistsDividedByFtWithRemix() {
-                initializeWithNameAndResult("Pretendingtowalkslow ft Zeroh (M. Constant Remix)", "Zeroh", "M. Constant");
+                initAudioItemAndExpectedArtists("Pretendingtowalkslow ft Zeroh (M. Constant Remix)", "", "", "Zeroh", "M. Constant");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Two names separated by '&' ending with 'Remix'")
             void twoArtistsDividedByAndpersandEndingWithRemix() {
-                initializeWithNameAndResult("Song name (Adam beyer & pete tong Remix)", "Adam Beyer", "Pete Tong");
+                initAudioItemAndExpectedArtists("Song title (Adam beyer & pete tong Remix)", "", "", "Adam Beyer", "Pete Tong");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Two names separated by 'vs' ending with 'Remix'")
             void vsSeparatedWithRemix() {
-                initializeWithNameAndResult("Fall (M83 vs Big Black Delta Remix)", "M83", "Big Black Delta");
+                initAudioItemAndExpectedArtists("Fall (M83 vs Big Black Delta Remix)", "", "", "M83", "Big Black Delta");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Four names separated by with comma and & starting with 'feat'")
             void fourNamesCommaAndpersandFeatSeparated() {
-                initializeWithNameAndResult("Jet Blue Jet (feat Leftside, GTA, Razz & Biggy)", "Leftside",
-                                            "GTA", "Razz", "Biggy");
+                initAudioItemAndExpectedArtists("Jet Blue Jet (feat Leftside, GTA, Razz & Biggy)", "", "", "Leftside",
+                                                "GTA", "Razz", "Biggy");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
         }
 
         @Nested
         @DisplayName("In album artist field")
-        class namesInsideAlbumArtistField {
-
-            AudioItem audioItem;
-            ImmutableSet<String> expectedArtists;
-
-            private void initializeWithNameAndResult(String albumArtistString, String... expectedArtist) {
-                audioItem = new ImmutableAudioItemBuilder(id, path, "", duration, bitRate, LocalDateTime.now(), LocalDateTime.now())
-                        .album(new ImmutableAlbum("", new ImmutableArtist(albumArtistString), false, (short) 1969, ImmutableLabel.UNKNOWN))
-                        .artist(ImmutableArtist.UNKNOWN_ARTIST)
-                        .bpm(bpm)
-                        .trackNumber(trackNumber)
-                        .discNumber(discNumber)
-                        .comments(comments)
-                        .genre(genre)
-                        .encoding(encoding)
-                        .encoder(encoder)
-                        .build();
-                expectedArtists = ImmutableSet.<String>builder().add(expectedArtist).build();
-            }
+        class namesInAlbumArtistField {
 
             @Test
             @DisplayName("One name")
             void oneNameInAlbumArtist() {
-                initializeWithNameAndResult("Adam Beyer", "Adam Beyer");
+                initAudioItemAndExpectedArtists(title, "Adam Beyer", "Adam Beyer", "Adam Beyer");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Two names separated by commas")
             void twoNamesInAlbumArtistCommSeparated() {
-                initializeWithNameAndResult("Adam Beyer, UMEK", "Adam Beyer", "UMEK");
+                initAudioItemAndExpectedArtists(title, "Adam Beyer, UMEK", "Adam Beyer", "UMEK", "Adam Beyer");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Two names separated by &")
             void twoNamesInAlbumArtistAndpersandSeparated() {
-                initializeWithNameAndResult("Adam Beyer & Pete Tong", "Adam Beyer", "Pete Tong");
+                initAudioItemAndExpectedArtists(title, "Adam Beyer & Pete Tong", "Adam Beyer", "Pete Tong", "Adam Beyer");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Three names separated by & and comma")
             void threeNamesInAlbumArtistAndpersandCommaSeparated() {
-                initializeWithNameAndResult("Adam Beyer, Pete Tong & UMEK", "Adam Beyer", "Pete Tong", "UMEK");
+                initAudioItemAndExpectedArtists(title, "Adam Beyer, Pete Tong & UMEK", "Adam Beyer", "Pete Tong", "UMEK", "Adam Beyer");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
         }
 
         @Nested
-        @DisplayName("In artist, name and album artist fields")
-        class namesInArtistNameAndAlbumFields {
-
-            AudioItem audioItem;
-            ImmutableSet<String> expectedArtists;
-
-            private void initializeWithNamesAndResult(String name, String artist, String albumArtist,
-                                                      String... expectedArtist) {
-                audioItem = new ImmutableAudioItemBuilder(id, path, name, duration, bitRate, LocalDateTime.now(), LocalDateTime.now())
-                        .album(new ImmutableAlbum("", new ImmutableArtist(albumArtist), false, (short) 1969, ImmutableLabel.UNKNOWN))
-                        .artist(new ImmutableArtist(artist))
-                        .bpm(bpm)
-                        .trackNumber(trackNumber)
-                        .discNumber(discNumber)
-                        .comments(comments)
-                        .genre(genre)
-                        .encoding(encoding)
-                        .encoder(encoder)
-                        .build();
-                expectedArtists = ImmutableSet.<String>builder().add(expectedArtist).build();
-            }
+        @DisplayName("In artist, title and album artist fields")
+        class namesInArtistTitleAndAlbumFields {
 
             @Test
             @DisplayName("Simple name, one artist, same album artist")
             void simpleNameOneArtistSameAlbumArtist() {
-                initializeWithNamesAndResult("Song name", "Pete Tong", "Pete Tong", "Pete Tong");
+                initAudioItemAndExpectedArtists("Song title", "Pete Tong", "Pete Tong", "Pete Tong");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Simple name, one artist, one album artist")
             void simpleNameOneArtistOneAlbumArtist() {
-                initializeWithNamesAndResult("Song name", "Pete Tong", "Jeff Mills", "Pete Tong", "Jeff Mills");
+                initAudioItemAndExpectedArtists("Song title", "Pete Tong", "Jeff Mills", "Pete Tong", "Jeff Mills");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Simple name, two artists, same album artist")
-            void simleNameTwoArtistsSameAlbumArtist() {
-                initializeWithNamesAndResult("Song name", "Pete Tong, UMEK", "Pete Tong", "Pete Tong", "UMEK");
+            void simpleNameTwoArtistsSameAlbumArtist() {
+                initAudioItemAndExpectedArtists("Song title", "Pete Tong, UMEK", "Pete Tong", "Pete Tong", "UMEK");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Name with 'Remix', one artist, no album artist")
             void nameWithRemixOneArtistNoAlbumArtist() {
-                initializeWithNamesAndResult("Song name (Ansome Remix)", "Pete Tong", "", "Pete Tong", "Ansome");
+                initAudioItemAndExpectedArtists("Song title (Ansome Remix)", "Pete Tong", "", "Pete Tong", "Ansome");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
 
             @Test
             @DisplayName("Name with featuring, two artists with comma, one repeated album artist")
             void oneNameOneArtistOneAlbumArtist() {
-                initializeWithNamesAndResult("Song name featuring Lulu Perez", "Pete Tong & Ansome", "Pete Tong", "Pete Tong",
+                initAudioItemAndExpectedArtists("Song title featuring Lulu Perez", "Pete Tong & Ansome", "Pete Tong", "Pete Tong",
                                              "Lulu Perez", "Ansome");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }
@@ -716,7 +736,7 @@ class ImmutableAudioItemTest {
             @Test
             @DisplayName("Name with 'Remix by', two artists with &, one other album artist")
             void nameWithRemixByTwoArtistsWithAndpersandOneOtherAlbumArtist() {
-                initializeWithNamesAndResult("Song name (Remix by Bonobo)", "Laurent Garnier & Rone", "Pete Tong",
+                initAudioItemAndExpectedArtists("Song title (Remix by Bonobo)", "Laurent Garnier & Rone", "Pete Tong",
                                              "Pete Tong", "Bonobo", "Laurent Garnier", "Rone");
                 assertEquals(expectedArtists, audioItem.artistsInvolved());
             }

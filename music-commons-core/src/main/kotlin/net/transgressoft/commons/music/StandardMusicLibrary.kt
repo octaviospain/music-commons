@@ -45,7 +45,7 @@ internal class DefaultMusicLibraryBuilder : MusicLibraryBuilder {
     override fun build(): StandardMusicLibrary {
         audioItemEventDispatcher = audioItemEventDispatcher ?: DefaultAudioItemEventDispatcher()
 
-        audioItemRepository = audioItemRepository ?: AudioItemInMemoryRepository(audioItemEventDispatcher)
+        audioItemRepository = audioItemRepository ?: AudioItemInMemoryRepository(eventDispatcher = audioItemEventDispatcher)
         audioPlaylistRepository = audioPlaylistRepository ?: AudioPlaylistInMemoryRepository()
         audioWaveformRepository = audioWaveformRepository ?: AudioWaveformInMemoryRepository()
 
