@@ -35,7 +35,7 @@ subprojects {
     }
 
     dependencies {
-        implementation 'net.transgressoft:soft-query-api:0.42-SNAPSHOT'
+        implementation 'net.transgressoft:soft-query-api:0.46-SNAPSHOT'
         implementation platform('org.jetbrains.kotlin:kotlin-bom')
         implementation "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"

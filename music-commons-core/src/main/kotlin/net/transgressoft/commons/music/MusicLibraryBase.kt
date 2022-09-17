@@ -20,9 +20,9 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Flow.Subscription
 
 abstract class MusicLibraryBase<I : AudioItem, P : AudioPlaylist<I>, D : AudioPlaylistDirectory<I>, W : AudioWaveform>(
-    private val audioItemRepository: AudioItemRepository<I>,
-    private val audioPlaylistRepository: AudioPlaylistRepository<I, P, D>,
-    private val waveformRepository: AudioWaveformRepository<W>,
+    final override val audioItemRepository: AudioItemRepository<I>,
+    final override val audioPlaylistRepository: AudioPlaylistRepository<I, P, D>,
+    final override val audioWaveformRepository: AudioWaveformRepository<W>,
 ) : MusicLibrary<I, P, D, W> {
 
     private val log = LoggerFactory.getLogger(MusicLibraryBase::class.java)
@@ -43,9 +43,9 @@ abstract class MusicLibraryBase<I : AudioItem, P : AudioPlaylist<I>, D : AudioPl
         audioPlaylistRepository.removeAudioItems(audioItems)
         audioItems.stream()
             .map(AudioItem::id)
-            .map { waveformRepository.findById(it) }
+            .map { audioWaveformRepository.findById(it) }
             .filter { it.isPresent }
-            .forEach { waveformRepository.remove(it.get()) }
+            .forEach { audioWaveformRepository.remove(it.get()) }
     }
 
     override fun addAudioItemsToPlaylist(audioItems: Collection<I>, playlist: P) {
@@ -61,12 +61,12 @@ abstract class MusicLibraryBase<I : AudioItem, P : AudioPlaylist<I>, D : AudioPl
     }
 
     override fun getOrCreateWaveformAsync(audioItem: I, width: Short, height: Short): CompletableFuture<W> {
-        return waveformRepository.findById(audioItem.id)
+        return audioWaveformRepository.findById(audioItem.id)
             .map<CompletableFuture<W>> { CompletableFuture.completedFuture(it) }
             .orElseGet {
                 CompletableFuture.supplyAsync {
                     try {
-                        return@supplyAsync waveformRepository.create(audioItem, width, height)
+                        return@supplyAsync audioWaveformRepository.create(audioItem, width, height)
                     } catch (exception: AudioWaveformProcessingException) {
                         return@supplyAsync AudioWaveformInMemoryRepository.emptyWaveform(width, height)
                     }

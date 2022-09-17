@@ -3,8 +3,9 @@ package net.transgressoft.commons.music.playlist
 import com.google.common.base.MoreObjects
 import com.google.common.base.Objects
 import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.playlist.PlaylistStringAttribute.*
 
-internal class MutablePlaylistDirectory<I : AudioItem>(
+open class MutablePlaylistDirectory<I : AudioItem>(
     id: Int,
     theName: String,
     audioItems: List<I> = emptyList(),
@@ -36,10 +37,10 @@ internal class MutablePlaylistDirectory<I : AudioItem>(
         super.removeAll(playlists)
     }
 
-    override fun equals(o: Any?): Boolean {
-        if (this === o) return true
-        if (o == null || javaClass != o.javaClass) return false
-        val that = o as MutablePlaylistDirectory<*>
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || javaClass != other.javaClass) return false
+        val that = other as MutablePlaylistDirectory<*>
         return Objects.equal(name, that.name) && Objects.equal(id, that.id)
     }
 

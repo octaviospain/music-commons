@@ -1,44 +1,46 @@
 package net.transgressoft.commons.music.audio
 
-import com.google.common.base.CharMatcher
 import com.google.common.base.MoreObjects
 import com.google.common.base.Objects
-import com.google.common.base.Splitter
-import com.google.common.collect.ImmutableMap
-import com.google.common.collect.ImmutableSet
-import net.transgressoft.commons.query.EntityAttribute
+import net.transgressoft.commons.music.audio.AlbumAttribute.ALBUM
+import net.transgressoft.commons.music.audio.ArtistAttribute.ARTIST
+import net.transgressoft.commons.music.audio.ArtistsInvolvedAttribute.ARTISTS_INVOLVED
+import net.transgressoft.commons.music.audio.AudioItemDurationAttribute.DURATION
+import net.transgressoft.commons.music.audio.AudioItemFloatAttribute.BPM
+import net.transgressoft.commons.music.audio.AudioItemGenreAttribute.GENRE
+import net.transgressoft.commons.music.audio.AudioItemIntegerAttribute.BITRATE
+import net.transgressoft.commons.music.audio.AudioItemLocalDateTimeAttribute.DATE_OF_CREATION
+import net.transgressoft.commons.music.audio.AudioItemLocalDateTimeAttribute.LAST_DATE_MODIFIED
+import net.transgressoft.commons.music.audio.AudioItemPathAttribute.PATH
+import net.transgressoft.commons.music.audio.AudioItemShortAttribute.DISC_NUMBER
+import net.transgressoft.commons.music.audio.AudioItemShortAttribute.TRACK_NUMBER
+import net.transgressoft.commons.music.audio.AudioItemStringAttribute.*
 import net.transgressoft.commons.query.QueryEntity
-import org.apache.commons.io.FilenameUtils
-import org.apache.commons.text.WordUtils
 import java.nio.file.Path
-import java.time.Duration
-import java.time.LocalDateTime
 import java.util.*
-import java.util.regex.Pattern
-import java.util.stream.Collectors
-import java.util.stream.Stream
+import kotlin.io.path.extension
 
 /**
  * @author Octavio Calleya
  */
-class ImmutableAudioItem(override val id: Int, attributes: AudioItemAttributes) : AudioItem, Comparable<AudioItem> {
-    private val path: Path
-    private val title: String
-    private val artist: Artist
-    private val artistsInvolved: Set<String>
-    private val album: Album
-    private val genre: Genre
-    private val comments: String
-    private val trackNumber: Short
-    private val discNumber: Short
-    private val bpm: Float
-    private val duration: Duration
-    private val bitRate: Int
-    private val encoder: String
-    private val encoding: String
-    private val dateOfCreation: LocalDateTime
-    private val lastDateModified: LocalDateTime
-    private val attributes: AudioItemAttributes
+class ImmutableAudioItem(override val id: Int, override val attributes: AudioItemAttributes) : AudioItem, Comparable<AudioItem> {
+
+    private val path = attributes[PATH]!!
+    private val title = attributes[TITLE]!!
+    private val artist = attributes[ARTIST]!!
+    private val artistsInvolved = attributes[ARTISTS_INVOLVED]!!
+    private val album = attributes[ALBUM]!!
+    private val genre = attributes[GENRE]!!
+    private val comments = attributes[COMMENTS]
+    private val trackNumber = attributes[TRACK_NUMBER]
+    private val discNumber = attributes[DISC_NUMBER]
+    private val bpm = attributes[BPM]
+    private val duration = attributes[DURATION]!!
+    private val bitRate = attributes[BITRATE]!!
+    private val encoder = attributes[ENCODER]
+    private val encoding = attributes[ENCODING]
+    private val dateOfCreation = attributes[DATE_OF_CREATION]!!
+    private val lastDateModified = attributes[LAST_DATE_MODIFIED]!!
 
     override val uniqueId: String
         get() = StringJoiner("-")
@@ -48,129 +50,65 @@ class ImmutableAudioItem(override val id: Int, attributes: AudioItemAttributes) 
             .add(bitRate().toString())
             .toString()
 
-    override fun path(): Path {
-        return path
-    }
+    override fun path() = path
 
-    override fun path(path: Path): AudioItem {
-        return ImmutableAudioItem(id, attributes.modifiedCopy(AudioItemPathAttribute.PATH, path))
-    }
+    override fun path(path: Path) = ImmutableAudioItem(id, attributes.modifiedCopyWithModifiedTime(PATH, path))
 
-    override fun fileName(): String {
-        return path.fileName.toString()
-    }
+    override fun fileName() = path.fileName.toString()
 
-    override fun extension(): String {
-        return FilenameUtils.getExtension(path.toString())
-    }
+    override fun extension() = path.extension
 
-    override fun title(): String {
-        return title
-    }
+    override fun title() = title
 
-    override fun title(title: String): AudioItem {
-        return ImmutableAudioItem(id, attributes.modifiedCopy(AudioItemStringAttribute.TITLE, title))
-    }
+    override fun title(title: String) = ImmutableAudioItem(id, attributes.modifiedCopyWithModifiedTime(TITLE, title))
 
-    override fun artist(): Artist {
-        return artist
-    }
+    override fun artist() = artist
 
-    override fun artist(artist: Artist): AudioItem {
-        return ImmutableAudioItem(id, attributes.modifiedCopy(ArtistAttribute.ARTIST, artist))
-    }
+    override fun artist(artist: Artist) = ImmutableAudioItem(id, attributes.modifiedCopyWithModifiedTime(ARTIST, artist))
 
-    override fun artistsInvolved(): ImmutableSet<String> {
-        return ImmutableSet.copyOf(artistsInvolved)
-    }
+    override fun artistsInvolved() = artistsInvolved.toSet()
 
-    override fun album(): Album {
-        return album
-    }
+    override fun album(): Album = album
 
-    override fun album(album: Album): AudioItem {
-        return ImmutableAudioItem(id, attributes.modifiedCopy(AlbumAttribute.ALBUM, album))
-    }
+    override fun album(album: Album) = ImmutableAudioItem(id, attributes.modifiedCopyWithModifiedTime(ALBUM, album))
 
-    override fun genre(): Genre {
-        return genre
-    }
+    override fun genre() = genre
 
-    override fun genre(genre: Genre): AudioItem {
-        return ImmutableAudioItem(id, attributes.modifiedCopy(AudioItemStringAttribute.GENRE_NAME, genre.name))
-    }
+    override fun genre(genre: Genre) = ImmutableAudioItem(id, attributes.modifiedCopyWithModifiedTime(GENRE_NAME, genre.name))
 
-    override fun comments(): String {
-        return comments
-    }
+    override fun comments() = comments
 
-    override fun comments(comments: String): AudioItem {
-        return ImmutableAudioItem(id, attributes.modifiedCopy(AudioItemStringAttribute.COMMENTS, comments))
-    }
+    override fun comments(comments: String) = ImmutableAudioItem(id, attributes.modifiedCopyWithModifiedTime(COMMENTS, comments))
 
-    override fun trackNumber(): Short {
-        return trackNumber
-    }
+    override fun trackNumber() = trackNumber
 
-    override fun trackNumber(trackNumber: Short): AudioItem {
-        return ImmutableAudioItem(id, attributes.modifiedCopy(AudioItemShortAttribute.TRACK_NUMBER, trackNumber))
-    }
+    override fun trackNumber(trackNumber: Short) = ImmutableAudioItem(id, attributes.modifiedCopyWithModifiedTime(TRACK_NUMBER, trackNumber))
 
-    override fun discNumber(): Short {
-        return discNumber
-    }
+    override fun discNumber() = discNumber
 
-    override fun discNumber(discNumber: Short): AudioItem {
-        return ImmutableAudioItem(id, attributes.modifiedCopy(AudioItemShortAttribute.DISC_NUMBER, discNumber))
-    }
+    override fun discNumber(discNumber: Short) = ImmutableAudioItem(id, attributes.modifiedCopyWithModifiedTime(DISC_NUMBER, discNumber))
 
-    override fun bpm(): Float {
-        return bpm
-    }
+    override fun bpm() = bpm
 
-    override fun bpm(bpm: Float): AudioItem {
-        return ImmutableAudioItem(id, attributes.modifiedCopy(AudioItemFloatAttribute.BPM, bpm))
-    }
+    override fun bpm(bpm: Float) = ImmutableAudioItem(id, attributes.modifiedCopyWithModifiedTime(BPM, bpm))
 
-    override fun duration(): Duration {
-        return duration
-    }
+    override fun duration() = duration
 
-    override fun length(): Long {
-        return path.toFile().length()
-    }
+    override fun length() = path.toFile().length()
 
-    override fun bitRate(): Int {
-        return bitRate
-    }
+    override fun bitRate() = bitRate
 
-    override fun encoder(): String {
-        return encoder
-    }
+    override fun encoder() = encoder
 
-    override fun encoder(encoder: String): AudioItem {
-        return ImmutableAudioItem(id, attributes.modifiedCopy(AudioItemStringAttribute.ENCODER, encoder))
-    }
+    override fun encoder(encoder: String) = ImmutableAudioItem(id, attributes.modifiedCopyWithModifiedTime(ENCODER, encoder))
 
-    override fun encoding(): String {
-        return encoding
-    }
+    override fun encoding() = encoding
 
-    override fun encoding(encoding: String): AudioItem {
-        return ImmutableAudioItem(id, attributes.modifiedCopy(AudioItemStringAttribute.ENCODING, encoding))
-    }
+    override fun encoding(encoding: String) = ImmutableAudioItem(id, attributes.modifiedCopyWithModifiedTime(ENCODING, encoding))
 
-    override fun dateOfInclusion(): LocalDateTime {
-        return dateOfCreation
-    }
+    override fun dateOfInclusion() = dateOfCreation
 
-    override fun lastDateModified(): LocalDateTime {
-        return lastDateModified
-    }
-
-    override fun <A : EntityAttribute<V>, V> getAttribute(attribute: A): V {
-        return attributes.get(attribute)
-    }
+    override fun lastDateModified() = lastDateModified
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -200,161 +138,4 @@ class ImmutableAudioItem(override val id: Int, attributes: AudioItemAttributes) 
             .add("name", title)
             .add("artist", artist)
             .toString()
-
-    init {
-        this.attributes = attributes.copy()
-        path = this.attributes[AudioItemPathAttribute.PATH]
-        title = this.attributes[AudioItemStringAttribute.TITLE]
-        artist = this.attributes[ArtistAttribute.ARTIST]
-        album = this.attributes[AlbumAttribute.ALBUM]
-        genre = Genre.parseGenre(this.attributes[AudioItemStringAttribute.GENRE_NAME])
-        comments = this.attributes[AudioItemStringAttribute.COMMENTS]
-        trackNumber = this.attributes[AudioItemShortAttribute.TRACK_NUMBER]
-        discNumber = this.attributes[AudioItemShortAttribute.DISC_NUMBER]
-        bpm = this.attributes[AudioItemFloatAttribute.BPM]
-        duration = this.attributes[AudioItemDurationAttribute.DURATION]
-        bitRate = this.attributes[AudioItemIntegerAttribute.BITRATE]
-        encoder = this.attributes[AudioItemStringAttribute.ENCODER]
-        encoding = this.attributes[AudioItemStringAttribute.ENCODING]
-
-        this.attributes[AudioItemStringAttribute.LABEL_NAME] = album.label.name
-        this.attributes[AudioItemShortAttribute.YEAR] = album.year ?: -1
-        this.attributes[ArtistAttribute.ALBUM_ARTIST] = album.albumArtist
-        this.attributes[ArtistsInvolvedAttribute.ARTISTS_INVOLVED] = getArtistsNamesInvolved(title, artist.name, album.albumArtist.name)
-        artistsInvolved = this.attributes[ArtistsInvolvedAttribute.ARTISTS_INVOLVED]
-
-        val now = LocalDateTime.now()
-        this.attributes.putIfAbsent(AudioItemLocalDateTimeAttribute.DATE_OF_CREATION, now)
-        dateOfCreation = this.attributes[AudioItemLocalDateTimeAttribute.DATE_OF_CREATION]
-        this.attributes[AudioItemLocalDateTimeAttribute.LAST_DATE_MODIFIED] = now
-        lastDateModified = this.attributes[AudioItemLocalDateTimeAttribute.LAST_DATE_MODIFIED]
-    }
-}
-
-private val endsWithRemix = Pattern.compile("[(|\\[](\\s*(&?\\s*(\\w+)\\s+)+(?i)(remix))[)|\\]]")
-private val startsWithRemixBy = Pattern.compile("[(|\\[](?i)(remix)(\\s+)(?i)(by)(.+)[)|\\]]")
-private val hasFt = Pattern.compile("[(|\\[|\\s](?i)(ft) (.+)")
-private val hasFeat = Pattern.compile("[(|\\[|\\s](?i)(feat) (.+)")
-private val hasFeaturing = Pattern.compile("[(|\\[|\\s](?i)(featuring) (.+)")
-private val startsWithWith = Pattern.compile("[(|\\[](?i)(with) (.+)[)|\\]]")
-
-private val artistsRegexMap: Map<Pattern, Pattern>? =
-    ImmutableMap.builder<Pattern, Pattern>()
-        .put(Pattern.compile(" (?i)(remix)"), endsWithRemix)
-        .put(Pattern.compile("(?i)(remix)(\\s+)(?i)(by) "), startsWithRemixBy)
-        .put(Pattern.compile("(?i)(ft) "), hasFt)
-        .put(Pattern.compile("(?i)(feat) "), hasFeat)
-        .put(Pattern.compile("(?i)(featuring) "), hasFeaturing)
-        .put(Pattern.compile("(?i)(with) "), startsWithWith).build()
-
-/**
- * Returns the names of the artists that are involved in the fields of an [AudioItem],
- * that is, every artist that could appear in the [AudioItem.artist] variable,
- * or [Album.albumArtist] or in the [AudioItem.title].
- *
- * <h3>Example</h3>
- *
- *
- * The following AudioItem instance: <pre>   `audioItem.name = "Who Controls (Adam Beyer Remix)"
- * audioItem.artist = "David Meiser, Black Asteroid & Tiga"
- * audioItem.albumArtist = "Ida Engberg"
- *
-`</pre> *
- * ... produces the following (without order): <pre>   `[David Meiser, Black Asteroid, Tiga, Adam Beyer, Ida Engberg]
-`</pre> *
- *
- * @param title           The title of an audio item
- * @param artistName      The artist name of an audio item
- * @param albumArtistName The album artist name of an audio item
- *
- * @return An `ImmutableSet` object with the names of the artists
- */
-private fun getArtistsNamesInvolved(title: String, artistName: String, albumArtistName: String): Set<String> {
-    val artistsInvolved: MutableSet<String> = mutableSetOf()
-    val albumArtistNames = Splitter.on(CharMatcher.anyOf(",&"))
-        .trimResults()
-        .omitEmptyStrings()
-        .splitToList(albumArtistName)
-
-    artistsInvolved.addAll(albumArtistNames)
-    artistsInvolved.addAll(getNamesInArtist(artistName))
-    artistsInvolved.addAll(getNamesInTitle(title))
-    return artistsInvolved.stream()
-        .map { WordUtils.capitalize(it) }
-        .collect(Collectors.toSet())
-}
-
-/**
- * Returns artist names that are in the given artist name.
- * Commonly they can be separated by ',' or '&' characters, or by the words 'versus' or 'vs'.
- *
- * <h3>Example</h3>
- *
- *
- * The given audio item artist field: <pre>   `"David Meiser, Black Asteroid & Tiga"
-`</pre> *
- * ... produces the following set (without order): <pre>   `[David Meiser, Black Asteroid, Tiga]
-`</pre> *
- *
- * @param artistName The artist name from where to find more names
- *
- * @return An [ImmutableSet] with the artists found
- */
-private fun getNamesInArtist(artistName: String): Set<String> {
-    val artistsInvolved: Set<String>
-    val splitNames = Stream.of(" versus ", " vs ")
-        .filter { artistName.contains(it) }
-        .map {
-            Splitter.on(it)
-                .trimResults()
-                .omitEmptyStrings()
-                .splitToList(artistName)
-        }.findAny()
-
-    artistsInvolved = splitNames.orElseGet {
-        val cleanedArtist = artistName.replace("(?i)(feat)(\\.|\\s+)".toRegex(), ",")
-            .replace("(?i)(ft)(\\.|\\s+)".toRegex(), ",")
-
-        Splitter.on(CharMatcher.anyOf(",&"))
-            .trimResults()
-            .omitEmptyStrings()
-            .splitToList(cleanedArtist)
-    }.toSet()
-    return artistsInvolved;
-}
-
-/**
- * Returns the names of the artists that are in a given string which is the title of an [AudioItem].
- * For example:
- *
- *
- * The following audio item name field: <pre>   `"Song name (Adam Beyer & Pete Tong Remix)"
-`</pre> *
- * ... produces the following (without order): <pre>   `[Adam Beyer, Pete Tong]
-`</pre> *
- *
- * @param title The `String` where to find artist names
- *
- * @return An [ImmutableSet] with the artists found
- */
-private fun getNamesInTitle(title: String): Set<String> {
-    val artistsInsideParenthesis = mutableSetOf<String>()
-    for ((keyPattern, value) in artistsRegexMap!!) {
-        val matcher = value.matcher(title)
-        if (matcher.find()) {
-            val insideParenthesisString = title.substring(matcher.start())
-                .replace("[(|\\[|)|\\]]".toRegex(), "")
-                .replace(keyPattern.pattern().toRegex(), "")
-                .replace("\\s(?i)(vs)\\s".toRegex(), "&")
-                .replace("\\s+".toRegex(), " ")
-
-            artistsInsideParenthesis.addAll(
-                Splitter.on(CharMatcher.anyOf("&,"))
-                    .trimResults()
-                    .omitEmptyStrings()
-                    .splitToList(insideParenthesisString))
-            break
-        }
-    }
-    return artistsInsideParenthesis
 }

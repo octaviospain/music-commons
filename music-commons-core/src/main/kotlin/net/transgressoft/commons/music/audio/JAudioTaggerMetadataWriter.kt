@@ -1,7 +1,6 @@
 package net.transgressoft.commons.music.audio
 
 import mu.KotlinLogging
-import org.apache.commons.io.FileUtils
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.wav.WavOptions
 import org.jaudiotagger.tag.FieldDataInvalidException
@@ -15,6 +14,8 @@ import org.jaudiotagger.tag.wav.WavInfoTag
 import org.jaudiotagger.tag.wav.WavTag
 import java.io.File
 import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.StandardOpenOption
 
 /**
  * @author Octavio Calleya
@@ -36,7 +37,7 @@ internal class JAudioTaggerMetadataWriter : AudioItemMetadataWriter {
             audio.commit()
             logger.debug { "AudioItem $serializableAudioItem written to file ${audioFile.absolutePath}" }
 
-            serializableAudioItem.album().coverImage.ifPresent {
+            serializableAudioItem.album().coverImage?.let {
                 overwriteCoverImage(serializableAudioItem, audioFile, it)
             }
         } catch (exception: Exception) {
@@ -81,10 +82,10 @@ internal class JAudioTaggerMetadataWriter : AudioItemMetadataWriter {
         tag.setField(FieldKey.ARTIST, audioItem.artist().name)
         tag.setField(FieldKey.GENRE, audioItem.genre().name)
         tag.setField(FieldKey.COMMENT, audioItem.comments())
-        tag.setField(FieldKey.GROUPING, audioItem.album().label.name)
-        tag.setField(FieldKey.TRACK, audioItem.trackNumber().toInt().toString())
-        tag.setField(FieldKey.DISC_NO, audioItem.discNumber().toInt().toString())
-        audioItem.album().year?.let { tag.setField(FieldKey.YEAR, ) }
+        tag.setField(FieldKey.GROUPING, audioItem.album().label?.name)
+        tag.setField(FieldKey.TRACK, audioItem.trackNumber().toString())
+        tag.setField(FieldKey.DISC_NO, audioItem.discNumber().toString())
+        tag.setField(FieldKey.YEAR, audioItem.album().year?.toString())
         tag.setField(FieldKey.IS_COMPILATION, audioItem.album().isCompilation.toString())
         tag.setField(FieldKey.ENCODER, audioItem.encoder())
         val bpmString = audioItem.bpm().toString()
@@ -102,7 +103,7 @@ internal class JAudioTaggerMetadataWriter : AudioItemMetadataWriter {
         val tempCoverFile: File
         try {
             tempCoverFile = File.createTempFile("tempCover_" + file.name, ".tmp")
-            FileUtils.writeByteArrayToFile(tempCoverFile, coverBytes)
+            Files.write(tempCoverFile.toPath(), coverBytes, StandardOpenOption.READ)
             tempCoverFile.deleteOnExit()
             val audioFile = AudioFileIO.read(file)
             val cover = ArtworkFactory.createArtworkFromFile(tempCoverFile)
@@ -111,7 +112,7 @@ internal class JAudioTaggerMetadataWriter : AudioItemMetadataWriter {
             tag.addField(cover)
             audioFile.commit()
 
-            logger.debug { "Cover image of AudioItem $audioItem written to file $file"}
+            logger.debug { "Cover image of AudioItem $audioItem written to file $file" }
         } catch (exception: IOException) {
             val errorText = "Error writing cover image of ${file.name}"
             logger.error(errorText, exception)

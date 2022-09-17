@@ -3,8 +3,6 @@ package net.transgressoft.commons.music.audio
 import com.google.common.collect.ImmutableSet
 import mu.KotlinLogging
 import net.transgressoft.commons.event.QueryEventDispatcher
-import net.transgressoft.commons.music.audio.AlbumAttribute.ALBUM
-import net.transgressoft.commons.music.audio.ArtistsInvolvedAttribute.ARTISTS_INVOLVED
 import net.transgressoft.commons.query.InMemoryRepository
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
@@ -28,8 +26,6 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
                 Collectors.mapping({ it.album() },
                     Collectors.toSet())))
     }
-
-    fun Album.audioItems() = setOf(search(ALBUM.equalsTo(this)))
 
     protected fun newId(): Int {
         var id: Int
@@ -111,8 +107,6 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
         entities.forEach { audioItem: AudioItem -> removeAlbumByArtistInternal(audioItem) }
         return removed
     }
-
-    override fun containsAudioItemWithArtist(artistName: String) = contains(ARTISTS_INVOLVED.containsElement(artistName))
 
     override fun artistAlbums(artist: Artist): Set<Album> = ImmutableSet.copyOf(albumsByArtist[artist] ?: emptySet())
 }

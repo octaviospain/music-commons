@@ -5,7 +5,6 @@ import be.tarsos.transcoder.Transcoder
 import be.tarsos.transcoder.ffmpeg.EncoderException
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.query.InMemoryRepository
-import org.apache.commons.io.FilenameUtils
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -15,6 +14,7 @@ import java.util.*
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.UnsupportedAudioFileException
+import kotlin.io.path.extension
 
 open class AudioWaveformInMemoryRepository<W : AudioWaveform>(entitiesById: MutableMap<Int, W>) : InMemoryRepository<W>(entitiesById, null),
     AudioWaveformRepository<W> {
@@ -58,7 +58,7 @@ internal class AudioWaveformExtractor {
     @Throws(AudioWaveformProcessingException::class)
     fun extractWaveform(path: Path, width: Int, height: Int): FloatArray {
         if (!path.toFile().exists()) throw AudioWaveformProcessingException("File does not exist $path")
-        val extension = FilenameUtils.getExtension(path.fileName.toString())
+        val extension = path.extension
         return try {
             when (extension) {
                 "wav" -> processWavFile(path, width, height)

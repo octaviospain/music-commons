@@ -41,11 +41,7 @@ class StandardMusicLibraryTest {
     void musicApiTest() throws Exception {
         when(audioItemRepository.iterator()).thenReturn(Collections.emptyIterator());
 
-        musicLibrary = StandardMusicLibraryKt.builder().withAudioItemRepository(audioItemRepository)
-                .withPlaylistRepository(audioPlaylistRepository)
-                .withWaveformRepository(audioWaveformRepository)
-                .withQueryEventDispatcher(audioItemEventDispatcher)
-                .build();
+        musicLibrary = StandardMusicLibrary.INSTANCE;
 
         verify(audioItemRepository).iterator();
         verify(audioItemEventDispatcher).subscribe(musicLibrary.getAudioItemSubscriber());

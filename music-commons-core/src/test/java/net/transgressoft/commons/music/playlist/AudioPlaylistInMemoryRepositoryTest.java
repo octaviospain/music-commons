@@ -15,9 +15,8 @@ import java.util.Set;
 import static com.google.common.truth.Truth.assertThat;
 import static net.transgressoft.commons.music.audio.AudioItemDurationAttribute.DURATION;
 import static net.transgressoft.commons.music.audio.AudioItemStringAttribute.TITLE;
-import static net.transgressoft.commons.music.playlist.PlaylistNodeAttribute.SELF;
+import static net.transgressoft.commons.music.playlist.PlaylistAttribute.IT;
 import static net.transgressoft.commons.music.playlist.PlaylistStringAttribute.NAME;
-import static net.transgressoft.commons.music.playlist.PlaylistStringAttribute.UNIQUE_ID;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -47,7 +46,7 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
         var rock = audioPlaylistRepository.createPlaylist("Rock", rockAudioItems);
         assertThat(audioPlaylistRepository.findSinglePlaylistByName(rock.getName()).orElseThrow()).isEqualTo(rock);
         var playlistsThatContainsAllAudioItemsWith50sInTitle =
-                audioPlaylistRepository.search(QueryPredicate.of(SELF.audioItemsAllMatch(TITLE.contains("50s"))));
+                audioPlaylistRepository.search(QueryPredicate.of(IT.containsAllAudioItemsMatching(TITLE.contains("50s"))));
         assertThat(playlistsThatContainsAllAudioItemsWith50sInTitle).containsExactly(rock);
 
         var pop = audioPlaylistRepository.createPlaylist("Pop");
@@ -72,14 +71,14 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
                 .containsExactly(fifties, sixties); // bestHits is an updated immutable copy
 
         var thisWeeksFavorites = audioPlaylistRepository.createPlaylist("This weeks' favorites songs");
-        assertThat(audioPlaylistRepository.search(UNIQUE_ID.contains("favorites"))).containsExactly(thisWeeksFavorites);
+        assertThat(audioPlaylistRepository.search(NAME.contains("favorites"))).containsExactly(thisWeeksFavorites);
         assertThat(audioPlaylistRepository.size()).isEqualTo(6);
 
         audioPlaylistRepository.addOrReplaceAll(Set.of(bestHits, thisWeeksFavorites));
         assertThat(audioPlaylistRepository.size()).isEqualTo(6);
 
-        assertThat(audioPlaylistRepository.search(SELF.isNotDirectory())).containsExactly(rock, pop, thisWeeksFavorites);
-        assertThat(audioPlaylistRepository.search(SELF.isDirectory())).containsExactly(fifties, sixties, bestHits);
+        assertThat(audioPlaylistRepository.search(IT.isNotDirectory())).containsExactly(rock, pop, thisWeeksFavorites);
+        assertThat(audioPlaylistRepository.search(IT.isDirectory())).containsExactly(fifties, sixties, bestHits);
 
         rock = audioPlaylistRepository.findById(rock.getId()).orElseThrow();
         fifties = audioPlaylistRepository.findSingleDirectoryByName(fifties.getName()).orElseThrow();
@@ -88,12 +87,12 @@ class AudioPlaylistInMemoryRepositoryTest extends MusicLibraryTestBase {
                         createTestAudioItem("50s favorite song", Duration.ofSeconds(120)));
         audioPlaylistRepository.addAudioItemsToPlaylist(fiftiesItems, fifties);
         var playlistsThatContainsAnyAudioItemsWithHitInTitle =
-                audioPlaylistRepository.search(QueryPredicate.of(SELF.audioItemsAnyMatch(TITLE.contains("hit"))));
+                audioPlaylistRepository.search(QueryPredicate.of(IT.containsAnyAudioItemsMatching(TITLE.contains("hit"))));
         fifties = audioPlaylistRepository.findSingleDirectoryByName(fifties.getName()).orElseThrow();
         assertThat(playlistsThatContainsAnyAudioItemsWithHitInTitle).containsExactly(rock, fifties);
 
         var playlistsThatContainsAudioItemsWithDurationBelow60 =
-                audioPlaylistRepository.search(QueryPredicate.of(SELF.audioItemsAnyMatch(DURATION.isShorterThan(Duration.ofSeconds(61)))));
+                audioPlaylistRepository.search(QueryPredicate.of(IT.containsAnyAudioItemsMatching(DURATION.isShorterThan(Duration.ofSeconds(61)))));
         assertThat(playlistsThatContainsAudioItemsWithDurationBelow60).containsExactly(rock, fifties);
 
         audioPlaylistRepository.removeAudioItemsFromPlaylist(fiftiesItems, fifties);

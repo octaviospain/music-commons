@@ -8,13 +8,13 @@ import java.util.*
 /**
  * @author Octavio Calleya
  */
-interface AudioPlaylistRepository<I : AudioItem, N : AudioPlaylist<I>, D : AudioPlaylistDirectory<I>> : Repository<N> {
+interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>, D : AudioPlaylistDirectory<I>> : Repository<P> {
 
     @Throws(RepositoryException::class)
-    fun createPlaylist(name: String): N
+    fun createPlaylist(name: String): P
 
     @Throws(RepositoryException::class)
-    fun createPlaylist(name: String, audioItems: List<I>): N
+    fun createPlaylist(name: String, audioItems: List<I>): P
 
     @Throws(RepositoryException::class)
     fun createPlaylistDirectory(name: String): D
@@ -29,7 +29,7 @@ interface AudioPlaylistRepository<I : AudioItem, N : AudioPlaylist<I>, D : Audio
      * @param audioItems
      * @param playlist
      */
-    fun addAudioItemsToPlaylist(audioItems: Collection<I>, playlist: N)
+    fun addAudioItemsToPlaylist(audioItems: Collection<I>, playlist: P)
 
     /**
      * Precondition, <tt>playlist</tt> and <tt>directory</tt> exist in the <tt>AudioPlaylistRepository</tt>.
@@ -38,7 +38,7 @@ interface AudioPlaylistRepository<I : AudioItem, N : AudioPlaylist<I>, D : Audio
      * @param playlist
      * @param directory
      */
-    fun addPlaylistsToDirectory(playlist: Set<N>, directory: D)
+    fun addPlaylistsToDirectory(playlist: Set<P>, directory: D)
 
     /**
      * Precondition, <tt>playlist</tt> exist in the <tt>AudioPlaylistRepository</tt>.
@@ -47,7 +47,7 @@ interface AudioPlaylistRepository<I : AudioItem, N : AudioPlaylist<I>, D : Audio
      * @param audioItems
      * @param playlist
      */
-    fun removeAudioItemsFromPlaylist(audioItems: Collection<I>, playlist: N)
+    fun removeAudioItemsFromPlaylist(audioItems: Collection<I>, playlist: P)
 
     fun removeAudioItems(audioItems: Collection<I>)
 
@@ -58,11 +58,11 @@ interface AudioPlaylistRepository<I : AudioItem, N : AudioPlaylist<I>, D : Audio
      * @param playlistToMove
      * @param destinationPlaylist
      */
-    fun movePlaylist(playlistToMove: N, destinationPlaylist: D)
+    fun movePlaylist(playlistToMove: P, destinationPlaylist: D)
 
-    fun findAllByName(name: String): List<N>
+    fun findAllByName(name: String): List<P>
 
-    fun findSinglePlaylistByName(name: String): Optional<N>
+    fun findSinglePlaylistByName(name: String): Optional<P>
 
     fun findSingleDirectoryByName(name: String): Optional<D>
 

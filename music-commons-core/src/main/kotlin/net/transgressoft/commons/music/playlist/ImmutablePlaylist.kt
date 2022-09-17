@@ -5,8 +5,9 @@ import com.google.common.base.Objects
 import com.google.common.collect.ImmutableList
 import mu.KotlinLogging
 import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.playlist.PlaylistAudioItemsAttribute.AUDIO_ITEMS
+import net.transgressoft.commons.music.playlist.PlaylistStringAttribute.NAME
 import net.transgressoft.commons.query.BooleanQueryTerm
-import net.transgressoft.commons.query.EntityAttribute
 import net.transgressoft.commons.query.QueryEntity
 import java.io.IOException
 import java.io.PrintWriter
@@ -15,31 +16,20 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentSkipListSet
-import java.util.function.Supplier
 
-internal open class ImmutablePlaylist<I : AudioItem> (id: Int, theName: String, audioItems: List<I>) : AudioPlaylist<I> {
+internal open class ImmutablePlaylist<I : AudioItem>(final override val id: Int, final override val attributes: PlaylistAttributes<I>) : AudioPlaylist<I> {
+
+    constructor(id: Int, theName: String, audioItems: List<I>) : this(id, PlaylistAttributes(theName, audioItems))
 
     private val logger = KotlinLogging.logger {}
-    
-    private val audioItems: MutableSet<I>
-    private val attributes: MutableMap<EntityAttribute<*>, Supplier<Any>>
-    
-    private var _name: String = theName
+
+    private val audioItems: List<I> = attributes[AUDIO_ITEMS]!!
+    private val playlists: MutableSet<AudioPlaylist<I>> = mutableSetOf()
+
+    private var _name: String = attributes[NAME]!!
+
     override val name: String
         get() = _name
-
-    final override val id: Int
-
-    init {
-        this.id = id
-        this.audioItems = ConcurrentSkipListSet(audioItems) // TODO decide and test thread-safe, concurrent collection
-        attributes = ConcurrentHashMap()
-        attributes[PlaylistStringAttribute.NAME] = Supplier { name }
-        attributes[PlaylistStringAttribute.UNIQUE_ID] = Supplier { uniqueId }
-        attributes[PlaylistNodeAttribute.SELF] = Supplier { this }
-    }
 
     override val uniqueId: String
         get() {
@@ -66,14 +56,14 @@ internal open class ImmutablePlaylist<I : AudioItem> (id: Int, theName: String, 
     protected fun addAll(audioItems: Collection<I>) {
         if (audioItems.isNotEmpty()) {
             this.audioItems.addAll(audioItems)
-            logger.debug {"Added audio items to playlist '$name': $audioItems" }
+            logger.debug { "Added audio items to playlist '$name': $audioItems" }
         }
     }
 
     protected fun removeAll(audioItems: Collection<I>) {
         if (audioItems.isNotEmpty()) {
-            audioItems.forEach{ this.audioItems.remove(it) }
-            logger.debug {"Removed audio items from playlist '$name': $audioItems" }
+            audioItems.forEach { this.audioItems.remove(it) }
+            logger.debug { "Removed audio items from playlist '$name': $audioItems" }
         }
     }
 
@@ -94,14 +84,14 @@ internal open class ImmutablePlaylist<I : AudioItem> (id: Int, theName: String, 
             logger.debug { "Destination file already exists: $destinationPath" }
         } else {
             Files.createFile(destinationPath)
-            PrintWriter(destinationPath.toFile(), StandardCharsets.UTF_8.name()).use {
-                    printWriter -> printPlaylist(printWriter, destinationPath)
+            PrintWriter(destinationPath.toFile(), StandardCharsets.UTF_8.name()).use { printWriter ->
+                printPlaylist(printWriter, destinationPath)
             }
         }
     }
 
     protected fun printPlaylist(printWriter: PrintWriter, playlistPath: Path) {
-        logger.info {"Writing playlist '$name' to file $playlistPath" }
+        logger.info { "Writing playlist '$name' to file $playlistPath" }
         printWriter.println("#EXTM3U")
         audioItems.forEach {
             printWriter.println("#EXTALB: ${it.album()}")
@@ -112,13 +102,6 @@ internal open class ImmutablePlaylist<I : AudioItem> (id: Int, theName: String, 
             val trackPath = parent.relativize(it.path())
             printWriter.println(trackPath)
         }
-    }
-
-    @Throws(UnknownAttributeException::class)
-    override fun <A : EntityAttribute<V>, V> getAttribute(attribute: A): V {
-        return Optional.ofNullable(attributes[attribute])
-            .map { it.get() }
-            .orElseThrow { UnknownAttributeException(attribute, javaClass) } as V
     }
 
     override fun compareTo(other: AudioPlaylist<I>) =

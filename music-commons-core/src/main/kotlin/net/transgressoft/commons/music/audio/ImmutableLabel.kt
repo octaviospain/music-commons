@@ -14,9 +14,4 @@ data class ImmutableLabel(override val name: String, override val countryCode: I
         else
             result
     }
-
-    companion object {
-        @JvmField
-        val UNKNOWN: Label = ImmutableLabel("")
-    }
 }

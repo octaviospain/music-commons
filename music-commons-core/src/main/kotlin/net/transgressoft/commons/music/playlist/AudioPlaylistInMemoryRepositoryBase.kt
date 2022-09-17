@@ -6,8 +6,8 @@ import com.google.common.collect.Multimap
 import com.google.common.collect.MultimapBuilder
 import mu.KotlinLogging
 import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.query.Attribute
 import net.transgressoft.commons.query.BooleanQueryTerm
-import net.transgressoft.commons.query.EntityAttribute
 import net.transgressoft.commons.query.InMemoryRepository
 import net.transgressoft.commons.query.RepositoryException
 import java.util.*
@@ -66,13 +66,13 @@ protected constructor(
     private fun addInternal(playlist: P): Boolean {
         var added = false
         if (playlist.isDirectory) {
-            if (directories.findByAttribute(PlaylistStringAttribute.NAME, playlist.name).isEmpty()) {
+            if (directories.findByAttribute(PlaylistStringAttribute.NAME as Attribute<MD, String>, playlist.name).isEmpty()) {
                 val mutableDirectory = toMutableDirectory(playlist as D)
                 added = directories.add(mutableDirectory)
                 added = added or addRecursive(mutableDirectory, mutableDirectory.descendantPlaylists())
             }
         } else {
-            if (playlists.findByAttribute(PlaylistStringAttribute.NAME, playlist.name).isEmpty()) {
+            if (playlists.findByAttribute(PlaylistStringAttribute.NAME as Attribute<MP, String>, playlist.name).isEmpty()) {
                 added = playlists.add(toMutablePlaylist(playlist))
             }
         }
@@ -142,19 +142,19 @@ protected constructor(
             .map { this.toImmutablePlaylist(it) }
             .or { directories.findByUniqueId(uniqueId).map { toImmutablePlaylistDirectory(it) } }
 
-    override fun <A : EntityAttribute<V>, V> findByAttribute(attribute: A, value: V): List<P> =
+    override fun <A : Attribute<P, V>, V : Any> findByAttribute(attribute: A, value: V): List<P> =
         ImmutableList.builder<P>()
-            .addAll(playlists.findByAttribute(attribute, value).stream()
+            .addAll(playlists.findByAttribute(attribute as Attribute<MP, V>, value).stream()
                 .map { this.toImmutablePlaylist(it) }
                 .toList())
-            .addAll(directories.findByAttribute(attribute, value).stream()
+            .addAll(directories.findByAttribute(attribute as Attribute<MD, V>, value).stream()
                 .map { toImmutablePlaylistDirectory(it) }
                 .toList()).build()
 
     @Throws(RepositoryException::class)
-    override fun <A : EntityAttribute<V>, V> findSingleByAttribute(attribute: A, value: V): Optional<P> {
-        val foundPlaylist = playlists.findSingleByAttribute(attribute, value).orElse(null)
-        val foundDirectory = directories.findSingleByAttribute(attribute, value).orElse(null)
+    override fun <A : Attribute<P, V>, V : Any> findSingleByAttribute(attribute: A, value: V): Optional<P> {
+        val foundPlaylist = playlists.findSingleByAttribute(attribute as Attribute<MP, V>, value).orElse(null)
+        val foundDirectory = directories.findSingleByAttribute(attribute as Attribute<MD, V>, value).orElse(null)
         if (foundPlaylist != null && foundDirectory != null)
             throw RepositoryException("Found 2 entities with the same attribute: [$foundPlaylist, $foundDirectory]")
 
@@ -262,16 +262,16 @@ protected constructor(
 
     override fun findAllByName(name: String): ImmutableList<P> =
         ImmutableList.builder<P>()
-            .addAll(playlists.findByAttribute(PlaylistStringAttribute.NAME, name).stream()
+            .addAll(playlists.findByAttribute(PlaylistStringAttribute.NAME as Attribute<MP, String>, name).stream()
                 .map { this.toImmutablePlaylist(it) }
                 .collect(Collectors.toSet()))
-            .addAll(directories.findByAttribute(PlaylistStringAttribute.NAME, name).stream()
+            .addAll(directories.findByAttribute(PlaylistStringAttribute.NAME as Attribute<MD, String>, name).stream()
                 .map { toImmutablePlaylistDirectory(it) }
                 .collect(Collectors.toSet())).build()
 
     override fun findSinglePlaylistByName(name: String): Optional<P> =
         try {
-            playlists.findSingleByAttribute(PlaylistStringAttribute.NAME, name)
+            playlists.findSingleByAttribute(PlaylistStringAttribute.NAME as Attribute<MP, String>, name)
                 .map { this.toImmutablePlaylist(it) }
         } catch (exception: RepositoryException) {
             throw IllegalStateException(exception)
@@ -279,7 +279,7 @@ protected constructor(
 
     override fun findSingleDirectoryByName(name: String): Optional<D> =
         try {
-            directories.findSingleByAttribute(PlaylistStringAttribute.NAME, name)
+            directories.findSingleByAttribute(PlaylistStringAttribute.NAME as Attribute<MD, String>, name)
                 .map { toImmutablePlaylistDirectory(it) as D }
         } catch (exception: RepositoryException) {
             throw IllegalStateException(exception)
