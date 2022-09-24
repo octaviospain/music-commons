@@ -35,7 +35,7 @@ subprojects {
     }
 
     dependencies {
-        implementation 'net.transgressoft:soft-query-api:0.46-SNAPSHOT'
+        implementation 'net.transgressoft:soft-query-api:0.48-SNAPSHOT'
         implementation platform('org.jetbrains.kotlin:kotlin-bom')
         implementation "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
@@ -100,16 +100,16 @@ subprojects {
 project('music-commons-api') {
 
     compileJava {
-        sourceCompatibility = JavaVersion.VERSION_16
-        targetCompatibility = JavaVersion.VERSION_16
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 }
 
 project('music-commons-core') {
 
     compileJava {
-        sourceCompatibility = JavaVersion.VERSION_16
-        targetCompatibility = JavaVersion.VERSION_16
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 
     configurations {

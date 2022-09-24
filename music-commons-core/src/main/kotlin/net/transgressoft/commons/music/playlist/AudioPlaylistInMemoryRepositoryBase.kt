@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
 import java.util.stream.Collectors
+import kotlin.streams.toList
 
 @Suppress("UNCHECKED_CAST")
 abstract class AudioPlaylistInMemoryRepositoryBase<I : AudioItem, P : AudioPlaylist<I>, D : AudioPlaylistDirectory<I>, MP : MutableAudioPlaylist<I>, MD : MutableAudioPlaylistDirectory<I>>

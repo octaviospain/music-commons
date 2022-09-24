@@ -3,6 +3,7 @@ package net.transgressoft.commons.music.audio
 import net.transgressoft.commons.music.audio.AlbumAttribute.ALBUM
 import net.transgressoft.commons.music.audio.ArtistAttribute.ARTIST
 import net.transgressoft.commons.music.audio.ArtistsInvolvedAttribute.ARTISTS_INVOLVED
+import net.transgressoft.commons.music.audio.AudioItemAttribute.ALBUM.artistsInvolvedType
 import net.transgressoft.commons.music.audio.AudioItemDurationAttribute.DURATION
 import net.transgressoft.commons.music.audio.AudioItemFloatAttribute.BPM
 import net.transgressoft.commons.music.audio.AudioItemGenreAttribute.GENRE
@@ -17,6 +18,7 @@ import net.transgressoft.commons.query.*
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
+import kotlin.reflect.*
 
 open class AudioItemAttributes(attributeSet: AudioItemAttributes?) : ImmutableAttributeSet<AudioItem>(attributeSet) {
 
@@ -68,29 +70,89 @@ private class MutableAudioItemAttributes(attributeSet: AudioItemAttributes) : Au
     }
 }
 
-enum class ArtistAttribute : Attribute<AudioItem, Artist> {
-    ARTIST;
+sealed class AudioItemAttribute<I : AudioItem, V : Any>(private val dataType: KClass<V>) : Attribute<I, V> {
+    object ARTIST : AudioItemAttribute<AudioItem, Artist>(Artist::class), ArtistAttribute
+    object ALBUM : AudioItemAttribute<AudioItem, Album>(Album::class), AlbumAttribute
+    object TITLE : AudioItemAttribute<AudioItem, String>(String::class), StringAttribute<AudioItem>
+    object GENRE : AudioItemAttribute<AudioItem, Genre>(Genre::class), Attribute<AudioItem, Genre>
+    object GENRE_NAME : AudioItemAttribute<AudioItem, String>(String::class), StringAttribute<AudioItem>
+    object COMMENTS : AudioItemAttribute<AudioItem, String>(String::class), StringAttribute<AudioItem>
+    object ENCODER : AudioItemAttribute<AudioItem, String>(String::class), StringAttribute<AudioItem>
+    object ENCODING : AudioItemAttribute<AudioItem, String>(String::class), StringAttribute<AudioItem>
 
+    internal val artistsInvolvedType = object : KClass<Set<String>> {
+        override val annotations: List<Annotation>
+            get() = TODO("Not yet implemented")
+        override val constructors: Collection<KFunction<Set<String>>>
+            get() = TODO("Not yet implemented")
+        override val isAbstract: Boolean
+            get() = TODO("Not yet implemented")
+        override val isCompanion: Boolean
+            get() = TODO("Not yet implemented")
+        override val isData: Boolean
+            get() = TODO("Not yet implemented")
+        override val isFinal: Boolean
+            get() = TODO("Not yet implemented")
+        override val isFun: Boolean
+            get() = TODO("Not yet implemented")
+        override val isInner: Boolean
+            get() = TODO("Not yet implemented")
+        override val isOpen: Boolean
+            get() = TODO("Not yet implemented")
+        override val isSealed: Boolean
+            get() = TODO("Not yet implemented")
+        override val isValue: Boolean
+            get() = TODO("Not yet implemented")
+        override val members: Collection<KCallable<*>>
+            get() = TODO("Not yet implemented")
+        override val nestedClasses: Collection<KClass<*>>
+            get() = TODO("Not yet implemented")
+        override val objectInstance: Set<String>?
+            get() = TODO("Not yet implemented")
+        override val qualifiedName: String?
+            get() = TODO("Not yet implemented")
+        override val sealedSubclasses: List<KClass<out Set<String>>>
+            get() = TODO("Not yet implemented")
+        override val simpleName: String?
+            get() = TODO("Not yet implemented")
+        override val supertypes: List<KType>
+            get() = TODO("Not yet implemented")
+        override val typeParameters: List<KTypeParameter>
+            get() = TODO("Not yet implemented")
+        override val visibility: KVisibility?
+            get() = TODO("Not yet implemented")
+
+        override fun equals(other: Any?): Boolean {
+            TODO("Not yet implemented")
+        }
+
+        override fun hashCode(): Int {
+            TODO("Not yet implemented")
+        }
+
+        override fun isInstance(value: Any?): Boolean {
+            TODO("Not yet implemented")
+        }
+
+    }
+    object ARTISTS_INVOLVED : AudioItemAttribute<AudioItem, Set<String>>(artistsInvolvedType)
+}
+
+interface ArtistAttribute : Attribute<AudioItem, Artist> {
     fun <E : AudioItem> nameEqualsTo(name: String, ignoreCase: Boolean): BooleanQueryTerm<E> {
         return BooleanQueryTerm { audioItem ->
-            audioItem.attributes[this@ArtistAttribute]?.let { it.name.equals(name, ignoreCase) } ?: false
+            audioItem[this@ArtistAttribute]?.let { it.name.equals(name, ignoreCase) } ?: false
         }
     }
 }
 
-enum class AlbumAttribute : Attribute<AudioItem, Album> {
-    ALBUM;
-
+interface AlbumAttribute : Attribute<AudioItem, Album> {
     fun <E : AudioItem> nameEqualsTo(name: String, ignoreCase: Boolean = false): BooleanQueryTerm<E> {
         return BooleanQueryTerm { audioItem ->
-            audioItem.attributes[this@AlbumAttribute]?.let { it.name.equals(name, ignoreCase) } ?: false
+            audioItem[this@AlbumAttribute]?.let { it.name.equals(name, ignoreCase) } ?: false
         }
     }
 }
-
-enum class AudioItemStringAttribute : StringAttribute<AudioItem> { TITLE, GENRE_NAME, COMMENTS, ENCODER, ENCODING }
-
-enum class AudioItemGenreAttribute : Attribute<AudioItem, Genre> { GENRE }
 
 enum class ArtistsInvolvedAttribute : SetAttribute<AudioItem, String> { ARTISTS_INVOLVED }
 
