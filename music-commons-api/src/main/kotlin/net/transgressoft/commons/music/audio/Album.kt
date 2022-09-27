@@ -8,7 +8,6 @@ interface Album : Comparable<Album> {
     val albumArtist: Artist
     val isCompilation: Boolean
     val year: Short?
-    val label: Label?
+    val label: Label
     val coverImage: ByteArray?
-    fun audioItems(): Set<AudioItem>
 }

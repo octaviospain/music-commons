@@ -10,7 +10,7 @@ import net.transgressoft.commons.music.waveform.AudioWaveform
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
 import java.util.concurrent.CompletableFuture
 
-interface MusicLibrary<I : AudioItem, P : AudioPlaylist<I>, D : AudioPlaylistDirectory<I>, W : AudioWaveform> {
+interface MusicLibrary<I : AudioItem, P : AudioPlaylist<I>, D : AudioPlaylistDirectory<I, P>, W : AudioWaveform> {
 
     val audioItemRepository: AudioItemRepository<I>
     val audioPlaylistRepository: AudioPlaylistRepository<I, P, D>

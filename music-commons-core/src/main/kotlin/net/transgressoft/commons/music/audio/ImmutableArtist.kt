@@ -1,11 +1,11 @@
 package net.transgressoft.commons.music.audio
 
-import java.util.Locale.IsoCountryCode
+import com.neovisionaries.i18n.CountryCode
 
 /**
  * @author Octavio Calleya
  */
-data class ImmutableArtist(override val name: String, override val countryCode: IsoCountryCode? = null) : Artist {
+data class ImmutableArtist(override val name: String, override val countryCode: CountryCode = CountryCode.UNDEFINED) : Artist {
 
     override fun compareTo(other: Artist): Int {
         val result = compareValues(name, other.name)

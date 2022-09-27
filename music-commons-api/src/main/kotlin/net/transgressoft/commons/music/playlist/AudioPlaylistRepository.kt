@@ -8,7 +8,7 @@ import java.util.*
 /**
  * @author Octavio Calleya
  */
-interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>, D : AudioPlaylistDirectory<I>> : Repository<P> {
+interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>, D : AudioPlaylistDirectory<I, P>> : Repository<P> {
 
     @Throws(RepositoryException::class)
     fun createPlaylist(name: String): P

@@ -22,8 +22,8 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
 
     init {
         albumsByArtist = audioItems.values.stream().collect(
-            Collectors.groupingBy({ it.artist() },
-                Collectors.mapping({ it.album() },
+            Collectors.groupingBy({ it.artist },
+                Collectors.mapping({ it.album },
                     Collectors.toSet())))
     }
 
@@ -42,8 +42,8 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
     }
 
     private fun addOrReplaceAlbumByArtist(audioItem: AudioItem, added: Boolean) {
-        val artist = audioItem.artist()
-        val album = audioItem.album()
+        val artist = audioItem.artist
+        val album = audioItem.album
         if (added) {
             if (albumsByArtist.containsKey(artist)) {
                 val mappedAlbums = albumsByArtist[artist]
@@ -88,10 +88,10 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
     }
 
     private fun removeAlbumByArtistInternal(audioItem: AudioItem) {
-        val artist = audioItem.artist()
+        val artist = audioItem.artist
         if (albumsByArtist.containsKey(artist)) {
-            var albums = albumsByArtist[audioItem.artist()]
-            albums = albums?.stream()?.filter { album: Album -> album.audioItems().isNotEmpty() }?.collect(Collectors.toSet())
+            var albums = albumsByArtist[audioItem.artist]
+            albums = albums?.stream()?.filter { album: Album -> isAlbumNotEmpty(album) }?.collect(Collectors.toSet())
             if (albums != null) {
                 if (albums.isEmpty()) {
                     albumsByArtist.remove(artist)
@@ -101,6 +101,8 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
             }
         }
     }
+
+    protected abstract fun isAlbumNotEmpty(album: Album): Boolean
 
     override fun removeAll(entities: Set<I>): Boolean {
         val removed = super.removeAll(entities)

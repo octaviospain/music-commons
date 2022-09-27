@@ -2,11 +2,9 @@ package net.transgressoft.commons.music.playlist
 
 import com.google.common.base.MoreObjects
 import com.google.common.base.Objects
-import com.google.common.collect.ImmutableList
 import mu.KotlinLogging
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.playlist.PlaylistAudioItemsAttribute.AUDIO_ITEMS
-import net.transgressoft.commons.music.playlist.PlaylistStringAttribute.NAME
+import net.transgressoft.commons.query.Attribute
 import net.transgressoft.commons.query.BooleanQueryTerm
 import net.transgressoft.commons.query.QueryEntity
 import java.io.IOException
@@ -17,16 +15,17 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 
-internal open class ImmutablePlaylist<I : AudioItem>(final override val id: Int, final override val attributes: PlaylistAttributes<I>) : AudioPlaylist<I> {
-
-    constructor(id: Int, theName: String, audioItems: List<I>) : this(id, PlaylistAttributes(theName, audioItems))
+internal open class ImmutablePlaylist<I : AudioItem>(
+    final override val id: Int,
+    theName: String,
+    audioItems: List<I>?,
+) : AudioPlaylist<I> {
 
     private val logger = KotlinLogging.logger {}
 
-    private val audioItems: List<I> = attributes[AUDIO_ITEMS]!!
-    private val playlists: MutableSet<AudioPlaylist<I>> = mutableSetOf()
+    private var _audioItems: MutableList<I> = mutableListOf<I>().apply { audioItems?.let { addAll(it) } }
 
-    private var _name: String = attributes[NAME]!!
+    private var _name: String = theName
 
     override val name: String
         get() = _name
@@ -48,35 +47,35 @@ internal open class ImmutablePlaylist<I : AudioItem>(final override val id: Int,
         }
     }
 
-    override fun audioItems(): List<I> = ImmutableList.copyOf(audioItems)
+    override fun audioItems(): List<I> = _audioItems.toList()
 
     override val isDirectory: Boolean
         get() = false
 
     protected fun addAll(audioItems: Collection<I>) {
         if (audioItems.isNotEmpty()) {
-            this.audioItems.addAll(audioItems)
+            this._audioItems.addAll(audioItems)
             logger.debug { "Added audio items to playlist '$name': $audioItems" }
         }
     }
 
     protected fun removeAll(audioItems: Collection<I>) {
         if (audioItems.isNotEmpty()) {
-            audioItems.forEach { this.audioItems.remove(it) }
+            audioItems.forEach { _audioItems.remove(it) }
             logger.debug { "Removed audio items from playlist '$name': $audioItems" }
         }
     }
 
     protected fun clear() {
-        if (audioItems.isNotEmpty()) {
-            audioItems.clear()
+        if (_audioItems.isNotEmpty()) {
+            _audioItems.clear()
             logger.debug { "Playlist '$name' cleared" }
         }
     }
 
-    override fun audioItemsAllMatch(queryPredicate: BooleanQueryTerm<AudioItem>) = audioItems.stream().allMatch { queryPredicate.apply(it) }
+    override fun audioItemsAllMatch(queryPredicate: BooleanQueryTerm<AudioItem>) = _audioItems.stream().allMatch { queryPredicate.apply(it) }
 
-    override fun audioItemsAnyMatch(queryPredicate: BooleanQueryTerm<AudioItem>) = audioItems.stream().anyMatch { queryPredicate.apply(it) }
+    override fun audioItemsAnyMatch(queryPredicate: BooleanQueryTerm<AudioItem>) = _audioItems.stream().anyMatch { queryPredicate.apply(it) }
 
     @Throws(IOException::class)
     override fun exportToM3uFile(destinationPath: Path) {
@@ -93,19 +92,28 @@ internal open class ImmutablePlaylist<I : AudioItem>(final override val id: Int,
     protected fun printPlaylist(printWriter: PrintWriter, playlistPath: Path) {
         logger.info { "Writing playlist '$name' to file $playlistPath" }
         printWriter.println("#EXTM3U")
-        audioItems.forEach {
-            printWriter.println("#EXTALB: ${it.album()}")
-            printWriter.println("#EXTART:${it.artist()}")
-            printWriter.print("#EXTINF:${it.duration().seconds}")
-            printWriter.println(",${it.title()}")
+        _audioItems.forEach {
+            printWriter.println("#EXTALB: ${it.album}")
+            printWriter.println("#EXTART:${it.artist}")
+            printWriter.print("#EXTINF:${it.duration.seconds}")
+            printWriter.println(",${it.title}")
             val parent = playlistPath.parent
-            val trackPath = parent.relativize(it.path())
+            val trackPath = parent.relativize(it.path)
             printWriter.println(trackPath)
         }
     }
 
     override fun compareTo(other: AudioPlaylist<I>) =
         Comparator.comparing(QueryEntity::uniqueId, CASE_INSENSITIVE_ORDER).compare(this, other)
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <A : Attribute<E, V>, E : QueryEntity, V : Any> get(attribute: A): V? {
+        return when (attribute as PlaylistAttribute<AudioPlaylist<AudioItem>, V>) {
+            PlaylistAttribute.AUDIO_ITEMS -> _audioItems as V
+            PlaylistAttribute.NAME -> _name as V
+            PlaylistAttribute.PLAYLISTS -> emptySet<AudioPlaylist<I>>() as V
+        }
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -120,7 +128,7 @@ internal open class ImmutablePlaylist<I : AudioItem>(final override val id: Int,
         return MoreObjects.toStringHelper(this)
             .add("id", id)
             .add("name", name)
-            .add("audioItems", audioItems.size)
+            .add("audioItems", _audioItems.size)
             .omitNullValues()
             .toString()
     }

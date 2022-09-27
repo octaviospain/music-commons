@@ -1,11 +1,11 @@
 package net.transgressoft.commons.music.playlist
 
 import com.google.common.collect.ImmutableList
-import com.google.common.collect.ImmutableSet
 import com.google.common.collect.Multimap
 import com.google.common.collect.MultimapBuilder
 import mu.KotlinLogging
 import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.playlist.PlaylistAttribute.NAME
 import net.transgressoft.commons.query.Attribute
 import net.transgressoft.commons.query.BooleanQueryTerm
 import net.transgressoft.commons.query.InMemoryRepository
@@ -15,10 +15,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
 import java.util.stream.Collectors
-import kotlin.streams.toList
 
 @Suppress("UNCHECKED_CAST")
-abstract class AudioPlaylistInMemoryRepositoryBase<I : AudioItem, P : AudioPlaylist<I>, D : AudioPlaylistDirectory<I>, MP : MutableAudioPlaylist<I>, MD : MutableAudioPlaylistDirectory<I>>
+abstract class AudioPlaylistInMemoryRepositoryBase<I : AudioItem, P : AudioPlaylist<I>, D : AudioPlaylistDirectory<I, P>, MP : MutableAudioPlaylist<I>, MD : MutableAudioPlaylistDirectory<I, P>>
 protected constructor(
     playlistsById: MutableMap<Int, MP>,
     directoriesById: MutableMap<Int, MD>,
@@ -42,7 +41,7 @@ protected constructor(
     protected abstract fun toMutableDirectory(playlistDirectory: D): MD
     protected abstract fun toImmutablePlaylist(audioPlaylist: MutableAudioPlaylist<I>): P
     protected abstract fun toImmutablePlaylist(audioPlaylist: P): P
-    protected abstract fun toImmutablePlaylistDirectory(playlistDirectory: MutableAudioPlaylistDirectory<I>): P // TODO change to nullable?
+    protected abstract fun toImmutablePlaylistDirectory(playlistDirectory: MutableAudioPlaylistDirectory<I, P>): P // TODO change to nullable?
     protected abstract fun toImmutablePlaylistDirectories(audioPlaylists: Set<P>): Set<P>
 
     protected fun getNewId(): Int {
@@ -67,13 +66,13 @@ protected constructor(
     private fun addInternal(playlist: P): Boolean {
         var added = false
         if (playlist.isDirectory) {
-            if (directories.findByAttribute(PlaylistStringAttribute.NAME as Attribute<MD, String>, playlist.name).isEmpty()) {
+            if (directories.findByAttribute(NAME as Attribute<MD, String>, playlist.name).isEmpty()) {
                 val mutableDirectory = toMutableDirectory(playlist as D)
                 added = directories.add(mutableDirectory)
-                added = added or addRecursive(mutableDirectory, mutableDirectory.descendantPlaylists())
+                added = added or addRecursive(mutableDirectory, mutableDirectory.descendantPlaylists() as Set<MP>)
             }
         } else {
-            if (playlists.findByAttribute(PlaylistStringAttribute.NAME as Attribute<MP, String>, playlist.name).isEmpty()) {
+            if (playlists.findByAttribute(NAME as Attribute<MP, String>, playlist.name).isEmpty()) {
                 added = playlists.add(toMutablePlaylist(playlist))
             }
         }
@@ -126,13 +125,14 @@ protected constructor(
         playlists.contains(query as BooleanQueryTerm<MP>) || directories.contains(query as BooleanQueryTerm<MD>)
 
     override fun search(query: BooleanQueryTerm<P>): List<P> =
-        ImmutableList.builder<P>()
-            .addAll(playlists.search((query as BooleanQueryTerm<MP>)).stream()
-                .map { this.toImmutablePlaylist(it) }
+        buildList {
+            addAll(playlists.search(query as BooleanQueryTerm<MP>)
+                .map { toImmutablePlaylist(it) }
                 .toList())
-            .addAll(directories.search((query as BooleanQueryTerm<MD>)).stream()
+            addAll(directories.search((query as BooleanQueryTerm<MD>))
                 .map { toImmutablePlaylistDirectory(it) }
-                .toList()).build()
+                .toList())
+        }
 
     override fun findById(id: Int): Optional<P> = findByIdInternal(id).map { this.toImmutablePlaylist(it) }
 
@@ -144,13 +144,14 @@ protected constructor(
             .or { directories.findByUniqueId(uniqueId).map { toImmutablePlaylistDirectory(it) } }
 
     override fun <A : Attribute<P, V>, V : Any> findByAttribute(attribute: A, value: V): List<P> =
-        ImmutableList.builder<P>()
-            .addAll(playlists.findByAttribute(attribute as Attribute<MP, V>, value).stream()
-                .map { this.toImmutablePlaylist(it) }
+        buildList {
+            addAll(playlists.findByAttribute(attribute as Attribute<MP, V>, value)
+                .map { toImmutablePlaylist(it) }
                 .toList())
-            .addAll(directories.findByAttribute(attribute as Attribute<MD, V>, value).stream()
+            addAll(directories.findByAttribute(attribute as Attribute<MD, V>, value)
                 .map { toImmutablePlaylistDirectory(it) }
-                .toList()).build()
+                .toList())
+        }
 
     @Throws(RepositoryException::class)
     override fun <A : Attribute<P, V>, V : Any> findSingleByAttribute(attribute: A, value: V): Optional<P> {
@@ -171,13 +172,10 @@ protected constructor(
     override val isEmpty: Boolean
         get() = playlists.isEmpty && directories.isEmpty
 
-    @Suppress("UnstableApiUsage")
-    override fun iterator(): Iterator<P> {
-        val setBuilder = ImmutableSet.builderWithExpectedSize<P>(playlists.size() + directories.size())
-        playlists.forEach(Consumer { setBuilder.add(toImmutablePlaylist(it)) })
-        directories.forEach(Consumer { setBuilder.add(toImmutablePlaylistDirectory(it)) })
-        return setBuilder.build().iterator()
-    }
+    override fun iterator(): Iterator<P> = buildSet(playlists.size() + directories.size()) {
+        playlists.forEach(Consumer { add(toImmutablePlaylist(it)) })
+        directories.forEach(Consumer { add(toImmutablePlaylistDirectory(it)) })
+    }.iterator()
 
     override fun numberOfPlaylists() = playlists.size()
 
@@ -216,10 +214,10 @@ protected constructor(
     }
 
     override fun addPlaylistsToDirectory(playlist: Set<P>, directory: D) {
-        val mutablePlaylists = toMutablePlaylists(playlist)
+        val mutablePlaylists: Set<MP> = toMutablePlaylists(playlist)
         directories.findById(directory.id)
             .ifPresent {
-                it.addPlaylists(mutablePlaylists)
+                it.addPlaylists(mutablePlaylists as Set<P>)
                 playlistsMultiMap.putAll(
                     it.uniqueId,
                     mutablePlaylists.stream().map { d -> d.uniqueId }.collect(Collectors.toSet())
@@ -233,10 +231,10 @@ protected constructor(
                 directories.findById(destinationPlaylist.id).ifPresent { playlistDirectory: MD ->
                     ancestor(playlistToMove).ifPresent { ancestor: MD ->
                         playlistsMultiMap.remove(ancestor.uniqueId, playlist.uniqueId)
-                        ancestor.removePlaylists(playlist)
+                        ancestor.removePlaylists(playlist as P)
                     }
                     playlistsMultiMap.put(playlistDirectory.uniqueId, playlist.uniqueId)
-                    playlistDirectory.addPlaylists(playlist)
+                    playlistDirectory.addPlaylists(playlist as P)
                     logger.debug { "Playlist '${playlistToMove.name}' moved to '${destinationPlaylist.name}'" }
                 }
             }
@@ -263,16 +261,16 @@ protected constructor(
 
     override fun findAllByName(name: String): ImmutableList<P> =
         ImmutableList.builder<P>()
-            .addAll(playlists.findByAttribute(PlaylistStringAttribute.NAME as Attribute<MP, String>, name).stream()
+            .addAll(playlists.findByAttribute(NAME as Attribute<MP, String>, name).stream()
                 .map { this.toImmutablePlaylist(it) }
                 .collect(Collectors.toSet()))
-            .addAll(directories.findByAttribute(PlaylistStringAttribute.NAME as Attribute<MD, String>, name).stream()
+            .addAll(directories.findByAttribute(NAME as Attribute<MD, String>, name).stream()
                 .map { toImmutablePlaylistDirectory(it) }
                 .collect(Collectors.toSet())).build()
 
     override fun findSinglePlaylistByName(name: String): Optional<P> =
         try {
-            playlists.findSingleByAttribute(PlaylistStringAttribute.NAME as Attribute<MP, String>, name)
+            playlists.findSingleByAttribute(NAME as Attribute<MP, String>, name)
                 .map { this.toImmutablePlaylist(it) }
         } catch (exception: RepositoryException) {
             throw IllegalStateException(exception)
@@ -280,7 +278,7 @@ protected constructor(
 
     override fun findSingleDirectoryByName(name: String): Optional<D> =
         try {
-            directories.findSingleByAttribute(PlaylistStringAttribute.NAME as Attribute<MD, String>, name)
+            directories.findSingleByAttribute(NAME as Attribute<MD, String>, name)
                 .map { toImmutablePlaylistDirectory(it) as D }
         } catch (exception: RepositoryException) {
             throw IllegalStateException(exception)

@@ -1,23 +1,18 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.StandardMusicLibrary
-import net.transgressoft.commons.music.audio.AlbumAttribute.ALBUM
-
 data class ImmutableAlbum(
     override val name: String,
     override val albumArtist: Artist,
     override val isCompilation: Boolean = false,
     override val year: Short? = null,
-    override val label: Label? = null,
+    override val label: Label = ImmutableLabel.UNKNOWN,
     override val coverImage: ByteArray? = null
 ) : Album {
-
-    override fun audioItems() = StandardMusicLibrary.audioItemRepository.search(ALBUM.equalsTo(this)).toSet()
 
     override fun compareTo(other: Album): Int {
         val nameComparison = compareValues(name, other.name)
         val artistComparison = compareValues(albumArtist.name, other.albumArtist.name)
-        val labelComparison = compareValues(label?.name, other.label?.name)
+        val labelComparison = compareValues(label.name, other.label.name)
         val yearComparison = compareValues(year, other.year)
         return if (nameComparison != 0) {
             nameComparison
@@ -53,6 +48,6 @@ data class ImmutableAlbum(
     }
 
     companion object {
-        val UNKNOWN = ImmutableAlbum("", ImmutableArtist.Companion.UNKNOWN)
+        val UNKNOWN = ImmutableAlbum("", ImmutableArtist.UNKNOWN)
     }
 }

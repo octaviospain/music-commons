@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Flow.Subscription
 
-abstract class MusicLibraryBase<I : AudioItem, P : AudioPlaylist<I>, D : AudioPlaylistDirectory<I>, W : AudioWaveform>(
+abstract class MusicLibraryBase<I : AudioItem, P : AudioPlaylist<I>, D : AudioPlaylistDirectory<I, P>, W : AudioWaveform>(
     final override val audioItemRepository: AudioItemRepository<I>,
     final override val audioPlaylistRepository: AudioPlaylistRepository<I, P, D>,
     final override val audioWaveformRepository: AudioWaveformRepository<W>,
@@ -33,7 +33,7 @@ abstract class MusicLibraryBase<I : AudioItem, P : AudioPlaylist<I>, D : AudioPl
     private val playCounts: MutableMap<Int, Short> = HashMap()
 
     init {
-        audioItemRepository.iterator().forEachRemaining { audioItem: I -> artists.addAll(audioItem.artistsInvolved()) }
+        audioItemRepository.iterator().forEachRemaining { audioItem: I -> artists.addAll(audioItem.artistsInvolved) }
     }
 
     override fun artists(): Set<String> = artists
@@ -127,6 +127,6 @@ abstract class MusicLibraryBase<I : AudioItem, P : AudioPlaylist<I>, D : AudioPl
             }
         }
 
-        private fun getEventArtists(event: EntityEvent<out I>): Set<String> = event.entities.flatMap { it.artistsInvolved() }.toSet()
+        private fun getEventArtists(event: EntityEvent<out I>): Set<String> = event.entities.flatMap { it.artistsInvolved }.toSet()
     }
 }

@@ -1,19 +1,7 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.audio.AlbumAttribute.ALBUM
-import net.transgressoft.commons.music.audio.ArtistAttribute.ARTIST
-import net.transgressoft.commons.music.audio.ArtistsInvolvedAttribute.ARTISTS_INVOLVED
+import net.transgressoft.commons.music.audio.AudioItemAttribute.*
 import net.transgressoft.commons.music.audio.AudioItemAttribute.ALBUM.artistsInvolvedType
-import net.transgressoft.commons.music.audio.AudioItemDurationAttribute.DURATION
-import net.transgressoft.commons.music.audio.AudioItemFloatAttribute.BPM
-import net.transgressoft.commons.music.audio.AudioItemGenreAttribute.GENRE
-import net.transgressoft.commons.music.audio.AudioItemIntegerAttribute.BITRATE
-import net.transgressoft.commons.music.audio.AudioItemLocalDateTimeAttribute.DATE_OF_CREATION
-import net.transgressoft.commons.music.audio.AudioItemLocalDateTimeAttribute.LAST_DATE_MODIFIED
-import net.transgressoft.commons.music.audio.AudioItemPathAttribute.PATH
-import net.transgressoft.commons.music.audio.AudioItemShortAttribute.DISC_NUMBER
-import net.transgressoft.commons.music.audio.AudioItemShortAttribute.TRACK_NUMBER
-import net.transgressoft.commons.music.audio.AudioItemStringAttribute.*
 import net.transgressoft.commons.query.*
 import java.nio.file.Path
 import java.time.Duration
@@ -22,27 +10,45 @@ import kotlin.reflect.*
 
 open class AudioItemAttributes(attributeSet: AudioItemAttributes?) : ImmutableAttributeSet<AudioItem>(attributeSet) {
 
+    constructor(audioItem: AudioItem) : this(
+        audioItem.path,
+        audioItem.title,
+        audioItem.artist,
+        audioItem.album,
+        audioItem.genre,
+        audioItem.comments,
+        audioItem.trackNumber,
+        audioItem.discNumber,
+        audioItem.bpm,
+        audioItem.duration,
+        audioItem.bitRate,
+        audioItem.encoder,
+        audioItem.encoding,
+        audioItem.dateOfCreation,
+        audioItem.lastDateModified
+    )
+
     constructor(
         path: Path,
         title: String,
-        artist: Artist,
-        artistsInvolved: Set<String>,
-        album: Album?,
-        genre: Genre?,
-        comments: String?,
-        trackNumber: Short?,
-        discNumber: Short?,
-        bpm: Float?,
+        artist: Artist = ImmutableArtist.UNKNOWN,
+        album: Album = ImmutableAlbum.UNKNOWN,
+        genre: Genre = Genre.UNDEFINED,
+        comments: String? = null,
+        trackNumber: Short? = null,
+        discNumber: Short? = null,
+        bpm: Float? = null,
         duration: Duration,
         bitRate: Int,
-        encoder: String?,
-        encoding: String?,
+        encoder: String? = null,
+        encoding: String? = null,
         dateOfCreation: LocalDateTime,
-    ) : this(buildAttributeSet<AudioItem> {
+        lastDateModified: LocalDateTime,
+    ) : this(buildAudioItemAttributes {
         set(PATH, path)
         set(TITLE, title)
         set(ARTIST, artist)
-        set(ARTISTS_INVOLVED, artistsInvolved)
+        set(ARTISTS_INVOLVED, AudioItemUtils.getArtistsNamesInvolved(title, artist.name, album.albumArtist.name))
         set(ALBUM, album)
         set(GENRE, genre)
         set(COMMENTS, comments)
@@ -54,8 +60,8 @@ open class AudioItemAttributes(attributeSet: AudioItemAttributes?) : ImmutableAt
         set(ENCODER, encoder)
         set(ENCODING, encoding)
         set(DATE_OF_CREATION, dateOfCreation)
-        set(LAST_DATE_MODIFIED, dateOfCreation)
-    } as AudioItemAttributes)
+        set(LAST_DATE_MODIFIED, lastDateModified)
+    })
 
     fun <V : Any> modifiedCopyWithModifiedTime(attribute: Attribute<AudioItem, V>, value: V): AudioItemAttributes =
         MutableAudioItemAttributes(this).also {
@@ -64,8 +70,12 @@ open class AudioItemAttributes(attributeSet: AudioItemAttributes?) : ImmutableAt
         }
 }
 
-private class MutableAudioItemAttributes(attributeSet: AudioItemAttributes) : AudioItemAttributes(attributeSet) {
-    operator fun <A : Attribute<AudioItem, V>, V : Any> set(attribute: A, value: V) {
+internal inline fun buildAudioItemAttributes(builderAction: MutableAudioItemAttributes.() -> Unit): AudioItemAttributes {
+    return MutableAudioItemAttributes().also { it.builderAction() }
+}
+
+internal class MutableAudioItemAttributes(attributeSet: AudioItemAttributes? = null) : AudioItemAttributes(attributeSet) {
+    operator fun <A : Attribute<AudioItem, V>, V : Any> set(attribute: A, value: V?) {
         attributesToValues[attribute] = value
     }
 }
@@ -74,11 +84,18 @@ sealed class AudioItemAttribute<I : AudioItem, V : Any>(private val dataType: KC
     object ARTIST : AudioItemAttribute<AudioItem, Artist>(Artist::class), ArtistAttribute
     object ALBUM : AudioItemAttribute<AudioItem, Album>(Album::class), AlbumAttribute
     object TITLE : AudioItemAttribute<AudioItem, String>(String::class), StringAttribute<AudioItem>
-    object GENRE : AudioItemAttribute<AudioItem, Genre>(Genre::class), Attribute<AudioItem, Genre>
-    object GENRE_NAME : AudioItemAttribute<AudioItem, String>(String::class), StringAttribute<AudioItem>
+    object GENRE : AudioItemAttribute<AudioItem, Genre>(Genre::class), GenreAttribute
     object COMMENTS : AudioItemAttribute<AudioItem, String>(String::class), StringAttribute<AudioItem>
     object ENCODER : AudioItemAttribute<AudioItem, String>(String::class), StringAttribute<AudioItem>
     object ENCODING : AudioItemAttribute<AudioItem, String>(String::class), StringAttribute<AudioItem>
+    object PATH : AudioItemAttribute<AudioItem, Path>(Path::class), PathAttribute<AudioItem>
+    object BITRATE : AudioItemAttribute<AudioItem, Int>(Int::class), IntegerAttribute<AudioItem>
+    object BPM : AudioItemAttribute<AudioItem, Float>(Float::class), FloatAttribute<AudioItem>
+    object TRACK_NUMBER : AudioItemAttribute<AudioItem, Short>(Short::class), ShortAttribute<AudioItem>
+    object DISC_NUMBER : AudioItemAttribute<AudioItem, Short>(Short::class), ShortAttribute<AudioItem>
+    object DATE_OF_CREATION : AudioItemAttribute<AudioItem, LocalDateTime>(LocalDateTime::class), LocalDateTimeAttribute<AudioItem>
+    object LAST_DATE_MODIFIED : AudioItemAttribute<AudioItem, LocalDateTime>(LocalDateTime::class), LocalDateTimeAttribute<AudioItem>
+    object DURATION : AudioItemAttribute<AudioItem, Duration>(Duration::class), DurationAttribute<AudioItem>
 
     internal val artistsInvolvedType = object : KClass<Set<String>> {
         override val annotations: List<Annotation>
@@ -135,7 +152,8 @@ sealed class AudioItemAttribute<I : AudioItem, V : Any>(private val dataType: KC
         }
 
     }
-    object ARTISTS_INVOLVED : AudioItemAttribute<AudioItem, Set<String>>(artistsInvolvedType)
+
+    object ARTISTS_INVOLVED : AudioItemAttribute<AudioItem, Set<String>>(artistsInvolvedType), SetAttribute<AudioItem, String>
 }
 
 interface ArtistAttribute : Attribute<AudioItem, Artist> {
@@ -154,16 +172,10 @@ interface AlbumAttribute : Attribute<AudioItem, Album> {
     }
 }
 
-enum class ArtistsInvolvedAttribute : SetAttribute<AudioItem, String> { ARTISTS_INVOLVED }
-
-enum class AudioItemPathAttribute : PathAttribute<AudioItem> { PATH }
-
-enum class AudioItemIntegerAttribute : IntegerAttribute<AudioItem> { BITRATE }
-
-enum class AudioItemFloatAttribute : FloatAttribute<AudioItem> { BPM }
-
-enum class AudioItemShortAttribute : ShortAttribute<AudioItem> { TRACK_NUMBER, DISC_NUMBER, }
-
-enum class AudioItemLocalDateTimeAttribute : LocalDateTimeAttribute<AudioItem> { DATE_OF_CREATION, LAST_DATE_MODIFIED }
-
-enum class AudioItemDurationAttribute : DurationAttribute<AudioItem> { DURATION }
+interface GenreAttribute : Attribute<AudioItem, Genre> {
+    fun <E : AudioItem> contains(string: String): BooleanQueryTerm<E> {
+        return BooleanQueryTerm { audioItem ->
+            audioItem[this@GenreAttribute]?.let { it.name.contains(string) } ?: false
+        }
+    }
+}

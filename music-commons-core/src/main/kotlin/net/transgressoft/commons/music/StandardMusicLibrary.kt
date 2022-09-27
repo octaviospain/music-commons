@@ -10,7 +10,9 @@ import net.transgressoft.commons.music.playlist.AudioPlaylistInMemoryRepository
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import net.transgressoft.commons.music.waveform.AudioWaveformInMemoryRepository
 
-object StandardMusicLibrary : MusicLibraryBase<AudioItem, AudioPlaylist<AudioItem>, AudioPlaylistDirectory<AudioItem>, AudioWaveform>(
+typealias StandardMusicLibraryBase = MusicLibraryBase<AudioItem, AudioPlaylist<AudioItem>, AudioPlaylistDirectory<AudioItem, AudioPlaylist<AudioItem>>, AudioWaveform>
+
+object StandardMusicLibrary : StandardMusicLibraryBase(
     audioItemRepository = AudioItemInMemoryRepository(),
     audioPlaylistRepository = AudioPlaylistInMemoryRepository(),
     audioWaveformRepository = AudioWaveformInMemoryRepository(),

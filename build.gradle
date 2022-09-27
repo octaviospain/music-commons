@@ -21,7 +21,6 @@ dependencies {
 }
 
 subprojects {
-    apply plugin: 'java'
     apply plugin: 'java-library'
     apply plugin: 'jacoco'
     apply plugin: 'kotlin'
@@ -35,6 +34,7 @@ subprojects {
     }
 
     dependencies {
+        implementation 'com.neovisionaries:nv-i18n:1.29'
         implementation 'net.transgressoft:soft-query-api:0.48-SNAPSHOT'
         implementation platform('org.jetbrains.kotlin:kotlin-bom')
         implementation "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"

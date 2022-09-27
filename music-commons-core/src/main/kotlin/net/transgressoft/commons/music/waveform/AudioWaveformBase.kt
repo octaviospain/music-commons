@@ -1,6 +1,7 @@
 package net.transgressoft.commons.music.waveform
 
-import net.transgressoft.commons.query.EntityAttribute
+import net.transgressoft.commons.query.Attribute
+import net.transgressoft.commons.query.QueryEntity
 import java.util.*
 
 open class AudioWaveformBase(
@@ -9,8 +10,6 @@ open class AudioWaveformBase(
     override val width: Int,
     override val height: Int,
 ) : AudioWaveform {
-
-    private val attributeMap: Map<EntityAttribute<*>, Any> = mapOf()
 
     override val uniqueId: String
         get() {
@@ -21,10 +20,6 @@ open class AudioWaveformBase(
             joiner.add(amplitudes.size.toString())
             return joiner.toString()
         }
-
-    override fun <A : EntityAttribute<V>, V> getAttribute(attribute: A): V {
-        return attributeMap[attribute] as V
-    }
 
     override fun scale(width: Int, height: Int): AudioWaveform {
         throw UnsupportedOperationException("Not implemented")
@@ -38,6 +33,13 @@ open class AudioWaveformBase(
         return width == that.width && height == that.height &&
                 com.google.common.base.Objects.equal(amplitudes, that.amplitudes)
     }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <A : Attribute<E, V>, E : QueryEntity, V : Any> get(attribute: A): V? =
+        when (attribute as AudioWaveformAttribute<AudioWaveform, V>) {
+            AudioWaveformAttribute.HEIGHT -> height as V
+            AudioWaveformAttribute.WIDTH -> width as V
+        }
 
     override fun hashCode(): Int {
         return com.google.common.base.Objects.hashCode(width, height, amplitudes)

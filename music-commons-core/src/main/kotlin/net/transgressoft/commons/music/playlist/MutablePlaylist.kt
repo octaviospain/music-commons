@@ -2,22 +2,20 @@ package net.transgressoft.commons.music.playlist
 
 import com.google.common.base.Objects
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.playlist.PlaylistStringAttribute.*
 
 /**
  * Base implementation of a `PlaylistNode`. All attributes are mutable but intend to be thread-safe, <tt>id</tt> is inmutable.
  *
  * @param <I> The type of the entities listed in the playlist node.
 </I> */
-internal class MutablePlaylist<I : AudioItem> (id: Int, attributes: PlaylistAttributes<I>) :
-    ImmutablePlaylist<I>(id, attributes), MutableAudioPlaylist<I> {
+internal class MutablePlaylist<I : AudioItem> (id: Int, theName: String, audioItems: List<I>? = null) :
+    ImmutablePlaylist<I>(id, theName, audioItems), MutableAudioPlaylist<I> {
 
-    constructor(id: Int, theName: String, audioItems: List<I>): this(id, PlaylistAttributes(theName, audioItems))
-
-    override var name: String = attributes[NAME]!!
+    override var name: String
         set(value) {
             super.setNameInternal(value)
         }
+        get() = super.name
 
     override fun addAudioItems(audioItems: Collection<I>) {
         super.addAll(audioItems)
