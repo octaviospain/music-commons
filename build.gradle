@@ -79,7 +79,7 @@ subprojects {
     compileKotlin {
         kotlinOptions {
             jvmTarget = JavaVersion.VERSION_1_8
-            freeCompilerArgs += '-Xjvm-default=enable'
+            freeCompilerArgs += '-Xjvm-default=all'
         }
     }
 

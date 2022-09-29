@@ -5,24 +5,27 @@ import net.transgressoft.commons.event.DefaultQueryEntitySubscriber
 import net.transgressoft.commons.event.EntityEvent
 import net.transgressoft.commons.event.QueryEntityEvent.Type.*
 import net.transgressoft.commons.event.QueryEntitySubscriber
+import net.transgressoft.commons.event.QueryEventDispatcher
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemEventType.Type.PLAYED
 import net.transgressoft.commons.music.audio.AudioItemRepository
 import net.transgressoft.commons.music.playlist.AudioPlaylist
 import net.transgressoft.commons.music.playlist.AudioPlaylistDirectory
 import net.transgressoft.commons.music.playlist.AudioPlaylistRepository
-import net.transgressoft.commons.music.waveform.AudioWaveform
-import net.transgressoft.commons.music.waveform.AudioWaveformInMemoryRepository
-import net.transgressoft.commons.music.waveform.AudioWaveformProcessingException
-import net.transgressoft.commons.music.waveform.AudioWaveformRepository
+import net.transgressoft.commons.music.waveform.*
+import net.transgressoft.commons.music.waveform.ImmutableAudioWaveform
 import org.slf4j.LoggerFactory
+import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Flow.Subscription
+import kotlin.collections.HashMap
+import kotlin.collections.HashSet
 
 abstract class MusicLibraryBase<I : AudioItem, P : AudioPlaylist<I>, D : AudioPlaylistDirectory<I, P>, W : AudioWaveform>(
     final override val audioItemRepository: AudioItemRepository<I>,
     final override val audioPlaylistRepository: AudioPlaylistRepository<I, P, D>,
     final override val audioWaveformRepository: AudioWaveformRepository<W>,
+    audioItemEventDispatcher: QueryEventDispatcher<I>
 ) : MusicLibrary<I, P, D, W> {
 
     private val log = LoggerFactory.getLogger(MusicLibraryBase::class.java)
@@ -34,6 +37,7 @@ abstract class MusicLibraryBase<I : AudioItem, P : AudioPlaylist<I>, D : AudioPl
 
     init {
         audioItemRepository.iterator().forEachRemaining { audioItem: I -> artists.addAll(audioItem.artistsInvolved) }
+        audioItemEventDispatcher.subscribe(audioItemSubscriber)
     }
 
     override fun artists(): Set<String> = artists
@@ -68,10 +72,23 @@ abstract class MusicLibraryBase<I : AudioItem, P : AudioPlaylist<I>, D : AudioPl
                     try {
                         return@supplyAsync audioWaveformRepository.create(audioItem, width, height)
                     } catch (exception: AudioWaveformProcessingException) {
-                        return@supplyAsync AudioWaveformInMemoryRepository.emptyWaveform(width, height)
+                        return@supplyAsync emptyWaveform(width, height)
                     }
                 }
             }
+    }
+
+    private val emptyWaveforms: MutableMap<Pair<Short, Short>, Any> = mutableMapOf()
+
+    private fun emptyWaveform(width: Short, height: Short): W {
+        val dimensionPair = Pair(width, height)
+        val fakeAmplitudes = FloatArray(width.toInt())
+        Arrays.fill(fakeAmplitudes, 0.0f)
+
+        return if (emptyWaveforms.contains(dimensionPair))
+            emptyWaveforms[dimensionPair] as W
+        else
+            ImmutableAudioWaveform(-1, fakeAmplitudes, width.toInt(), height.toInt()) as W
     }
 
     inner class DefaultAudioItemSubscriber : QueryEntitySubscriber<I>, DefaultQueryEntitySubscriber<I>() {
