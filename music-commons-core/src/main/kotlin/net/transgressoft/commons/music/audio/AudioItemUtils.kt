@@ -3,16 +3,15 @@ package net.transgressoft.commons.music.audio
 import org.jetbrains.kotlin.com.google.common.base.CharMatcher
 import org.jetbrains.kotlin.com.google.common.base.Splitter
 import java.util.regex.Pattern
-import java.util.stream.Collectors
 import java.util.stream.Stream
 
 object AudioItemUtils {
 
     private val endsWithRemix = Pattern.compile("[(|\\[](\\s*(&?\\s*(\\w+)\\s+)+(?i)(remix))[)|\\]]")
     private val startsWithRemixBy = Pattern.compile("[(|\\[](?i)(remix)(\\s+)(?i)(by)(.+)[)|\\]]")
-    private val hasFt = Pattern.compile("[(|\\[|\\s](?i)(ft) (.+)")
-    private val hasFeat = Pattern.compile("[(|\\[|\\s](?i)(feat) (.+)")
-    private val hasFeaturing = Pattern.compile("[(|\\[|\\s](?i)(featuring) (.+)")
+    private val hasFt = Pattern.compile("[(\\[|\\s](?i)(ft) (.+)")
+    private val hasFeat = Pattern.compile("[(\\[|\\s](?i)(feat) (.+)")
+    private val hasFeaturing = Pattern.compile("[(\\[|\\s](?i)(featuring) (.+)")
     private val startsWithWith = Pattern.compile("[(|\\[](?i)(with) (.+)[)|\\]]")
 
     private val artistsRegexMap: Map<Pattern, Pattern> = buildMap {
@@ -78,7 +77,7 @@ object AudioItemUtils {
      *
      * @param artistName The artist name from where to find more names
      *
-     * @return An [ImmutableSet] with the artists found
+     * @return A Set with the artists found
      */
     private fun getNamesInArtist(artistName: String): Set<String> {
         val artistsInvolved: Set<String>
@@ -121,7 +120,7 @@ object AudioItemUtils {
      *
      * @param title The `String` where to find artist names
      *
-     * @return An [ImmutableSet] with the artists found
+     * @return A Set with the artists found
      */
     private fun getNamesInTitle(title: String): Set<String> {
         val artistsInsideParenthesis = mutableSetOf<String>()
@@ -129,7 +128,7 @@ object AudioItemUtils {
             val matcher = value.matcher(title)
             if (matcher.find()) {
                 val insideParenthesisString = title.substring(matcher.start())
-                    .replace("[(|\\[|)|\\]]".toRegex(), "")
+                    .replace("[(\\[|)\\]]".toRegex(), "")
                     .replace(keyPattern.pattern().toRegex(), "")
                     .replace("\\s(?i)(vs)\\s".toRegex(), "&")
                     .replace("\\s+".toRegex(), " ")

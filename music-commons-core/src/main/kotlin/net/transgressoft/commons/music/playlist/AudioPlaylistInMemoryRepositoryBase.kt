@@ -32,8 +32,8 @@ protected constructor(
     private val playlistsMultiMap: Multimap<String, String> = MultimapBuilder.treeKeys().treeSetValues().build()
 
     init {
-        playlists = InMemoryRepository(playlistsById, null)
-        directories = InMemoryRepository(directoriesById, null)
+        playlists = InMemoryRepository(playlistsById)
+        directories = InMemoryRepository(directoriesById)
     }
 
     protected abstract fun toMutablePlaylist(playlistDirectory: P): MP
@@ -41,7 +41,7 @@ protected constructor(
     protected abstract fun toMutableDirectory(playlistDirectory: D): MD
     protected abstract fun toImmutablePlaylist(audioPlaylist: MutableAudioPlaylist<I>): P
     protected abstract fun toImmutablePlaylist(audioPlaylist: P): P
-    protected abstract fun toImmutablePlaylistDirectory(playlistDirectory: MutableAudioPlaylistDirectory<I, P>): P // TODO change to nullable?
+    protected abstract fun toImmutablePlaylistDirectory(playlistDirectory: MutableAudioPlaylistDirectory<I, P>): P
     protected abstract fun toImmutablePlaylistDirectories(audioPlaylists: Set<P>): Set<P>
 
     protected fun getNewId(): Int {

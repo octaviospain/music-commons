@@ -1,15 +1,13 @@
 package net.transgressoft.commons.music.audio
 
 import mu.KotlinLogging
-import net.transgressoft.commons.event.QueryEventDispatcher
 import net.transgressoft.commons.music.audio.AudioItemAttribute.*
 import java.nio.file.Files
 import java.nio.file.Path
 
-internal class AudioItemInMemoryRepository(
+open class AudioItemInMemoryRepository(
     audioItems: MutableMap<Int, AudioItem> = mutableMapOf(),
-    eventDispatcher: QueryEventDispatcher<AudioItem> = DefaultAudioItemEventDispatcher(),
-) : AudioItemInMemoryRepositoryBase<AudioItem>(audioItems, eventDispatcher) {
+) : AudioItemInMemoryRepositoryBase<AudioItem>(audioItems) {
 
     private val logger = KotlinLogging.logger {}
 

@@ -1,8 +1,6 @@
 package net.transgressoft.commons.music.audio
 
-import com.google.common.collect.ImmutableSet
 import mu.KotlinLogging
-import net.transgressoft.commons.event.QueryEventDispatcher
 import net.transgressoft.commons.query.InMemoryRepository
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
@@ -13,10 +11,10 @@ import java.util.stream.Collectors
  */
 abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
     audioItems: MutableMap<Int, I>,
-    private val eventDispatcher: QueryEventDispatcher<I>?,
-) : InMemoryRepository<I>(audioItems, eventDispatcher), AudioItemRepository<I> {
+) : InMemoryRepository<I>(audioItems), AudioItemRepository<I> {
 
     private val logger = KotlinLogging.logger {}
+
     private val idCounter = AtomicInteger(1)
     private val albumsByArtist: MutableMap<Artist, MutableSet<Album>>
 
@@ -69,13 +67,13 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
         addedOrReplaced[true]?.let { addedList ->
             if (addedList.isNotEmpty()) {
                 addedList.forEach(Consumer { addOrReplaceAlbumByArtist(it, true) })
-                eventDispatcher?.putCreateEvent(addedList)
+                putCreateEvent(addedList)
             }
         }
         addedOrReplaced[false]?.let { replacedList ->
             if (replacedList.isNotEmpty()) {
                 replacedList.forEach(Consumer { addOrReplaceAlbumByArtist(it, true) })
-                eventDispatcher?.putUpdateEvent(replacedList)
+                putUpdateEvent(replacedList)
             }
         }
         return addedOrReplaced.values.stream().flatMap { it.stream() }.findAny().isPresent
@@ -110,5 +108,7 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
         return removed
     }
 
-    override fun artistAlbums(artist: Artist): Set<Album> = ImmutableSet.copyOf(albumsByArtist[artist] ?: emptySet())
+    override fun artists(): Set<Artist> = albumsByArtist.keys.toSet()
+
+    override fun artistAlbums(artist: Artist): Set<Album> = albumsByArtist[artist]?.toSet() ?: emptySet()
 }

@@ -1,5 +1,6 @@
 package net.transgressoft.commons.music.playlist
 
+import net.transgressoft.commons.event.QueryEntitySubscriber
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.query.Repository
 import net.transgressoft.commons.query.RepositoryException
@@ -9,6 +10,8 @@ import java.util.*
  * @author Octavio Calleya
  */
 interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>, D : AudioPlaylistDirectory<I, P>> : Repository<P> {
+
+    val audioItemEventSubscriber: QueryEntitySubscriber<I>
 
     @Throws(RepositoryException::class)
     fun createPlaylist(name: String): P

@@ -1,6 +1,8 @@
 package net.transgressoft.commons.music.playlist
 
+import net.transgressoft.commons.event.QueryEntityEvent
 import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.event.AudioItemEventSubscriber
 import java.util.stream.Collectors
 
 open class AudioPlaylistInMemoryRepository(
@@ -13,6 +15,12 @@ open class AudioPlaylistInMemoryRepository(
         MutableAudioPlaylist<AudioItem>,
         MutableAudioPlaylistDirectory<AudioItem, AudioPlaylist<AudioItem>>>
     (playlistsById, directoriesById) {
+
+    final override val audioItemEventSubscriber = AudioItemEventSubscriber().apply {
+        addOnNextEventAction(QueryEntityEvent.Type.DELETE) {
+            removeAudioItems(it.entities)
+        }
+    }
 
     override fun toMutablePlaylist(playlistDirectory: AudioPlaylist<AudioItem>): MutableAudioPlaylist<AudioItem> =
         MutablePlaylist(getNewId(), playlistDirectory.name, playlistDirectory.audioItems())
@@ -39,7 +47,8 @@ open class AudioPlaylistInMemoryRepository(
             getNewId(),
             playlistDirectory.name,
             playlistDirectory.audioItems(),
-            toMutablePlaylists(playlistDirectory.descendantPlaylists()))
+            toMutablePlaylists(playlistDirectory.descendantPlaylists())
+        )
 
     override fun toImmutablePlaylist(audioPlaylist: MutableAudioPlaylist<AudioItem>): AudioPlaylist<AudioItem> =
         ImmutablePlaylist(audioPlaylist.id, audioPlaylist.name, audioPlaylist.audioItems())
@@ -57,7 +66,8 @@ open class AudioPlaylistInMemoryRepository(
             playlistDirectory.id,
             playlistDirectory.name,
             playlistDirectory.audioItems(),
-            toImmutablePlaylistDirectories(playlistDirectory.descendantPlaylists()))
+            toImmutablePlaylistDirectories(playlistDirectory.descendantPlaylists())
+        )
 
     @Suppress("UNCHECKED_CAST")
     override fun toImmutablePlaylistDirectories(audioPlaylists: Set<AudioPlaylist<AudioItem>>): Set<AudioPlaylist<AudioItem>> =

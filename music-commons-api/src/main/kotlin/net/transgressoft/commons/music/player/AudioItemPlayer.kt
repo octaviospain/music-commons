@@ -7,7 +7,7 @@ interface AudioItemPlayer {
         UNKNOWN, READY, PAUSED, PLAYING, STOPPED, STALLED, HALTED, DISPOSED
     }
 
-    fun play(audioItem: AudioItem?)
+    fun play(audioItem: AudioItem)
     fun pause()
     fun resume()
     fun stop()

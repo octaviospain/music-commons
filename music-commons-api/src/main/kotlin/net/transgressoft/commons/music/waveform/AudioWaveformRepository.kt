@@ -1,12 +1,17 @@
 package net.transgressoft.commons.music.waveform
 
+import net.transgressoft.commons.event.QueryEntitySubscriber
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.query.Repository
+import java.util.concurrent.CompletableFuture
 
 interface AudioWaveformRepository<W : AudioWaveform> : Repository<W> {
 
-    @Throws(AudioWaveformProcessingException::class)
-    fun create(audioItem: AudioItem, width: Short, height: Short): W
+    val audioItemEventSubscriber: QueryEntitySubscriber<AudioItem>
+
+    fun getOrCreateWaveformAsync(audioItem: AudioItem, width: Short, height: Short): CompletableFuture<W>
+
+    fun removeByAudioItemIds(audioItemIds: List<Int>)
 }
 
 class AudioWaveformProcessingException : Exception {
