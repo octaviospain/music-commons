@@ -2,7 +2,6 @@ package net.transgressoft.commons.music.audio
 
 import com.neovisionaries.i18n.CountryCode
 import net.transgressoft.commons.music.audio.AudioItemUtils.beautifyArtistName
-import net.transgressoft.commons.music.audio.AudioItemUtils.getArtistsNamesInvolved
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.AudioHeader
 import org.jaudiotagger.tag.FieldKey
@@ -16,7 +15,6 @@ internal class JAudioTaggerMetadataReader(private val audioItemPath: Path) : Aud
 
     private val title: String by lazy { getFieldIfExisting(FieldKey.TITLE) ?: "" }
     private val artist: Artist by lazy { readArtist() }
-    private val artistsInvolved: Set<String> by lazy { getArtistsNamesInvolved(title, artist.name, album.albumArtist.name) }
     private val album: Album by lazy { readAlbum(extension) }
     private val duration: Duration
     private val genre: Genre by lazy { getFieldIfExisting(FieldKey.GENRE)?.let { Genre.parseGenre(it) } ?: Genre.UNDEFINED }

@@ -6,5 +6,5 @@ package net.transgressoft.commons.music.audio
 interface AudioItemMetadataWriter {
 
     @Throws(AudioItemManipulationException::class)
-    fun writeMetadata(serializableAudioItem: AudioItem)
+    fun writeMetadata(audioItem: AudioItem)
 }

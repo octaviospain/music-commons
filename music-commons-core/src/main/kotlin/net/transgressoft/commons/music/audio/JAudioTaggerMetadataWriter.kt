@@ -3,7 +3,6 @@ package net.transgressoft.commons.music.audio
 import mu.KotlinLogging
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.wav.WavOptions
-import org.jaudiotagger.tag.FieldDataInvalidException
 import org.jaudiotagger.tag.FieldKey
 import org.jaudiotagger.tag.Tag
 import org.jaudiotagger.tag.flac.FlacTag
@@ -26,23 +25,23 @@ internal class JAudioTaggerMetadataWriter : AudioItemMetadataWriter {
     private val logger = KotlinLogging.logger {}
     
     @Throws(AudioItemManipulationException::class)
-    override fun writeMetadata(serializableAudioItem: AudioItem) {
-        logger.debug { "Writing AudioItem to file ${serializableAudioItem.path}" }
+    override fun writeMetadata(audioItem: AudioItem) {
+        logger.debug { "Writing AudioItem to file ${audioItem.path}" }
 
-        val audioFile = serializableAudioItem.path.toFile()
+        val audioFile = audioItem.path.toFile()
         try {
             val audio = AudioFileIO.read(audioFile)
             val emptyTag = createEmptyTag(audio.audioHeader.format)
             audio.tag = emptyTag
-            setTrackFieldsToTag(audio.tag, serializableAudioItem)
+            setTrackFieldsToTag(audio.tag, audioItem)
             audio.commit()
-            logger.debug { "AudioItem $serializableAudioItem written to file ${audioFile.absolutePath}" }
+            logger.debug { "AudioItem $audioItem written to file ${audioFile.absolutePath}" }
 
-            serializableAudioItem.album.coverImage?.let {
-                overwriteCoverImage(serializableAudioItem, audioFile, it)
+            audioItem.album.coverImage?.let {
+                overwriteCoverImage(audioItem, audioFile, it)
             }
         } catch (exception: Exception) {
-            val errorText = "Error writing metadata of ${serializableAudioItem.path}"
+            val errorText = "Error writing metadata of ${audioItem.path}"
             logger.error(errorText, exception)
             throw AudioItemManipulationException(errorText, exception)
         }

@@ -50,12 +50,12 @@ class AudioItemTestFactory {
 
     fun createTestAudioItem(): AudioItem {
         val id = testCounter++
-        return ImmutableAudioItem(id, attributes.modifiedCopyWithModifiedTime(PATH, DEFAULT_PATH.resolve("$id.mp3")))
+        return ImmutableAudioItem(id, attributes.copyWithModifiedTime(PATH, DEFAULT_PATH.resolve("$id.mp3")))
     }
 
     private fun <V : Any> attributeCopy(id: Int, attribute: AudioItemAttribute<AudioItem, V>, value: V): AudioItemAttributes =
-        attributes.modifiedCopyWithModifiedTime(PATH, DEFAULT_PATH.resolve("$id.mp3"))
-            .modifiedCopyWithModifiedTime(attribute, value)
+        attributes.copyWithModifiedTime(PATH, DEFAULT_PATH.resolve("$id.mp3"))
+            .copyWithModifiedTime(attribute, value)
 
     fun createTestAudioItem(title: String): AudioItem {
         val id = testCounter++
@@ -73,7 +73,7 @@ class AudioItemTestFactory {
 
     fun createTestAudioItem(title: String, duration: Duration): AudioItem {
         val id = testCounter++
-        return ImmutableAudioItem(id, attributeCopy(id, DURATION, duration).modifiedCopyWithModifiedTime(TITLE, title))
+        return ImmutableAudioItem(id, attributeCopy(id, DURATION, duration).copyWithModifiedTime(TITLE, title))
     }
 
     fun createTestAudioItemsList(size: Int): List<AudioItem> {

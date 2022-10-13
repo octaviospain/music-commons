@@ -2,6 +2,7 @@ package net.transgressoft.commons.music.audio
 
 import org.jetbrains.kotlin.com.google.common.base.CharMatcher
 import org.jetbrains.kotlin.com.google.common.base.Splitter
+import java.nio.file.Path
 import java.util.regex.Pattern
 import java.util.stream.Stream
 
@@ -152,5 +153,11 @@ object AudioItemUtils {
             .replace("\\s+".toRegex(), " ")
             .replace(" (?i)(vs)(\\.|\\s)".toRegex(), " vs ")
             .replace(" (?i)(versus) ".toRegex(), " versus ")
+    }
+
+    fun readAudioItemAttributes(path: Path): AudioItemAttributes = JAudioTaggerMetadataReader(path).readAudioItemAttributes()
+
+    fun writeAudioItemAttributes(audioItem: AudioItem) {
+        JAudioTaggerMetadataWriter().writeMetadata(audioItem)
     }
 }

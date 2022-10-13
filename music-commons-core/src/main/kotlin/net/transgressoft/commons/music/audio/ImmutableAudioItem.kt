@@ -43,6 +43,7 @@ data class ImmutableAudioItem(
     dateOfCreation,
     lastDateModified
 ) {
+
     constructor(id: Int, attributes: AudioItemAttributes) : this(
         id,
         attributes[AudioItemAttribute.PATH]!!,

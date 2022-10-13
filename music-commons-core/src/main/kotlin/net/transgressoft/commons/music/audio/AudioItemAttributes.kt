@@ -63,7 +63,7 @@ open class AudioItemAttributes(attributeSet: AudioItemAttributes?) : ImmutableAt
         set(LAST_DATE_MODIFIED, lastDateModified)
     })
 
-    fun <V : Any> modifiedCopyWithModifiedTime(attribute: Attribute<AudioItem, V>, value: V): AudioItemAttributes =
+    fun <V : Any> copyWithModifiedTime(attribute: Attribute<AudioItem, V>, value: V): AudioItemAttributes =
         MutableAudioItemAttributes(this).also {
             it[attribute] = value
             it[LAST_DATE_MODIFIED] = LocalDateTime.now()

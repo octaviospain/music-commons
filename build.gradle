@@ -1,6 +1,6 @@
 plugins {
     id 'com.palantir.git-version' version '0.15.0'
-    id 'org.jetbrains.kotlin.jvm' version '1.6.21'
+    id 'org.jetbrains.kotlin.jvm' version '1.7.0'
 }
 
 group 'net.transgressoft'
@@ -27,7 +27,7 @@ subprojects {
     apply plugin: 'maven-publish'
 
     ext {
-        kotlinVersion = '1.6.21'
+        kotlinVersion = '1.7.0'
 
         // the password needs to be specified via command line
         repoPass = project.hasProperty('repoPass') ? project.getProperty('repoPass') : ''
