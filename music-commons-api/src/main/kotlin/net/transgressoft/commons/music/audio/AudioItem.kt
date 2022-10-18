@@ -1,6 +1,5 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.query.AttributeSet
 import net.transgressoft.commons.query.QueryEntity
 import java.nio.file.Path
 import java.time.Duration
@@ -30,5 +29,3 @@ interface AudioItem : QueryEntity {
     val dateOfCreation: LocalDateTime
     val lastDateModified: LocalDateTime
 }
-
-interface AudioItemAttributes : AttributeSet<AudioItem>

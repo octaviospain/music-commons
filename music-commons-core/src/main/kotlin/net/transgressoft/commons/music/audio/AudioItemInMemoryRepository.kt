@@ -1,7 +1,6 @@
 package net.transgressoft.commons.music.audio
 
 import mu.KotlinLogging
-import net.transgressoft.commons.music.audio.AudioItemAttribute.*
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -23,8 +22,8 @@ open class AudioItemInMemoryRepository(
     }
 
     override fun containsAudioItemWithArtist(artistName: String): Boolean {
-        return search(ARTISTS_INVOLVED.containsElement(artistName)).isNotEmpty()
+        return search { it.artistsInvolved.contains(artistName) }.isNotEmpty()
     }
 
-    override fun isAlbumNotEmpty(album: Album) = search(ALBUM.equalsTo(album)).isNotEmpty()
+    override fun isAlbumNotEmpty(album: Album) = search { it.album == album }.isNotEmpty()
 }

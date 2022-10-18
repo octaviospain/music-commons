@@ -1,10 +1,10 @@
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.query.BooleanQueryTerm
 import net.transgressoft.commons.query.QueryEntity
 import java.io.IOException
 import java.nio.file.Path
+import java.util.function.Predicate
 
 interface AudioPlaylist<I : AudioItem> : QueryEntity, Comparable<AudioPlaylist<I>> {
 
@@ -12,12 +12,16 @@ interface AudioPlaylist<I : AudioItem> : QueryEntity, Comparable<AudioPlaylist<I
 
     val name: String
 
-    fun audioItems(): List<I>
+    val audioItems: List<I>
 
-    fun audioItemsAllMatch(queryPredicate: BooleanQueryTerm<AudioItem>): Boolean
+    val playlists: Set<AudioPlaylist<I>>
 
-    fun audioItemsAnyMatch(queryPredicate: BooleanQueryTerm<AudioItem>): Boolean
+    fun audioItemsAllMatch(predicate: Predicate<AudioItem>): Boolean
+
+    fun audioItemsAnyMatch(predicate: Predicate<AudioItem>): Boolean
 
     @Throws(IOException::class)
     fun exportToM3uFile(destinationPath: Path)
+
+    fun toMutablePlaylist(): MutableAudioPlaylist<I>
 }

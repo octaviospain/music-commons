@@ -177,11 +177,11 @@ internal class AudioPlaylistInMemoryRepositoryTest : MusicLibraryTestBase() {
         audioPlaylistRepository.createPlaylistDirectory("Nina Simone discography")
         assertThat(audioPlaylistRepository).hasSize(2)
 
-        val bestHits = mock<ImmutablePlaylist<AudioItem>> {
+        val bestHits = mock<MutablePlaylist<AudioItem>> {
             on { name } doReturn "Best hits"
             on { isDirectory } doReturn false
         }
-        val rock = mock<ImmutablePlaylist<AudioItem>> {
+        val rock = mock<MutablePlaylist<AudioItem>> {
             on { name } doReturn "Best hits - Rock"
             on { isDirectory } doReturn false
         }
@@ -192,7 +192,7 @@ internal class AudioPlaylistInMemoryRepositoryTest : MusicLibraryTestBase() {
             on { name } doReturn "Nina Simone discography"
             on { isDirectory } doReturn true
         }
-        val revolver = mock<ImmutablePlaylist<AudioItem>> {
+        val revolver = mock<MutablePlaylist<AudioItem>> {
             on { name } doReturn "Revolver"
             on { isDirectory } doReturn false
         }

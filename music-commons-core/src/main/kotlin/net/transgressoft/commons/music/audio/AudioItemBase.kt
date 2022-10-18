@@ -1,7 +1,6 @@
 package net.transgressoft.commons.music.audio
 
 import com.google.common.base.Objects
-import net.transgressoft.commons.query.Attribute
 import net.transgressoft.commons.query.QueryEntity
 import java.nio.file.Path
 import java.time.Duration
@@ -27,25 +26,6 @@ abstract class AudioItemBase(
     override val dateOfCreation: LocalDateTime = LocalDateTime.now(),
     override val lastDateModified: LocalDateTime = dateOfCreation
 ) : AudioItem, Comparable<AudioItem> {
-
-    constructor(id: Int, attributes: AudioItemAttributes) : this(
-        id,
-        attributes[AudioItemAttribute.PATH]!!,
-        attributes[AudioItemAttribute.TITLE]!!,
-        attributes[AudioItemAttribute.DURATION]!!,
-        attributes[AudioItemAttribute.BITRATE]!!,
-        attributes[AudioItemAttribute.ARTIST]!!,
-        attributes[AudioItemAttribute.ALBUM]!!,
-        attributes[AudioItemAttribute.GENRE]!!,
-        attributes[AudioItemAttribute.COMMENTS],
-        attributes[AudioItemAttribute.TRACK_NUMBER],
-        attributes[AudioItemAttribute.DISC_NUMBER],
-        attributes[AudioItemAttribute.BPM],
-        attributes[AudioItemAttribute.ENCODER],
-        attributes[AudioItemAttribute.ENCODING],
-        attributes[AudioItemAttribute.DATE_OF_CREATION]!!,
-        attributes[AudioItemAttribute.LAST_DATE_MODIFIED]!!
-    )
 
     override val uniqueId by lazy {
         StringJoiner("-")
@@ -75,9 +55,6 @@ abstract class AudioItemBase(
     private val attributes by lazy {
         AudioItemAttributes(this)
     }
-
-    @Suppress("UNCHECKED_CAST")
-    override fun <A : Attribute<E, V>, E : QueryEntity, V : Any> get(attribute: A): V? = attributes[attribute as Attribute<AudioItem, V>]
 
     override operator fun compareTo(other: AudioItem) =
         Comparator.comparing(QueryEntity::uniqueId, java.lang.String.CASE_INSENSITIVE_ORDER).compare(this, other)

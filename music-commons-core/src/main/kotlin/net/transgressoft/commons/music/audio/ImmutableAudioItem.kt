@@ -44,25 +44,6 @@ data class ImmutableAudioItem(
     lastDateModified
 ) {
 
-    constructor(id: Int, attributes: AudioItemAttributes) : this(
-        id,
-        attributes[AudioItemAttribute.PATH]!!,
-        attributes[AudioItemAttribute.TITLE]!!,
-        attributes[AudioItemAttribute.DURATION]!!,
-        attributes[AudioItemAttribute.BITRATE]!!,
-        attributes[AudioItemAttribute.ARTIST]!!,
-        attributes[AudioItemAttribute.ALBUM]!!,
-        attributes[AudioItemAttribute.GENRE]!!,
-        attributes[AudioItemAttribute.COMMENTS],
-        attributes[AudioItemAttribute.TRACK_NUMBER],
-        attributes[AudioItemAttribute.DISC_NUMBER],
-        attributes[AudioItemAttribute.BPM],
-        attributes[AudioItemAttribute.ENCODER],
-        attributes[AudioItemAttribute.ENCODING],
-        attributes[AudioItemAttribute.DATE_OF_CREATION]!!,
-        attributes[AudioItemAttribute.LAST_DATE_MODIFIED]!!
-    )
-
     override fun toString(): String =
         MoreObjects.toStringHelper(this)
             .add("path", path)

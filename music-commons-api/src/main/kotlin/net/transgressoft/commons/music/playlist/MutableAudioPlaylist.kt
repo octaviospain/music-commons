@@ -4,19 +4,13 @@ import net.transgressoft.commons.music.audio.AudioItem
 
 interface MutableAudioPlaylist<I : AudioItem> : AudioPlaylist<I> {
 
+    override var isDirectory: Boolean
+
     override var name: String
 
-    fun addAudioItems(vararg audioItems: I) {
-        addAudioItems(listOf(*audioItems))
-    }
+    override val audioItems: MutableList<I>
 
-    fun addAudioItems(audioItems: Collection<I>)
+    override val playlists: MutableSet<AudioPlaylist<I>>
 
-    fun removeAudioItems(vararg audioItems: I) {
-        removeAudioItems(setOf(*audioItems))
-    }
-
-    fun removeAudioItems(audioItems: Collection<I>)
-
-    fun clearAudioItems()
+    fun toAudioPlaylist(): AudioPlaylist<I>
 }

@@ -5,7 +5,6 @@ import net.transgressoft.commons.music.audio.AudioItemInMemoryRepository
 import net.transgressoft.commons.music.audio.AudioItemRepository
 import net.transgressoft.commons.music.event.MusicStats
 import net.transgressoft.commons.music.playlist.AudioPlaylist
-import net.transgressoft.commons.music.playlist.AudioPlaylistDirectory
 import net.transgressoft.commons.music.playlist.AudioPlaylistInMemoryRepository
 import net.transgressoft.commons.music.playlist.AudioPlaylistRepository
 import net.transgressoft.commons.music.waveform.AudioWaveform

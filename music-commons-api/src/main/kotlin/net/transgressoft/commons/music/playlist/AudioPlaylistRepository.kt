@@ -3,27 +3,26 @@ package net.transgressoft.commons.music.playlist
 import net.transgressoft.commons.event.QueryEntitySubscriber
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.query.Repository
-import net.transgressoft.commons.query.RepositoryException
 import java.util.*
 
 /**
  * @author Octavio Calleya
  */
-interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>, D : AudioPlaylistDirectory<I, P>> : Repository<P> {
+interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>> : Repository<P> {
 
     val audioItemEventSubscriber: QueryEntitySubscriber<I>
 
-    @Throws(RepositoryException::class)
+    @Throws(AudioPlaylistRepositoryException::class)
     fun createPlaylist(name: String): P
 
-    @Throws(RepositoryException::class)
+    @Throws(AudioPlaylistRepositoryException::class)
     fun createPlaylist(name: String, audioItems: List<I>): P
 
-    @Throws(RepositoryException::class)
-    fun createPlaylistDirectory(name: String): D
+    @Throws(AudioPlaylistRepositoryException::class)
+    fun createPlaylistDirectory(name: String): P
 
-    @Throws(RepositoryException::class)
-    fun createPlaylistDirectory(name: String, audioItems: List<I>): D
+    @Throws(AudioPlaylistRepositoryException::class)
+    fun createPlaylistDirectory(name: String, audioItems: List<I>): P
 
     /**
      * Precondition, <tt>playlist</tt> exist in the <tt>AudioPlaylistRepository</tt>.
@@ -41,7 +40,8 @@ interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>, D : Audio
      * @param playlist
      * @param directory
      */
-    fun addPlaylistsToDirectory(playlist: Set<P>, directory: D)
+    @Throws(AudioPlaylistRepositoryException::class)
+    fun addPlaylistsToDirectory(playlist: Set<P>, directory: P)
 
     /**
      * Precondition, <tt>playlist</tt> exist in the <tt>AudioPlaylistRepository</tt>.
@@ -61,15 +61,14 @@ interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>, D : Audio
      * @param playlistToMove
      * @param destinationPlaylist
      */
-    fun movePlaylist(playlistToMove: P, destinationPlaylist: D)
+    @Throws(AudioPlaylistRepositoryException::class)
+    fun movePlaylist(playlistToMove: P, destinationPlaylist: P)
 
-    fun findAllByName(name: String): List<P>
-
-    fun findSinglePlaylistByName(name: String): Optional<P>
-
-    fun findSingleDirectoryByName(name: String): Optional<D>
+    fun findByName(name: String): P?
 
     fun numberOfPlaylists(): Int
 
     fun numberOfPlaylistDirectories(): Int
 }
+
+class AudioPlaylistRepositoryException(message: String) : Exception(message)

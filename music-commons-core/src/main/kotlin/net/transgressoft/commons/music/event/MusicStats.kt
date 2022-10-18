@@ -6,7 +6,7 @@ import net.transgressoft.commons.event.QueryEntitySubscription
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemEventType.Type.PLAYED
 
-class MusicStats : AudioItemEventSubscriber() {
+class MusicStats : AudioItemEventSubscriber<AudioItem>() {
 
     private val log = KotlinLogging.logger {}
 

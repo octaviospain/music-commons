@@ -51,10 +51,10 @@ open class AudioPlaylistInMemoryRepository(
         )
 
     override fun toImmutablePlaylist(audioPlaylist: MutableAudioPlaylist<AudioItem>): AudioPlaylist<AudioItem> =
-        ImmutablePlaylist(audioPlaylist.id, audioPlaylist.name, audioPlaylist.audioItems())
+        MutablePlaylist(audioPlaylist.id, audioPlaylist.name, audioPlaylist.audioItems())
 
     override fun toImmutablePlaylist(audioPlaylist: AudioPlaylist<AudioItem>): AudioPlaylist<AudioItem> {
-        return ImmutablePlaylist(audioPlaylist.id, audioPlaylist.name, audioPlaylist.audioItems())
+        return MutablePlaylist(audioPlaylist.id, audioPlaylist.name, audioPlaylist.audioItems())
     }
 
     override fun toImmutablePlaylistDirectory(playlistDirectory: MutableAudioPlaylistDirectory<AudioItem, AudioPlaylist<AudioItem>>): AudioPlaylist<AudioItem> =
