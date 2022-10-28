@@ -39,10 +39,9 @@ internal class JAudioTaggerMetadataReader(private val audioItemPath: Path) : Aud
         bitRate = getBitRate(audioHeader)
     }
 
-    override fun readAudioItemAttributes() =
-        AudioItemAttributes(
-            audioItemPath, title, artist, album, genre, comments, trackNumber, discNumber,
-            bpm, duration, bitRate, encoder, encoding, LocalDateTime.now(), LocalDateTime.now()
+    override fun readAudioItem(id: Int) = ImmutableAudioItem(
+            id, audioItemPath, title, duration, bitRate, artist, album, genre, comments, trackNumber, discNumber,
+            bpm, encoder, encoding, LocalDateTime.now(), LocalDateTime.now()
         )
 
     private fun getBitRate(audioHeader: AudioHeader): Int {

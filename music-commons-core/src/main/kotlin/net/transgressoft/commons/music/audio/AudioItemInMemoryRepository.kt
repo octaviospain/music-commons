@@ -14,8 +14,7 @@ open class AudioItemInMemoryRepository(
     override fun createFromFile(path: Path): AudioItem {
         require(!Files.notExists(path)) { "File " + path.toAbsolutePath() + " does not exist" }
 
-        val audioItemAttributes = AudioItemUtils.readAudioItemAttributes(path)
-        val audioItem = ImmutableAudioItem(newId(), audioItemAttributes)
+        val audioItem = JAudioTaggerMetadataReader(path).readAudioItem(newId())
         logger.debug { "New AudioItem read from file $path" }
         add(audioItem)
         return audioItem

@@ -52,10 +52,6 @@ abstract class AudioItemBase(
         path.toFile().length()
     }
 
-    private val attributes by lazy {
-        AudioItemAttributes(this)
-    }
-
     override operator fun compareTo(other: AudioItem) =
         Comparator.comparing(QueryEntity::uniqueId, java.lang.String.CASE_INSENSITIVE_ORDER).compare(this, other)
 
