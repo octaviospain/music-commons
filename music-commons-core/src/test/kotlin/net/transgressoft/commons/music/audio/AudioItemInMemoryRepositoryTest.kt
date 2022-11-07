@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableSet
 import com.google.common.truth.Truth.assertThat
 import com.neovisionaries.i18n.CountryCode
 import net.transgressoft.commons.music.MusicLibraryTestBase
-import net.transgressoft.commons.music.audio.AudioItemAttribute.ALBUM
 import org.jaudiotagger.audio.AudioFile
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.wav.WavOptions
@@ -28,7 +27,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.time.Duration
-import java.util.*
 
 internal class AudioItemInMemoryRepositoryTest : MusicLibraryTestBase() {
 
@@ -64,7 +62,7 @@ internal class AudioItemInMemoryRepositoryTest : MusicLibraryTestBase() {
     lateinit var audioItem: AudioItem
     lateinit var audioItemRepository: AudioItemRepository<AudioItem>
 
-    private fun Album.audioItems(): Set<AudioItem> = audioItemRepository.search(ALBUM.equalsTo(this)).toSet()
+    private fun Album.audioItems(): Set<AudioItem> = audioItemRepository.search { it.album == this }.toSet()
 
     @BeforeEach
     fun beforeEach() {
@@ -216,18 +214,18 @@ internal class AudioItemInMemoryRepositoryTest : MusicLibraryTestBase() {
         val result = audioItemRepository.addOrReplaceAll(set)
         Assertions.assertTrue(result)
         assertThat(audioItemRepository).hasSize(9)
-        assertThat(audioItemRepository.search(ALBUM.notEqualsTo(album))).hasSize(5)
+        assertThat(audioItemRepository.search { it.album != album } ).hasSize(5)
 
-        var helpAudioItems = audioItemRepository.search(ALBUM.nameEqualsTo(album.name))
+        var helpAudioItems = audioItemRepository.search { it.album.name == album.name }
         assertThat(audioItem.album.audioItems()).containsExactlyElementsIn(helpAudioItems)
 
-        helpAudioItems = audioItemRepository.search(ALBUM.nameEqualsTo(album.name.uppercase()))
+        helpAudioItems = audioItemRepository.search { it.album.name == album.name.uppercase() }
         assertThat(audioItem.album.audioItems()).containsAtLeastElementsIn(helpAudioItems)
 
-        helpAudioItems = audioItemRepository.search(ALBUM.nameEqualsTo(album.name.uppercase(), ignoreCase = true))
+        helpAudioItems = audioItemRepository.search { it.album.name.equals(album.name.uppercase(), ignoreCase = true) }
         assertThat(audioItem.album.audioItems()).containsExactlyElementsIn(helpAudioItems)
 
-        helpAudioItems = audioItemRepository.search(ALBUM.equalsTo(album))
+        helpAudioItems = audioItemRepository.search { it.album == album }
         assertThat(audioItem.album.audioItems()).containsExactlyElementsIn(helpAudioItems)
 
     }

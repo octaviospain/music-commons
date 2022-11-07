@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
 import java.util.stream.Collectors
 
+@Suppress("UNCHECKED_CAST")
 abstract class AudioPlaylistInMemoryRepositoryBase<I : AudioItem, P : AudioPlaylist<I>>
 protected constructor(
     playlistsById: MutableMap<Int, P>,
@@ -134,38 +135,40 @@ protected constructor(
             .ifPresent { it.audioItems.addAll(audioItems) }
     }
 
-    override fun addPlaylistsToDirectory(playlist: Set<P>, directory: P) {
-        val mutablePlaylists: Set<MP> = toMutablePlaylists(playlist)
-        directories.findById(directory.id)
+    override fun addPlaylistsToDirectory(playlistsToAdd: Set<P>, directory: P) {
+        val mutablePlaylists: Set<P> = playlistsToAdd.map { it.toMutablePlaylist() as P }.toSet()
+        playlists.findById(directory.id)
             .ifPresent {
-                it.addPlaylists(mutablePlaylists as Set<P>)
-                playlistsMultiMap.putAll(
-                    it.uniqueId,
-                    mutablePlaylists.stream().map { d -> d.uniqueId }.collect(Collectors.toSet())
-                )
+                if (it.isDirectory) {
+                    it.playlists.addAll(mutablePlaylists)
+                    playlistsMultiMap.putAll(
+                        it.uniqueId,
+                        mutablePlaylists.stream().map { d -> d.uniqueId }.collect(Collectors.toSet())
+                    )
+                }
             }
     }
 
-    override fun movePlaylist(playlistToMove: P, destinationPlaylist: D) {
-        findByIdInternal(playlistToMove.id)
-            .ifPresent { playlist: MP ->
-                directories.findById(destinationPlaylist.id).ifPresent { playlistDirectory: MD ->
-                    ancestor(playlistToMove).ifPresent { ancestor: MD ->
+    override fun movePlaylist(playlistToMove: P, destinationPlaylist: P) {
+        findById(playlistToMove.id)
+            .ifPresent { playlist: P ->
+                playlists.findById(destinationPlaylist.id).ifPresent { playlistDirectory: MutableAudioPlaylist<I> ->
+                    ancestor(playlistToMove).ifPresent { ancestor: MutableAudioPlaylist<I> ->
                         playlistsMultiMap.remove(ancestor.uniqueId, playlist.uniqueId)
-                        ancestor.removePlaylists(playlist as P)
+                        ancestor.playlists.remove(playlist)
                     }
                     playlistsMultiMap.put(playlistDirectory.uniqueId, playlist.uniqueId)
-                    playlistDirectory.addPlaylists(playlist as P)
+                    playlistDirectory.playlists.remove(playlist)
                     logger.debug { "Playlist '${playlistToMove.name}' moved to '${destinationPlaylist.name}'" }
                 }
             }
     }
 
-    private fun ancestor(playlistNode: P): Optional<P> =
+    private fun ancestor(playlistNode: P): Optional<MutableAudioPlaylist<I>> =
         if (playlistsMultiMap.containsValue(playlistNode.uniqueId)) {
             playlistsMultiMap.entries().stream()
                 .filter { playlistNode.uniqueId == it.value }
-                .map { playlists.findByUniqueId(it.key).get() as P }
+                .map { playlists.findByUniqueId(it.key).get().toMutablePlaylist() }
                 .findFirst()
         } else {
             Optional.empty()
@@ -177,12 +180,17 @@ protected constructor(
 
     override fun removeAudioItems(audioItems: Collection<I>) = playlists.forEach { it.audioItems.removeAll(audioItems) }
 
-    override fun findByName(name: String): P? = playlists.search { it.name == name } as P?
+    override fun findByName(name: String): P? = playlists.search { it.name == name }.let {
+        if (it.isNotEmpty()) {
+            assert(it.size == 1)
+            it[0] as P
+        } else null
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false
-        val that = other as AudioPlaylistInMemoryRepositoryBase<I, P>
+        val that = other as AudioPlaylistInMemoryRepositoryBase<*, *>
         return playlistsMultiMap == that.playlistsMultiMap && playlists == that.playlists
     }
 

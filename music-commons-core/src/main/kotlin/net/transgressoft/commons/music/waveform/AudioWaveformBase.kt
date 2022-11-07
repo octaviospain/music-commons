@@ -1,7 +1,5 @@
 package net.transgressoft.commons.music.waveform
 
-import net.transgressoft.commons.query.Attribute
-import net.transgressoft.commons.query.QueryEntity
 import java.util.*
 
 open class AudioWaveformBase(
@@ -33,13 +31,6 @@ open class AudioWaveformBase(
         return width == that.width && height == that.height &&
                 com.google.common.base.Objects.equal(amplitudes, that.amplitudes)
     }
-
-    @Suppress("UNCHECKED_CAST")
-    override fun <A : Attribute<E, V>, E : QueryEntity, V : Any> get(attribute: A): V? =
-        when (attribute as AudioWaveformAttribute<AudioWaveform, V>) {
-            AudioWaveformAttribute.HEIGHT -> height as V
-            AudioWaveformAttribute.WIDTH -> width as V
-        }
 
     override fun hashCode(): Int {
         return com.google.common.base.Objects.hashCode(width, height, amplitudes)

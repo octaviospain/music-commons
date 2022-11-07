@@ -17,7 +17,7 @@ internal class MusicLibraryIntegrationTest {
 
     lateinit var audioItemRepository: AudioItemRepository<AudioItem>
     lateinit var audioWaveformRepository: AudioWaveformRepository<AudioWaveform>
-    lateinit var audioPlaylistRepository: AudioPlaylistRepository<AudioItem, AudioPlaylist<AudioItem>, AudioPlaylistDirectory<AudioItem, AudioPlaylist<AudioItem>>>
+    lateinit var audioPlaylistRepository: AudioPlaylistRepository<AudioItem, AudioPlaylist<AudioItem>>
     lateinit var musicStats: MusicStats
 
     @BeforeEach

@@ -2,7 +2,6 @@ package net.transgressoft.commons.music.audio
 
 import com.google.common.truth.Truth.assertThat
 import com.neovisionaries.i18n.CountryCode
-import net.transgressoft.commons.music.audio.AudioItemAttribute.*
 import net.transgressoft.commons.music.audio.AudioItemUtils.beautifyArtistName
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Disabled
@@ -55,28 +54,11 @@ internal class ImmutableAudioItemTest {
         on { isCompilation } doReturn isCompilation
         on { albumArtist } doReturn albumArtist
     }
-    var attributes: AudioItemAttributes = AudioItemAttributes(
-        path,
-        title,
-        artist,
-        album,
-        genre,
-        comments,
-        trackNumber,
-        discNumber,
-        bpm,
-        duration,
-        bitRate,
-        encoder,
-        encoding,
-        dateOfCreation,
-        dateOfCreation
-    )
 
     @Test
     @DisplayName("AudioItem properties")
     fun propertiesTest() {
-        var audioItem = ImmutableAudioItem(id, attributes)
+        var audioItem = ImmutableAudioItem(id, path, title, duration, bitRate, artist, album, genre, comments, trackNumber, discNumber, bpm, encoder, encoding, dateOfCreation)
         val dateOfCreation = audioItem.dateOfCreation
         val lastDateModified = audioItem.lastDateModified
 
@@ -106,7 +88,6 @@ internal class ImmutableAudioItemTest {
         assertEquals(genre, audioItem.genre)
         assertEquals(encoding, audioItem.encoding)
         assertEquals(encoder, audioItem.encoder)
-        assertEquals(path, audioItem[PATH])
 
         audioItem = audioItem.copy(comments = "modified", lastDateModified = LocalDateTime.now())
         assertNotEquals(lastDateModified, audioItem.lastDateModified)

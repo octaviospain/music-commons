@@ -41,7 +41,7 @@ interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>> : Reposit
      * @param directory
      */
     @Throws(AudioPlaylistRepositoryException::class)
-    fun addPlaylistsToDirectory(playlist: Set<P>, directory: P)
+    fun addPlaylistsToDirectory(playlistsToAdd: Set<P>, directory: P)
 
     /**
      * Precondition, <tt>playlist</tt> exist in the <tt>AudioPlaylistRepository</tt>.

@@ -3,10 +3,6 @@ package net.transgressoft.commons.music.playlist
 import com.google.common.truth.Truth.assertThat
 import net.transgressoft.commons.music.MusicLibraryTestBase
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.AudioItemAttribute.DURATION
-import net.transgressoft.commons.music.audio.AudioItemAttribute.TITLE
-import net.transgressoft.commons.music.playlist.PlaylistAttribute.NAME
-import net.transgressoft.commons.query.RepositoryException
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
@@ -15,7 +11,7 @@ import java.time.Duration
 import java.util.*
 
 internal class AudioPlaylistInMemoryRepositoryTest : MusicLibraryTestBase() {
-    lateinit var audioPlaylistRepository: AudioPlaylistRepository<AudioItem, AudioPlaylist<AudioItem>, AudioPlaylistDirectory<AudioItem, AudioPlaylist<AudioItem>>>
+    lateinit var audioPlaylistRepository: AudioPlaylistRepository<AudioItem, AudioPlaylist<AudioItem>>
 
     // ├──Best hits
     // │  ├──50s
@@ -36,9 +32,9 @@ internal class AudioPlaylistInMemoryRepositoryTest : MusicLibraryTestBase() {
             createTestAudioItem("50s Rock hit 2 my fav", Duration.ofSeconds(230))
         )
         var rock = audioPlaylistRepository.createPlaylist("Rock", rockAudioItems)
-        assertThat(audioPlaylistRepository.findSinglePlaylistByName(rock.name).orElseThrow()).isEqualTo(rock)
+        assertThat(audioPlaylistRepository.findByName(rock.name)).isEqualTo(rock)
         val playlistsThatContainsAllAudioItemsWith50sInTitle =
-            audioPlaylistRepository.search(PlaylistAttribute.containsAllAudioItemsMatching(TITLE.contains("50s")))
+            audioPlaylistRepository.search { it.name.contains("50s") }
         assertThat(playlistsThatContainsAllAudioItemsWith50sInTitle).containsExactly(rock)
 
         val pop = audioPlaylistRepository.createPlaylist("Pop")
@@ -47,51 +43,51 @@ internal class AudioPlaylistInMemoryRepositoryTest : MusicLibraryTestBase() {
 
         var fifties = audioPlaylistRepository.createPlaylistDirectory("50s")
         audioPlaylistRepository.addPlaylistsToDirectory(setOf(pop, rock), fifties)
-        assertThat(audioPlaylistRepository.findSingleDirectoryByName(fifties.name).orElseThrow().descendantPlaylists())
+        assertThat(audioPlaylistRepository.findByName(fifties.name)?.playlists)
             .containsExactly(pop, rock)
         assertThat(audioPlaylistRepository.numberOfPlaylistDirectories()).isEqualTo(1)
 
         val sixties = audioPlaylistRepository.createPlaylistDirectory("60s")
-        assertThat(sixties.descendantPlaylists()).isEmpty()
+        assertThat(sixties.playlists).isEmpty()
         assertThat(audioPlaylistRepository.numberOfPlaylistDirectories()).isEqualTo(2)
         assertThat(audioPlaylistRepository.findByUniqueId(sixties.id.toString() + "-D-" + sixties.name)).isEqualTo(Optional.of(sixties))
 
         val bestHits = audioPlaylistRepository.createPlaylistDirectory("Best hits")
-        audioPlaylistRepository.addPlaylistsToDirectory(java.util.Set.of(fifties, sixties), bestHits)
-        assertThat(bestHits.descendantPlaylists()).isEmpty() // Fails because bestHits is an old immutable copy
-        assertThat(audioPlaylistRepository.findSingleDirectoryByName(bestHits.name).orElseThrow().descendantPlaylists())
+        audioPlaylistRepository.addPlaylistsToDirectory(setOf(fifties, sixties), bestHits)
+        assertThat(bestHits.playlists).isEmpty() // Fails because bestHits is an old immutable copy
+        assertThat(audioPlaylistRepository.findByName(bestHits.name)?.playlists)
             .containsExactly(fifties, sixties) // bestHits is an updated immutable copy
 
         val thisWeeksFavorites = audioPlaylistRepository.createPlaylist("This weeks' favorites songs")
-        assertThat(audioPlaylistRepository.search(NAME.contains("favorites"))).containsExactly(thisWeeksFavorites)
+        assertThat(audioPlaylistRepository.search { it.name.contains("favorites") }).containsExactly(thisWeeksFavorites)
         assertThat(audioPlaylistRepository.size()).isEqualTo(6)
-        audioPlaylistRepository.addOrReplaceAll(java.util.Set.of(bestHits, thisWeeksFavorites))
+        audioPlaylistRepository.addOrReplaceAll(setOf(bestHits, thisWeeksFavorites))
         assertThat(audioPlaylistRepository.size()).isEqualTo(6)
-        assertThat(audioPlaylistRepository.search(PlaylistAttribute.isNotDirectory)).containsExactly(rock, pop, thisWeeksFavorites)
-        assertThat(audioPlaylistRepository.search(PlaylistAttribute.isDirectory)).containsExactly(fifties, sixties, bestHits)
+        assertThat(audioPlaylistRepository.search { it.isDirectory.not() }).containsExactly(rock, pop, thisWeeksFavorites)
+        assertThat(audioPlaylistRepository.search { it.isDirectory }).containsExactly(fifties, sixties, bestHits)
 
-        rock = audioPlaylistRepository.findById(rock.id).orElseThrow()
-        fifties = audioPlaylistRepository.findSingleDirectoryByName(fifties.name).orElseThrow()
-        val fiftiesItems = java.util.List.of(
+        rock = audioPlaylistRepository.findById(rock.id).get()
+        fifties = audioPlaylistRepository.findByName(fifties.name)!!
+        val fiftiesItems = listOf(
             createTestAudioItem("50s hit", Duration.ofSeconds(30)),
             createTestAudioItem("50s favorite song", Duration.ofSeconds(120))
         )
 
         audioPlaylistRepository.addAudioItemsToPlaylist(fiftiesItems, fifties)
         val playlistsThatContainsAnyAudioItemsWithHitInTitle =
-            audioPlaylistRepository.search(PlaylistAttribute.containsAnyAudioItemsMatching(TITLE.contains("hit")))
-        fifties = audioPlaylistRepository.findSingleDirectoryByName(fifties.name).orElseThrow()
+            audioPlaylistRepository.search { it.name.contains("hit") }
+        fifties = audioPlaylistRepository.findByName(fifties.name)!!
         assertThat(playlistsThatContainsAnyAudioItemsWithHitInTitle).containsExactly(rock, fifties)
-        val playlistsThatContainsAudioItemsWithDurationBelow60 = audioPlaylistRepository.search(
-            PlaylistAttribute.containsAnyAudioItemsMatching(DURATION.isShorterThan(Duration.ofSeconds(61)))
-        )
+        val playlistsThatContainsAudioItemsWithDurationBelow60 = audioPlaylistRepository.search {
+            it.audioItemsAnyMatch { audioItem: AudioItem -> audioItem.duration < Duration.ofSeconds(60) }
+        }
         assertThat(playlistsThatContainsAudioItemsWithDurationBelow60).containsExactly(rock, fifties)
 
         audioPlaylistRepository.removeAudioItemsFromPlaylist(fiftiesItems, fifties)
 
-        assertThat(audioPlaylistRepository.findById(fifties.id).get().audioItems()).isEmpty()
+        assertThat(audioPlaylistRepository.findById(fifties.id).get().audioItems).isEmpty()
         audioPlaylistRepository.removeAudioItems(rockAudioItems)
-        assertThat(audioPlaylistRepository.findById(rock.id).get().audioItems()).isEmpty()
+        assertThat(audioPlaylistRepository.findById(rock.id).get().audioItems).isEmpty()
 
         audioPlaylistRepository.clear()
         assertThat(audioPlaylistRepository).isEmpty()
@@ -107,7 +103,7 @@ internal class AudioPlaylistInMemoryRepositoryTest : MusicLibraryTestBase() {
         audioPlaylistRepository = AudioPlaylistInMemoryRepository()
 
         val rock = audioPlaylistRepository.createPlaylist("Rock")
-        assertThat(audioPlaylistRepository.findSingleByAttribute(NAME, rock.name).orElseThrow()).isEqualTo(rock)
+        assertThat(audioPlaylistRepository.findByName(rock.name)).isEqualTo(rock)
         val pop = audioPlaylistRepository.createPlaylist("Pop")
         var fifties = audioPlaylistRepository.createPlaylistDirectory("50s")
         audioPlaylistRepository.addPlaylistsToDirectory(setOf(rock, pop), fifties)
@@ -125,13 +121,13 @@ internal class AudioPlaylistInMemoryRepositoryTest : MusicLibraryTestBase() {
         //    └──Rock
 
         assertThat(audioPlaylistRepository.size()).isEqualTo(5)
-        assertThat(audioPlaylistRepository.findSingleDirectoryByName(selection.name).orElseThrow().descendantPlaylists()).containsExactly(rock)
-        assertThat(audioPlaylistRepository.findSingleDirectoryByName(fifties.name).orElseThrow().descendantPlaylists()).doesNotContain(rock)
+        assertThat(audioPlaylistRepository.findByName(selection.name)?.playlists).containsExactly(rock)
+        assertThat(audioPlaylistRepository.findByName(fifties.name)?.playlists).doesNotContain(rock)
 
         // --
 
-        fifties = audioPlaylistRepository.findSingleDirectoryByName(fifties.name).orElseThrow()
-        selection = audioPlaylistRepository.findSingleDirectoryByName(selection.name).orElseThrow()
+        fifties = audioPlaylistRepository.findByName(fifties.name)!!
+        selection = audioPlaylistRepository.findByName(selection.name)!!
 
         audioPlaylistRepository.movePlaylist(selection, fifties)
 
@@ -142,8 +138,8 @@ internal class AudioPlaylistInMemoryRepositoryTest : MusicLibraryTestBase() {
         //          └──Rock
 
         assertThat(audioPlaylistRepository.size()).isEqualTo(5)
-        assertThat(audioPlaylistRepository.findSingleDirectoryByName(selection.name).orElseThrow().descendantPlaylists()).containsExactly(rock)
-        assertThat(audioPlaylistRepository.findSingleDirectoryByName(fifties.name).orElseThrow().descendantPlaylists()).containsExactly(pop, selection)
+        assertThat(audioPlaylistRepository.findByName(selection.name)?.playlists).containsExactly(rock)
+        assertThat(audioPlaylistRepository.findByName(fifties.name)?.playlists).containsExactly(pop, selection)
     }
 
     @Test
@@ -151,22 +147,15 @@ internal class AudioPlaylistInMemoryRepositoryTest : MusicLibraryTestBase() {
         audioPlaylistRepository = AudioPlaylistInMemoryRepository()
 
         val newPlaylistDirectory = audioPlaylistRepository.createPlaylistDirectory("New playlist")
-        assertThat(assertThrows(RepositoryException::class.java) { audioPlaylistRepository.createPlaylistDirectory("New playlist") })
+        assertThat(assertThrows(AudioPlaylistRepositoryException::class.java) { audioPlaylistRepository.createPlaylistDirectory("New playlist") })
             .hasMessageThat().isEqualTo("Playlist with name 'New playlist' already exists")
+        assertThat(audioPlaylistRepository.size()).isEqualTo(1)
 
-        val newPlaylist: AudioPlaylist<AudioItem> = audioPlaylistRepository.createPlaylist("New playlist")
-        assertThat(assertThrows(RepositoryException::class.java) { audioPlaylistRepository.createPlaylist("New playlist") })
+        assertThat(assertThrows(AudioPlaylistRepositoryException::class.java) { audioPlaylistRepository.createPlaylist("New playlist") })
             .hasMessageThat().isEqualTo("Playlist with name 'New playlist' already exists")
-        assertThat(audioPlaylistRepository.size()).isEqualTo(2)
-        assertThat(audioPlaylistRepository.findAllByName("New playlist")).containsExactly(newPlaylistDirectory, newPlaylist)
+        assertThat(audioPlaylistRepository.size()).isEqualTo(1)
 
-        audioPlaylistRepository.movePlaylist(newPlaylist, newPlaylistDirectory)
-
-        assertThat(audioPlaylistRepository.size()).isEqualTo(2)
-        assertThat(audioPlaylistRepository.findByUniqueId(newPlaylist.id.toString() + "-New playlist").orElseThrow()).isEqualTo(newPlaylist)
-        assertThat(audioPlaylistRepository.findByAttribute(NAME, "New playlist")).containsExactly(newPlaylist, newPlaylistDirectory)
-        assertThat(audioPlaylistRepository.findAllByName("New playlist")).containsExactly(newPlaylistDirectory, newPlaylist)
-        assertThat(audioPlaylistRepository.removeAll(setOf(newPlaylist, newPlaylistDirectory))).isTrue()
+        assertThat(audioPlaylistRepository.remove(newPlaylistDirectory)).isTrue()
         assertThat(audioPlaylistRepository.isEmpty).isTrue()
     }
 
@@ -188,7 +177,7 @@ internal class AudioPlaylistInMemoryRepositoryTest : MusicLibraryTestBase() {
         audioPlaylistRepository.addOrReplaceAll(setOf(bestHits, rock))
         assertThat(audioPlaylistRepository).hasSize(3)
 
-        val ninaSimoneDiscography = mock<ImmutablePlaylistDirectory<AudioItem, AudioPlaylist<AudioItem>>> {
+        val ninaSimoneDiscography = mock<ImmutablePlaylist<AudioItem>> {
             on { name } doReturn "Nina Simone discography"
             on { isDirectory } doReturn true
         }
@@ -196,14 +185,14 @@ internal class AudioPlaylistInMemoryRepositoryTest : MusicLibraryTestBase() {
             on { name } doReturn "Revolver"
             on { isDirectory } doReturn false
         }
-        val beatlesDiscography = mock<ImmutablePlaylistDirectory<AudioItem, AudioPlaylist<AudioItem>>> {
+        val beatlesDiscography = mock<ImmutablePlaylist<AudioItem>> {
             on { name } doReturn "The Beatles' discography"
             on { isDirectory } doReturn true
-            on { descendantPlaylists() } doReturn setOf(revolver)
+            on { playlists } doReturn setOf(revolver)
         }
         audioPlaylistRepository.addOrReplaceAll(setOf(ninaSimoneDiscography, beatlesDiscography))
 
         assertThat(audioPlaylistRepository).hasSize(5)
-        assertThat(audioPlaylistRepository.findSingleDirectoryByName(beatlesDiscography.name).orElseThrow().descendantPlaylists()).isNotEmpty()
+        assertThat(audioPlaylistRepository.findByName(beatlesDiscography.name)?.playlists).isNotEmpty()
     }
 }

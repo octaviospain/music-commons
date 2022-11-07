@@ -11,7 +11,7 @@ open class AudioWaveformInMemoryRepository(entitiesById: MutableMap<Int, AudioWa
     InMemoryRepository<AudioWaveform>(entitiesById),
     AudioWaveformRepository<AudioWaveform> {
 
-    final override val audioItemEventSubscriber = AudioItemEventSubscriber().apply {
+    final override val audioItemEventSubscriber = AudioItemEventSubscriber<AudioItem>().apply {
         addOnNextEventAction(QueryEntityEvent.Type.DELETE) { event ->
             removeByAudioItemIds(event.entities.map { it.id }.toList())
         }
