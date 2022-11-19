@@ -21,7 +21,7 @@ publishing {
 
             pom {
                 name = 'music-commons-api'
-                description = 'Transgressoft Music Commons - AI'
+                description = 'Transgressoft Music Commons - API'
                 licenses {
                     license {
                         name = 'GNU General Public License v3'

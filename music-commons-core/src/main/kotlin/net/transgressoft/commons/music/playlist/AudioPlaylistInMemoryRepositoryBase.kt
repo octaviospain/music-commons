@@ -183,7 +183,7 @@ protected constructor(
     override fun findByName(name: String): P? = playlists.search { it.name == name }.let {
         if (it.isNotEmpty()) {
             assert(it.size == 1)
-            it[0] as P
+            it[0].toAudioPlaylist() as P
         } else null
     }
 
