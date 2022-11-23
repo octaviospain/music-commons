@@ -20,7 +20,7 @@ internal class MutablePlaylistTest : MusicLibraryTestBase() {
         assertThat(playlist1.name).isEqualTo("Playlist1")
         assertThat(playlist1.uniqueId).isEqualTo("1-Playlist1")
         assertThat(playlist1.audioItems).isEmpty()
-        assertThat(playlist1.toString()).isEqualTo("ImmutablePlaylist(id=1, isDirectory=false, name='Playlist1', audioItems=[], playlists=[])")
+        assertThat(playlist1.toString()).isEqualTo("MutablePlaylist(id=1, isDirectory=false, name='Playlist1', audioItems=[], playlists=[])")
 
         playlist1.name = "Modified playlist1"
 
@@ -44,11 +44,43 @@ internal class MutablePlaylistTest : MusicLibraryTestBase() {
         assertThat(playlist1.audioItems).hasSize(1)
         assertThat(playlist1.audioItemsAllMatch { it.title == "Song title" } ).isTrue()
 
-        val playlist2 = MutablePlaylist<AudioItem>(1, false, "Modified playlist1")
+        val playlist2 = MutablePlaylist(1, false, "Modified playlist1", listOf(customAudioItem))
 
         assertThat(playlist1).isEqualTo(playlist2)
         assertThat(playlist1).isEquivalentAccordingToCompareTo(playlist2)
         playlist1.audioItems.clear()
+    }
+
+    @Test
+    fun `Mutable audio directory attributes and operations`() {
+        val directory1 = MutablePlaylist<AudioItem>(1, true,"Directory1")
+
+        assertThat(directory1.isDirectory).isTrue()
+        assertThat(directory1.playlists).isEmpty()
+        assertThat(directory1.audioItems).isEmpty()
+        assertThat(directory1.toString()).isEqualTo("MutablePlaylist(id=1, isDirectory=true, name='Directory1', audioItems=[], playlists=[])")
+
+        val audioItems = createTestAudioItemsSet(5)
+        val p1 = MutablePlaylist(10, true, "p1", _audioItems = audioItems)
+        val p2 = MutablePlaylist<AudioItem>(11, true, "p2")
+        val d1 = MutablePlaylist(12, true, "d1", _audioItems = listOf(createTestAudioItem("One")))
+
+        directory1.playlists.addAll(listOf(p1, p2, d1))
+        assertThat(directory1.playlists).hasSize(3)
+        assertThat(directory1.audioItems).isEmpty()
+        assertThat(directory1.audioItemsRecursive).hasSize(6)
+        assertThat(directory1.playlists.contains(d1)).isTrue()
+
+        d1.audioItems.clear()
+        p1.audioItems.clear()
+        assertThat(directory1.audioItems).isEmpty()
+        assertThat(directory1.audioItemsRecursive).isEmpty()
+
+        directory1.playlists.clear()
+
+        val directory2 = MutablePlaylist<AudioItem>(1, true, "Directory1")
+
+        assertThat(directory1).isEqualTo(directory2)
     }
 
     @Test

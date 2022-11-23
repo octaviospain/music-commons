@@ -14,6 +14,8 @@ interface AudioPlaylist<I : AudioItem> : QueryEntity, Comparable<AudioPlaylist<I
 
     val audioItems: List<I>
 
+    val audioItemsRecursive: List<I>
+
     val playlists: Set<AudioPlaylist<I>>
 
     fun audioItemsAllMatch(predicate: Predicate<AudioItem>): Boolean

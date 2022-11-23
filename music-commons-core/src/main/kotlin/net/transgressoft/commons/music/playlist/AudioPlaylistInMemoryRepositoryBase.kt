@@ -37,15 +37,7 @@ protected constructor(
         return id
     }
 
-    override fun add(entity: P) = addOrReplaceAll(setOf(entity))
-
-    override fun addOrReplace(entity: P) = addOrReplaceAll(setOf(entity))
-
-    override fun addOrReplaceAll(entities: Set<P>): Boolean {
-        val added = AtomicBoolean(false)
-        entities.forEach { added.set(added.get() || addInternal(it)) }
-        return added.get()
-    }
+    override fun add(entity: P) = addInternal(entity)
 
     private fun addInternal(playlistToAdd: AudioPlaylist<I>): Boolean {
         var added = false
@@ -55,6 +47,32 @@ protected constructor(
             added = added or addInternal(p)
         }
         return added
+    }
+
+    override fun addOrReplace(entity: P) = addOrReplaceAll(setOf(entity))
+
+    override fun addOrReplaceAll(entities: Set<P>): Boolean {
+        val added = AtomicBoolean(false)
+        entities.forEach { added.set(addOrReplaceInternal(it) || added.get()) }
+        return added.get()
+    }
+
+    private fun addOrReplaceInternal(playlistToAdd: AudioPlaylist<I>): Boolean {
+        return if (playlists.contains(Predicate<MutableAudioPlaylist<I>>{ it.name == playlistToAdd.name} )) {
+            replace(playlistToAdd)
+            true
+        } else {
+            addInternal(playlistToAdd)
+        }
+    }
+
+    private fun replace(playlistToReplace: AudioPlaylist<I>) {
+        val existing = playlists.find { it.name == playlistToReplace.name }!!
+        existing.playlists.clear()
+        existing.playlists.addAll(playlistToReplace.playlists)
+        existing.audioItems.clear()
+        existing.audioItems.addAll(playlistToReplace.audioItems)
+        existing.isDirectory = playlistToReplace.isDirectory
     }
 
     override fun remove(entity: P) = removeAll(setOf(entity))
@@ -87,7 +105,7 @@ protected constructor(
 
     override fun search(predicate: Predicate<P>): List<P> =
         playlists.filter { predicate.test(it.toAudioPlaylist() as P) }
-            .map { it as P }
+            .map { it.toAudioPlaylist() as P }
             .toList()
 
     override fun findById(id: Int): Optional<P> = playlists.findById(id).map { it.toAudioPlaylist() as P }
@@ -136,14 +154,13 @@ protected constructor(
     }
 
     override fun addPlaylistsToDirectory(playlistsToAdd: Set<P>, directory: P) {
-        val mutablePlaylists: Set<P> = playlistsToAdd.map { it.toMutablePlaylist() as P }.toSet()
         playlists.findById(directory.id)
             .ifPresent {
                 if (it.isDirectory) {
-                    it.playlists.addAll(mutablePlaylists)
+                    it.playlists.addAll(playlistsToAdd)
                     playlistsMultiMap.putAll(
                         it.uniqueId,
-                        mutablePlaylists.stream().map { d -> d.uniqueId }.collect(Collectors.toSet())
+                        playlistsToAdd.stream().map { d -> d.uniqueId }.collect(Collectors.toSet())
                     )
                 }
             }
@@ -158,7 +175,7 @@ protected constructor(
                         ancestor.playlists.remove(playlist)
                     }
                     playlistsMultiMap.put(playlistDirectory.uniqueId, playlist.uniqueId)
-                    playlistDirectory.playlists.remove(playlist)
+                    playlistDirectory.playlists.add(playlist)
                     logger.debug { "Playlist '${playlistToMove.name}' moved to '${destinationPlaylist.name}'" }
                 }
             }
@@ -168,7 +185,7 @@ protected constructor(
         if (playlistsMultiMap.containsValue(playlistNode.uniqueId)) {
             playlistsMultiMap.entries().stream()
                 .filter { playlistNode.uniqueId == it.value }
-                .map { playlists.findByUniqueId(it.key).get().toMutablePlaylist() }
+                .map { playlists.findByUniqueId(it.key).get() }
                 .findFirst()
         } else {
             Optional.empty()

@@ -11,6 +11,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 import java.util.function.Predicate
+import kotlin.streams.toList
 
 internal open class ImmutablePlaylist<I : AudioItem>(
     override val id: Int,
@@ -30,6 +31,12 @@ internal open class ImmutablePlaylist<I : AudioItem>(
                 stringJoiner.add("D")
             }
             return stringJoiner.add(name).toString()
+        }
+
+    override val audioItemsRecursive: List<I>
+        get() = buildList {
+            addAll(audioItems)
+            addAll(playlists.stream().flatMap { it.audioItemsRecursive.stream() }.toList())
         }
 
     override fun audioItemsAllMatch(predicate: Predicate<AudioItem>) = audioItems.stream().allMatch { predicate.test(it) }
