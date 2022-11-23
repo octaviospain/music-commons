@@ -13,4 +13,9 @@ open class AudioPlaylistInMemoryRepository(
             removeAudioItems(it.entities)
         }
     }
+
+    override fun createMutablePlaylist(id: Int, isDirectory: Boolean, name: String, audioItems: List<AudioItem>): MutableAudioPlaylist<AudioItem> =
+        MutablePlaylist(id, isDirectory, name, audioItems.toMutableList())
+
+    override fun toAudioPlaylist(mutableAudioPlaylist: MutableAudioPlaylist<AudioItem>): AudioPlaylist<AudioItem> = mutableAudioPlaylist.toAudioPlaylist()
 }

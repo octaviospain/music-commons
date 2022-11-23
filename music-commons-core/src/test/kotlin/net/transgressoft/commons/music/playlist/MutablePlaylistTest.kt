@@ -13,7 +13,7 @@ internal class MutablePlaylistTest : MusicLibraryTestBase() {
 
     @Test
     fun `Mutable audio playlist attributes and operations`() {
-        val playlist1 = MutablePlaylist<AudioItem>(1, false, "Playlist1")
+        val playlist1 = MutablePlaylist(1, false, "Playlist1")
 
         assertThat(playlist1.id).isEqualTo(1)
         assertThat(playlist1.isDirectory).isFalse()
@@ -53,7 +53,7 @@ internal class MutablePlaylistTest : MusicLibraryTestBase() {
 
     @Test
     fun `Mutable audio directory attributes and operations`() {
-        val directory1 = MutablePlaylist<AudioItem>(1, true,"Directory1")
+        val directory1 = MutablePlaylist(1, true,"Directory1")
 
         assertThat(directory1.isDirectory).isTrue()
         assertThat(directory1.playlists).isEmpty()
@@ -61,9 +61,9 @@ internal class MutablePlaylistTest : MusicLibraryTestBase() {
         assertThat(directory1.toString()).isEqualTo("MutablePlaylist(id=1, isDirectory=true, name='Directory1', audioItems=[], playlists=[])")
 
         val audioItems = createTestAudioItemsSet(5)
-        val p1 = MutablePlaylist(10, true, "p1", _audioItems = audioItems)
-        val p2 = MutablePlaylist<AudioItem>(11, true, "p2")
-        val d1 = MutablePlaylist(12, true, "d1", _audioItems = listOf(createTestAudioItem("One")))
+        val p1 = MutablePlaylist(10, true, "p1", audioItems = audioItems)
+        val p2 = MutablePlaylist(11, true, "p2")
+        val d1 = MutablePlaylist(12, true, "d1", audioItems = listOf(createTestAudioItem("One")))
 
         directory1.playlists.addAll(listOf(p1, p2, d1))
         assertThat(directory1.playlists).hasSize(3)
@@ -78,7 +78,7 @@ internal class MutablePlaylistTest : MusicLibraryTestBase() {
 
         directory1.playlists.clear()
 
-        val directory2 = MutablePlaylist<AudioItem>(1, true, "Directory1")
+        val directory2 = MutablePlaylist(1, true, "Directory1")
 
         assertThat(directory1).isEqualTo(directory2)
     }

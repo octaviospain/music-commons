@@ -2,18 +2,17 @@ package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.AudioItem
 
-internal class MutablePlaylist<I : AudioItem>(
-    override val id: Int,
-    override var isDirectory: Boolean,
-    override var name: String,
-    _audioItems: List<I> = listOf(),
-    _playlists: Set<AudioPlaylist<I>> = setOf()
-) : ImmutablePlaylist<I>(id, isDirectory, name, _audioItems, _playlists), MutableAudioPlaylist<I> {
+internal class MutablePlaylist(
+    id: Int,
+    isDirectory: Boolean,
+    name: String,
+    audioItems: List<AudioItem> = listOf(),
+    playlists: Set<AudioPlaylist<AudioItem>> = setOf()
+) : MutablePlaylistBase<AudioItem>(id, isDirectory, name, audioItems, playlists) {
 
-    override val audioItems: MutableList<I> = _audioItems.toMutableList()
-    override val playlists: MutableSet<AudioPlaylist<I>> = _playlists.toMutableSet()
+    override fun toAudioPlaylist(): AudioPlaylist<AudioItem> = ImmutablePlaylist(id, isDirectory, name, audioItems.toList(), playlists.toSet())
 
-    override fun toAudioPlaylist(): AudioPlaylist<I> = ImmutablePlaylist(id, isDirectory, name, audioItems.toList(), playlists.toSet())
+    override fun toMutablePlaylist(): MutableAudioPlaylist<AudioItem> = this
 
     override fun toString(): String {
         return "MutablePlaylist(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$audioItems, playlists=$playlists)"

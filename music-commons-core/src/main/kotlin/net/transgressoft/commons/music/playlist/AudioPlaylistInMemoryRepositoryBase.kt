@@ -13,7 +13,6 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
 import java.util.stream.Collectors
 
-@Suppress("UNCHECKED_CAST")
 abstract class AudioPlaylistInMemoryRepositoryBase<I : AudioItem, P : AudioPlaylist<I>>
 protected constructor(
     playlistsById: MutableMap<Int, P>,
@@ -28,7 +27,7 @@ protected constructor(
 
     override val audioItemEventSubscriber: QueryEntitySubscriber<I> = AudioItemEventSubscriber()
 
-    protected fun getNewId(): Int {
+    private fun getNewId(): Int {
         var id: Int
         do {
             id = idCounter.getAndIncrement()
@@ -99,24 +98,26 @@ protected constructor(
     override operator fun contains(id: Int) = playlists.contains(id)
 
     override fun contains(predicate: Predicate<P>) =
-        playlists.filter { predicate.test(it.toAudioPlaylist() as P) }
-            .map { it as P }
+        playlists.filter { predicate.test(toAudioPlaylist(it)) }
+            .map { toAudioPlaylist(it) }
             .isNotEmpty()
 
     override fun search(predicate: Predicate<P>): List<P> =
-        playlists.filter { predicate.test(it.toAudioPlaylist() as P) }
-            .map { it.toAudioPlaylist() as P }
+        playlists.filter { predicate.test(toAudioPlaylist(it)) }
+            .map { toAudioPlaylist(it) }
             .toList()
 
-    override fun findById(id: Int): Optional<P> = playlists.findById(id).map { it.toAudioPlaylist() as P }
+    override fun findById(id: Int): Optional<P> = playlists.findById(id).map { toAudioPlaylist(it) }
 
-    override fun findByUniqueId(uniqueId: String): Optional<P> = playlists.findByUniqueId(uniqueId).map { it.toAudioPlaylist() as P }
+    override fun findByUniqueId(uniqueId: String): Optional<P> = playlists.findByUniqueId(uniqueId).map { toAudioPlaylist(it) }
+
+    protected abstract fun toAudioPlaylist(mutableAudioPlaylist: MutableAudioPlaylist<I>): P
 
     override fun size() = playlists.size()
 
     override val isEmpty = playlists.isEmpty
 
-    override fun iterator(): Iterator<P> = playlists.map { it.toAudioPlaylist() as P }.iterator()
+    override fun iterator(): Iterator<P> = playlists.map { toAudioPlaylist(it) }.iterator()
 
     override fun numberOfPlaylists() = playlists.size()
 
@@ -128,9 +129,9 @@ protected constructor(
     @Throws(AudioPlaylistRepositoryException::class)
     override fun createPlaylist(name: String, audioItems: List<I>): P =
         if (findByName(name) == null) {
-            val newPlaylist = MutablePlaylist(getNewId(), false, name, audioItems.toMutableList())
+            val newPlaylist = createMutablePlaylist(getNewId(), false, name, audioItems)
             playlists.add(newPlaylist)
-            newPlaylist.toAudioPlaylist() as P
+            toAudioPlaylist(newPlaylist)
         } else {
             throw AudioPlaylistRepositoryException("Playlist with name '$name' already exists")
         }
@@ -141,12 +142,14 @@ protected constructor(
     @Throws(AudioPlaylistRepositoryException::class)
     override fun createPlaylistDirectory(name: String, audioItems: List<I>): P =
         if (findByName(name) == null) {
-            val newPlaylist = MutablePlaylist(getNewId(), true, name, audioItems.toMutableList())
+            val newPlaylist = createMutablePlaylist(getNewId(), true, name, audioItems)
             playlists.add(newPlaylist)
-            newPlaylist.toAudioPlaylist() as P
+            toAudioPlaylist(newPlaylist)
         } else {
             throw AudioPlaylistRepositoryException("Playlist with name '$name' already exists")
         }
+
+    protected abstract fun createMutablePlaylist(id: Int, isDirectory: Boolean, name: String, audioItems: List<I>): MutableAudioPlaylist<I>
 
     override fun addAudioItemsToPlaylist(audioItems: Collection<I>, playlist: P) {
         playlists.findById(playlist.id)
@@ -200,7 +203,7 @@ protected constructor(
     override fun findByName(name: String): P? = playlists.search { it.name == name }.let {
         if (it.isNotEmpty()) {
             assert(it.size == 1)
-            it[0].toAudioPlaylist() as P
+            toAudioPlaylist(it[0])
         } else null
     }
 

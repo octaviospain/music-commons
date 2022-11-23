@@ -169,15 +169,15 @@ internal class AudioPlaylistInMemoryRepositoryTest : MusicLibraryTestBase() {
         audioPlaylistRepository.createPlaylistDirectory("Nina Simone discography")
         assertThat(audioPlaylistRepository).hasSize(2)
 
-        val bestHits = MutablePlaylist<AudioItem>(9, false,"Best hits")
-        val rock = MutablePlaylist<AudioItem>(10, false, "Best hits - Rock")
+        val bestHits = MutablePlaylist(9, false,"Best hits")
+        val rock = MutablePlaylist(10, false, "Best hits - Rock")
 
         audioPlaylistRepository.addOrReplaceAll(setOf(bestHits, rock))
         assertThat(audioPlaylistRepository).hasSize(3)
 
-        val ninaSimoneDiscography = ImmutablePlaylist<AudioItem>(11, true, "Nina Simone discography")
-        val revolver = MutablePlaylist<AudioItem>(12, false, "Revolver")
-        val beatlesDiscography = ImmutablePlaylist<AudioItem>(13, true, "The Beatles' discography", emptyList(), setOf(revolver))
+        val ninaSimoneDiscography = ImmutablePlaylist(11, true, "Nina Simone discography")
+        val revolver = MutablePlaylist(12, false, "Revolver")
+        val beatlesDiscography = ImmutablePlaylist(13, true, "The Beatles' discography", emptyList(), setOf(revolver))
 
         audioPlaylistRepository.addOrReplaceAll(setOf(ninaSimoneDiscography, beatlesDiscography))
 
