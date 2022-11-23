@@ -2,6 +2,8 @@ package net.transgressoft.commons.music.audio
 
 import mu.KotlinLogging
 import net.transgressoft.commons.query.InMemoryRepository
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
 import java.util.stream.Collectors
@@ -25,7 +27,19 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
                     Collectors.toSet())))
     }
 
-    protected fun newId(): Int {
+    @Throws(AudioItemManipulationException::class)
+    override fun createFromFile(path: Path): I {
+        require(!Files.notExists(path)) { "File " + path.toAbsolutePath() + " does not exist" }
+
+        val audioItem = getNewMetadataReader(path).readAudioItem(newId())
+        logger.debug { "New AudioItem read from file $path" }
+        add(audioItem)
+        return audioItem
+    }
+
+    protected abstract fun getNewMetadataReader(path: Path): JAudioTaggerMetadataReaderBase<I>
+
+    private fun newId(): Int {
         var id: Int
         do {
             id = idCounter.getAndIncrement()
