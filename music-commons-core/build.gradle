@@ -2,9 +2,9 @@ plugins {
     id 'org.sonarqube' version '3.3'
 }
 
-group = 'net.transgressoft'
+group 'net.transgressoft'
 version gitVersion()
-description = 'Transgressoft Music Commons - Core'
+description 'Transgressoft Music Commons - Core'
 
 project.tasks['sonarqube'].dependsOn 'compileJava'
 

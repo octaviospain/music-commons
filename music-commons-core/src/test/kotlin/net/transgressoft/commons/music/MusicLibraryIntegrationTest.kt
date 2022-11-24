@@ -1,23 +1,17 @@
 package net.transgressoft.commons.music
 
-import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemInMemoryRepository
-import net.transgressoft.commons.music.audio.AudioItemRepository
 import net.transgressoft.commons.music.event.MusicStats
-import net.transgressoft.commons.music.playlist.AudioPlaylist
 import net.transgressoft.commons.music.playlist.AudioPlaylistInMemoryRepository
-import net.transgressoft.commons.music.playlist.AudioPlaylistRepository
-import net.transgressoft.commons.music.waveform.AudioWaveformBase
 import net.transgressoft.commons.music.waveform.AudioWaveformInMemoryRepository
-import net.transgressoft.commons.music.waveform.AudioWaveformRepository
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 internal class MusicLibraryIntegrationTest {
 
-    lateinit var audioItemRepository: AudioItemRepository<AudioItem>
-    lateinit var audioWaveformRepository: AudioWaveformRepository<AudioWaveformBase>
-    lateinit var audioPlaylistRepository: AudioPlaylistRepository<AudioItem, AudioPlaylist<AudioItem>>
+    lateinit var audioItemRepository: AudioItemInMemoryRepository
+    lateinit var audioWaveformRepository: AudioWaveformInMemoryRepository
+    lateinit var audioPlaylistRepository: AudioPlaylistInMemoryRepository
     lateinit var musicStats: MusicStats
 
     @BeforeEach
