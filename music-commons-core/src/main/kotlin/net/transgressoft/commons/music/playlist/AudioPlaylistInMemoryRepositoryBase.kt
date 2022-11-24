@@ -183,7 +183,7 @@ protected constructor(
         findById(playlistToMove.id)
             .ifPresent { playlist: P ->
                 playlists.findById(destinationPlaylist.id).ifPresent { playlistDirectory: MutableAudioPlaylist<I> ->
-                    ancestor(playlistToMove).ifPresent { ancestor: MutableAudioPlaylist<I> ->
+                    findParentMutablePlaylist(playlistToMove).ifPresent { ancestor: MutableAudioPlaylist<I> ->
                         playlistsMultiMap.remove(ancestor.uniqueId, playlist.uniqueId)
                         ancestor.playlists.remove(playlist)
                     }
@@ -194,7 +194,7 @@ protected constructor(
             }
     }
 
-    private fun ancestor(playlistNode: P): Optional<MutableAudioPlaylist<I>> =
+    private fun findParentMutablePlaylist(playlistNode: P): Optional<MutableAudioPlaylist<I>> =
         if (playlistsMultiMap.containsValue(playlistNode.uniqueId)) {
             playlistsMultiMap.entries().stream()
                 .filter { playlistNode.uniqueId == it.value }
@@ -216,6 +216,8 @@ protected constructor(
             toAudioPlaylist(it[0])
         } else null
     }
+
+    override fun findParentPlaylist(playlist: P): P? = findParentMutablePlaylist(playlist).map { toAudioPlaylist(it) }.orElse(null)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

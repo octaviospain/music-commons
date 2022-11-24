@@ -68,6 +68,8 @@ interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>> : Reposit
 
     fun findByName(name: String): P?
 
+    fun findParentPlaylist(playlist: P): P?
+
     fun numberOfPlaylists(): Int
 
     fun numberOfPlaylistDirectories(): Int
