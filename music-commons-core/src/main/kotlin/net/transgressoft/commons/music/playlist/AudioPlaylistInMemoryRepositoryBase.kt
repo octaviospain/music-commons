@@ -4,6 +4,7 @@ import com.google.common.collect.Multimap
 import com.google.common.collect.MultimapBuilder
 import mu.KotlinLogging
 import net.transgressoft.commons.event.QueryEntitySubscriber
+import net.transgressoft.commons.event.QueryEventPublisherBase
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.event.AudioItemEventSubscriber
 import net.transgressoft.commons.query.InMemoryRepository
@@ -13,16 +14,25 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
 import java.util.stream.Collectors
 
+private class MutableAudioPlaylistInMemoryRepository<I : AudioItem>(playlistsById: MutableMap<Int, MutableAudioPlaylist<I>>) :
+    InMemoryRepository<MutableAudioPlaylist<I>>(playlistsById) {
+
+        // TODO fix the subscription to AudioPlaylist<I> to MutableAudioPlaylist<I>
+//        override fun putCreateEvent(entities: Collection<MutableAudioPlaylist<I>>) {
+//
+//        }
+}
+
 abstract class AudioPlaylistInMemoryRepositoryBase<I : AudioItem, P : AudioPlaylist<I>>
 protected constructor(
     playlistsById: MutableMap<Int, P>,
-) : AudioPlaylistRepository<I, P> {
+) : QueryEventPublisherBase<P>(), AudioPlaylistRepository<I, P> {
 
     private val logger = KotlinLogging.logger {}
 
     private val idCounter = AtomicInteger(1)
     private val idSet: MutableSet<Int> = HashSet()
-    private val playlists = InMemoryRepository(playlistsById.mapValues { it.value.toMutablePlaylist() }.toMutableMap() )
+    private val playlists = MutableAudioPlaylistInMemoryRepository(playlistsById.mapValues { it.value.toMutablePlaylist() }.toMutableMap())
     private val playlistsMultiMap: Multimap<String, String> = MultimapBuilder.treeKeys().treeSetValues().build()
 
     override val audioItemEventSubscriber: QueryEntitySubscriber<I> = AudioItemEventSubscriber()
@@ -57,7 +67,7 @@ protected constructor(
     }
 
     private fun addOrReplaceInternal(playlistToAdd: AudioPlaylist<I>): Boolean {
-        return if (playlists.contains(Predicate<MutableAudioPlaylist<I>>{ it.name == playlistToAdd.name} )) {
+        return if (playlists.contains(Predicate<MutableAudioPlaylist<I>> { it.name == playlistToAdd.name })) {
             replace(playlistToAdd)
             true
         } else {

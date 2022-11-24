@@ -1,14 +1,16 @@
 package net.transgressoft.commons.music.playlist
 
+import net.transgressoft.commons.event.EntityEvent
 import net.transgressoft.commons.event.QueryEntitySubscriber
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.query.Repository
 import java.util.*
+import java.util.concurrent.Flow
 
 /**
  * @author Octavio Calleya
  */
-interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>> : Repository<P> {
+interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>> : Repository<P>, Flow.Publisher<EntityEvent<out P>> {
 
     val audioItemEventSubscriber: QueryEntitySubscriber<I>
 
@@ -37,7 +39,7 @@ interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>> : Reposit
      * Precondition, <tt>playlist</tt> and <tt>directory</tt> exist in the <tt>AudioPlaylistRepository</tt>.
      * Otherwise, no action is performed.
      *
-     * @param playlist
+     * @param playlistsToAdd
      * @param directory
      */
     @Throws(AudioPlaylistRepositoryException::class)
