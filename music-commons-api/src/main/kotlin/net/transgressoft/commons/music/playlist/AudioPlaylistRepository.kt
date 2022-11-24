@@ -63,7 +63,6 @@ interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>> : Reposit
      * @param playlistToMove
      * @param destinationPlaylist
      */
-    @Throws(AudioPlaylistRepositoryException::class)
     fun movePlaylist(playlistToMove: P, destinationPlaylist: P)
 
     fun findByName(name: String): P?
