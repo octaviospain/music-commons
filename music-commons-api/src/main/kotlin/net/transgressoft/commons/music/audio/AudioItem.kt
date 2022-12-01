@@ -28,4 +28,6 @@ interface AudioItem : QueryEntity {
     val length: Long
     val dateOfCreation: LocalDateTime
     val lastDateModified: LocalDateTime
+
+    fun update(change: AudioItemMetadataChange): AudioItem
 }

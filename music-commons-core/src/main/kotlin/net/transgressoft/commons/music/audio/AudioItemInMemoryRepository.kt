@@ -8,9 +8,7 @@ open class AudioItemInMemoryRepository(
 
     override fun getNewMetadataReader(path: Path): JAudioTaggerMetadataReaderBase<AudioItem> = JAudioTaggerMetadataReader(path)
 
-    override fun containsAudioItemWithArtist(artistName: String): Boolean {
-        return search { it.artistsInvolved.contains(artistName) }.isNotEmpty()
+    override fun updateAudioItem(audioItem: AudioItem, change: AudioItemMetadataChange): AudioItem {
+        return audioItem.update(change)
     }
-
-    override fun isAlbumNotEmpty(album: Album) = search { it.album == album }.isNotEmpty()
 }

@@ -22,9 +22,14 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
 
     init {
         albumsByArtist = audioItems.values.stream().collect(
-            Collectors.groupingBy({ it.artist },
-                Collectors.mapping({ it.album },
-                    Collectors.toSet())))
+            Collectors.groupingBy(
+                { it.artist },
+                Collectors.mapping(
+                    { it.album },
+                    Collectors.toSet()
+                )
+            )
+        )
     }
 
     @Throws(AudioItemManipulationException::class)
@@ -114,7 +119,7 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
         }
     }
 
-    protected abstract fun isAlbumNotEmpty(album: Album): Boolean
+    private fun isAlbumNotEmpty(album: Album) = search { it.album == album }.isNotEmpty()
 
     override fun removeAll(entities: Set<I>): Boolean {
         val removed = super.removeAll(entities)
@@ -122,7 +127,23 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
         return removed
     }
 
+    override fun containsAudioItemWithArtist(artistName: String): Boolean {
+        return search { it.artistsInvolved.contains(artistName) }.isNotEmpty()
+    }
+
     override fun artists(): Set<Artist> = albumsByArtist.keys.toSet()
 
     override fun artistAlbums(artist: Artist): Set<Album> = albumsByArtist[artist]?.toSet() ?: emptySet()
+
+    override fun albumAudioItems(album: Album): Set<I> = search { it.album == album }.toSet()
+
+    override fun editAudioItems(audioItemIds: Set<Int>, change: AudioItemMetadataChange) {
+        audioItemIds.forEach { id ->
+            findById(id).ifPresent {
+                addOrReplace(updateAudioItem(it, change))
+            }
+        }
+    }
+
+    abstract fun updateAudioItem(audioItem: I, change: AudioItemMetadataChange): I
 }

@@ -15,4 +15,8 @@ interface AudioItemRepository<I : AudioItem> : Repository<I>, Flow.Publisher<Ent
     fun artists(): Set<Artist>
 
     fun artistAlbums(artist: Artist): Set<Album>
+
+    fun albumAudioItems(album: Album): Set<I>
+
+    fun editAudioItems(audioItemIds: Set<Int>, change: AudioItemMetadataChange)
 }
