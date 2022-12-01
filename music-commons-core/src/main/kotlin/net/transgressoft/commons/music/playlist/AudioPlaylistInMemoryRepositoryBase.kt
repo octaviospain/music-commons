@@ -4,7 +4,7 @@ import com.google.common.collect.Multimap
 import com.google.common.collect.MultimapBuilder
 import mu.KotlinLogging
 import net.transgressoft.commons.event.QueryEntitySubscriber
-import net.transgressoft.commons.event.QueryEventPublisherBase
+import net.transgressoft.commons.event.QueryEntityPublisherBase
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.event.AudioItemEventSubscriber
 import net.transgressoft.commons.query.InMemoryRepository
@@ -26,7 +26,7 @@ private class MutableAudioPlaylistInMemoryRepository<I : AudioItem>(playlistsByI
 abstract class AudioPlaylistInMemoryRepositoryBase<I : AudioItem, P : AudioPlaylist<I>>
 protected constructor(
     playlistsById: MutableMap<Int, P>,
-) : QueryEventPublisherBase<P>(), AudioPlaylistRepository<I, P> {
+) : QueryEntityPublisherBase<P>(), AudioPlaylistRepository<I, P> {
 
     private val logger = KotlinLogging.logger {}
 
