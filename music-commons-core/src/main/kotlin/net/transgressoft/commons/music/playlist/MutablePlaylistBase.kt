@@ -12,9 +12,4 @@ abstract class MutablePlaylistBase<I: AudioItem>(
 
     override val audioItems: MutableList<I> = _audioItems.toMutableList()
     override val playlists: MutableSet<AudioPlaylist<I>> = _playlists.toMutableSet()
-
-    override fun toString(): String {
-        return "MutablePlaylistBase(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$audioItems, playlists=$playlists)"
-
-    }
 }

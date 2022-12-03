@@ -14,7 +14,5 @@ internal class MutablePlaylist(
 
     override fun toMutablePlaylist(): MutableAudioPlaylist<AudioItem> = this
 
-    override fun toString(): String {
-        return "MutablePlaylist(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$audioItems, playlists=$playlists)"
-    }
+    override fun toString() = "MutablePlaylist(id=$id, isDirectory=$isDirectory, name='$name', audioItems=${audioItems.size}, playlists=${playlists.size})"
 }
