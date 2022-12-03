@@ -124,7 +124,5 @@ abstract class ImmutablePlaylistBase<I : AudioItem>(
         return result
     }
 
-    override fun toString(): String {
-        return "ImmutablePlaylistBase(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$audioItems, playlists=$playlists)"
-    }
+    override fun toString() = "ImmutablePlaylistBase(id=$id, isDirectory=$isDirectory, name='$name', audioItems=${audioItems.size}, playlists=${playlists.size})"
 }
