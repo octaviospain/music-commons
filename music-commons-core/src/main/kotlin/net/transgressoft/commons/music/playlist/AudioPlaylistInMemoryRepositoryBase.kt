@@ -3,25 +3,16 @@ package net.transgressoft.commons.music.playlist
 import com.google.common.collect.Multimap
 import com.google.common.collect.MultimapBuilder
 import mu.KotlinLogging
-import net.transgressoft.commons.event.QueryEntitySubscriber
-import net.transgressoft.commons.event.QueryEntityPublisherBase
+import net.transgressoft.commons.event.*
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.event.AudioItemEventSubscriber
 import net.transgressoft.commons.query.InMemoryRepository
 import java.util.*
+import java.util.concurrent.Flow
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
 import java.util.stream.Collectors
-
-private class MutableAudioPlaylistInMemoryRepository<I : AudioItem>(playlistsById: MutableMap<Int, MutableAudioPlaylist<I>>) :
-    InMemoryRepository<MutableAudioPlaylist<I>>(playlistsById) {
-
-        // TODO fix the subscription to AudioPlaylist<I> to MutableAudioPlaylist<I>
-//        override fun putCreateEvent(entities: Collection<MutableAudioPlaylist<I>>) {
-//
-//        }
-}
 
 abstract class AudioPlaylistInMemoryRepositoryBase<I : AudioItem, P : AudioPlaylist<I>>
 protected constructor(
@@ -32,10 +23,32 @@ protected constructor(
 
     private val idCounter = AtomicInteger(1)
     private val idSet: MutableSet<Int> = HashSet()
-    private val playlists = MutableAudioPlaylistInMemoryRepository(playlistsById.mapValues { it.value.toMutablePlaylist() }.toMutableMap())
     private val playlistsMultiMap: Multimap<String, String> = MultimapBuilder.treeKeys().treeSetValues().build()
+    private val playlists = InMemoryRepository(playlistsById.mapValues { it.value.toMutablePlaylist() }.toMutableMap()).also {
+        it.subscribe(object: Flow.Subscriber<EntityEvent<out MutableAudioPlaylist<I>>> {
+            override fun onSubscribe(subscription: Flow.Subscription) = logger.debug { "Internal playlists subscribed to MutableAudioPlaylist events" }
+            override fun onError(throwable: Throwable) = logger.error("An error occurred on the internal playlists subscriber", throwable)
+            override fun onComplete() = logger.debug { "Internal playlists subscriber completed the subscription" }
+            override fun onNext(item: EntityEvent<out MutableAudioPlaylist<I>>) {
+                val audioPlaylists = item.entities.map(::toAudioPlaylist).toSet()
+                if (item.isCreate()) {
+                    this@AudioPlaylistInMemoryRepositoryBase.putCreateEvent(audioPlaylists)
+                } else if (item.isRead()) {
+                    this@AudioPlaylistInMemoryRepositoryBase.putReadEvent(audioPlaylists)
+                } else if (item.isUpdate()) {
+                    this@AudioPlaylistInMemoryRepositoryBase.putUpdateEvent(audioPlaylists)
+                } else if (item.isDelete()) {
+                    this@AudioPlaylistInMemoryRepositoryBase.putDeleteEvent(audioPlaylists)
+                }
+            }
+        })
+    }
 
-    override val audioItemEventSubscriber: QueryEntitySubscriber<I> = AudioItemEventSubscriber()
+    override val audioItemEventSubscriber: QueryEntitySubscriber<I> = AudioItemEventSubscriber<I>().apply {
+        addOnNextEventAction(QueryEntityEvent.Type.DELETE) {
+            removeAudioItems(it.entities)
+        }
+    }
 
     private fun getNewId(): Int {
         var id: Int
