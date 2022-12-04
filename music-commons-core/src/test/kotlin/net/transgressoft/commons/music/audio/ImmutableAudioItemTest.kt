@@ -93,7 +93,7 @@ internal class ImmutableAudioItemTest {
         assertNotEquals(lastDateModified, audioItem.lastDateModified)
         assertTrue(lastDateModified.isBefore(audioItem.lastDateModified))
         assertEquals(
-            "ImmutableAudioItem(id=9, path=testfiles/testeable.mp3, title=Yesterday, artist=ImmutableArtist{name=The Beatles, countryCode=UK})",
+            "ImmutableAudioItem(id=9, path=testfiles/testeable.mp3, title=Yesterday, artist=The Beatles)",
             audioItem.toString()
         )
         assertEquals("testeable.mp3-Yesterday-120-320", audioItem.uniqueId)

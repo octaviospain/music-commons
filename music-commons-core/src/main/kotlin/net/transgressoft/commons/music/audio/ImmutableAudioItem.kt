@@ -43,5 +43,5 @@ data class ImmutableAudioItem(
     lastDateModified
 ) {
 
-    override fun toString() = "ImmutableAudioItem(id=$id, path=$path, title=$title, artist=$artist)"
+    override fun toString() = "ImmutableAudioItem(id=$id, path=$path, title=$title, artist=${artist.name})"
 }

@@ -58,7 +58,7 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
         return added
     }
 
-    private fun addOrReplaceAlbumByArtist(audioItem: AudioItem, added: Boolean) {
+    private fun addOrReplaceAlbumByArtist(audioItem: I, added: Boolean) {
         val artist = audioItem.artist
         val album = audioItem.album
         if (added) {
@@ -76,7 +76,7 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
     }
 
     @Throws(AudioItemManipulationException::class)
-    override fun editAudioItemMetadata(audioItem: AudioItem, change: AudioItemMetadataChange) {
+    override fun editAudioItemMetadata(audioItem: I, change: AudioItemMetadataChange) {
         findById(audioItem.id).ifPresent {
             val updatedAudioItem = updateAudioItem(it, change)
             JAudioTaggerMetadataWriter().writeMetadata(updatedAudioItem)
@@ -115,7 +115,7 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
         return removed
     }
 
-    private fun removeAlbumByArtistInternal(audioItem: AudioItem) {
+    private fun removeAlbumByArtistInternal(audioItem: I) {
         val artist = audioItem.artist
         if (albumsByArtist.containsKey(artist)) {
             var albums = albumsByArtist[audioItem.artist]
@@ -134,7 +134,7 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
 
     override fun removeAll(entities: Set<I>): Boolean {
         val removed = super.removeAll(entities)
-        entities.forEach { audioItem: AudioItem -> removeAlbumByArtistInternal(audioItem) }
+        entities.forEach { audioItem: I -> removeAlbumByArtistInternal(audioItem) }
         return removed
     }
 

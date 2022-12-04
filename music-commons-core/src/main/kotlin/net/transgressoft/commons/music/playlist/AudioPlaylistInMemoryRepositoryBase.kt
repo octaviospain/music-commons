@@ -13,10 +13,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
 import java.util.stream.Collectors
+import kotlin.collections.HashMap
 
 abstract class AudioPlaylistInMemoryRepositoryBase<I : AudioItem, P : AudioPlaylist<I>>
 protected constructor(
-    playlistsById: MutableMap<Int, P>,
+    playlistsById: MutableMap<Int, P> = HashMap(),
 ) : QueryEntityPublisherBase<P>(), AudioPlaylistRepository<I, P> {
 
     private val logger = KotlinLogging.logger {}

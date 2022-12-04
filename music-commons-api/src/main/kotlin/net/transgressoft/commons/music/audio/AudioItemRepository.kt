@@ -8,10 +8,10 @@ import java.util.concurrent.Flow
 interface AudioItemRepository<I : AudioItem> : Repository<I>, Flow.Publisher<EntityEvent<out I>> {
 
     @Throws(AudioItemManipulationException::class)
-    fun createFromFile(path: Path): AudioItem
+    fun createFromFile(path: Path): I
 
     @Throws(AudioItemManipulationException::class)
-    fun editAudioItemMetadata(audioItem: AudioItem, change: AudioItemMetadataChange)
+    fun editAudioItemMetadata(audioItem: I, change: AudioItemMetadataChange)
 
     fun containsAudioItemWithArtist(artistName: String): Boolean
 
