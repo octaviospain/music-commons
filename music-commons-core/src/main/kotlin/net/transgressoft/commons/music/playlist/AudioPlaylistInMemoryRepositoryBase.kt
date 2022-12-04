@@ -239,7 +239,5 @@ protected constructor(
         return playlistsMultiMap == that.playlistsMultiMap && playlists == that.playlists
     }
 
-    override fun hashCode(): Int {
-        return Objects.hash(playlistsMultiMap, playlists)
-    }
+    override fun hashCode() = Objects.hash(playlistsMultiMap, playlists)
 }

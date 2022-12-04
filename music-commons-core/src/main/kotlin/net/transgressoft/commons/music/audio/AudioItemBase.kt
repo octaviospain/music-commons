@@ -31,7 +31,7 @@ abstract class AudioItemBase(
         StringJoiner("-")
             .add(path.fileName.toString().replace(' ', '_'))
             .add(title)
-            .add(duration.toString())
+            .add(duration.toSeconds().toString())
             .add(bitRate.toString())
             .toString()
     }
@@ -52,35 +52,9 @@ abstract class AudioItemBase(
         path.toFile().length()
     }
 
-    override fun update(change: AudioItemMetadataChange): AudioItem {
-        val updatedTitle = change.title?: title
-        val updatedArtist = change.artist?: artist
+    override operator fun compareTo(other: AudioItem) = Comparator.comparing(QueryEntity::uniqueId, java.lang.String.CASE_INSENSITIVE_ORDER).compare(this, other)
 
-        val updatedAlbumName = change.albumName?: album.name
-        val updatedAlbumArtist = change.albumArtist?: album.albumArtist
-        val updatedIsCompilation = change.isCompilation?: album.isCompilation
-        val updatedYear = change.year?: album.year
-        val updatedLabel = change.label?: album.label
-        val updatedCoverImage = change.coveImage?: album.coverImage
-        val updatedAlbum = ImmutableAlbum(updatedAlbumName, updatedAlbumArtist, updatedIsCompilation, updatedYear, updatedLabel, updatedCoverImage)
-
-        val updatedGenre = change.genre?: genre
-        val updatedComments = change.comments?: comments
-        val updatedTrackNumber = change.trackNumber?: trackNumber
-        val updatedDiscNumber = change.discNumber?: discNumber
-        val updatedBpm = change.bpm?: bpm
-
-        return ImmutableAudioItem(
-            id, path, updatedTitle, duration, bitRate, updatedArtist, updatedAlbum, updatedGenre, updatedComments,
-            updatedTrackNumber,updatedDiscNumber, updatedBpm, encoder, encoding, dateOfCreation, LocalDateTime.now()
-        )
-    }
-
-    override operator fun compareTo(other: AudioItem) =
-        Comparator.comparing(QueryEntity::uniqueId, java.lang.String.CASE_INSENSITIVE_ORDER).compare(this, other)
-
-    override fun hashCode(): Int =
-        Objects.hashCode(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration)
+    override fun hashCode() = Objects.hashCode(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

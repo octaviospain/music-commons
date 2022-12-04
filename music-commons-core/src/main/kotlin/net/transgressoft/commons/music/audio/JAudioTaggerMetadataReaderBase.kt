@@ -14,7 +14,7 @@ abstract class JAudioTaggerMetadataReaderBase<I : AudioItem>(audioItemPath: Path
 
     protected val title: String by lazy { getFieldIfExisting(FieldKey.TITLE) ?: "" }
     protected val artist: Artist by lazy { readArtist() }
-    protected val album: Album by lazy { readAlbum(extension) }
+    protected val album: Album
     protected val duration: Duration
     protected val genre: Genre by lazy { getFieldIfExisting(FieldKey.GENRE)?.let { Genre.parseGenre(it) } ?: Genre.UNDEFINED }
     protected val comments: String? by lazy { getFieldIfExisting(FieldKey.COMMENT) }
@@ -36,6 +36,7 @@ abstract class JAudioTaggerMetadataReaderBase<I : AudioItem>(audioItemPath: Path
         encoding = audioHeader.encodingType
         duration = Duration.ofSeconds(audioHeader.trackLength.toLong())
         bitRate = getBitRate(audioHeader)
+        album = readAlbum(extension)
     }
 
     private fun getFieldIfExisting(fieldKey: FieldKey): String? = tag.hasField(fieldKey).takeIf { true }.run { tag.getFirst(fieldKey) }
@@ -50,9 +51,13 @@ abstract class JAudioTaggerMetadataReaderBase<I : AudioItem>(audioItemPath: Path
     }
 
     private fun readArtist(): Artist =
-        getFieldIfExisting(FieldKey.ARTIST)?.let {
-            val country = getFieldIfExisting(FieldKey.COUNTRY)?.let { _country -> CountryCode.valueOf(_country) } ?: CountryCode.UNDEFINED
-            ImmutableArtist(beautifyArtistName(it), country)
+        getFieldIfExisting(FieldKey.ARTIST)?.let { artistName ->
+            val country = getFieldIfExisting(FieldKey.COUNTRY)?.let { _country ->
+                if (_country.isNotEmpty())
+                    CountryCode.valueOf(_country)
+                else CountryCode.UNDEFINED
+            } ?: CountryCode.UNDEFINED
+            ImmutableArtist(beautifyArtistName(artistName), country)
         } ?: ImmutableArtist("")
 
     private fun readAlbum(extension: String): Album =

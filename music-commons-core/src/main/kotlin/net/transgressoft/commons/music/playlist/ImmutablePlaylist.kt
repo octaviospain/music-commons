@@ -34,7 +34,5 @@ internal open class ImmutablePlaylist(
         return result
     }
 
-    override fun toString(): String {
-        return "ImmutablePlaylist(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$audioItems, playlists=$playlists)"
-    }
+    override fun toString() = "ImmutablePlaylist(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$audioItems, playlists=$playlists)"
 }

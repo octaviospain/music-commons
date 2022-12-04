@@ -47,6 +47,8 @@ data class ImmutableAlbum(
         return true
     }
 
+    override fun toString() = "ImmutableAlbum(name='$name', albumArtist=$albumArtist, isCompilation=$isCompilation, year=$year, label=$label)"
+
     companion object {
         val UNKNOWN = ImmutableAlbum("", ImmutableArtist.UNKNOWN)
     }

@@ -10,6 +10,9 @@ interface AudioItemRepository<I : AudioItem> : Repository<I>, Flow.Publisher<Ent
     @Throws(AudioItemManipulationException::class)
     fun createFromFile(path: Path): AudioItem
 
+    @Throws(AudioItemManipulationException::class)
+    fun editAudioItemMetadata(audioItem: AudioItem, change: AudioItemMetadataChange)
+
     fun containsAudioItemWithArtist(artistName: String): Boolean
 
     fun artists(): Set<Artist>
@@ -17,6 +20,4 @@ interface AudioItemRepository<I : AudioItem> : Repository<I>, Flow.Publisher<Ent
     fun artistAlbums(artist: Artist): Set<Album>
 
     fun albumAudioItems(album: Album): Set<I>
-
-    fun editAudioItems(audioItemIds: Set<Int>, change: AudioItemMetadataChange)
 }

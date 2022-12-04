@@ -1,6 +1,5 @@
 package net.transgressoft.commons.music.audio
 
-import com.google.common.base.MoreObjects
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
@@ -44,10 +43,5 @@ data class ImmutableAudioItem(
     lastDateModified
 ) {
 
-    override fun toString(): String =
-        MoreObjects.toStringHelper(this)
-            .add("path", path)
-            .add("name", title)
-            .add("artist", artist)
-            .toString()
+    override fun toString() = "ImmutableAudioItem(id=$id, path=$path, title=$title, artist=$artist)"
 }

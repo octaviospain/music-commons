@@ -75,6 +75,17 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
         }
     }
 
+    @Throws(AudioItemManipulationException::class)
+    override fun editAudioItemMetadata(audioItem: AudioItem, change: AudioItemMetadataChange) {
+        findById(audioItem.id).ifPresent {
+            val updatedAudioItem = updateAudioItem(it, change)
+            JAudioTaggerMetadataWriter().writeMetadata(updatedAudioItem)
+            addOrReplace(updatedAudioItem)
+        }
+    }
+
+    protected abstract fun updateAudioItem(audioItem: I, change: AudioItemMetadataChange): I
+
     override fun addOrReplace(entity: I): Boolean {
         val addedOrReplaced = super.addOrReplace(entity)
         addOrReplaceAlbumByArtist(entity, addedOrReplaced)
@@ -136,14 +147,4 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
     override fun artistAlbums(artist: Artist): Set<Album> = albumsByArtist[artist]?.toSet() ?: emptySet()
 
     override fun albumAudioItems(album: Album): Set<I> = search { it.album == album }.toSet()
-
-    override fun editAudioItems(audioItemIds: Set<Int>, change: AudioItemMetadataChange) {
-        audioItemIds.forEach { id ->
-            findById(id).ifPresent {
-                addOrReplace(updateAudioItem(it, change))
-            }
-        }
-    }
-
-    abstract fun updateAudioItem(audioItem: I, change: AudioItemMetadataChange): I
 }

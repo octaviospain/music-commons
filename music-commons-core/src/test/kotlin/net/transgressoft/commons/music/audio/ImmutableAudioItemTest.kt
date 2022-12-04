@@ -93,9 +93,10 @@ internal class ImmutableAudioItemTest {
         assertNotEquals(lastDateModified, audioItem.lastDateModified)
         assertTrue(lastDateModified.isBefore(audioItem.lastDateModified))
         assertEquals(
-            "ImmutableAudioItem{path=testfiles/testeable.mp3, name=Yesterday, artist=ImmutableArtist{name=The Beatles, countryCode=UK}}",
+            "ImmutableAudioItem(id=9, path=testfiles/testeable.mp3, title=Yesterday, artist=ImmutableArtist{name=The Beatles, countryCode=UK})",
             audioItem.toString()
         )
+        assertEquals("testeable.mp3-Yesterday-120-320", audioItem.uniqueId)
         val label: Label = ImmutableLabel("New label")
         assertNotEquals(label, audioItem.album.label)
         assertEquals("ImmutableLabel(name=New label, countryCode=UNDEFINED)", label.toString())
