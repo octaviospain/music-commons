@@ -142,6 +142,14 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
         return searchInternal { it.artistsInvolved.contains(artistName) }.isNotEmpty()
     }
 
+    override fun getRandomAudioItemsFromArtist(artist: Artist, size: Int): List<I> {
+        return albumsByArtist[artist]?.stream()
+            ?.flatMap { albumAudioItems(it).stream() }
+            ?.limit(size.toLong())
+            ?.collect(Collectors.toList())
+            .also { it?.shuffle() } ?: emptyList()
+    }
+
     override fun artists(): Set<Artist> = albumsByArtist.keys.toSet()
 
     override fun artistAlbums(artist: Artist): Set<Album> = albumsByArtist[artist]?.toSet() ?: emptySet()

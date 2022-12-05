@@ -7,29 +7,13 @@ import java.time.LocalDateTime
 open class AudioItemTestUtil {
     var audioItemTestFactory = AudioItemTestFactory()
 
-    protected fun createTestAudioItem(): AudioItem {
-        return audioItemTestFactory.createTestAudioItem()
-    }
-
-    protected fun createTestAudioItem(name: String): AudioItem {
-        return audioItemTestFactory.createTestAudioItem(name)
-    }
-
-    protected fun createTestAudioItem(id: Int, album: Album): AudioItem {
-        return audioItemTestFactory.createTestAudioItem(id, album)
-    }
-
-    protected fun createTestAudioItem(album: Album): AudioItem {
-        return audioItemTestFactory.createTestAudioItem(album)
-    }
-
-    protected fun createTestAudioItem(name: String, duration: Duration): AudioItem {
-        return audioItemTestFactory.createTestAudioItem(name, duration)
-    }
-
-    protected fun createTestAudioItemsSet(size: Int): List<AudioItem> {
-        return audioItemTestFactory.createTestAudioItemsList(size)
-    }
+    protected fun createTestAudioItem() = audioItemTestFactory.createTestAudioItem()
+    protected fun createTestAudioItem(name: String) = audioItemTestFactory.createTestAudioItem(name)
+    protected fun createTestAudioItem(name: String, artistName: String) = audioItemTestFactory.createTestAudioItem(name, artistName)
+    protected fun createTestAudioItem(id: Int, album: Album) = audioItemTestFactory.createTestAudioItem(id, album)
+    protected fun createTestAudioItem(album: Album) = audioItemTestFactory.createTestAudioItem(album)
+    protected fun createTestAudioItem(name: String, duration: Duration) = audioItemTestFactory.createTestAudioItem(name, duration)
+    protected fun createTestAudioItemsSet(size: Int) = audioItemTestFactory.createTestAudioItemsList(size)
 }
 
 class AudioItemTestFactory {
@@ -65,6 +49,11 @@ class AudioItemTestFactory {
 
     fun createTestAudioItem(id: Int, album: Album): AudioItem {
         return defaultAudioItem.copy(id = id, album = album)
+    }
+
+    fun createTestAudioItem(title: String, artistName: String): AudioItem {
+        val id = testCounter++
+        return defaultAudioItem.copy(id = id, title = title, artist = ImmutableArtist(artistName))
     }
 
     fun createTestAudioItem(title: String, duration: Duration): AudioItem {

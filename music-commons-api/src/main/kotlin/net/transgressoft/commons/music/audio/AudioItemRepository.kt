@@ -15,6 +15,8 @@ interface AudioItemRepository<I : AudioItem> : Repository<I>, Flow.Publisher<Ent
 
     fun containsAudioItemWithArtist(artistName: String): Boolean
 
+    fun getRandomAudioItemsFromArtist(artist: Artist, size: Int): List<I>
+
     fun artists(): Set<Artist>
 
     fun artistAlbums(artist: Artist): Set<Album>

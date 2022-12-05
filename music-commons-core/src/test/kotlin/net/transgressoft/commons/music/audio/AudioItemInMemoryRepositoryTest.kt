@@ -425,6 +425,22 @@ internal class AudioItemInMemoryRepositoryTest : MusicLibraryTestBase() {
         assertThat(audioItemRepository).isEmpty()
     }
 
+    @Test
+    fun `Random audio items from artist`() {
+        val queenElements = mutableSetOf<AudioItem>()
+        for (i in 0 until 50) {
+            queenElements.add(createTestAudioItem(i.toString(), "Queen"))
+        }
+
+        audioItemRepository.addOrReplaceAll(queenElements)
+
+        val itemsFromArtist = audioItemRepository.getRandomAudioItemsFromArtist(ImmutableArtist("Queen"), 25)
+        assertThat(itemsFromArtist).containsNoDuplicates()
+        val itemsFromArtist2 = audioItemRepository.getRandomAudioItemsFromArtist(ImmutableArtist("Queen"), 25)
+        assertThat(itemsFromArtist2).containsNoDuplicates()
+        assertThat(itemsFromArtist).isNotEqualTo(itemsFromArtist2)
+    }
+
     private fun audioItemsSet() = buildSet {
         add(createTestAudioItem())
         add(createTestAudioItem())
