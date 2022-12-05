@@ -130,7 +130,7 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
         }
     }
 
-    private fun isAlbumNotEmpty(album: Album) = search { it.album == album }.isNotEmpty()
+    private fun isAlbumNotEmpty(album: Album) = searchInternal { it.album == album }.isNotEmpty()
 
     override fun removeAll(entities: Set<I>): Boolean {
         val removed = super.removeAll(entities)
@@ -139,12 +139,12 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
     }
 
     override fun containsAudioItemWithArtist(artistName: String): Boolean {
-        return search { it.artistsInvolved.contains(artistName) }.isNotEmpty()
+        return searchInternal { it.artistsInvolved.contains(artistName) }.isNotEmpty()
     }
 
     override fun artists(): Set<Artist> = albumsByArtist.keys.toSet()
 
     override fun artistAlbums(artist: Artist): Set<Album> = albumsByArtist[artist]?.toSet() ?: emptySet()
 
-    override fun albumAudioItems(album: Album): Set<I> = search { it.album == album }.toSet()
+    override fun albumAudioItems(album: Album): Set<I> = searchInternal { it.album == album }.toSet()
 }
