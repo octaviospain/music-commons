@@ -26,7 +26,7 @@ internal class JAudioTaggerMetadataWriter : AudioItemMetadataWriter {
     
     @Throws(AudioItemManipulationException::class)
     override fun writeMetadata(audioItem: AudioItem) {
-        logger.debug { "Writing AudioItem to file ${audioItem.path}" }
+        logger.debug { "Writing metadata of $audioItem to file '${audioItem.path.toAbsolutePath()}'" }
 
         val audioFile = audioItem.path.toFile()
         try {
@@ -35,13 +35,13 @@ internal class JAudioTaggerMetadataWriter : AudioItemMetadataWriter {
             audio.tag = emptyTag
             setTrackFieldsToTag(audio.tag, audioItem)
             audio.commit()
-            logger.debug { "AudioItem $audioItem written to file ${audioFile.absolutePath}" }
+            logger.debug { "Metadata of $audioItem successfully written to file" }
 
             audioItem.album.coverImage?.let {
                 overwriteCoverImage(audioItem, audioFile, it)
             }
         } catch (exception: Exception) {
-            val errorText = "Error writing metadata of ${audioItem.path}"
+            val errorText = "Error writing metadata of $audioItem"
             logger.error(errorText, exception)
             throw AudioItemManipulationException(errorText, exception)
         }
@@ -97,7 +97,7 @@ internal class JAudioTaggerMetadataWriter : AudioItemMetadataWriter {
     }
 
     private fun overwriteCoverImage(audioItem: AudioItem, file: File, coverBytes: ByteArray) {
-        logger.debug { "Writing cover image on file ${file.absolutePath}" }
+        logger.debug { "Saving cover image on file ${file.absolutePath}" }
         val tempCover: Path
         try {
             tempCover = Files.createTempFile("tempCover_" + file.name, ".tmp")
@@ -110,9 +110,9 @@ internal class JAudioTaggerMetadataWriter : AudioItemMetadataWriter {
             tag.addField(cover)
             audioFile.commit()
 
-            logger.debug { "Cover image of AudioItem $audioItem written to file $file" }
+            logger.debug { "Cover image of $audioItem successfully written to file" }
         } catch (exception: IOException) {
-            val errorText = "Error writing cover image of ${file.name}"
+            val errorText = "Error writing cover image of $audioItem"
             logger.error(errorText, exception)
             throw AudioItemManipulationException(errorText, exception)
         }

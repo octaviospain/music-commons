@@ -34,10 +34,10 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
 
     @Throws(AudioItemManipulationException::class)
     override fun createFromFile(path: Path): I {
-        require(!Files.notExists(path)) { "File " + path.toAbsolutePath() + " does not exist" }
+        require(!Files.notExists(path)) { "File '${path.toAbsolutePath()}' does not exist" }
 
         val audioItem = getNewMetadataReader(path).readAudioItem(newId())
-        logger.debug { "New AudioItem read from file $path" }
+        logger.debug { "New AudioItem read from file '${path.toAbsolutePath()}'" }
         add(audioItem)
         return audioItem
     }
