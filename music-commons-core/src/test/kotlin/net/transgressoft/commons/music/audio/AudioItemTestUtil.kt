@@ -13,7 +13,7 @@ open class AudioItemTestUtil {
     protected fun createTestAudioItem(id: Int, album: Album) = audioItemTestFactory.createTestAudioItem(id, album)
     protected fun createTestAudioItem(album: Album) = audioItemTestFactory.createTestAudioItem(album)
     protected fun createTestAudioItem(name: String, duration: Duration) = audioItemTestFactory.createTestAudioItem(name, duration)
-    protected fun createTestAudioItemsSet(size: Int) = audioItemTestFactory.createTestAudioItemsList(size)
+    protected fun createTestAudioItemsList(size: Int) = audioItemTestFactory.createTestAudioItemsList(size)
 }
 
 class AudioItemTestFactory {
@@ -32,37 +32,37 @@ class AudioItemTestFactory {
         )
     }
 
-    fun createTestAudioItem(): AudioItem {
+    fun createTestAudioItem(): ImmutableAudioItem {
         val id = testCounter++
         return defaultAudioItem.copy(id = id, path = DEFAULT_PATH.resolve("$id.mp3"))
     }
 
-    fun createTestAudioItem(title: String): AudioItem {
+    fun createTestAudioItem(title: String): ImmutableAudioItem {
         val id = testCounter++
         return defaultAudioItem.copy(id = id, title = title)
     }
 
-    fun createTestAudioItem(album: Album): AudioItem {
+    fun createTestAudioItem(album: Album): ImmutableAudioItem {
         val id = testCounter++
         return defaultAudioItem.copy(id = id, album = album)
     }
 
-    fun createTestAudioItem(id: Int, album: Album): AudioItem {
+    fun createTestAudioItem(id: Int, album: Album): ImmutableAudioItem {
         return defaultAudioItem.copy(id = id, album = album)
     }
 
-    fun createTestAudioItem(title: String, artistName: String): AudioItem {
+    fun createTestAudioItem(title: String, artistName: String): ImmutableAudioItem {
         val id = testCounter++
         return defaultAudioItem.copy(id = id, title = title, artist = ImmutableArtist(artistName))
     }
 
-    fun createTestAudioItem(title: String, duration: Duration): AudioItem {
+    fun createTestAudioItem(title: String, duration: Duration): ImmutableAudioItem {
         val id = testCounter++
         return defaultAudioItem.copy(id = id, duration = duration, title = title)
     }
 
-    fun createTestAudioItemsList(size: Int): List<AudioItem> {
-        val list = ArrayList<AudioItem>()
+    fun createTestAudioItemsList(size: Int): List<ImmutableAudioItem> {
+        val list = ArrayList<ImmutableAudioItem>()
         for (i in 0 until size) {
             list.add(createTestAudioItem())
         }

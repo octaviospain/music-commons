@@ -10,6 +10,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.*
 import java.util.function.Predicate
+import kotlin.io.path.exists
 import kotlin.streams.toList
 
 abstract class ImmutablePlaylistBase<I : AudioItem>(
@@ -44,56 +45,47 @@ abstract class ImmutablePlaylistBase<I : AudioItem>(
 
     @Throws(IOException::class)
     override fun exportToM3uFile(destinationPath: Path) {
-        if (destinationPath.toFile().exists()) {
-            logger.debug { "Destination file already exists: $destinationPath" }
+        if (destinationPath.exists()) {
+            throw IOException("Destination file already exists: $destinationPath").also {
+                logger.error("Error trying to export playlist '$name' to '$destinationPath'", it)
+            }
         } else {
             Files.createFile(destinationPath)
-            PrintWriter(destinationPath.toFile(), StandardCharsets.UTF_8.name()).use { printWriter ->
-                printPlaylist(printWriter, destinationPath)
+            PrintWriter(destinationPath.toString(), StandardCharsets.UTF_8.name()).use {
+                printPlaylist(it, destinationPath)
+            }
+            if (isDirectory && playlists.isNotEmpty()) {
+                val playlistDirectoryPath: Path = destinationPath.parent.resolve(name)
+                if (!playlistDirectoryPath.exists()) {
+                    Files.createDirectory(playlistDirectoryPath)
+                    playlists.forEach {
+                        it.exportToM3uFile(playlistDirectoryPath.resolve("${it.name}.m3u"))
+                    }
+                } else {
+                    throw IOException("Contained playlists directory already exists: $playlistDirectoryPath").also {
+                        logger.error("Error trying to export contained playlists inside '$name' to '$playlistDirectoryPath'", it)
+                    }
+                }
             }
         }
     }
 
-//    override fun exportToM3uFile(destinationPath: Path) {
-//        if (destinationPath.toFile().exists()) {
-//            logger.debug { "Destination file already exists: $destinationPath" }
-//        } else {
-//            Files.createFile(destinationPath)
-//            printDescendantPlaylistsToM3uFile(destinationPath)
-//            if (_playlists.isNotEmpty()) {
-//                val playlistDirectoryPath: Path = destinationPath.resolve(name)
-//                val playlistDirectoryFile = playlistDirectoryPath.toFile()
-//                if (!playlistDirectoryPath.toFile().exists()) {
-//                    Files.createDirectory(playlistDirectoryFile.toPath())
-//                    for (playlist in _playlists) {
-//                        playlist.exportToM3uFile(playlistDirectoryPath.resolve(playlist.name))
-//                    }
-//                }
-//            }
-//        }
-//    }
-//
-//    @Throws(IOException::class)
-//    private fun printDescendantPlaylistsToM3uFile(playlistFolderPath: Path) {
-//        PrintWriter(playlistFolderPath.toString(), StandardCharsets.UTF_8.name()).use { printWriter ->
-//            printWriter.println("#EXTM3U")
-//            _playlists.forEach {
-//                val descendantPlaylistPath = playlistFolderPath.parent.relativize(playlistFolderPath.resolve(it.name))
-//                printWriter.println(descendantPlaylistPath)
-//                super.printPlaylist(printWriter, playlistFolderPath)
-//            }
-//        }
-//    }
-
-    protected fun printPlaylist(printWriter: PrintWriter, playlistPath: Path) {
+    private fun printPlaylist(printWriter: PrintWriter, playlistPath: Path) {
         logger.info { "Writing playlist '$name' to file $playlistPath" }
+        val parent = playlistPath.parent
+
         printWriter.println("#EXTM3U")
+        if (isDirectory) {
+            playlists.forEach {
+                val containedPlaylistPath = parent.resolve(name).resolve("${it.name}.m3u")
+                printWriter.println(parent.relativize(containedPlaylistPath))
+            }
+        }
         audioItems.forEach {
-            printWriter.println("#EXTALB: ${it.album}")
-            printWriter.println("#EXTART:${it.artist}")
-            printWriter.print("#EXTINF:${it.duration.seconds}")
+            printWriter.println("#EXTALB: ${it.album.name}")
+            printWriter.println("#EXTART: ${it.artist.name}")
+            printWriter.print("#EXTINF: ${it.duration.seconds}")
             printWriter.println(",${it.title}")
-            val parent = playlistPath.parent
             val trackPath = parent.relativize(it.path)
             printWriter.println(trackPath)
         }
@@ -124,5 +116,5 @@ abstract class ImmutablePlaylistBase<I : AudioItem>(
         return result
     }
 
-    override fun toString() = "ImmutablePlaylistBase(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$audioItems, playlists=$playlists)"
+    override fun toString() = "ImmutablePlaylistBase(id=$id, isDirectory=$isDirectory, name='$name', playlists=${playlists.size}, audioItems=$audioItems)"
 }
