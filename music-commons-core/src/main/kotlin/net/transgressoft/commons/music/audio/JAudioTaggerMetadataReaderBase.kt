@@ -18,9 +18,9 @@ abstract class JAudioTaggerMetadataReaderBase<I : AudioItem>(audioItemPath: Path
     protected val duration: Duration
     protected val genre: Genre by lazy { getFieldIfExisting(FieldKey.GENRE)?.let { Genre.parseGenre(it) } ?: Genre.UNDEFINED }
     protected val comments: String? by lazy { getFieldIfExisting(FieldKey.COMMENT) }
-    protected val trackNumber: Short? by lazy { getFieldIfExisting(FieldKey.TRACK)?.takeIf { it.isNotEmpty().and(it != "0") }?.toShort() }
-    protected val discNumber: Short? by lazy { getFieldIfExisting(FieldKey.DISC_NO)?.takeIf { it.isNotEmpty().and(it != "0") }?.toShort() }
-    protected val bpm: Float? by lazy { getFieldIfExisting(FieldKey.BPM)?.takeIf { it.isNotEmpty().and(it != "0") }?.toFloat() }
+    protected val trackNumber: Short? by lazy { getFieldIfExisting(FieldKey.TRACK)?.takeIf { it.isNotEmpty().and(it != "0") }?.toShortOrNull() }
+    protected val discNumber: Short? by lazy { getFieldIfExisting(FieldKey.DISC_NO)?.takeIf { it.isNotEmpty().and(it != "0") }?.toShortOrNull() }
+    protected val bpm: Float? by lazy { getFieldIfExisting(FieldKey.BPM)?.takeIf { it.isNotEmpty().and(it != "0") }?.toFloatOrNull() }
     protected val encoder: String? by lazy { getFieldIfExisting(FieldKey.ENCODER) }
     protected var bitRate: Int
     protected val encoding: String?
@@ -39,7 +39,7 @@ abstract class JAudioTaggerMetadataReaderBase<I : AudioItem>(audioItemPath: Path
         album = readAlbum(extension)
     }
 
-    private fun getFieldIfExisting(fieldKey: FieldKey): String? = tag.hasField(fieldKey).takeIf { true }.run { tag.getFirst(fieldKey) }
+    private fun getFieldIfExisting(fieldKey: FieldKey): String? = tag.hasField(fieldKey).takeIf { it }.run { tag.getFirst(fieldKey) }
 
     private fun getBitRate(audioHeader: AudioHeader): Int {
         val bitRate = audioHeader.bitRate
