@@ -2,14 +2,14 @@ package net.transgressoft.commons.music.event
 
 import mu.KotlinLogging
 import net.transgressoft.commons.event.QueryEntitySubscriberBase
-import net.transgressoft.commons.event.QueryEntitySubscription
+import net.transgressoft.commons.event.QueryEntitySubscriptionBase
 import net.transgressoft.commons.music.audio.AudioItem
 
 open class AudioItemEventSubscriber<I : AudioItem> : QueryEntitySubscriberBase<I>() {
 
     private val logger = KotlinLogging.logger {}
 
-    protected var audioItemSubscription: QueryEntitySubscription<I>? = null
+    protected var audioItemSubscription: QueryEntitySubscriptionBase<I>? = null
 
     init {
         addOnSubscribeEventAction {

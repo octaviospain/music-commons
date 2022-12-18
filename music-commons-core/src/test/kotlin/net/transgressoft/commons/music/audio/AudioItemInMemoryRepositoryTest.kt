@@ -3,6 +3,7 @@ package net.transgressoft.commons.music.audio
 import com.google.common.collect.ImmutableSet
 import com.google.common.truth.Truth.assertThat
 import com.neovisionaries.i18n.CountryCode
+import io.kotest.core.spec.style.BehaviorSpec
 import net.transgressoft.commons.music.MusicLibraryTestBase
 import org.jaudiotagger.audio.AudioFile
 import org.jaudiotagger.audio.AudioFileIO
@@ -27,6 +28,76 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.time.Duration
+
+internal class AudioItemInMemoryRepositoryTest2: BehaviorSpec({
+
+    val mp3File = File(javaClass.getResource("/testfiles/testeable.mp3").toURI())
+    val mp3FilePath = mp3File.toPath()
+    val wavFile = File(javaClass.getResource("/testfiles/testeable.wav").toURI())
+    val wavFilePath = wavFile.toPath()
+    val flacFile = File(javaClass.getResource("/testfiles/testeable.flac").toURI())
+    val flacFilePath = flacFile.toPath()
+    val m4aFile = File(javaClass.getResource("/testfiles/testeable.m4a").toURI())
+    val m4aFilePath = m4aFile.toPath()
+    val testCover = File(javaClass.getResource("/testfiles/cover.jpg").toURI())
+    val coverBytes = Files.readAllBytes(testCover.toPath())
+
+    val title = "Yesterday"
+    val artistName = "The Beatles"
+    val artist = ImmutableArtist(artistName, CountryCode.UK)
+    val albumName = "Help!"
+    val albumArtistName = "The Beatles Artist"
+    val albumArtist: Artist = ImmutableArtist(albumArtistName)
+    val isCompilation = false
+    val year: Short = 1992
+    val labelName = "EMI"
+    val label = ImmutableLabel(labelName)
+    val comments = "Best song ever!"
+    val genre = "Rock"
+    val trackNumber: Short = 5
+    val discNumber: Short = 4
+    val bpm = 128
+    val encoder = "transgressoft"
+
+    val updatedTitle = "Bohemian Rhapsody"
+    val updatedArtist = ImmutableArtist("Queen")
+    val updatedCoverImage = File(javaClass.getResource("/testfiles/a-night-at-the-opera.jpg").toURI())
+    val updatedCoverBytes = Files.readAllBytes(updatedCoverImage.toPath())
+    val updatedAlbum = ImmutableAlbum("A night at the opera", updatedArtist, false, 1992, ImmutableLabel.UNKNOWN, updatedCoverBytes)
+    val updatedGenre = Genre.UNDEFINED
+    val updatedComments = ""
+
+    lateinit var album: Album
+    lateinit var audioItem: AudioItem
+    lateinit var audioItemRepository: AudioItemRepository<AudioItem>
+
+    fun Album.audioItems(): Set<AudioItem> = audioItemRepository.search { it.album == this }.toSet()
+
+    beforeTest {
+        album = spy {
+            on { albumArtist } doReturn albumArtist
+            on { year } doReturn year
+            on { name } doReturn albumName
+            on { coverImage } doReturn coverBytes
+            on { label } doReturn label
+            on { isCompilation } doReturn isCompilation
+        }
+        audioItemRepository = AudioItemInMemoryRepository()
+    }
+
+    given("A mp3 file") {
+        prepareMp3FileMetadata()
+
+        When("An AudioItem is created") {
+            audioItem = audioItemRepository.createFromFile(mp3FilePath)
+        }
+
+        then("its properties should match the metadata of the file") {
+
+        }
+    }
+
+})
 
 internal class AudioItemInMemoryRepositoryTest : MusicLibraryTestBase() {
 
