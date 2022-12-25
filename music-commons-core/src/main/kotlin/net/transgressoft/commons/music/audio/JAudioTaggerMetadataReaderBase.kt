@@ -70,7 +70,7 @@ abstract class JAudioTaggerMetadataReaderBase<I : AudioItem>(audioItemPath: Path
                     if ("m4a" == extension) "1" == tag.getFirst(FieldKey.IS_COMPILATION)
                     else "true" == tag.getFirst(FieldKey.IS_COMPILATION)
                 } ?: false
-                val year = getFieldIfExisting(FieldKey.YEAR)?.toShort()
+                val year = getFieldIfExisting(FieldKey.YEAR)?.toShortOrNull()
                 val label = getFieldIfExisting(FieldKey.GROUPING)?.let { ImmutableLabel(it) } as Label
                 val coverBytes = tag.artworkList.isNotEmpty().takeIf { true }?.let { tag.firstArtwork.binaryData }
                 ImmutableAlbum(this, ImmutableArtist(beautifyArtistName(albumArtistName)), isCompilation, year, label, coverBytes)

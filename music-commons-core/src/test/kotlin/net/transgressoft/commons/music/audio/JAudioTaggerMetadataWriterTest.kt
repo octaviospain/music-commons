@@ -97,7 +97,7 @@ internal class JAudioTaggerMetadataWriterTest {
 
         assertFileMetadata(mp3File)
         assertEquals(genre.capitalize(), tag.getFirst(FieldKey.GENRE))
-        assertEquals("MPEG-1 Layer 2", audioFile.audioHeader.encodingType)
+        assertEquals("MPEG-1 Layer 3", audioFile.audioHeader.encodingType)
     }
 
     @Test

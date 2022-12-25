@@ -19,13 +19,14 @@ dependencies {
     testImplementation 'ch.qos.logback:logback-core:1.4.5'
 
     testImplementation 'org.mockito:mockito-junit-jupiter:4.8.0'
-    testImplementation "org.mockito.kotlin:mockito-kotlin:4.0.0"
+    testImplementation 'org.mockito.kotlin:mockito-kotlin:4.1.0'
     testImplementation(platform('org.junit:junit-bom:5.9.0'))
     testImplementation('org.junit.jupiter:junit-jupiter')
 
     testImplementation "io.mockk:mockk:1.13.3"
     testImplementation "io.kotest:kotest-runner-junit5:5.5.4"
     testImplementation "io.kotest:kotest-assertions-core:5.5.4"
+    testImplementation "io.kotest:kotest-property:5.5.4"
 
     testRuntimeOnly 'ch.qos.logback:logback-classic:1.4.5'
 }
