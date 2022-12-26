@@ -52,7 +52,7 @@ internal class AudioItemInMemoryRepositoryTest : MusicLibraryTestBase() {
     val labelName = "EMI"
     val label = ImmutableLabel(labelName)
     val comments = "Best song ever!"
-    val genre = "Rock"
+    val genre = Genre.ROCK
     val trackNumber: Short = 5
     val discNumber: Short = 4
     val bpm = 128
@@ -60,7 +60,7 @@ internal class AudioItemInMemoryRepositoryTest : MusicLibraryTestBase() {
 
     val updatedTitle = "Bohemian Rhapsody"
     val updatedArtist = ImmutableArtist("Queen")
-    val updatedCoverImage = File(javaClass.getResource("/testfiles/a-night-at-the-opera.jpg").toURI())
+    val updatedCoverImage = File(javaClass.getResource("/testfiles/cover-2.jpg").toURI())
     val updatedCoverBytes = Files.readAllBytes(updatedCoverImage.toPath())
     val updatedAlbum = ImmutableAlbum("A night at the opera", updatedArtist, false, 1992, ImmutableLabel.UNKNOWN, updatedCoverBytes)
     val updatedGenre = Genre.UNDEFINED
@@ -460,7 +460,7 @@ internal class AudioItemInMemoryRepositoryTest : MusicLibraryTestBase() {
         assertThat(audioItem.album.albumArtist.countryCode).isEqualTo(CountryCode.UNDEFINED)
         assertThat(audioItem.artist.name).isEqualTo(artistName)
         assertThat(audioItem.artist.countryCode).isEqualTo(CountryCode.UK)
-        assertThat(audioItem.genre).isEqualTo(Genre.parseGenre(genre))
+        assertThat(audioItem.genre).isEqualTo(genre)
         assertThat(audioItem.comments).isEqualTo(comments)
         assertThat(audioItem.album.label.name).isEqualTo(labelName)
         assertThat(audioItem.album.label.countryCode).isEqualTo(CountryCode.UNDEFINED)
@@ -513,7 +513,7 @@ internal class AudioItemInMemoryRepositoryTest : MusicLibraryTestBase() {
         tag.setField(FieldKey.COUNTRY, artist.countryCode.name)
         tag.setField(FieldKey.ALBUM_ARTIST, album.albumArtist.name)
         tag.setField(FieldKey.ARTIST, artist.name)
-        tag.setField(FieldKey.GENRE, genre)
+        tag.setField(FieldKey.GENRE, genre.name)
         tag.setField(FieldKey.COMMENT, comments)
         tag.setField(FieldKey.GROUPING, album.label.name)
         tag.setField(FieldKey.TRACK, trackNumber.toString())

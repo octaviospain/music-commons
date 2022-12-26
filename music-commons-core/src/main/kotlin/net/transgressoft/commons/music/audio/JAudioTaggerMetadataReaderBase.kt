@@ -18,9 +18,9 @@ abstract class JAudioTaggerMetadataReaderBase<I : AudioItem>(audioItemPath: Path
     protected val duration: Duration
     protected val genre: Genre by lazy { getFieldIfExisting(FieldKey.GENRE)?.let { Genre.parseGenre(it) } ?: Genre.UNDEFINED }
     protected val comments: String? by lazy { getFieldIfExisting(FieldKey.COMMENT) }
-    protected val trackNumber: Short? by lazy { getFieldIfExisting(FieldKey.TRACK)?.takeIf { it.isNotEmpty().and(it != "0") }?.toShortOrNull() }
-    protected val discNumber: Short? by lazy { getFieldIfExisting(FieldKey.DISC_NO)?.takeIf { it.isNotEmpty().and(it != "0") }?.toShortOrNull() }
-    protected val bpm: Float? by lazy { getFieldIfExisting(FieldKey.BPM)?.takeIf { it.isNotEmpty().and(it != "0") }?.toFloatOrNull() }
+    protected val trackNumber: Short? by lazy { getFieldIfExisting(FieldKey.TRACK)?.takeIf { it.isNotEmpty().and(it != "0") }?.toShortOrNull()?.takeIf { it > 0 } }
+    protected val discNumber: Short? by lazy { getFieldIfExisting(FieldKey.DISC_NO)?.takeIf { it.isNotEmpty().and(it != "0") }?.toShortOrNull()?.takeIf { it > 0 } }
+    protected val bpm: Float? by lazy { getFieldIfExisting(FieldKey.BPM)?.takeIf { it.isNotEmpty().and(it != "0") }?.toFloatOrNull()?.takeIf { it > 0 } }
     protected val encoder: String? by lazy { getFieldIfExisting(FieldKey.ENCODER) }
     protected var bitRate: Int
     protected val encoding: String?
@@ -70,7 +70,7 @@ abstract class JAudioTaggerMetadataReaderBase<I : AudioItem>(audioItemPath: Path
                     if ("m4a" == extension) "1" == tag.getFirst(FieldKey.IS_COMPILATION)
                     else "true" == tag.getFirst(FieldKey.IS_COMPILATION)
                 } ?: false
-                val year = getFieldIfExisting(FieldKey.YEAR)?.toShortOrNull()
+                val year = getFieldIfExisting(FieldKey.YEAR)?.toShortOrNull()?.takeIf { it > 0 }
                 val label = getFieldIfExisting(FieldKey.GROUPING)?.let { ImmutableLabel(it) } as Label
                 val coverBytes = tag.artworkList.isNotEmpty().takeIf { true }?.let { tag.firstArtwork.binaryData }
                 ImmutableAlbum(this, ImmutableArtist(beautifyArtistName(albumArtistName)), isCompilation, year, label, coverBytes)

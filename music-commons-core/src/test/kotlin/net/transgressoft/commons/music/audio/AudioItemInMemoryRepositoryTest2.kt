@@ -17,12 +17,15 @@ import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.wav.WavOptions
 import org.jaudiotagger.tag.FieldKey
 import org.jaudiotagger.tag.Tag
+import org.jaudiotagger.tag.TagOptionSingleton
 import org.jaudiotagger.tag.flac.FlacTag
 import org.jaudiotagger.tag.id3.ID3v24Tag
 import org.jaudiotagger.tag.images.ArtworkFactory
 import org.jaudiotagger.tag.mp4.Mp4Tag
 import org.jaudiotagger.tag.wav.WavInfoTag
 import org.jaudiotagger.tag.wav.WavTag
+import java.awt.image.BufferedImage
+import java.awt.image.DataBufferByte
 import java.io.File
 import java.net.URI
 import java.nio.file.Files
@@ -30,7 +33,9 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.time.Duration
+import javax.imageio.ImageIO
 import kotlin.io.path.absolutePathString
+
 
 internal class AudioItemInMemoryRepositoryTest2 : BehaviorSpec({
 
@@ -41,6 +46,7 @@ internal class AudioItemInMemoryRepositoryTest2 : BehaviorSpec({
     val flacFile = File("/testfiles/testeable.flac".asURI())
     val wavFile = File("/testfiles/testeable.wav".asURI())
     val testCover = File("/testfiles/cover.jpg".asURI())
+    val testCover2 = File("/testfiles/cover-2.jpg".asURI())
     val coverBytes = Files.readAllBytes(testCover.toPath())
 
     val arbitraryMp3Tag = arbitrary { setRandomAudioItemTagFields(ID3v24Tag(), coverBytes) }
@@ -57,32 +63,31 @@ internal class AudioItemInMemoryRepositoryTest2 : BehaviorSpec({
     val arbitraryAudioItemChange = arbitrary {
         AudioItemMetadataChange(
             title = Arb.string().bind(),
-            artist = ImmutableArtist(Arb.string().bind()),
+            artist = ImmutableArtist(beautifyArtistName(Arb.string().bind()), CountryCode.values().random()),
             albumName = Arb.string().bind(),
-            albumArtist = ImmutableArtist(Arb.string().bind()),
+            albumArtist = ImmutableArtist(beautifyArtistName(Arb.string().bind())),
             isCompilation = Arb.boolean().bind(),
             year = Arb.short().bind(),
             label = ImmutableLabel(Arb.string().bind()),
-            coverImage = Arb.byteArray(Arb.int(16, 32), Arb.byte()).bind(),
-            genre = Genre.UNDEFINED,
+            coverImage = Files.readAllBytes(testCover2.toPath()),
+            genre = Genre.values().random(),
             comments = Arb.string().bind(),
             trackNumber = Arb.short().bind(),
             discNumber = Arb.short().bind(),
-            bpm = Arb.float().bind()
+            bpm = Arb.positiveInt(230).bind().toFloat()
         )
     }
+
     lateinit var audioRepository: AudioItemRepository<AudioItem>
-    lateinit var audioItem: AudioItem
 
     beforeContainer {
         audioRepository = AudioItemInMemoryRepository()
     }
 
     given("An AudioItemRepository") {
-        val audioRepository = AudioItemInMemoryRepository()
 
         and("A mp3 file") {
-            checkAll(2, arbitraryMp3Tag, arbitraryAudioItemChange) { mp3Tag, audioItemChange ->
+            checkAll(20, arbitraryMp3Tag, arbitraryAudioItemChange) { mp3Tag, audioItemChange ->
 
                 val mp3TempFile = tempfile(suffix = ".mp3").also {
                     withContext(Dispatchers.IO) {
@@ -108,29 +113,22 @@ internal class AudioItemInMemoryRepositoryTest2 : BehaviorSpec({
                         assertAudioItem(audioItem, mp3TempFile.toPath(), mp3Tag)
                     }
 
-                    and("it is modified") {
-                        audioRepository.shouldContainExactly(audioItem)
+                    then("its properties are modified when the audioItem is modified") {
                         audioRepository.editAudioItemMetadata(audioItem, audioItemChange)
+                        val updatedAudioItem = audioRepository.findById(audioItem.id).get()
 
-                        then("its properties are modified") {
-                            val updatedAudioItem = audioRepository.findById(audioItem.id).get()
-                            assertSoftly {
-                                updatedAudioItem shouldNotBe audioItem
-                                updatedAudioItem.id shouldBe audioItem.id
-                                updatedAudioItem.path shouldBe audioItem.path
-                                updatedAudioItem.encoder shouldBe audioItem.encoder
-                                updatedAudioItem.encoding shouldBe audioItem.encoding
-                                updatedAudioItem.bitRate shouldBe audioItem.bitRate
-                            }
-                            assertAudioItemChange(updatedAudioItem, audioItemChange, mp3Tag)
-                        }
+                        updatedAudioItem shouldNotBe audioItem
+                        updatedAudioItem.id shouldBe audioItem.id
+                        assertAudioItemChange(updatedAudioItem, audioItemChange, ID3v24Tag().apply {
+                            setField(FieldKey.ENCODER, audioItem.encoder)
+                        })
                     }
                 }
             }
         }
 
         and("A m4a file") {
-            checkAll(2, arbitraryM4aTag, arbitraryAudioItemChange) { m4aTag, audioItemChange ->
+            checkAll(20, arbitraryM4aTag, arbitraryAudioItemChange) { m4aTag, audioItemChange ->
 
                 val m4aTempFile = tempfile(suffix = ".m4a").also {
                     withContext(Dispatchers.IO) {
@@ -148,37 +146,30 @@ internal class AudioItemInMemoryRepositoryTest2 : BehaviorSpec({
 
                     then("its properties should match the metadata of the file") {
                         assertSoftly {
+                            audioItem.id shouldNotBe null
                             audioItem.encoding shouldBe "Aac"
                             audioItem.bitRate shouldBe 256
-                            audioItem.duration shouldBe Duration.ofSeconds(296)
+                            audioItem.duration shouldBe Duration.ofSeconds(42)
                         }
                         assertAudioItem(audioItem, m4aTempFile.toPath(), m4aTag)
                     }
-                }
 
-                When("An AudioItem is modified") {
-                    val audioItem = audioRepository.createFromFile(m4aTempFile.toPath())
-                    audioRepository.shouldContainExactly(audioItem)
-                    audioRepository.editAudioItemMetadata(audioItem, audioItemChange)
-
-                    then("its properties are modified") {
+                    then("its properties are modified when the audioItem is modified") {
+                        audioRepository.editAudioItemMetadata(audioItem, audioItemChange)
                         val updatedAudioItem = audioRepository.findById(audioItem.id).get()
-                        assertSoftly {
-                            updatedAudioItem shouldNotBe audioItem
-                            updatedAudioItem.id shouldBe audioItem.id
-                            updatedAudioItem.path shouldBe audioItem.path
-                            updatedAudioItem.encoder shouldBe audioItem.encoder
-                            updatedAudioItem.encoding shouldBe audioItem.encoding
-                            updatedAudioItem.bitRate shouldBe audioItem.bitRate
-                        }
-                        assertAudioItemChange(updatedAudioItem, audioItemChange, m4aTag)
+
+                        updatedAudioItem shouldNotBe audioItem
+                        updatedAudioItem.id shouldBe audioItem.id
+                        assertAudioItemChange(updatedAudioItem, audioItemChange, Mp4Tag().apply {
+                            setField(FieldKey.ENCODER, audioItem.encoder)
+                        })
                     }
                 }
             }
         }
 
         and("a flac file") {
-            checkAll(2, arbitraryFlacTag, arbitraryAudioItemChange) { flacTag, audioItemChange ->
+            checkAll(20, arbitraryFlacTag, arbitraryAudioItemChange) { flacTag, audioItemChange ->
 
                 val flacTempFile = tempfile(suffix = ".flac").also {
                     withContext(Dispatchers.IO) {
@@ -197,36 +188,29 @@ internal class AudioItemInMemoryRepositoryTest2 : BehaviorSpec({
                     then("its properties should match the metadata of the file") {
                         assertAudioItem(audioItem, flacTempFile.toPath(), flacTag)
                         assertSoftly {
+                            audioItem.id shouldNotBe null
                             audioItem.encoding shouldBe "FLAC 16 bits"
-                            audioItem.bitRate shouldBe 689
-                            audioItem.duration shouldBe Duration.ofSeconds(30)
+                            audioItem.bitRate shouldBe 445
+                            audioItem.duration shouldBe Duration.ofSeconds(28)
                         }
                     }
-                }
 
-                When("An AudioItem is modified") {
-                    val audioItem = audioRepository.createFromFile(flacTempFile.toPath())
-                    audioRepository.shouldContainExactly(audioItem)
-                    audioRepository.editAudioItemMetadata(audioItem, audioItemChange)
-
-                    then("its properties are modified") {
+                    then("its properties are modified when the audioItem is modified") {
+                        audioRepository.editAudioItemMetadata(audioItem, audioItemChange)
                         val updatedAudioItem = audioRepository.findById(audioItem.id).get()
-                        assertSoftly {
-                            updatedAudioItem shouldNotBe audioItem
-                            updatedAudioItem.id shouldBe audioItem.id
-                            updatedAudioItem.path shouldBe audioItem.path
-                            updatedAudioItem.encoder shouldBe audioItem.encoder
-                            updatedAudioItem.encoding shouldBe audioItem.encoding
-                            updatedAudioItem.bitRate shouldBe audioItem.bitRate
-                        }
-                        assertAudioItemChange(updatedAudioItem, audioItemChange, flacTag)
+
+                        updatedAudioItem shouldNotBe audioItem
+                        updatedAudioItem.id shouldBe audioItem.id
+                        assertAudioItemChange(updatedAudioItem, audioItemChange, FlacTag().apply {
+                            setField(FieldKey.ENCODER, audioItem.encoder)
+                        })
                     }
                 }
             }
         }
 
         and("a wav file") {
-            checkAll(2, arbitraryWavTag, arbitraryAudioItemChange) { wavTag, audioItemChange ->
+            checkAll(20, arbitraryWavTag, arbitraryAudioItemChange) { wavTag, audioItemChange ->
 
                 val wavTempFile = tempfile(suffix = ".wav").also {
                     withContext(Dispatchers.IO) {
@@ -243,32 +227,27 @@ internal class AudioItemInMemoryRepositoryTest2 : BehaviorSpec({
                     audioRepository.shouldContainExactly(audioItem)
 
                     assertSoftly {
-                        audioItem.encoding shouldBe "WAV PCM 24 bits"
-                        audioItem.bitRate shouldBe 2116
-                        audioItem.duration shouldBe Duration.ofSeconds(104)
+                        audioItem.id shouldNotBe null
+                        audioItem.encoding shouldBe "WAV PCM 16 bits"
+                        audioItem.bitRate shouldBe 1411
+                        audioItem.duration shouldBe Duration.ofSeconds(0)
                     }
 
                     then("its properties should match the metadata of the file") {
                         assertAudioItem(audioItem, wavTempFile.toPath(), wavTag)
                     }
-                }
 
-                When("An AudioItem is modified") {
-                    val audioItem = audioRepository.createFromFile(wavFile.toPath())
-                    audioRepository.shouldContainExactly(audioItem)
-                    audioRepository.editAudioItemMetadata(audioItem, audioItemChange)
-
-                    then("its properties are modified") {
+                    then("its properties are modified when the audioItem is modified") {
+                        audioRepository.editAudioItemMetadata(audioItem, audioItemChange)
                         val updatedAudioItem = audioRepository.findById(audioItem.id).get()
-                        assertSoftly {
-                            updatedAudioItem shouldNotBe audioItem
-                            updatedAudioItem.id shouldBe audioItem.id
-                            updatedAudioItem.path shouldBe audioItem.path
-                            updatedAudioItem.encoder shouldBe audioItem.encoder
-                            updatedAudioItem.encoding shouldBe audioItem.encoding
-                            updatedAudioItem.bitRate shouldBe audioItem.bitRate
-                        }
-                        assertAudioItemChange(updatedAudioItem, audioItemChange, wavTag)
+
+                        updatedAudioItem shouldNotBe audioItem
+                        updatedAudioItem.id shouldBe audioItem.id
+                        assertAudioItemChange(updatedAudioItem, audioItemChange, WavTag(WavOptions.READ_ID3_ONLY).apply {
+                            iD3Tag = ID3v24Tag()
+                            infoTag = WavInfoTag()
+                            setField(FieldKey.ENCODER, audioItem.encoder)
+                        })
                     }
                 }
             }
@@ -277,19 +256,27 @@ internal class AudioItemInMemoryRepositoryTest2 : BehaviorSpec({
 })
 
 fun setRandomAudioItemTagFields(tag: Tag, coverBytes: ByteArray): Tag {
+    TagOptionSingleton.getInstance().isWriteMp4GenresAsText = true
+    TagOptionSingleton.getInstance().isWriteMp3GenresAsText = true
+
     tag.setField(FieldKey.TITLE, Arb.string().next())
-    tag.setField(FieldKey.ARTIST, Arb.string().next())
     tag.setField(FieldKey.ALBUM, Arb.string().next())
-    tag.setField(FieldKey.ALBUM_ARTISTS, Arb.string().next())
-    tag.setField(FieldKey.ALBUM_YEAR, Arb.string().next())
-    tag.setField(FieldKey.GROUPING, Arb.string().next())
+    tag.setField(FieldKey.COUNTRY, CountryCode.values().random().name)
+    tag.setField(FieldKey.ALBUM_ARTIST, Arb.string().next())
+    tag.setField(FieldKey.ARTIST, Arb.string().next())
+    tag.setField(FieldKey.GENRE, Genre.values().random().name)
     tag.setField(FieldKey.COMMENT, Arb.string().next())
     tag.setField(FieldKey.GENRE, Arb.string().next())
-    tag.setField(FieldKey.TRACK, Arb.positiveShort().next().toString())
-    tag.setField(FieldKey.DISC_NO, Arb.positiveShort().next().toString())
-    tag.setField(FieldKey.BPM, Arb.int(85..200).next().toString())
+    tag.setField(FieldKey.TRACK, Arb.short().next().toString())
+    tag.setField(FieldKey.DISC_NO, Arb.short().next().toString())
+    tag.setField(FieldKey.YEAR, Arb.short().next().toString())
     tag.setField(FieldKey.ENCODER, Arb.string().next())
     tag.setField(FieldKey.IS_COMPILATION, Arb.boolean().next().toString())
+    if (tag is Mp4Tag) {
+        tag.setField(FieldKey.BPM, Arb.int(-1, 220).next().toString())
+    } else {
+        tag.setField(FieldKey.BPM, Arb.float(-1.0f, 220.58f).next().toString())
+    }
     setArtworkTag(tag, coverBytes)
     return tag
 }
@@ -299,36 +286,31 @@ fun setArtworkTag(tag: Tag, coverBytes: ByteArray?) {
         Files.write(toPath(), coverBytes!!, StandardOpenOption.CREATE)
         deleteOnExit()
         ArtworkFactory.createArtworkFromFile(this).let { artwork ->
+            tag.artworkList.clear()
             tag.addField(artwork)
         }
     }
 }
 
 fun assertAudioItemChange(audioItem: AudioItem, audioItemChange: AudioItemMetadataChange, tag: Tag) {
-    assertSoftly {
-        audioItem.title shouldBe audioItemChange.title
-        audioItem.artist shouldBe audioItemChange.artist
-        audioItem.album.name shouldBe audioItemChange.albumName
-        audioItem.album.albumArtist shouldBe audioItemChange.albumArtist
-        audioItem.album.year shouldBe audioItemChange.year
-        audioItem.album.isCompilation shouldBe audioItemChange.isCompilation
-        audioItem.album.label shouldBe audioItemChange.label
-        audioItem.album.coverImage shouldBe audioItemChange.coverImage
-        audioItem.trackNumber shouldBe audioItemChange.trackNumber
-        audioItem.discNumber shouldBe audioItemChange.discNumber
-        audioItem.bpm shouldBe audioItemChange.bpm
-    }
     tag.setField(FieldKey.TITLE, audioItemChange.title)
-    tag.setField(FieldKey.ARTIST, audioItemChange.artist?.name)
     tag.setField(FieldKey.ALBUM, audioItemChange.albumName)
-    tag.setField(FieldKey.COMMENT, audioItemChange.comments)
+    tag.setField(FieldKey.COUNTRY, audioItemChange.artist?.countryCode?.name)
     tag.setField(FieldKey.ALBUM_ARTIST, audioItemChange.albumArtist?.name)
-    tag.setField(FieldKey.YEAR, audioItemChange.year.toString())
-    tag.setField(FieldKey.IS_COMPILATION, audioItemChange.isCompilation.toString())
+    tag.setField(FieldKey.ARTIST, audioItemChange.artist?.name)
+    tag.setField(FieldKey.GENRE, audioItemChange.genre?.name)
+    tag.setField(FieldKey.COMMENT, audioItemChange.comments)
     tag.setField(FieldKey.GROUPING, audioItemChange.label?.name)
     tag.setField(FieldKey.TRACK, audioItemChange.trackNumber.toString())
     tag.setField(FieldKey.DISC_NO, audioItemChange.discNumber.toString())
-    tag.setField(FieldKey.BPM, audioItemChange.bpm.toString())
+    tag.setField(FieldKey.YEAR, audioItemChange.year.toString())
+    if (tag is Mp4Tag) {
+        val indexOfDot = audioItemChange.bpm.toString().indexOf('.')
+        tag.setField(FieldKey.BPM, audioItemChange.bpm.toString().substring(0, indexOfDot))
+    } else {
+        tag.setField(FieldKey.BPM, audioItemChange.bpm.toString())
+    }
+    tag.setField(FieldKey.IS_COMPILATION, audioItemChange.isCompilation.toString())
     setArtworkTag(tag, audioItemChange.coverImage)
     assertAudioItem(audioItem, audioItem.path, tag)
 }
@@ -339,18 +321,38 @@ fun assertAudioItem(audioItem: AudioItem, path: Path, tag: Tag) {
         audioItem.title shouldBe tag.getFirst(FieldKey.TITLE)
         audioItem.album.name shouldBe tag.getFirst(FieldKey.ALBUM)
         audioItem.album.albumArtist.name shouldBe beautifyArtistName(tag.getFirst(FieldKey.ALBUM_ARTIST))
-        audioItem.artist.name shouldBe beautifyArtistName(tag.getFirst(FieldKey.ARTIST))
-        audioItem.artist.countryCode shouldBe CountryCode.UNDEFINED
-        audioItem.genre shouldBe Genre.UNDEFINED
-        audioItem.comments shouldBe tag.getFirst(FieldKey.COMMENT)
         audioItem.album.label.name shouldBe tag.getFirst(FieldKey.GROUPING)
         audioItem.album.label.countryCode shouldBe CountryCode.UNDEFINED
-        audioItem.trackNumber shouldBe tag.getFirst(FieldKey.TRACK).toShortOrNull()
-        audioItem.discNumber shouldBe tag.getFirst(FieldKey.DISC_NO).toShortOrNull()
-        audioItem.album.year shouldBe tag.getFirst(FieldKey.YEAR).toShortOrNull()
-        audioItem.bpm shouldBe tag.getFirst(FieldKey.BPM).toFloatOrNull()
-        audioItem.encoder shouldBe tag.getFirst(FieldKey.ENCODER)
         audioItem.album.coverImage shouldBe tag.firstArtwork.binaryData
+        audioItem.artist.name shouldBe beautifyArtistName(tag.getFirst(FieldKey.ARTIST))
+        audioItem.artist.countryCode.name shouldBe tag.getFirst(FieldKey.COUNTRY)
+        audioItem.genre shouldBe Genre.parseGenre(tag.getFirst(FieldKey.GENRE))
+        audioItem.comments shouldBe tag.getFirst(FieldKey.COMMENT)
+        audioItem.encoder shouldBe tag.getFirst(FieldKey.ENCODER)
+        tag.getFirst(FieldKey.YEAR).toShortOrNull()?.let {
+            if (it > 0)
+                audioItem.album.year shouldBe it
+            else
+                audioItem.album.year shouldNotBe it
+        }
+        tag.getFirst(FieldKey.TRACK).toShortOrNull()?.let {
+            if (it > 0)
+                audioItem.trackNumber shouldBe it
+            else
+                audioItem.trackNumber shouldNotBe it
+        }
+        tag.getFirst(FieldKey.DISC_NO).toShortOrNull()?.let {
+            if (it > 0)
+                audioItem.discNumber shouldBe it
+            else
+                audioItem.discNumber shouldNotBe it
+        }
+        tag.getFirst(FieldKey.BPM).toFloatOrNull()?.let {
+            if (it > 0)
+                audioItem.bpm shouldBe it
+            else
+                audioItem.bpm shouldNotBe it
+        }
 
         if (audioItem.extension == "m4a") {
             audioItem.album.isCompilation.shouldBe(tag.getFirst(FieldKey.IS_COMPILATION) == "1")

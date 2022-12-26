@@ -16,16 +16,16 @@ open class AudioItemInMemoryRepository(
         val updatedAlbumName = change.albumName?: audioItem.album.name
         val updatedAlbumArtist = change.albumArtist?: audioItem.album.albumArtist
         val updatedIsCompilation = change.isCompilation?: audioItem.album.isCompilation
-        val updatedYear = change.year?: audioItem.album.year
+        val updatedYear = change.year?.takeIf { it > 0 } ?: audioItem.album.year
         val updatedLabel = change.label?: audioItem.album.label
         val updatedCoverImage = change.coverImage?: audioItem.album.coverImage
         val updatedAlbum = ImmutableAlbum(updatedAlbumName, updatedAlbumArtist, updatedIsCompilation, updatedYear, updatedLabel, updatedCoverImage)
 
         val updatedGenre = change.genre?: audioItem.genre
         val updatedComments = change.comments?: audioItem.comments
-        val updatedTrackNumber = change.trackNumber?: audioItem.trackNumber
-        val updatedDiscNumber = change.discNumber?: audioItem.discNumber
-        val updatedBpm = change.bpm?: audioItem.bpm
+        val updatedTrackNumber = change.trackNumber?.takeIf { it > 0 } ?: audioItem.trackNumber
+        val updatedDiscNumber = change.discNumber?.takeIf { it > 0 } ?: audioItem.discNumber
+        val updatedBpm = change.bpm?.takeIf { it > 0 } ?: audioItem.bpm
 
         return ImmutableAudioItem(
             audioItem.id, audioItem.path, updatedTitle, audioItem.duration, audioItem.bitRate, updatedArtist, updatedAlbum, updatedGenre, updatedComments,

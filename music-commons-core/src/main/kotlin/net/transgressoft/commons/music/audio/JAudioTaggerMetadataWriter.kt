@@ -5,6 +5,7 @@ import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.wav.WavOptions
 import org.jaudiotagger.tag.FieldKey
 import org.jaudiotagger.tag.Tag
+import org.jaudiotagger.tag.TagOptionSingleton
 import org.jaudiotagger.tag.flac.FlacTag
 import org.jaudiotagger.tag.id3.ID3v24Tag
 import org.jaudiotagger.tag.images.ArtworkFactory
@@ -31,9 +32,12 @@ internal class JAudioTaggerMetadataWriter : AudioItemMetadataWriter {
         val audioFile = audioItem.path.toFile()
         try {
             val audio = AudioFileIO.read(audioFile)
-            val emptyTag = createEmptyTag(audio.audioHeader.format)
+            val audioHeader = audio.audioHeader
+            val emptyTag = createEmptyTag(audioHeader.format)
             audio.tag = emptyTag
-            setTrackFieldsToTag(audio.tag, audioItem)
+            setTrackFieldsToTag(audio.tag, audioItem, audioHeader.encodingType)
+            TagOptionSingleton.getInstance().isWriteMp4GenresAsText = true
+            TagOptionSingleton.getInstance().isWriteMp3GenresAsText = true
             audio.commit()
             logger.debug { "Metadata of $audioItem successfully written to file" }
 
@@ -74,25 +78,30 @@ internal class JAudioTaggerMetadataWriter : AudioItemMetadataWriter {
         }
     }
 
-    private fun setTrackFieldsToTag(tag: Tag, audioItem: AudioItem) {
+    private fun setTrackFieldsToTag(tag: Tag, audioItem: AudioItem, encodingType: String) {
         tag.setField(FieldKey.TITLE, audioItem.title)
         tag.setField(FieldKey.ALBUM, audioItem.album.name)
         tag.setField(FieldKey.ALBUM_ARTIST, audioItem.album.albumArtist.name)
         tag.setField(FieldKey.ARTIST, audioItem.artist.name)
         tag.setField(FieldKey.GENRE, audioItem.genre.name)
-        tag.setField(FieldKey.COMMENT, audioItem.comments)
-        tag.setField(FieldKey.GROUPING, audioItem.album.label.name)
-        tag.setField(FieldKey.TRACK, audioItem.trackNumber.toString())
-        tag.setField(FieldKey.DISC_NO, audioItem.discNumber.toString())
-        tag.setField(FieldKey.YEAR, audioItem.album.year?.toString())
-        tag.setField(FieldKey.IS_COMPILATION, audioItem.album.isCompilation.toString())
+        audioItem.comments?.let { tag.setField(FieldKey.COMMENT, it)}
+        audioItem.trackNumber?.let { tag.setField(FieldKey.TRACK, it.toString()) }
+        audioItem.album.year?.let { tag.setField(FieldKey.YEAR, it.toString()) }
         tag.setField(FieldKey.ENCODER, audioItem.encoder)
-        val bpmString = audioItem.bpm.toString()
-        if (tag is Mp4Tag) {
-            val indexOfDot = bpmString.indexOf('.')
-            tag.setField(FieldKey.BPM, bpmString.substring(0, indexOfDot))
-        } else {
-            tag.setField(FieldKey.BPM, bpmString)
+        if (encodingType != "Alac") {
+            tag.setField(FieldKey.GROUPING, audioItem.album.label.name)
+            audioItem.discNumber?.let { tag.setField(FieldKey.DISC_NO, it.toString()) }
+            tag.setField(FieldKey.IS_COMPILATION, audioItem.album.isCompilation.toString())
+            audioItem.bpm?.let {
+                val bpmString = it.toString()
+                if (tag is Mp4Tag) {
+                    val indexOfDot = bpmString.indexOf('.')
+                    tag.setField(FieldKey.BPM, bpmString.substring(0, indexOfDot))
+                } else {
+                    tag.setField(FieldKey.BPM, bpmString)
+
+                }
+            }
         }
     }
 
