@@ -7,6 +7,7 @@ import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
 import java.util.stream.Collectors
+import kotlin.streams.toList
 
 /**
  * @author Octavio Calleya
@@ -139,7 +140,7 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
     }
 
     override fun containsAudioItemWithArtist(artistName: String): Boolean {
-        return searchInternal { it.artistsInvolved.contains(artistName) }.isNotEmpty()
+        return searchInternal { it.artistsInvolved.stream().map(String::lowercase).toList().contains(artistName.lowercase()) }.isNotEmpty()
     }
 
     override fun getRandomAudioItemsFromArtist(artist: Artist, size: Int): List<I> {
