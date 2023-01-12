@@ -1,43 +1,31 @@
+import org.gradle.api.JavaVersion
+
 plugins {
     id 'org.sonarqube' version '3.3'
+    id "org.openjfx.javafxplugin" version "0.0.13"
 }
 
 group 'net.transgressoft'
 version gitVersion()
-description 'Transgressoft Music Commons - Core'
+description 'Transgressoft Music Commons - JavaFX'
 
 project.tasks['sonarqube'].dependsOn 'compileJava'
 
 dependencies {
-    implementation 'be.tarsos:transcoder:1.2'
-    implementation 'com.google.guava:guava:31.1-jre'
-    implementation 'net.jthink:jaudiotagger:3.0.1'
-    implementation 'net.transgressoft:soft-query-mem:0.56-SNAPSHOT'
-    implementation 'io.github.microutils:kotlin-logging-jvm:3.0.4'
+    api project(path: ':music-commons-api')
+    api project(path: ':music-commons-core')
+}
 
-    testImplementation 'com.google.truth:truth:1.1.3'
-    testImplementation 'ch.qos.logback:logback-core:1.4.5'
-
-    testImplementation 'org.mockito:mockito-junit-jupiter:4.8.0'
-    testImplementation 'org.mockito.kotlin:mockito-kotlin:4.1.0'
-    testImplementation(platform('org.junit:junit-bom:5.9.0'))
-    testImplementation('org.junit.jupiter:junit-jupiter')
-
-    testImplementation "io.mockk:mockk:1.13.3"
-    testImplementation "io.kotest:kotest-runner-junit5:5.5.4"
-    testImplementation "io.kotest:kotest-assertions-core:5.5.4"
-    testImplementation "io.kotest:kotest-property:5.5.4"
-    testImplementation "io.kotest:kotest-property:5.5.4"
-    testImplementation "io.kotest:kotest-framework-datatest:5.5.4"
-
-    testRuntimeOnly 'ch.qos.logback:logback-classic:1.4.5'
+javafx {
+    version = JavaVersion.VERSION_11
+    modules = ['javafx.controls']
 }
 
 publishing {
     publications {
-        maven(MavenPublication) {
+        maven(org.gradle.api.publish.maven.MavenPublication) {
             groupId group
-            artifactId 'music-commons-core'
+            artifactId 'music-commons-fx'
             version version
 
             from components.java
@@ -46,7 +34,7 @@ publishing {
 
             pom {
                 name = 'music-commons-core'
-                description = 'Transgressoft Music Commons - Core'
+                description = 'Transgressoft Music Commons - JavaFX'
                 licenses {
                     license {
                         name = 'GNU General Public License v3'

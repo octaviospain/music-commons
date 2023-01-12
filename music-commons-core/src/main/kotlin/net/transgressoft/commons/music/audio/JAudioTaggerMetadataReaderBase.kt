@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music.audio
 
 import com.neovisionaries.i18n.CountryCode
-import net.transgressoft.commons.music.audio.AudioItemUtils.beautifyArtistName
+import net.transgressoft.commons.music.AudioUtils.beautifyArtistName
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.AudioHeader
 import org.jaudiotagger.tag.FieldKey

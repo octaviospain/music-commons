@@ -5,6 +5,7 @@ import io.kotest.core.TestConfiguration
 import io.kotest.engine.spec.tempfile
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.*
+import net.transgressoft.commons.music.AudioUtils
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.wav.WavOptions
 import org.jaudiotagger.tag.FieldKey
@@ -29,10 +30,10 @@ object AudioItemTestUtil2 : TestConfiguration() {
 
     fun File.tag(): Tag = AudioFileIO.read(this).tag
 
-    private val mp3File = File("/testfiles/testeable.mp3".asURI())
-    private val m4aFile = File("/testfiles/testeable.m4a".asURI())
-    private val flacFile = File("/testfiles/testeable.flac".asURI())
-    private val wavFile = File("/testfiles/testeable.wav".asURI())
+    val mp3File = File("/testfiles/testeable.mp3".asURI())
+    val m4aFile = File("/testfiles/testeable.m4a".asURI())
+    val flacFile = File("/testfiles/testeable.flac".asURI())
+    val wavFile = File("/testfiles/testeable.wav".asURI())
     private val testCover = File("/testfiles/cover.jpg".asURI())
     private val testCover2 = File("/testfiles/cover-2.jpg".asURI())
     private val coverBytes = Files.readAllBytes(testCover.toPath())
@@ -64,11 +65,11 @@ object AudioItemTestUtil2 : TestConfiguration() {
         AudioItemMetadataChange(
             title = Arb.string().bind(),
             artist = ImmutableArtist(
-                AudioItemUtils.beautifyArtistName(Arb.stringPattern("[a-z]{5} [a-z]{5}").bind()),
+                AudioUtils.beautifyArtistName(Arb.stringPattern("[a-z]{5} [a-z]{5}").bind()),
                 CountryCode.values().random()
             ),
             albumName = Arb.string().bind(),
-            albumArtist = ImmutableArtist(AudioItemUtils.beautifyArtistName(Arb.stringPattern("[a-z]{5} [a-z]{5}").bind())),
+            albumArtist = ImmutableArtist(AudioUtils.beautifyArtistName(Arb.stringPattern("[a-z]{5} [a-z]{5}").bind())),
             isCompilation = Arb.boolean().bind(),
             year = Arb.short().bind(),
             label = ImmutableLabel(Arb.string().bind()),

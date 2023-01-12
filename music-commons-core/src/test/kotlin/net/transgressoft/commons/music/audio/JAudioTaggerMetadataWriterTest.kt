@@ -111,7 +111,7 @@ internal class JAudioTaggerMetadataWriterTest {
 
         assertFileMetadata(wavFile)
         assertEquals(genre.capitalize(), tag.getFirst(FieldKey.GENRE))
-        assertEquals("WAV PCM 24 bits", audioFile.audioHeader.encodingType)
+        assertEquals("WAV PCM 16 bits", audioFile.audioHeader.encodingType)
     }
 
     @Test
@@ -124,7 +124,7 @@ internal class JAudioTaggerMetadataWriterTest {
         metadataWriter.writeMetadata(audioItem)
 
         assertFileMetadata(flacFile)
-        assertEquals(genre.capitalize().uppercase(Locale.getDefault()), tag.getFirst(FieldKey.GENRE))
+        assertEquals(genre.capitalize(), tag.getFirst(FieldKey.GENRE))
         assertEquals("FLAC 16 bits", audioFile.audioHeader.encodingType)
     }
 
@@ -138,7 +138,7 @@ internal class JAudioTaggerMetadataWriterTest {
         metadataWriter.writeMetadata(audioItem)
 
         assertFileMetadata(m4aFile)
-        assertEquals(genre.capitalize().uppercase(Locale.getDefault()), tag.getFirst(FieldKey.GENRE))
+        assertEquals(genre.capitalize(), tag.getFirst(FieldKey.GENRE))
         assertEquals("Aac", audioFile.audioHeader.encodingType)
     }
 

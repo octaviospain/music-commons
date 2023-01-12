@@ -1,3 +1,5 @@
+import org.gradle.api.JavaVersion
+
 plugins {
     id 'com.palantir.git-version' version '0.15.0'
     id 'org.jetbrains.kotlin.jvm' version '1.7.20'
@@ -128,5 +130,13 @@ project('music-commons-core') {
 
     dependencies {
         api project(path: ':music-commons-api')
+    }
+}
+
+project('music-commons-fx') {
+
+    compileJava {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 }

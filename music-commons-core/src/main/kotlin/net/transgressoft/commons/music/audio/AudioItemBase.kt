@@ -1,6 +1,7 @@
 package net.transgressoft.commons.music.audio
 
 import com.google.common.base.Objects
+import net.transgressoft.commons.music.AudioUtils
 import net.transgressoft.commons.query.QueryEntity
 import java.nio.file.Path
 import java.time.Duration
@@ -45,7 +46,7 @@ abstract class AudioItemBase(
     }
 
     override val artistsInvolved by lazy {
-        AudioItemUtils.getArtistsNamesInvolved(title, artist.name, album.albumArtist.name)
+        AudioUtils.getArtistsNamesInvolved(title, artist.name, album.albumArtist.name)
     }
 
     override val length by lazy {

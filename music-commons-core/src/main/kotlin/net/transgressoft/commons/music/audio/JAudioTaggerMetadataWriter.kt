@@ -83,7 +83,7 @@ internal class JAudioTaggerMetadataWriter : AudioItemMetadataWriter {
         tag.setField(FieldKey.ALBUM, audioItem.album.name)
         tag.setField(FieldKey.ALBUM_ARTIST, audioItem.album.albumArtist.name)
         tag.setField(FieldKey.ARTIST, audioItem.artist.name)
-        tag.setField(FieldKey.GENRE, audioItem.genre.name)
+        tag.setField(FieldKey.GENRE, audioItem.genre.capitalize())
         audioItem.comments?.let { tag.setField(FieldKey.COMMENT, it)}
         audioItem.trackNumber?.let { tag.setField(FieldKey.TRACK, it.toString()) }
         audioItem.album.year?.let { tag.setField(FieldKey.YEAR, it.toString()) }

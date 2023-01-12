@@ -20,7 +20,7 @@ import net.transgressoft.commons.music.audio.AudioItemTestUtil2.arbitraryMp3File
 import net.transgressoft.commons.music.audio.AudioItemTestUtil2.arbitraryWavFile
 import net.transgressoft.commons.music.audio.AudioItemTestUtil2.setArtworkTag
 import net.transgressoft.commons.music.audio.AudioItemTestUtil2.tag
-import net.transgressoft.commons.music.audio.AudioItemUtils.beautifyArtistName
+import net.transgressoft.commons.music.AudioUtils.beautifyArtistName
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.wav.WavOptions
 import org.jaudiotagger.tag.FieldKey
@@ -207,7 +207,7 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
                     audioRepository.findById(audioItem.id) shouldBePresent { found -> found.id shouldBe audioItem.id }
                 }
 
-                then("`addOrReplaceAll`") {
+                then("`addOrReplaceAll works as expected`") {
                     val size = audioRepository.size()
                     val arbAudioItems = Arb.set(arbitraryAudioItem(), 5 .. 10).next()
                     audioRepository.addOrReplaceAll(arbAudioItems) shouldBe true

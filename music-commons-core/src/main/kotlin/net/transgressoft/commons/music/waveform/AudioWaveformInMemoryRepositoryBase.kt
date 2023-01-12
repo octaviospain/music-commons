@@ -1,6 +1,7 @@
 package net.transgressoft.commons.music.waveform
 
 import net.transgressoft.commons.event.QueryEntityEvent
+import net.transgressoft.commons.music.AudioUtils
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.event.AudioItemEventSubscriber
 import net.transgressoft.commons.query.InMemoryRepository
@@ -45,7 +46,7 @@ abstract class AudioWaveformInMemoryRepositoryBase<W : AudioWaveform>(entitiesBy
     }
 
     private fun create(audioItem: AudioItem, width: Short, height: Short): W {
-        val amplitudes = AudioWaveformExtractor().extractWaveform(audioItem.path, width.toInt(), height.toInt())
+        val amplitudes = AudioUtils.extractWaveformAmplitudes(audioItem.path, width.toInt(), height.toInt())
         val waveform = createWaveform(audioItem.id, amplitudes, width.toInt(), height.toInt())
         add(waveform)
         return waveform
