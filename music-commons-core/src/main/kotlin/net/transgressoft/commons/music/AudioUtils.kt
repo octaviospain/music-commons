@@ -15,7 +15,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.regex.Pattern
-import java.util.stream.Stream
 import javax.imageio.ImageIO
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
@@ -28,7 +27,7 @@ import kotlin.math.roundToInt
 object AudioUtils {
 
     /**********************************************************************************
-     *          Functions to extract PCM amplitudes from an audio file                 *
+     *          Functions to extract PCM amplitudes from an audio file
      **********************************************************************************/
 
     fun extractWaveformToImage(audioFilePath: Path, outputFile: File, width: Int, height: Int, color: Color = Color.RED) {
@@ -143,7 +142,7 @@ object AudioUtils {
     }
 
     /**********************************************************************************
-     * Function to get artist names in the title, artist field and album artist field *
+     *  Function to get artist names in the title, artist field and album artist field
      **********************************************************************************/
 
     private val endsWithRemix = Pattern.compile("[(|\\[](\\s*(&?\\s*(\\w+)\\s+)+(?i)(remix))[)|\\]]")
@@ -196,6 +195,7 @@ object AudioUtils {
         artistsInvolved.addAll(albumArtistNames)
         artistsInvolved.addAll(getNamesInArtist(artistName))
         artistsInvolved.addAll(getNamesInTitle(title))
+        artistsInvolved.remove("")
         return artistsInvolved
     }
 
