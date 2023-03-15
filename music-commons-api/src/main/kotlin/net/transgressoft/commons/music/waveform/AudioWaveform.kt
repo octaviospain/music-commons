@@ -1,13 +1,15 @@
 package net.transgressoft.commons.music.waveform
 
 import net.transgressoft.commons.query.QueryEntity
+import java.awt.Color
+import java.io.File
 
 /**
  * @author Octavio Calleya
  */
 interface AudioWaveform : QueryEntity {
-    val width: Int
-    val height: Int
-    val amplitudes: FloatArray
-    fun scale(width: Int, height: Int): AudioWaveform
+
+    fun amplitudes(width: Int, height: Int): FloatArray
+
+    fun createImage(outputFile: File, waveformColor: Color, backgroundColor: Color, width: Int, height: Int)
 }
