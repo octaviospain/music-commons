@@ -35,12 +35,21 @@ subprojects {
         repoPass = project.hasProperty('repoPass') ? project.getProperty('repoPass') : ''
     }
 
+    compileJava {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
     dependencies {
         implementation 'com.neovisionaries:nv-i18n:1.29'
+        implementation 'io.github.microutils:kotlin-logging-jvm:3.0.5'
         implementation 'net.transgressoft:soft-query-api:0.56-SNAPSHOT'
         implementation platform('org.jetbrains.kotlin:kotlin-bom')
         implementation "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
+
+        testImplementation 'ch.qos.logback:logback-core:1.4.5'
+        testRuntimeOnly 'ch.qos.logback:logback-classic:1.4.5'
     }
 
     repositories {
@@ -99,14 +108,6 @@ subprojects {
     }
 }
 
-project('music-commons-api') {
-
-    compileJava {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-}
-
 project('music-commons-core') {
 
     compileJava {
@@ -130,13 +131,5 @@ project('music-commons-core') {
 
     dependencies {
         api project(path: ':music-commons-api')
-    }
-}
-
-project('music-commons-fx') {
-
-    compileJava {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
     }
 }

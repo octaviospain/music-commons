@@ -21,7 +21,9 @@ class AudioWaveformInMemoryRepository(entitiesById: MutableMap<Int, ScalableAudi
             .map<CompletableFuture<ScalableAudioWaveform>> { CompletableFuture.completedFuture(it) }
             .orElseGet {
                 CompletableFuture.supplyAsync {
-                    return@supplyAsync ScalableAudioWaveform(audioItem.id, audioItem.path)
+                    val audioWaveform = ScalableAudioWaveform(audioItem.id, audioItem.path)
+                    add(audioWaveform)
+                    return@supplyAsync audioWaveform
                 }
             }
     }

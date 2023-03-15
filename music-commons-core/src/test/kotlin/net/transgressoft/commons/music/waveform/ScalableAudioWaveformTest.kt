@@ -5,13 +5,13 @@ import io.kotest.datatest.withData
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import javafx.scene.paint.Color
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.transgressoft.commons.music.audio.AudioItemTestUtil2.flacFile
 import net.transgressoft.commons.music.audio.AudioItemTestUtil2.m4aFile
 import net.transgressoft.commons.music.audio.AudioItemTestUtil2.mp3File
 import net.transgressoft.commons.music.audio.AudioItemTestUtil2.wavFile
-import java.awt.Color
 import java.io.File
 import javax.imageio.ImageIO
 
@@ -29,7 +29,7 @@ class ScalableAudioWaveformTest : FunSpec({
             )
         ) {
             val pngTempFile = tempfile(suffix = ".png")
-            ScalableAudioWaveform(1, it.audioFile.toPath()).createImage(pngTempFile, Color.RED, Color.WHITE, 780, 335)
+            ScalableAudioWaveform(1, it.audioFile.toPath()).createImage(pngTempFile, Color.RED, Color.BLUE, 780, 335)
             pngTempFile.exists() shouldBe true
 
             pngTempFile.extension shouldBe "png"

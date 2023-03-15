@@ -1,10 +1,10 @@
 package net.transgressoft.commons.music.waveform
 
+import javafx.scene.paint.Color
 import ws.schild.jave.Encoder
 import ws.schild.jave.MultimediaObject
 import ws.schild.jave.encode.AudioAttributes
 import ws.schild.jave.encode.EncodingAttributes
-import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.File
 import java.nio.file.Files
@@ -24,6 +24,15 @@ class ScalableAudioWaveform(
     override val id: Int,
     audioFilePath: Path,
 ) : AudioWaveform {
+
+    /*
+        This constant is used to scale the amplitude height of the waveform
+        For the waveform to be properly visible, the amplitude must be between 3.8 and 4.4
+        Below 3.8, the waveform is too big and touches the limits of the canvas
+        Above 4.2, the waveform can be too small and is not visible
+        This anyway depends on each waveform, but this value is the one I found more balanced
+    */
+    private val amplitudeCoefficient = 3.9
 
     private val rawAudioPcm: IntArray
 
@@ -98,12 +107,15 @@ class ScalableAudioWaveform(
         return audioPcm
     }
 
-    override fun amplitudes(width: Int, height: Int): FloatArray {
+    override suspend fun amplitudes(width: Int, height: Int): FloatArray {
+        check(width > 0) { "Width must be greater than 0" }
+        check(height > 0) { "Height must be greater than 0" }
+
         val scaledAudioPcm = getScaledPulseCodeModulation(height)
 
         val waveformAmplitudes = FloatArray(width)
         val samplesPerPixel = scaledAudioPcm.size / width
-        val divisor = (Byte.SIZE_BITS * 2.0).pow(4.0).toFloat() // meant to be 65536.0f
+        val divisor = (Byte.SIZE_BITS * 2.0).pow(amplitudeCoefficient).toFloat()
         for (w in 0 until width) {
             var amplitude = 0.0f
             val samplesAtWidth = w * samplesPerPixel
@@ -122,16 +134,37 @@ class ScalableAudioWaveform(
         }
     }
 
-    override fun createImage(outputFile: File, waveformColor: Color, backgroundColor: Color, width: Int, height: Int) {
-        val amplitudes = amplitudes(width, height)
+    override suspend fun createImage(outputFile: File, waveformColor: Color, backgroundColor: Color, width: Int, height: Int) {
+        check(width > 0) { "Width must be greater than 0" }
+        check(height > 0) { "Height must be greater than 0" }
 
-        val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB).apply {
+        val amplitudes = amplitudes(width, height)
+        val backgroundRgb = java.awt.Color(
+            backgroundColor.red.toFloat(),
+            backgroundColor.green.toFloat(),
+            backgroundColor.blue.toFloat(),
+            backgroundColor.opacity.toFloat()
+        ).rgb
+
+        val waveformRgb = java.awt.Color(
+            waveformColor.red.toFloat(),
+            waveformColor.green.toFloat(),
+            waveformColor.blue.toFloat(),
+            waveformColor.opacity.toFloat()
+        ).rgb
+
+        val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB).apply {
             for (x in 0 until width) {
-                val absoluteAmplitude = amplitudes[x].roundToInt()
-                val y1: Int = (height - 2 * absoluteAmplitude) / 2
-                val y2: Int = y1 + 2 * absoluteAmplitude
-                for (y in y1..y2) {
-                    setRGB(x, y, waveformColor.rgb)
+                for (y in 0 until height) {
+                    val absoluteAmplitude = amplitudes[x].roundToInt()
+                    val y1: Int = (height - 2 * absoluteAmplitude) / 2
+                    val y2: Int = y1 + 2 * absoluteAmplitude
+
+                    if (y in y1..y2) {
+                        setRGB(x, y, waveformRgb)
+                    } else {
+                        setRGB(x, y, backgroundRgb)
+                    }
                 }
             }
         }

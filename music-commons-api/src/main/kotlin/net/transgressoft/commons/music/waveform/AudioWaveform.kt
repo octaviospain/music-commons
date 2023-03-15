@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music.waveform
 
+import javafx.scene.paint.Color
 import net.transgressoft.commons.query.QueryEntity
-import java.awt.Color
 import java.io.File
 
 /**
@@ -9,7 +9,7 @@ import java.io.File
  */
 interface AudioWaveform : QueryEntity {
 
-    fun amplitudes(width: Int, height: Int): FloatArray
+    suspend fun amplitudes(width: Int, height: Int): FloatArray
 
-    fun createImage(outputFile: File, waveformColor: Color, backgroundColor: Color, width: Int, height: Int)
+    suspend fun createImage(outputFile: File, waveformColor: Color, backgroundColor: Color, width: Int, height: Int)
 }
