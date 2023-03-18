@@ -6,39 +6,38 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.javafx.JavaFx
 import net.transgressoft.commons.music.waveform.AudioWaveform
 
-class WaveformPane(
-    private var waveform: AudioWaveform,
-    width: Double,
-    height: Double,
-    waveformColor: Color = Color.WHITE,
-    backgroundColor: Color = Color.BLACK,
-) : Canvas() {
+class WaveformPane : Canvas() {
 
+    private var waveform: AudioWaveform? = null
+    private var waveformColor: Color = Color.WHITE
+    private var backgroundColor: Color = Color.BLACK
     private var amplitudesTask: Job? = null
 
     init {
-        this.width = width
-        this.height = height
-        drawWaveformAsync(waveform, backgroundColor, waveformColor)
-
         widthProperty().addListener { _, newWidth, newHeight ->
             run {
-                if (newWidth.toDouble() > 0 && newHeight.toDouble() > 0)
-                    drawWaveformAsync(waveform, waveformColor, backgroundColor)
+                waveform?.let {
+                    if (newWidth.toDouble() > 0 && newHeight.toDouble() > 0)
+                        drawWaveformAsync(it, waveformColor, backgroundColor)
+                }
             }
         }
         heightProperty().addListener { _, newWidth, newHeight ->
             run {
-                if (newWidth.toDouble() > 0 && newHeight.toDouble() > 0) {
-                    drawWaveformAsync(waveform, waveformColor, backgroundColor)
+                waveform?.let {
+                    if (newWidth.toDouble() > 0 && newHeight.toDouble() > 0) {
+                        drawWaveformAsync(it, waveformColor, backgroundColor)
+                    }
                 }
             }
         }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    fun drawWaveformAsync(waveform: AudioWaveform, waveformColor: Color, backgroundColor: Color) {
+    fun drawWaveformAsync(waveform: AudioWaveform, waveformColor: Color = this.waveformColor, backgroundColor: Color = this.backgroundColor) {
         this.waveform = waveform
+        this.waveformColor = waveformColor
+        this.backgroundColor = backgroundColor
 
         amplitudesTask?.isActive?.takeIf { it }?.let {
             amplitudesTask?.cancel()

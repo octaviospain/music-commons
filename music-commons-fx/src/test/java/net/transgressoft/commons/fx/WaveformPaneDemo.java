@@ -5,7 +5,6 @@ import javafx.scene.Scene;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-import net.transgressoft.commons.music.waveform.AudioWaveform;
 import net.transgressoft.commons.music.waveform.ScalableAudioWaveform;
 
 import java.io.File;
@@ -19,15 +18,15 @@ public class WaveformPaneDemo extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        URI uri = getClass().getResource("/testfiles/testeable.flac").toURI();
-        AudioWaveform audioWaveform = new ScalableAudioWaveform(1, new File(uri).toPath());
-        WaveformPane waveformPane = new WaveformPane(audioWaveform, 500, 200, Color.GREEN, Color.MAGENTA);
+        WaveformPane waveformPane = new WaveformPane();
         AnchorPane anchorPane = new AnchorPane(waveformPane);
-
+        anchorPane.setPrefSize(500, 200);
         waveformPane.heightProperty().bind(anchorPane.heightProperty());
         waveformPane.widthProperty().bind(anchorPane.widthProperty());
-        anchorPane.setPrefSize(500, 200);
+        URI uri = getClass().getResource("/testfiles/testeable.flac").toURI();
+
         primaryStage.setScene(new Scene(anchorPane));
         primaryStage.show();
+        waveformPane.drawWaveformAsync(new ScalableAudioWaveform(1, new File(uri).toPath()), Color.GREEN, Color.MAGENTA);
     }
 }
