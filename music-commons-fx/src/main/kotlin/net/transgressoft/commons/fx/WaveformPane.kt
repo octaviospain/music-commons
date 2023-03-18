@@ -7,7 +7,7 @@ import kotlinx.coroutines.javafx.JavaFx
 import net.transgressoft.commons.music.waveform.AudioWaveform
 
 class WaveformPane(
-    waveform: AudioWaveform,
+    private var waveform: AudioWaveform,
     width: Double,
     height: Double,
     waveformColor: Color = Color.WHITE,
@@ -37,7 +37,9 @@ class WaveformPane(
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    private fun drawWaveformAsync(waveform: AudioWaveform, waveformColor: Color, backgroundColor: Color) {
+    fun drawWaveformAsync(waveform: AudioWaveform, waveformColor: Color, backgroundColor: Color) {
+        this.waveform = waveform
+
         amplitudesTask?.isActive?.takeIf { it }?.let {
             amplitudesTask?.cancel()
         }
