@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music.audio
 
 import mu.KotlinLogging
-import net.transgressoft.commons.query.InMemoryRepository
+import net.transgressoft.commons.query.InMemoryRepositoryBase
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
@@ -14,7 +14,7 @@ import kotlin.streams.toList
  */
 abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
     audioItems: MutableMap<Int, I>,
-) : InMemoryRepository<I>(audioItems), AudioItemRepository<I> {
+) : InMemoryRepositoryBase<I>(audioItems), AudioItemRepository<I> {
 
     private val logger = KotlinLogging.logger {}
 

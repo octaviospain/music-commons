@@ -1,8 +1,6 @@
-import org.gradle.api.JavaVersion
-
 plugins {
-    id 'com.palantir.git-version' version '0.15.0'
-    id 'org.jetbrains.kotlin.jvm' version '1.7.20'
+    id 'com.palantir.git-version' version '3.0.0'
+    id 'org.jetbrains.kotlin.jvm' version '1.8.10'
 }
 
 group 'net.transgressoft'
@@ -29,7 +27,7 @@ subprojects {
     apply plugin: 'maven-publish'
 
     ext {
-        kotlinVersion = '1.7.20'
+        kotlinVersion = '1.8.10'
 
         // the password needs to be specified via command line
         repoPass = project.hasProperty('repoPass') ? project.getProperty('repoPass') : ''
@@ -43,17 +41,18 @@ subprojects {
     dependencies {
         implementation 'com.neovisionaries:nv-i18n:1.29'
         implementation 'io.github.microutils:kotlin-logging-jvm:3.0.5'
-        implementation 'net.transgressoft:soft-query-api:0.56-SNAPSHOT'
+        implementation 'net.transgressoft:soft-query-api:0.58-SNAPSHOT'
         implementation platform('org.jetbrains.kotlin:kotlin-bom')
         implementation "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
 
-        testImplementation 'ch.qos.logback:logback-core:1.4.5'
-        testRuntimeOnly 'ch.qos.logback:logback-classic:1.4.5'
+        testImplementation 'ch.qos.logback:logback-core:1.4.7'
+        testRuntimeOnly 'ch.qos.logback:logback-classic:1.4.7'
     }
 
     repositories {
         mavenCentral()
+        mavenLocal()
         maven {
             url 'https://nexus.transgressoft.net/repository/maven-public/'
         }
