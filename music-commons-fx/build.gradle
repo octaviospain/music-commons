@@ -1,13 +1,10 @@
 plugins {
-    id 'org.sonarqube' version '4.2.0.3129'
     id "org.openjfx.javafxplugin" version "0.0.14"
 }
 
 group 'net.transgressoft'
 version gitVersion()
 description 'Transgressoft Music Commons - JavaFX'
-
-project.tasks['sonarqube'].dependsOn 'compileJava'
 
 dependencies {
     api project(path: ':music-commons-api')
@@ -68,8 +65,8 @@ publishing {
                 snapshotsOnly()
             }
 
-            name 'pi-repo-snapshots'
-            url 'https://nexus.transgressoft.net/repository/maven-snapshots/'
+            name 'transgressoft-snapshots'
+            url 'http://10.8.0.1:8081/repository/maven-snapshots/'
             allowInsecureProtocol = true
         }
     }

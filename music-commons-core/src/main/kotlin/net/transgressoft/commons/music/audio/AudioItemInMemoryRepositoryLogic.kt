@@ -5,6 +5,7 @@ import net.transgressoft.commons.query.InMemoryRepositoryBase
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.BiFunction
 import java.util.function.Consumer
 import java.util.stream.Collectors
 import kotlin.streams.toList
@@ -12,8 +13,10 @@ import kotlin.streams.toList
 /**
  * @author Octavio Calleya
  */
-abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
-    audioItems: MutableMap<Int, I>,
+class AudioItemInMemoryRepositoryLogic<I : AudioItemBase>(
+    audioItems: MutableMap<Int, I> = mutableMapOf(),
+    private val audioReader: AudioItemMetadataReader<I>,
+    private val audioItemUpdateFunction: BiFunction<I, AudioItemMetadataChange, I>
 ) : InMemoryRepositoryBase<I>(audioItems), AudioItemRepository<I> {
 
     private val logger = KotlinLogging.logger {}
@@ -37,13 +40,11 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
     override fun createFromFile(path: Path): I {
         require(!Files.notExists(path)) { "File '${path.toAbsolutePath()}' does not exist" }
 
-        val audioItem = getNewMetadataReader(path).readAudioItem(newId())
+        val audioItem = audioReader.readAudioItem(newId(), path)
         logger.debug { "New AudioItem read from file '${path.toAbsolutePath()}'" }
         add(audioItem)
         return audioItem
     }
-
-    protected abstract fun getNewMetadataReader(path: Path): JAudioTaggerMetadataReaderBase<I>
 
     private fun newId(): Int {
         var id: Int
@@ -79,13 +80,11 @@ abstract class AudioItemInMemoryRepositoryBase<I : AudioItem>(
     @Throws(AudioItemManipulationException::class)
     override fun editAudioItemMetadata(audioItem: I, change: AudioItemMetadataChange) {
         findById(audioItem.id).ifPresent {
-            val updatedAudioItem = updateAudioItem(it, change)
+            val updatedAudioItem = audioItemUpdateFunction.apply(it, change)
             JAudioTaggerMetadataWriter().writeMetadata(updatedAudioItem)
             addOrReplace(updatedAudioItem)
         }
     }
-
-    protected abstract fun updateAudioItem(audioItem: I, change: AudioItemMetadataChange): I
 
     override fun addOrReplace(entity: I): Boolean {
         val addedOrReplaced = super.addOrReplace(entity)

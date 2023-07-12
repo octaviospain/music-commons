@@ -1,6 +1,10 @@
 package net.transgressoft.commons.music.audio
 
 import com.google.common.base.Objects
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+import kotlinx.serialization.json.JsonClassDiscriminator
 import net.transgressoft.commons.music.AudioUtils
 import net.transgressoft.commons.query.QueryEntity
 import java.nio.file.Path
@@ -9,23 +13,26 @@ import java.time.LocalDateTime
 import java.util.*
 import kotlin.io.path.extension
 
+@OptIn(ExperimentalSerializationApi::class)
+@Serializable
+@JsonClassDiscriminator("audioItemType")
 abstract class AudioItemBase(
-    override val id: Int,
-    override val path: Path,
-    override val title: String,
-    override val duration: Duration,
-    override val bitRate: Int,
-    override val artist: Artist = ImmutableArtist.UNKNOWN,
-    override val album: Album = ImmutableAlbum.UNKNOWN,
-    override val genre: Genre = Genre.UNDEFINED,
-    override val comments: String? = null,
-    override val trackNumber: Short? = null,
-    override val discNumber: Short? = null,
-    override val bpm: Float? = null,
-    override val encoder: String? = null,
-    override val encoding: String? = null,
-    override val dateOfCreation: LocalDateTime = LocalDateTime.now(),
-    override val lastDateModified: LocalDateTime = dateOfCreation
+    @Transient override val id: Int = 0,
+    @Transient override val path: Path = Path.of(""),
+    @Transient override val title: String = "",
+    @Transient override val duration: Duration = Duration.ZERO,
+    @Transient override val bitRate: Int = 0,
+    @Transient override val artist: Artist = ImmutableArtist.UNKNOWN,
+    @Transient override val album: Album = ImmutableAlbum.UNKNOWN,
+    @Transient override val genre: Genre = Genre.UNDEFINED,
+    @Transient override val comments: String? = null,
+    @Transient override val trackNumber: Short? = null,
+    @Transient override val discNumber: Short? = null,
+    @Transient override val bpm: Float? = null,
+    @Transient override val encoder: String? = null,
+    @Transient override val encoding: String? = null,
+    @Transient override val dateOfCreation: LocalDateTime = LocalDateTime.now(),
+    @Transient override val lastDateModified: LocalDateTime = dateOfCreation
 ) : AudioItem, Comparable<AudioItem> {
 
     override val uniqueId by lazy {

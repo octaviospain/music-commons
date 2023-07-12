@@ -1,12 +1,6 @@
-plugins {
-    id 'org.sonarqube' version '4.2.0.3129'
-}
-
 group 'net.transgressoft'
 version gitVersion()
 description 'Transgressoft Music Commons - API'
-
-project.tasks['sonarqube'].dependsOn 'compileJava'
 
 publishing {
     publications {
@@ -51,7 +45,8 @@ publishing {
             }
 
             name 'transgressoft-snapshots'
-            url 'https://nexus.transgressoft.net/repository/maven-snapshots/'
+            url 'http://10.8.0.1:8081/repository/maven-snapshots/'
+            allowInsecureProtocol = true
         }
     }
 }
