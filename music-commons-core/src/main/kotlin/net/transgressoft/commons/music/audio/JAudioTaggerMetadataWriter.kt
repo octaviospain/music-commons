@@ -1,6 +1,7 @@
 package net.transgressoft.commons.music.audio
 
 import mu.KotlinLogging
+import net.transgressoft.commons.music.audio.AudioItemBase.*
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.wav.WavOptions
 import org.jaudiotagger.tag.FieldKey
@@ -21,12 +22,12 @@ import java.nio.file.StandardOpenOption
 /**
  * @author Octavio Calleya
  */
-internal class JAudioTaggerMetadataWriter : AudioItemMetadataWriter {
-    
+internal class JAudioTaggerMetadataWriter {
+
     private val logger = KotlinLogging.logger {}
-    
+
     @Throws(AudioItemManipulationException::class)
-    override fun writeMetadata(audioItem: AudioItem) {
+    fun writeMetadata(audioItem: AudioItem) {
         logger.debug { "Writing metadata of $audioItem to file '${audioItem.path.toAbsolutePath()}'" }
 
         val audioFile = audioItem.path.toFile()
@@ -53,23 +54,23 @@ internal class JAudioTaggerMetadataWriter : AudioItemMetadataWriter {
 
     private fun createEmptyTag(format: String): Tag {
         return when {
-            format.startsWith("Wav") -> {
+            format.startsWith("Wav", ignoreCase = true) -> {
                 val wavTag = WavTag(WavOptions.READ_ID3_ONLY)
                 wavTag.iD3Tag = ID3v24Tag()
                 wavTag.infoTag = WavInfoTag()
                 wavTag
             }
-            format.startsWith("Mp3") -> {
+            format.startsWith("Mp3", ignoreCase = true) -> {
                 val tag: Tag = ID3v24Tag()
                 tag.artworkList.clear()
                 tag
             }
-            format.startsWith("Flac") -> {
+            format.startsWith("Flac", ignoreCase = true) -> {
                 val tag: Tag = FlacTag()
                 tag.artworkList.clear()
                 tag
             }
-            format.startsWith("Aac") -> {
+            format.startsWith("Aac", ignoreCase = true) -> {
                 val tag: Tag = Mp4Tag()
                 tag.artworkList.clear()
                 tag

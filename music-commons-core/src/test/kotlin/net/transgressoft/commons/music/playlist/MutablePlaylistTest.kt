@@ -3,6 +3,7 @@ package net.transgressoft.commons.music.playlist
 import com.google.common.truth.Truth.assertThat
 import net.transgressoft.commons.music.MusicLibraryTestBase
 import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.ImmutableAudioItem
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
@@ -127,7 +128,7 @@ internal class MutablePlaylistTest : MusicLibraryTestBase() {
                 val artistName = "Queen"
                 val duration = Duration.ofSeconds((60 + i).toLong())
                 add(
-                    createTestAudioItem(title, artistName)
+                    (createTestAudioItem(title, artistName) as ImmutableAudioItem)
                         .copy(path = tempDirectory.resolve("$title.mp3"), duration = duration)
                 )
             }

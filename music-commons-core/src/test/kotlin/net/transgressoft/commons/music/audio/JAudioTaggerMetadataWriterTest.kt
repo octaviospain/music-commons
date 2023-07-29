@@ -21,7 +21,6 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
-import java.util.*
 
 /**
  * @author Octavio Calleya
@@ -82,7 +81,7 @@ internal class JAudioTaggerMetadataWriterTest {
         on { encoding } doReturn encoding
     }
 
-    lateinit var metadataWriter: AudioItemMetadataWriter
+    lateinit var metadataWriter: JAudioTaggerMetadataWriter
     lateinit var audioFile: AudioFile
     lateinit var tag: Tag
 

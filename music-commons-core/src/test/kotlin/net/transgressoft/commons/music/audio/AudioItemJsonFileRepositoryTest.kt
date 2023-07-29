@@ -5,17 +5,21 @@ import io.kotest.engine.spec.tempfile
 import net.transgressoft.commons.query.JsonFileRepository
 import java.io.File
 
-internal lateinit var jsonFile: File
-internal lateinit var repository: JsonFileRepository<AudioItemBase>
+private lateinit var jsonFile: File
+private lateinit var repository: JsonFileRepository<AudioItemBase>
 
 internal class AudioItemJsonFileRepositoryTest: StringSpec({
 
     beforeEach {
         jsonFile = tempfile("json-repository-test", ".json").also { it.deleteOnExit() }
-        repository = AudioItemJsonFileRepository.initialize(jsonFile)
+        repository = AudioItemJsonRepository.initialize(jsonFile)
     }
 
     "Repository serializes itself to file when audio item is added" {
+
+    }
+
+    "Repository updates an updated audio item" {
 
     }
 })

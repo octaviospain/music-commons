@@ -1,11 +1,11 @@
 package net.transgressoft.commons.music.audio
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import mu.KotlinLogging
-import net.transgressoft.commons.query.InMemoryRepositoryBase
-import java.nio.file.Files
-import java.nio.file.Path
+import net.transgressoft.commons.query.JsonFileRepository
+import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.function.BiFunction
 import java.util.function.Consumer
 import java.util.stream.Collectors
 import kotlin.streams.toList
@@ -13,38 +13,19 @@ import kotlin.streams.toList
 /**
  * @author Octavio Calleya
  */
-class AudioItemInMemoryRepositoryLogic<I : AudioItemBase>(
-    audioItems: MutableMap<Int, I> = mutableMapOf(),
-    private val audioReader: AudioItemMetadataReader<I>,
-    private val audioItemUpdateFunction: BiFunction<I, AudioItemMetadataChange, I>
-) : InMemoryRepositoryBase<I>(audioItems), AudioItemRepository<I> {
+@Serializable
+abstract class AudioItemJsonRepositoryBase<I : AudioItem> protected constructor(): JsonFileRepository<I>(), AudioItemRepository<I> {
 
+    @Transient
     private val logger = KotlinLogging.logger {}
 
+    @Transient
     private val idCounter = AtomicInteger(1)
-    private val albumsByArtist: MutableMap<Artist, MutableSet<Album>>
 
-    init {
-        albumsByArtist = audioItems.values.stream().collect(
-            Collectors.groupingBy(
-                { it.artist },
-                Collectors.mapping(
-                    { it.album },
-                    Collectors.toSet()
-                )
-            )
-        )
-    }
+    @Transient
+    override var jsonFile: File? = null
 
-    @Throws(AudioItemManipulationException::class)
-    override fun createFromFile(path: Path): I {
-        require(!Files.notExists(path)) { "File '${path.toAbsolutePath()}' does not exist" }
-
-        val audioItem = audioReader.readAudioItem(newId(), path)
-        logger.debug { "New AudioItem read from file '${path.toAbsolutePath()}'" }
-        add(audioItem)
-        return audioItem
-    }
+    protected val albumsByArtist: MutableMap<Artist, MutableSet<Album>> = mutableMapOf()
 
     private fun newId(): Int {
         var id: Int
@@ -55,8 +36,15 @@ class AudioItemInMemoryRepositoryLogic<I : AudioItemBase>(
     }
 
     override fun add(entity: I): Boolean {
-        val added = super.add(entity)
-        addOrReplaceAlbumByArtist(entity, added)
+        val entityToAdd = if (entity.id <= UNASSIGNED_ID) {
+            entity.toBuilder().id(newId()).build().also {
+                logger.debug { "New id ${it.id} assigned to audioItem with uniqueId ${entity.uniqueId}" }
+            } as I
+        } else entity
+
+        val added = super.add(entityToAdd)
+        addOrReplaceAlbumByArtist(entityToAdd, added)
+
         return added
     }
 
@@ -64,25 +52,16 @@ class AudioItemInMemoryRepositoryLogic<I : AudioItemBase>(
         val artist = audioItem.artist
         val album = audioItem.album
         if (added) {
-            if (albumsByArtist.containsKey(artist)) {
+            albumsByArtist[artist]?.let {
                 val mappedAlbums = albumsByArtist[artist]
-                if (!albumsByArtist[artist]!!.contains(album)) {
+                if (!it.contains(album)) {
                     mappedAlbums!!.add(album)
                 }
-            } else {
+            } ?: run {
                 val newSet = HashSet<Album>()
                 newSet.add(album)
                 albumsByArtist[artist] = newSet
             }
-        }
-    }
-
-    @Throws(AudioItemManipulationException::class)
-    override fun editAudioItemMetadata(audioItem: I, change: AudioItemMetadataChange) {
-        findById(audioItem.id).ifPresent {
-            val updatedAudioItem = audioItemUpdateFunction.apply(it, change)
-            JAudioTaggerMetadataWriter().writeMetadata(updatedAudioItem)
-            addOrReplace(updatedAudioItem)
         }
     }
 

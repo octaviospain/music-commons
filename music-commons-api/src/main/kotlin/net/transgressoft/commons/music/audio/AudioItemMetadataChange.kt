@@ -1,6 +1,6 @@
 package net.transgressoft.commons.music.audio
 
-data class AudioItemMetadataChange(
+data class AudioItemMetadataChange (
     val title: String? = null,
     val artist: Artist? = null,
     val albumName: String? = null,

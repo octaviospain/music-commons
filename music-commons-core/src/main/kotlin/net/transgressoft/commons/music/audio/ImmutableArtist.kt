@@ -1,10 +1,12 @@
 package net.transgressoft.commons.music.audio
 
 import com.neovisionaries.i18n.CountryCode
+import kotlinx.serialization.Serializable
 
 /**
  * @author Octavio Calleya
  */
+@Serializable
 data class ImmutableArtist(override val name: String, override val countryCode: CountryCode = CountryCode.UNDEFINED) : Artist {
 
     override fun compareTo(other: Artist): Int {

@@ -8,7 +8,7 @@ abstract class MutablePlaylistBase<I: AudioItem>(
     override var name: String,
     _audioItems: List<I> = listOf(),
     _playlists: Set<AudioPlaylist<I>> = setOf()
-):ImmutablePlaylistBase<I>(id, isDirectory, name), MutableAudioPlaylist<I> {
+): ImmutablePlaylistBase<I>(id, isDirectory, name), MutableAudioPlaylist<I> {
 
     override val audioItems: MutableList<I> = _audioItems.toMutableList()
     override val playlists: MutableSet<AudioPlaylist<I>> = _playlists.toMutableSet()

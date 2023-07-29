@@ -26,7 +26,7 @@ import java.time.Month
 import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.toJavaDuration
 
-object AudioItemTestUtil2 : TestConfiguration() {
+internal object AudioItemTestUtil2 : TestConfiguration() {
 
     fun File.tag(): Tag = AudioFileIO.read(this).tag
 

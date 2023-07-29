@@ -9,21 +9,8 @@ import kotlinx.serialization.modules.subclass
 import net.transgressoft.commons.query.JsonFileRepository
 import java.io.File
 
-val audioItemRepositorySerializersModule = SerializersModule {
-    polymorphic(JsonFileRepository::class) {
-        subclass(AudioItemJsonFileRepository.serializer())
-    }
-    polymorphic(AudioItemBase::class) {
-        subclass(ImmutableAudioItem.serializer())
-    }
-}
-
 @Serializable
-open class AudioItemJsonFileRepository protected constructor() :
-    AudioItemJsonFileRepositoryBase<AudioItemBase>(JAudioTaggerMetadataReader(), immutableAudioItemUpdateFunction) {
-
-    @Transient
-    override lateinit var jsonFile: File
+class AudioItemJsonRepository() : AudioItemJsonRepositoryBase<AudioItemBase>() {
 
     @Transient
     override var queryEntitySerializer = AudioItemBase.serializer()
@@ -31,7 +18,7 @@ open class AudioItemJsonFileRepository protected constructor() :
     @Transient
     override var polymorphicRepositorySerializer = audioItemRepositorySerializersModule
 
-    protected constructor(file: File) : this() {
+    constructor(file: File) : this() {
         jsonFile = file
     }
 
@@ -47,6 +34,15 @@ open class AudioItemJsonFileRepository protected constructor() :
                 }
         }
 
-        fun initialize(file: File) = AudioItemJsonFileRepository(file)
+        fun initialize(file: File) = AudioItemJsonRepository(file)
+    }
+}
+
+val audioItemRepositorySerializersModule = SerializersModule {
+    polymorphic(JsonFileRepository::class) {
+        subclass(AudioItemJsonRepository.serializer())
+    }
+    polymorphic(AudioItemBase::class) {
+        subclass(ImmutableAudioItem.serializer())
     }
 }

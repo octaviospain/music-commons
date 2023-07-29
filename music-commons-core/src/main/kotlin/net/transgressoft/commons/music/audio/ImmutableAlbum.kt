@@ -1,5 +1,8 @@
 package net.transgressoft.commons.music.audio
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class ImmutableAlbum(
     override val name: String,
     override val albumArtist: Artist,
@@ -14,13 +17,12 @@ data class ImmutableAlbum(
         val artistComparison = compareValues(albumArtist.name, other.albumArtist.name)
         val labelComparison = compareValues(label.name, other.label.name)
         val yearComparison = compareValues(year, other.year)
-        return if (nameComparison != 0) {
-            nameComparison
-        } else if (artistComparison != 0) {
-            artistComparison
-        } else if (labelComparison != 0) {
-            labelComparison
-        } else yearComparison
+        return when {
+            nameComparison != 0 -> nameComparison
+            artistComparison != 0 -> artistComparison
+            labelComparison != 0 -> labelComparison
+            else -> yearComparison
+        }
     }
 
     override fun hashCode(): Int {
@@ -42,9 +44,7 @@ data class ImmutableAlbum(
         if (albumArtist != other.albumArtist) return false
         if (isCompilation != other.isCompilation) return false
         if (year != other.year) return false
-        if (label != other.label) return false
-
-        return true
+        return label == other.label
     }
 
     override fun toString() = "ImmutableAlbum(name='$name', albumArtist=$albumArtist, isCompilation=$isCompilation, year=$year, label=$label)"
