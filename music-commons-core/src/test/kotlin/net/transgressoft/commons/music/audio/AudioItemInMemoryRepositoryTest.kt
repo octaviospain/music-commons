@@ -34,6 +34,7 @@ import org.jaudiotagger.tag.wav.WavTag
 import java.io.File
 import java.nio.file.Path
 import java.time.Duration
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.absolutePathString
 
 private lateinit var jsonFile: File
@@ -41,11 +42,14 @@ private lateinit var audioRepository: AudioItemRepository<AudioItemBase>
 
 internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
 
+    val testIdCounter = AtomicInteger(1)
+
     fun Album.audioItems(): Set<AudioItem> = audioRepository.search { it.album == this }.toSet()
+    fun createFromFileWithId(file: File) = ImmutableAudioItem.createFromFile(file.toPath()).copy(id = testIdCounter.getAndIncrement())
 
     beforeContainer {
         jsonFile = tempfile("json-repository-test", ".json").also { it.deleteOnExit() }
-        audioRepository = AudioItemJsonRepository(jsonFile)
+        audioRepository = AudioItemJsonRepository()
     }
 
     given("An AudioItemRepository") {
@@ -300,7 +304,7 @@ fun assertAudioItem(audioItem: AudioItem, path: Path, tag: Tag) {
         audioItem.album.albumArtist.name shouldBe beautifyArtistName(tag.getFirst(FieldKey.ALBUM_ARTIST))
         audioItem.album.label.name shouldBe tag.getFirst(FieldKey.GROUPING)
         audioItem.album.label.countryCode shouldBe CountryCode.UNDEFINED
-        audioItem.album.coverImage shouldBe tag.firstArtwork.binaryData
+        audioItem.coverImage shouldBe tag.firstArtwork.binaryData
         audioItem.artist.name shouldBe beautifyArtistName(tag.getFirst(FieldKey.ARTIST))
         audioItem.artist.countryCode.name shouldBe tag.getFirst(FieldKey.COUNTRY)
         audioItem.genre shouldBe Genre.parseGenre(tag.getFirst(FieldKey.GENRE))

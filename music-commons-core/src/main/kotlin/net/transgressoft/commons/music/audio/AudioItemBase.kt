@@ -40,9 +40,13 @@ abstract class AudioItemBase(
     @Transient override val bpm: Float? = null,
     @Transient override val encoder: String? = null,
     @Transient override val encoding: String? = null,
+    @Transient private val _coverImage: ByteArray? = null,
     @Transient override val dateOfCreation: LocalDateTime = LocalDateTime.now(),
     @Transient override val lastDateModified: LocalDateTime = dateOfCreation
 ) : AudioItem, Comparable<AudioItem> {
+
+    override val coverImage: ByteArray?
+        get() = _coverImage ?: getCoverBytes(this)
 
     override val uniqueId by lazy {
         StringJoiner("-")
@@ -70,44 +74,26 @@ abstract class AudioItemBase(
     }
 
     override fun toBuilder() = AudioItemBaseBuilder()
-        .id(this.id)
-        .path(this.path)
-        .title(this.title)
-        .duration(this.duration)
-        .bitRate(this.bitRate)
-        .artist(this.artist)
-        .album(this.album)
-        .genre(this.genre)
-        .comments(this.comments)
-        .trackNumber(this.trackNumber)
-        .discNumber(this.discNumber)
-        .bpm(this.bpm)
-        .encoder(this.encoder)
-        .encoding(this.encoding)
-        .dateOfCreation(this.dateOfCreation)
-        .lastDateModified(this.lastDateModified)
-
-    override fun update(change: AudioItemMetadataChange) = this.toBuilder()
         .id(id)
-        .title(change.title ?: title)
-        .artist(change.artist ?: artist)
-        .album(ImmutableAlbum(
-            change.albumName ?: album.name,
-            change.albumArtist ?: album.albumArtist,
-            change.isCompilation ?: album.isCompilation,
-            change.year?.takeIf { it > 0 } ?: album.year,
-            change.label ?: album.label,
-            change.coverImage ?: album.coverImage
-        ))
-        .genre(change.genre ?: genre)
-        .comments(change.comments ?: comments)
-        .trackNumber(change.trackNumber?.takeIf { it > 0 } ?: trackNumber)
-        .discNumber(change.discNumber?.takeIf { it > 0 } ?: discNumber)
-        .bpm(change.bpm ?: bpm)
-        .build()
+        .path(path)
+        .title(title)
+        .duration(duration)
+        .bitRate(bitRate)
+        .artist(artist)
+        .album(album)
+        .genre(genre)
+        .comments(comments)
+        .trackNumber(trackNumber)
+        .discNumber(discNumber)
+        .bpm(bpm)
+        .encoder(encoder)
+        .encoding(encoding)
+        .coverImage(coverImage)
+        .dateOfCreation(dateOfCreation)
+        .lastDateModified(lastDateModified)
 
     override suspend fun writeMetadata() = JAudioTaggerMetadataWriter().writeMetadata(this)
-    
+
     override operator fun compareTo(other: AudioItem) =
         Comparator.comparing(QueryEntity::uniqueId, java.lang.String.CASE_INSENSITIVE_ORDER).compare(this, other)
 
@@ -116,7 +102,7 @@ abstract class AudioItemBase(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false
-        val that = other as ImmutableAudioItem
+        val that = other as AudioItemBase
         return trackNumber == that.trackNumber &&
                 discNumber == that.discNumber &&
                 bpm == that.bpm &&
@@ -132,7 +118,7 @@ abstract class AudioItemBase(
     open class AudioItemBaseBuilder(builder: AudioItemBuilder<out AudioItem>?) : AudioItemBuilder<AudioItem> {
 
         constructor() : this(null)
-        
+
         override var id: Int = UNASSIGNED_ID
         override var path: Path = Path.of("")
         override var title: String = ""
@@ -147,6 +133,7 @@ abstract class AudioItemBase(
         override var bpm: Float? = null
         override var encoder: String? = null
         override var encoding: String? = null
+        override var coverImage: ByteArray? = null
         override var dateOfCreation: LocalDateTime = LocalDateTime.now()
         override var lastDateModified: LocalDateTime = LocalDateTime.now()
 
@@ -166,13 +153,30 @@ abstract class AudioItemBase(
                 bpm = it.bpm
                 encoder = it.encoder
                 encoding = it.encoding
+                coverImage = it.coverImage
                 dateOfCreation = it.dateOfCreation
                 lastDateModified = it.lastDateModified
             }
         }
 
         override fun build(): AudioItemBase = ImmutableAudioItem(
-            id, path, title, duration, bitRate, artist, album, genre, comments, trackNumber, discNumber, bpm, encoder, encoding, dateOfCreation, lastDateModified
+            id,
+            path,
+            title,
+            duration,
+            bitRate,
+            artist,
+            album,
+            genre,
+            comments,
+            trackNumber,
+            discNumber,
+            bpm,
+            encoder,
+            encoding,
+            coverImage,
+            dateOfCreation,
+            lastDateModified
         )
 
         override fun id(id: Int) = apply { this.id = id }
@@ -189,10 +193,38 @@ abstract class AudioItemBase(
         override fun bpm(bpm: Float?) = apply { this.bpm = bpm }
         override fun encoder(encoder: String?) = apply { this.encoder = encoder }
         override fun encoding(encoding: String?) = apply { this.encoding = encoding }
+        override fun coverImage(coverImage: ByteArray?) = apply { this.coverImage = coverImage }
         override fun dateOfCreation(dateOfCreation: LocalDateTime) = apply { this.dateOfCreation = dateOfCreation }
         override fun lastDateModified(lastDateModified: LocalDateTime) = apply { this.lastDateModified = lastDateModified }
     }
 }
+
+fun AudioItem.update(change: AudioItemMetadataChange): AudioItemBase =
+    AudioItemBaseBuilder(this.toBuilder())
+        .id(id)
+        .title(change.title ?: title)
+        .artist(change.artist ?: artist)
+        .album(ImmutableAlbum(
+            change.albumName ?: album.name,
+            change.albumArtist ?: album.albumArtist,
+            change.isCompilation ?: album.isCompilation,
+            change.year?.takeIf { it > 0 } ?: album.year,
+            change.label ?: album.label,
+        ))
+        .genre(change.genre ?: genre)
+        .comments(change.comments ?: comments)
+        .trackNumber(change.trackNumber?.takeIf { it > 0 } ?: trackNumber)
+        .discNumber(change.discNumber?.takeIf { it > 0 } ?: discNumber)
+        .bpm(change.bpm ?: bpm)
+        .coverImage(change.coverImage ?: coverImage)
+        .lastDateModified(LocalDateTime.now())
+        .build()
+
+fun AudioItem.update(changeAction: AudioItemMetadataChange.() -> Unit): AudioItemBase =
+    AudioItemMetadataChange().let { change ->
+        change.changeAction()
+        update(change)
+    }
 
 fun readAudioItemFields(audioItemPath: Path): AudioItemBuilder<AudioItem> {
     require(!Files.notExists(audioItemPath)) { "File '${audioItemPath.toAbsolutePath()}' does not exist" }
@@ -209,11 +241,12 @@ fun readAudioItemFields(audioItemPath: Path): AudioItemBuilder<AudioItem> {
     val artist = readArtist(tag)
     val album = readAlbum(tag, extension)
     val genre = getFieldIfExisting(tag, FieldKey.GENRE)?.let { Genre.parseGenre(it) } ?: Genre.UNDEFINED
-    val comments =  getFieldIfExisting(tag, FieldKey.COMMENT)
+    val comments = getFieldIfExisting(tag, FieldKey.COMMENT)
     val trackNumber = getFieldIfExisting(tag, FieldKey.TRACK)?.takeIf { it.isNotEmpty().and(it != "0") }?.toShortOrNull()?.takeIf { it > 0 }
     val discNumber = getFieldIfExisting(tag, FieldKey.DISC_NO)?.takeIf { it.isNotEmpty().and(it != "0") }?.toShortOrNull()?.takeIf { it > 0 }
     val bpm = getFieldIfExisting(tag, FieldKey.BPM)?.takeIf { it.isNotEmpty().and(it != "0") }?.toFloatOrNull()?.takeIf { it > 0 }
     val encoder = getFieldIfExisting(tag, FieldKey.ENCODER)
+    val coverBytes = getCoverBytes(tag)
 
     val now = LocalDateTime.now()
     return AudioItemBaseBuilder()
@@ -230,9 +263,14 @@ fun readAudioItemFields(audioItemPath: Path): AudioItemBuilder<AudioItem> {
         .bpm(bpm)
         .encoder(encoder)
         .encoding(encoding)
+        .coverImage(coverBytes)
         .lastDateModified(now)
         .dateOfCreation(now)
 }
+
+private fun getCoverBytes(audioItem: AudioItem) = getCoverBytes(AudioFileIO.read(audioItem.path.toFile()).tag)
+
+private fun getCoverBytes(tag: Tag): ByteArray? = tag.artworkList.isNotEmpty().takeIf { it }?.let { tag.firstArtwork.binaryData }
 
 private fun getFieldIfExisting(tag: Tag, fieldKey: FieldKey): String? = tag.hasField(fieldKey).takeIf { it }.run { tag.getFirst(fieldKey) }
 
@@ -267,7 +305,6 @@ private fun readAlbum(tag: Tag, extension: String): Album =
             } ?: false
             val year = getFieldIfExisting(tag, FieldKey.YEAR)?.toShortOrNull()?.takeIf { it > 0 }
             val label = getFieldIfExisting(tag, FieldKey.GROUPING)?.let { ImmutableLabel(it) } as Label
-            val coverBytes = tag.artworkList.isNotEmpty().takeIf { true }?.let { tag.firstArtwork.binaryData }
-            ImmutableAlbum(this, ImmutableArtist(AudioUtils.beautifyArtistName(albumArtistName)), isCompilation, year, label, coverBytes)
+            ImmutableAlbum(this, ImmutableArtist(AudioUtils.beautifyArtistName(albumArtistName)), isCompilation, year, label)
         }
     }

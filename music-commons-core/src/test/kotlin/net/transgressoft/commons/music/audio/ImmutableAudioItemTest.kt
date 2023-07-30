@@ -1,109 +1,100 @@
 package net.transgressoft.commons.music.audio
 
-import com.google.common.truth.Truth.assertThat
 import com.neovisionaries.i18n.CountryCode
-import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.DisplayName
-import org.junit.jupiter.api.Test
+import io.kotest.assertions.assertSoftly
+import io.kotest.assertions.timing.eventually
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.engine.spec.tempfile
+import io.kotest.matchers.date.shouldBeAfter
+import io.kotest.matchers.date.shouldBeBefore
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.string.shouldContain
+import kotlinx.serialization.json.Json
+import net.transgressoft.commons.music.audio.AudioItemTestUtil2.mp3File
+import net.transgressoft.commons.music.audio.AudioItemTestUtil2.testCoverBytes
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
+import java.time.ZoneOffset
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 /**
  * @author Octavio Calleya
  */
-internal class ImmutableAudioItemTest {
+internal class ImmutableAudioItemTest : StringSpec({
 
-    var id = 9
-    var path = Path.of("testfiles", "testeable.mp3")
-    var title = "Yesterday"
-    var duration = Duration.ofMinutes(2)
-    var bitRate = 320
-    var artistName = "The Beatles"
-    var label: Label = ImmutableLabel("EMI", CountryCode.US)
-    var albumName = "Help!"
-    var albumArtistName = "The Beatles Band"
-    var isCompilation = false
-    var year: Short = 1965
-    var bpm = 120f
-    var trackNumber: Short = 13
-    var discNumber: Short = 1
-    var comments = "Best song ever!"
-    var genre = Genre.ROCK
-    var encoding = "Lame MP3"
-    var encoder = "transgressoft"
+    val id = 9
+    val path = Path.of("testfiles", "testeable.mp3")
+    val title = "Yesterday"
+    val duration = Duration.ofMinutes(2)
+    val bitRate = 320
+    val artistName = "The Beatles"
+    val label: Label = ImmutableLabel("EMI", CountryCode.US)
+    val albumName = "Help!"
+    val albumArtistName = "The Beatles Band"
+    val isCompilation = false
+    val year: Short = 1965
+    val bpm = 120f
+    val trackNumber: Short = 13
+    val discNumber: Short = 1
+    val comments = "Best song ever!"
+    val genre = Genre.ROCK
+    val encoding = "Lame MP3"
+    val encoder = "transgressoft"
     val dateOfCreation = LocalDateTime.now()
-    var artist: Artist = mock {
-        on { name } doReturn artistName
-        on { countryCode } doReturn CountryCode.UK
-        on { toString() } doReturn "ImmutableArtist{name=The Beatles, countryCode=UK}"
-    }
-    var albumArtist: Artist = mock {
-        on { name } doReturn albumArtistName
-        on { countryCode } doReturn CountryCode.UK
-    }
-    var album: Album = mock {
-        on { name } doReturn albumName
-        on { year } doReturn year
-        on { label } doReturn label
-        on { isCompilation } doReturn isCompilation
-        on { albumArtist } doReturn albumArtist
-    }
+    val artist = ImmutableArtist(artistName, CountryCode.UK)
+    val albumArtist = ImmutableArtist(albumArtistName, CountryCode.UK)
+    val album = ImmutableAlbum(albumName, albumArtist, isCompilation, year, label)
 
-    @Test
-    @DisplayName("AudioItem properties")
-    fun propertiesTest() {
-        var audioItem = ImmutableAudioItem(id, path, title, duration, bitRate, artist, album, genre, comments, trackNumber, discNumber, bpm, encoder, encoding, dateOfCreation)
-        val dateOfCreation = audioItem.dateOfCreation
-        val lastDateModified = audioItem.lastDateModified
+    var audioItem = ImmutableAudioItem(id, path, title, duration, bitRate, artist, album, genre, comments, trackNumber, discNumber, bpm, encoder, encoding, null, dateOfCreation)
 
-        assertEquals(9, audioItem.id)
-        assertEquals(dateOfCreation, lastDateModified)
-        assertTrue(LocalDateTime.now().isAfter(audioItem.dateOfCreation))
-        assertEquals(path, audioItem.path)
-        assertEquals(dateOfCreation, audioItem.dateOfCreation)
-        assertEquals("testeable.mp3", audioItem.fileName)
-        assertEquals("mp3", audioItem.extension)
-        assertEquals(title, audioItem.title)
-        assertEquals(duration, audioItem.duration)
-        assertEquals(bitRate, audioItem.bitRate)
-        assertEquals(album.name, audioItem.album.name)
-        assertEquals(album.albumArtist.name, audioItem.album.albumArtist.name)
-        assertEquals(CountryCode.UK, audioItem.album.albumArtist.countryCode)
-        assertFalse(audioItem.album.isCompilation)
-        assertEquals(album.year, audioItem.album.year)
-        assertEquals(album.label.name, audioItem.album.label.name)
-        assertEquals(CountryCode.US, audioItem.album.label.countryCode)
-        assertEquals(artist.name, audioItem.artist.name)
-        assertEquals(CountryCode.UK, audioItem.artist.countryCode)
-        assertEquals(bpm, audioItem.bpm)
-        assertEquals(trackNumber, audioItem.trackNumber)
-        assertEquals(discNumber, audioItem.discNumber)
-        assertEquals(comments, audioItem.comments)
-        assertEquals(genre, audioItem.genre)
-        assertEquals(encoding, audioItem.encoding)
-        assertEquals(encoder, audioItem.encoder)
+    "AudioItem properties" {
+        assertSoftly {
+            audioItem.id shouldBe 9
+            audioItem.lastDateModified shouldBe dateOfCreation
+            audioItem.dateOfCreation shouldBe dateOfCreation
+            audioItem.dateOfCreation shouldBeBefore LocalDateTime.now()
+            audioItem.path shouldBe path
+            audioItem.fileName shouldBe "testeable.mp3"
+            audioItem.extension shouldBe "mp3"
+            audioItem.title shouldBe title
+            audioItem.duration shouldBe duration
+            audioItem.bitRate shouldBe bitRate
+            audioItem.album.name shouldBe album.name
+            audioItem.album.albumArtist.name shouldBe album.albumArtist.name
+            audioItem.album.albumArtist.countryCode shouldBe CountryCode.UK
+            audioItem.album.isCompilation shouldBe false
+            audioItem.album.year shouldBe album.year
+            audioItem.album.label.name shouldBe album.label.name
+            audioItem.album.label.countryCode shouldBe CountryCode.US
+            audioItem.artist.name shouldBe artist.name
+            audioItem.artist.countryCode shouldBe CountryCode.UK
+            audioItem.bpm shouldBe bpm
+            audioItem.trackNumber shouldBe trackNumber
+            audioItem.discNumber shouldBe discNumber
+            audioItem.comments shouldBe comments
+            audioItem.genre shouldBe genre
+            audioItem.encoding shouldBe encoding
+            audioItem.encoder shouldBe encoder
+            audioItem.uniqueId shouldBe "testeable.mp3-Yesterday-120-320"
+            audioItem.toString() shouldBe "ImmutableAudioItem(id=9, path=testfiles/testeable.mp3, title=Yesterday, artist=The Beatles)"
+        }
 
+        val previousDateModified = audioItem.lastDateModified
         audioItem = audioItem.copy(comments = "modified", lastDateModified = LocalDateTime.now())
-        assertNotEquals(lastDateModified, audioItem.lastDateModified)
-        assertTrue(lastDateModified.isBefore(audioItem.lastDateModified))
-        assertEquals(
-            "ImmutableAudioItem(id=9, path=testfiles/testeable.mp3, title=Yesterday, artist=The Beatles)",
-            audioItem.toString()
-        )
-        assertEquals("testeable.mp3-Yesterday-120-320", audioItem.uniqueId)
-        val label: Label = ImmutableLabel("New label")
-        assertNotEquals(label, audioItem.album.label)
-        assertEquals("ImmutableLabel(name=New label, countryCode=UNDEFINED)", label.toString())
+        audioItem.lastDateModified shouldBeAfter previousDateModified
+        audioItem.comments shouldBe "modified"
 
         val newAlbum = mock<Album> {
-            on { name } doReturn "OtherAlbum"
-            on { albumArtist } doReturn ImmutableArtist("Other Artist")
-            on { isCompilation } doReturn true
-            on { year } doReturn 1999.toShort()
-            on { it.label } doReturn ImmutableLabel.UNKNOWN
+            on { this@on.name } doReturn "OtherAlbum"
+            on { this@on.albumArtist } doReturn ImmutableArtist("Other Artist")
+            on { this@on.isCompilation } doReturn true
+            on { this@on.year } doReturn 1999.toShort()
+            on { this@on.label } doReturn ImmutableLabel.UNKNOWN
         }
         val audioItemWithModifiedAlbum = audioItem.copy(
             title = "Other title",
@@ -111,39 +102,188 @@ internal class ImmutableAudioItemTest {
             encoder = "New encoder",
             encoding = "New encoding",
             bpm = 128f)
-        assertEquals("Other Artist", audioItemWithModifiedAlbum.album.albumArtist.name)
-        assertEquals("Other title", audioItemWithModifiedAlbum.title)
-        assertNotEquals(audioItem, audioItemWithModifiedAlbum)
-        assertTrue(audioItemWithModifiedAlbum.album.isCompilation)
-        assertEquals("New encoder", audioItemWithModifiedAlbum.encoder)
-        assertEquals("New encoding", audioItemWithModifiedAlbum.encoding)
-        assertEquals(128f, audioItemWithModifiedAlbum.bpm)
-        assertEquals(0, audioItem.length)
+
+        audioItemWithModifiedAlbum shouldNotBe audioItem
+        audioItemWithModifiedAlbum.album.albumArtist.name shouldBe "Other Artist"
+        audioItemWithModifiedAlbum.title shouldBe "Other title"
+        audioItemWithModifiedAlbum.album.isCompilation shouldBe true
+        audioItemWithModifiedAlbum.encoder shouldBe "New encoder"
+        audioItemWithModifiedAlbum.encoding shouldBe "New encoding"
+        audioItemWithModifiedAlbum.bpm shouldBe 128f
+        audioItem.length shouldBe 0
 
         val unknownAlbum = mock<Album> {
-            on { name } doReturn ""
-            on { albumArtist } doReturn ImmutableArtist.UNKNOWN
-            on { isCompilation } doReturn true
-            on { year } doReturn 1999.toShort()
-            on { it.label } doReturn ImmutableLabel.UNKNOWN
+            on { this@on.name } doReturn ""
+            on { this@on.albumArtist } doReturn ImmutableArtist.UNKNOWN
+            on { this@on.isCompilation } doReturn true
+            on { this@on.year } doReturn 1999.toShort()
+            on { this@on.label } doReturn ImmutableLabel.UNKNOWN
         }
         var modifiedAudioItem = audioItemWithModifiedAlbum.copy(
             genre = Genre.UNDEFINED,
             album = unknownAlbum,
             comments = "Modified")
-        assertEquals(audioItem.artist, modifiedAudioItem.artist)
-        assertThat(modifiedAudioItem.album.name).isEmpty()
-        assertEquals(Genre.UNDEFINED, modifiedAudioItem.genre)
-        assertEquals("Modified", modifiedAudioItem.comments)
-        assertEquals(artist, modifiedAudioItem.artist)
+
+        modifiedAudioItem.artist shouldBe audioItem.artist
+        modifiedAudioItem.album.name shouldBe ""
+        modifiedAudioItem.genre shouldBe Genre.UNDEFINED
+        modifiedAudioItem.comments shouldBe "Modified"
+        modifiedAudioItem.artist shouldBe artist
 
         modifiedAudioItem = modifiedAudioItem.copy(
             artist = ImmutableArtist.UNKNOWN,
             path = Path.of("/moved/song.mp3"),
             discNumber = 2.toShort(),
             trackNumber = 3.toShort())
-        assertEquals("/moved/song.mp3", modifiedAudioItem.path.toString())
-        assertEquals(2.toShort(), modifiedAudioItem.discNumber)
-        assertEquals(3.toShort(), modifiedAudioItem.trackNumber)
+        modifiedAudioItem.path.toString() shouldBe "/moved/song.mp3"
+        modifiedAudioItem.discNumber shouldBe 2.toShort()
+        modifiedAudioItem.trackNumber shouldBe 3.toShort()
     }
-}
+    
+    "AudioItem writes metadata into file" {
+        val file = tempfile("audioItem-test", ".mp3").also { it.deleteOnExit() }
+        mp3File.copyTo(file, overwrite = true)
+
+        var updatedAudioItem: AudioItemBase = ImmutableAudioItem.createFromFile(file.toPath())
+        val thisDateOfCreation = updatedAudioItem.dateOfCreation
+        updatedAudioItem = updatedAudioItem.update(
+            AudioItemMetadataChange(
+                title,
+                artist,
+                albumName,
+                albumArtist,
+                isCompilation,
+                year,
+                label,
+                testCoverBytes,
+                genre,
+                comments,
+                trackNumber,
+                discNumber,
+                bpm
+            )
+        )
+
+        assertSoftly {
+            updatedAudioItem.id shouldBe 0
+            updatedAudioItem.dateOfCreation shouldBe thisDateOfCreation
+            updatedAudioItem.dateOfCreation shouldBeBefore LocalDateTime.now()
+            updatedAudioItem.lastDateModified shouldBeAfter dateOfCreation
+            updatedAudioItem.path shouldBe file.toPath()
+            updatedAudioItem.fileName shouldContain "audioItem-test"
+            updatedAudioItem.extension shouldBe "mp3"
+            updatedAudioItem.title shouldBe title
+            updatedAudioItem.duration shouldBe 8.seconds.toJavaDuration()
+            updatedAudioItem.bitRate shouldBe 143
+            updatedAudioItem.album.name shouldBe album.name
+            updatedAudioItem.album.albumArtist.name shouldBe album.albumArtist.name
+            updatedAudioItem.album.albumArtist.countryCode shouldBe CountryCode.UK
+            updatedAudioItem.album.isCompilation shouldBe false
+            updatedAudioItem.album.year shouldBe album.year
+            updatedAudioItem.album.label.name shouldBe album.label.name
+            updatedAudioItem.album.label.countryCode shouldBe CountryCode.US
+            updatedAudioItem.artist.name shouldBe artist.name
+            updatedAudioItem.artist.countryCode shouldBe CountryCode.UK
+            updatedAudioItem.bpm shouldBe bpm
+            updatedAudioItem.trackNumber shouldBe trackNumber
+            updatedAudioItem.discNumber shouldBe discNumber
+            updatedAudioItem.comments shouldBe comments
+            updatedAudioItem.genre shouldBe genre
+            updatedAudioItem.encoding shouldBe "MPEG-1 Layer 3"
+            updatedAudioItem.encoder shouldBe ""
+            updatedAudioItem.coverImage shouldBe testCoverBytes
+            updatedAudioItem.uniqueId shouldBe "${updatedAudioItem.fileName}-Yesterday-8-143"
+            updatedAudioItem.toString() shouldBe "ImmutableAudioItem(id=0, path=${file.toPath()}, title=Yesterday, artist=The Beatles)"
+        }
+
+        updatedAudioItem.writeMetadata()
+
+        eventually(2.seconds) {
+            val loadedAudioItem = ImmutableAudioItem.createFromFile(updatedAudioItem.path)
+            assertSoftly {
+                loadedAudioItem.id shouldBe updatedAudioItem.id
+                loadedAudioItem.dateOfCreation shouldBeAfter updatedAudioItem.dateOfCreation
+                loadedAudioItem.lastDateModified shouldBeAfter updatedAudioItem.lastDateModified
+                loadedAudioItem.path shouldBe updatedAudioItem.path
+                loadedAudioItem.fileName shouldBe updatedAudioItem.fileName
+                loadedAudioItem.extension shouldBe updatedAudioItem.extension
+                loadedAudioItem.title shouldBe updatedAudioItem.title
+                loadedAudioItem.duration shouldBe updatedAudioItem.duration
+                loadedAudioItem.bitRate shouldBe updatedAudioItem.bitRate
+                loadedAudioItem.album.albumArtist.name shouldBe updatedAudioItem.album.albumArtist.name
+                loadedAudioItem.album.albumArtist.countryCode shouldBe CountryCode.UNDEFINED    // album country code is not updated because there is no ID3 tag for it
+                loadedAudioItem.album.isCompilation shouldBe updatedAudioItem.album.isCompilation
+                loadedAudioItem.album.label.name shouldBe updatedAudioItem.album.label.name
+                loadedAudioItem.album.label.countryCode shouldBe CountryCode.UNDEFINED  // label country code is not updated because there is no ID3 tag for it
+                loadedAudioItem.artist.name shouldBe updatedAudioItem.artist.name
+                loadedAudioItem.artist.countryCode shouldBe updatedAudioItem.artist.countryCode // artist country code is saved into COUNTRY ID3 tag
+                loadedAudioItem.bpm shouldBe updatedAudioItem.bpm
+                loadedAudioItem.trackNumber shouldBe updatedAudioItem.trackNumber
+                loadedAudioItem.discNumber shouldBe updatedAudioItem.discNumber
+                loadedAudioItem.comments shouldBe updatedAudioItem.comments
+                loadedAudioItem.genre shouldBe updatedAudioItem.genre
+                loadedAudioItem.encoding shouldBe updatedAudioItem.encoding
+                loadedAudioItem.encoder shouldBe updatedAudioItem.encoder
+                loadedAudioItem.coverImage shouldBe updatedAudioItem.coverImage
+                loadedAudioItem.uniqueId shouldBe updatedAudioItem.uniqueId
+                loadedAudioItem.toString() shouldBe updatedAudioItem.toString()
+            }
+        }
+    }
+
+    "AudioItem returns coverImage after being deserialized" {
+        val tempFile = tempfile("audioItem-test", ".mp3").also { it.deleteOnExit() }
+        mp3File.copyTo(tempFile, overwrite = true)
+        audioItem = audioItem.copy(path = tempFile.toPath())
+
+        audioItem.coverImage shouldBe null
+
+        val updatedAudioItem = audioItem.update { coverImage = testCoverBytes }
+        updatedAudioItem.writeMetadata()
+
+        val json = Json { serializersModule = audioItemSerializerModule; prettyPrint = true }
+        val encodedAudioItem = json.encodeToString(AudioItemBase.serializer(), audioItem)
+        encodedAudioItem shouldBe """
+        {
+            "audioItemType": "DefaultAudioItem",
+            "id": ${audioItem.id},
+            "path": "${audioItem.path}",
+            "title": "${audioItem.title}",
+            "duration": ${audioItem.duration.toSeconds()},
+            "bitRate": ${audioItem.bitRate},
+            "artist": {
+                "type": "DefaultArtist",
+                "name": "${audioItem.artist.name}",
+                "countryCode": "${audioItem.artist.countryCode}"
+            },
+            "album": {
+                "type": "DefaultAlbum",
+                "name": "${audioItem.album.name}",
+                "albumArtist": {
+                    "type": "DefaultArtist",
+                    "name": "${audioItem.album.albumArtist.name}",
+                    "countryCode": "${audioItem.artist.countryCode}"
+                },
+                "year": ${audioItem.album.year},
+                "label": {
+                    "type": "DefaultLabel",
+                    "name": "${audioItem.album.label.name}",
+                    "countryCode": "${audioItem.album.label.countryCode}"
+                }
+            },
+            "genre": "${audioItem.genre.name}",
+            "comments": "${audioItem.comments}",
+            "trackNumber": ${audioItem.trackNumber},
+            "discNumber": ${audioItem.discNumber},
+            "bpm": ${audioItem.bpm},
+            "encoder": "${audioItem.encoder}",
+            "encoding": "${audioItem.encoding}",
+            "dateOfCreation": ${audioItem.dateOfCreation.toEpochSecond(ZoneOffset.UTC)},
+            "lastDateModified": ${audioItem.lastDateModified.toEpochSecond(ZoneOffset.UTC)}
+        }""".trimIndent()
+
+        val decodedAudioItem = json.decodeFromString<AudioItemBase>(encodedAudioItem)
+
+        decodedAudioItem.coverImage shouldBe testCoverBytes
+    }
+})

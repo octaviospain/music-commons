@@ -13,7 +13,7 @@ ext {
 dependencies {
     implementation 'com.google.guava:guava:32.1.1-jre'
     implementation 'net.jthink:jaudiotagger:3.0.1'
-    implementation 'net.transgressoft:soft-query-mem:0.65-SNAPSHOT'
+    implementation 'net.transgressoft:soft-query-mem:0.68-SNAPSHOT'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1'
     implementation 'ws.schild:jave-core:3.3.1'
     implementation 'ws.schild:jave-nativebin-linux64:3.3.1'
@@ -23,7 +23,6 @@ dependencies {
     testImplementation 'org.mockito:mockito-junit-jupiter:5.4.0'
     testImplementation 'org.mockito.kotlin:mockito-kotlin:5.0.0'
     testImplementation(platform('org.junit:junit-bom:5.10.0-M1'))
-    testImplementation('org.junit.jupiter:junit-jupiter')
 
     testImplementation 'io.mockk:mockk:1.13.5'
     testImplementation "io.kotest:kotest-runner-junit5:$kotestVersion"

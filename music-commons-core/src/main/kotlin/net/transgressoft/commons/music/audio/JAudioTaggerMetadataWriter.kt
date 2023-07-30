@@ -42,7 +42,7 @@ internal class JAudioTaggerMetadataWriter {
             audio.commit()
             logger.debug { "Metadata of $audioItem successfully written to file" }
 
-            audioItem.album.coverImage?.let {
+            audioItem.coverImage?.let {
                 overwriteCoverImage(audioItem, audioFile, it)
             }
         } catch (exception: Exception) {
@@ -85,6 +85,7 @@ internal class JAudioTaggerMetadataWriter {
         tag.setField(FieldKey.ALBUM_ARTIST, audioItem.album.albumArtist.name)
         tag.setField(FieldKey.ARTIST, audioItem.artist.name)
         tag.setField(FieldKey.GENRE, audioItem.genre.capitalize())
+        tag.setField(FieldKey.COUNTRY, audioItem.artist.countryCode.name)
         audioItem.comments?.let { tag.setField(FieldKey.COMMENT, it)}
         audioItem.trackNumber?.let { tag.setField(FieldKey.TRACK, it.toString()) }
         audioItem.album.year?.let { tag.setField(FieldKey.YEAR, it.toString()) }

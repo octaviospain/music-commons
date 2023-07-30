@@ -61,7 +61,6 @@ internal class JAudioTaggerMetadataWriterTest {
         on { albumArtist } doReturn albumArtist
         on { year } doReturn year
         on { name } doReturn albumName
-        on { coverImage } doReturn coverBytes
         on { label } doReturn label
         on { isCompilation } doReturn isCompilation
     }
@@ -79,6 +78,7 @@ internal class JAudioTaggerMetadataWriterTest {
         on { bitRate } doReturn bitRate
         on { encoder } doReturn encoder
         on { encoding } doReturn encoding
+        on { coverImage } doReturn coverBytes
     }
 
     lateinit var metadataWriter: JAudioTaggerMetadataWriter

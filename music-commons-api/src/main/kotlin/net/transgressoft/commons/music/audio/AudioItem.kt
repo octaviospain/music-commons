@@ -26,12 +26,11 @@ interface AudioItem : QueryEntity {
     val encoder: String?
     val encoding: String?
     val length: Long
+    val coverImage: ByteArray?
     val dateOfCreation: LocalDateTime
     val lastDateModified: LocalDateTime
 
     fun toBuilder(): AudioItemBuilder<out AudioItem>
-
-    fun update(change: AudioItemMetadataChange): AudioItem
 
     suspend fun writeMetadata()
 }

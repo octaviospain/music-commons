@@ -3,27 +3,29 @@ package net.transgressoft.commons.music.audio
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import mu.KotlinLogging
+import net.transgressoft.commons.query.InMemoryRepositoryBase
 import net.transgressoft.commons.query.JsonFileRepository
 import java.io.File
+import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
 import java.util.stream.Collectors
+import kotlin.collections.HashSet
 import kotlin.streams.toList
 
 /**
  * @author Octavio Calleya
  */
 @Serializable
-abstract class AudioItemJsonRepositoryBase<I : AudioItem> protected constructor(): JsonFileRepository<I>(), AudioItemRepository<I> {
+abstract class AudioItemJsonRepositoryBase<I : AudioItem> (
+    @Transient val file: File? = null
+): JsonFileRepository<I>(file), AudioItemRepository<I> {
 
     @Transient
     private val logger = KotlinLogging.logger {}
 
     @Transient
     private val idCounter = AtomicInteger(1)
-
-    @Transient
-    override var jsonFile: File? = null
 
     protected val albumsByArtist: MutableMap<Artist, MutableSet<Album>> = mutableMapOf()
 
@@ -35,6 +37,7 @@ abstract class AudioItemJsonRepositoryBase<I : AudioItem> protected constructor(
         return id
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun add(entity: I): Boolean {
         val entityToAdd = if (entity.id <= UNASSIGNED_ID) {
             entity.toBuilder().id(newId()).build().also {
@@ -134,4 +137,13 @@ abstract class AudioItemJsonRepositoryBase<I : AudioItem> protected constructor(
     override fun artistAlbums(artist: Artist): Set<Album> = albumsByArtist[artist]?.toSet() ?: emptySet()
 
     override fun albumAudioItems(album: Album): Set<I> = searchInternal { it.album == album }.toSet()
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || javaClass != other.javaClass) return false
+        val that = other as AudioItemJsonRepositoryBase<*>
+        return entitiesById == that.entitiesById && albumsByArtist == that.albumsByArtist
+    }
+
+    override fun hashCode() = Objects.hash(entitiesById, albumsByArtist)
 }

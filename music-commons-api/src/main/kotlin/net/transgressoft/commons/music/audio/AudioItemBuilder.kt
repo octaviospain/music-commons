@@ -20,6 +20,7 @@ interface AudioItemBuilder<I : AudioItem> {
      val bpm: Float?
      val encoder: String?
      val encoding: String?
+     val coverImage: ByteArray?
      val dateOfCreation: LocalDateTime
      val lastDateModified: LocalDateTime
     
@@ -39,6 +40,7 @@ interface AudioItemBuilder<I : AudioItem> {
     fun bpm(bpm: Float?): AudioItemBuilder<I>
     fun encoder(encoder: String?): AudioItemBuilder<I>
     fun encoding(encoding: String?): AudioItemBuilder<I>
+    fun coverImage(coverImage: ByteArray?): AudioItemBuilder<I>
     fun dateOfCreation(dateOfCreation: LocalDateTime): AudioItemBuilder<I>
     fun lastDateModified(lastDateModified: LocalDateTime): AudioItemBuilder<I>
 }

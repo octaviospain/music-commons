@@ -9,5 +9,4 @@ interface Album : Comparable<Album> {
     val isCompilation: Boolean
     val year: Short?
     val label: Label
-    val coverImage: ByteArray?
 }

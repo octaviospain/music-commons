@@ -1,5 +1,6 @@
 package net.transgressoft.commons.music.audio
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlinx.serialization.json.Json
@@ -10,7 +11,10 @@ import net.transgressoft.commons.query.JsonFileRepository
 import java.io.File
 
 @Serializable
-class AudioItemJsonRepository() : AudioItemJsonRepositoryBase<AudioItemBase>() {
+@SerialName("AudioItemRepository")
+class AudioItemJsonRepository internal constructor(
+    @Transient val _file: File? = null
+) : AudioItemJsonRepositoryBase<AudioItemBase>(_file) {
 
     @Transient
     override var queryEntitySerializer = AudioItemBase.serializer()
@@ -18,17 +22,17 @@ class AudioItemJsonRepository() : AudioItemJsonRepositoryBase<AudioItemBase>() {
     @Transient
     override var polymorphicRepositorySerializer = audioItemRepositorySerializersModule
 
-    constructor(file: File) : this() {
-        jsonFile = file
-    }
+    constructor() : this(null)
 
     companion object {
-        private val json = Json { serializersModule = audioItemRepositorySerializersModule }
+        private val json = Json {
+            serializersModule = audioItemRepositorySerializersModule
+            allowStructuredMapKeys = true
+        }
 
         fun loadFromFile(file: File): JsonFileRepository<AudioItemBase> {
             return json.decodeFromString(JsonFileRepository.serializer(AudioItemBase.serializer()), file.readText())
                 .apply {
-                    jsonFile = file
                     queryEntitySerializer = AudioItemBase.serializer()
                     polymorphicRepositorySerializer = audioItemRepositorySerializersModule
                 }
@@ -42,7 +46,5 @@ val audioItemRepositorySerializersModule = SerializersModule {
     polymorphic(JsonFileRepository::class) {
         subclass(AudioItemJsonRepository.serializer())
     }
-    polymorphic(AudioItemBase::class) {
-        subclass(ImmutableAudioItem.serializer())
-    }
+    include(audioItemSerializerModule)
 }

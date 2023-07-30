@@ -1,12 +1,14 @@
 package net.transgressoft.commons.music.audio
 
 import com.neovisionaries.i18n.CountryCode
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
  * @author Octavio Calleya
  */
 @Serializable
+@SerialName("DefaultLabel")
 data class ImmutableLabel(override val name: String, override val countryCode: CountryCode = CountryCode.UNDEFINED) : Label {
 
     override fun compareTo(other: Label): Int {

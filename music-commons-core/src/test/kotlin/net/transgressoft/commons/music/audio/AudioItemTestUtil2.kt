@@ -36,13 +36,14 @@ internal object AudioItemTestUtil2 : TestConfiguration() {
     val wavFile = File("/testfiles/testeable.wav".asURI())
     private val testCover = File("/testfiles/cover.jpg".asURI())
     private val testCover2 = File("/testfiles/cover-2.jpg".asURI())
-    private val coverBytes = Files.readAllBytes(testCover.toPath())
+    val testCoverBytes = Files.readAllBytes(testCover.toPath())
 
     private fun String.asURI(): URI = object {}.javaClass.getResource(this)!!.toURI()
 
     private fun createTempFileWithTag(suffix: String, testFile: File, tag: Tag): File =
         tempfile(suffix = suffix).also { file ->
             Files.copy(testFile.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            file.deleteOnExit()
             AudioFileIO.read(file).apply {
                 this.tag = tag
                 commit()
@@ -63,19 +64,19 @@ internal object AudioItemTestUtil2 : TestConfiguration() {
 
     val arbitraryAudioItemChange = arbitrary {
         AudioItemMetadataChange(
-            title = Arb.string().bind(),
+            title = Arb.stringPattern("[a-z]{5} [a-z]{5}").bind(),
             artist = ImmutableArtist(
                 AudioUtils.beautifyArtistName(Arb.stringPattern("[a-z]{5} [a-z]{5}").bind()),
                 CountryCode.values().random()
             ),
-            albumName = Arb.string().bind(),
+            albumName = Arb.stringPattern("[a-z]{5} [a-z]{5}").bind(),
             albumArtist = ImmutableArtist(AudioUtils.beautifyArtistName(Arb.stringPattern("[a-z]{5} [a-z]{5}").bind())),
             isCompilation = Arb.boolean().bind(),
             year = Arb.short().bind(),
-            label = ImmutableLabel(Arb.string().bind()),
+            label = ImmutableLabel(Arb.stringPattern("[a-z]{5} [a-z]{5}").bind()),
             coverImage = Files.readAllBytes(testCover2.toPath()),
             genre = Genre.values().random(),
-            comments = Arb.string().bind(),
+            comments = Arb.stringPattern("[a-z]{5} [a-z]{5}").bind(),
             trackNumber = Arb.short().bind(),
             discNumber = Arb.short().bind(),
             bpm = Arb.positiveInt(230).bind().toFloat()
@@ -86,25 +87,25 @@ internal object AudioItemTestUtil2 : TestConfiguration() {
         TagOptionSingleton.getInstance().isWriteMp4GenresAsText = true
         TagOptionSingleton.getInstance().isWriteMp3GenresAsText = true
 
-        tag.setField(FieldKey.TITLE, Arb.string().next())
-        tag.setField(FieldKey.ALBUM, Arb.string().next())
+        tag.setField(FieldKey.TITLE, Arb.stringPattern("[a-z]{5} [a-z]{5}").next())
+        tag.setField(FieldKey.ALBUM, Arb.stringPattern("[a-z]{5} [a-z]{5}").next())
         tag.setField(FieldKey.COUNTRY, CountryCode.values().random().name)
         tag.setField(FieldKey.ALBUM_ARTIST, Arb.stringPattern("[a-z]{5} [a-z]{5}").next())
         tag.setField(FieldKey.ARTIST, Arb.stringPattern("[a-z]{5} [a-z]{5}").next())
         tag.setField(FieldKey.GENRE, Genre.values().random().name)
-        tag.setField(FieldKey.COMMENT, Arb.string().next())
-        tag.setField(FieldKey.GENRE, Arb.string().next())
+        tag.setField(FieldKey.COMMENT, Arb.stringPattern("[a-z]{5} [a-z]{5}").next())
+        tag.setField(FieldKey.GENRE, Arb.stringPattern("[a-z]{5} [a-z]{5}").next())
         tag.setField(FieldKey.TRACK, Arb.short().next().toString())
         tag.setField(FieldKey.DISC_NO, Arb.short().next().toString())
         tag.setField(FieldKey.YEAR, Arb.short().next().toString())
-        tag.setField(FieldKey.ENCODER, Arb.string().next())
+        tag.setField(FieldKey.ENCODER, Arb.stringPattern("[a-z]{5} [a-z]{5}").next())
         tag.setField(FieldKey.IS_COMPILATION, Arb.boolean().next().toString())
         if (tag is Mp4Tag) {
             tag.setField(FieldKey.BPM, Arb.int(-1, 220).next().toString())
         } else {
             tag.setField(FieldKey.BPM, Arb.float(-1.0f, 220.58f).next().toString())
         }
-        setArtworkTag(tag, coverBytes)
+        setArtworkTag(tag, testCoverBytes)
         return tag
     }
 
@@ -189,6 +190,7 @@ internal object AudioItemTestUtil2 : TestConfiguration() {
         bpm: Float? = defaultBpm,
         encoder: String? = defaultEncoder,
         encoding: String? = defaultEncoding,
+        coverImage: ByteArray? = testCoverBytes,
         dateOfCreation: LocalDateTime = defaultDateOfCreation,
         lastDateModified: LocalDateTime = defaultDateOfModification,
     ) = arbitrary {
@@ -204,9 +206,10 @@ internal object AudioItemTestUtil2 : TestConfiguration() {
             if (comments == defaultComments) Arb.string().bind() else comments,
             if (trackNumber == defaultTrackNumber) Arb.short().bind() else trackNumber,
             if (discNumber == defaultDiscNumber) Arb.short().bind() else discNumber,
-            if (bpm == defaultBpm) Arb.float().bind() else bpm,
+            if (bpm == defaultBpm) Arb.float(-1.0f, 220.58f).bind() else bpm,
             if (encoder == defaultEncoder) Arb.string().bind() else encoder,
             if (encoding == defaultEncoding) Arb.string().bind() else encoding,
+            coverImage,
             if (dateOfCreation == defaultDateOfCreation) Arb.localDateTime().next() else dateOfCreation,
             if (lastDateModified == defaultDateOfModification) lastDateModified else lastDateModified
         )
