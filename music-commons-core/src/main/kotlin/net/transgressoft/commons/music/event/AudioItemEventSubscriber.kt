@@ -1,15 +1,18 @@
 package net.transgressoft.commons.music.event
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import mu.KotlinLogging
 import net.transgressoft.commons.event.QueryEntitySubscriberBase
 import net.transgressoft.commons.event.QueryEntitySubscriptionBase
 import net.transgressoft.commons.music.audio.AudioItem
 
-open class AudioItemEventSubscriber<I : AudioItem> : QueryEntitySubscriberBase<I>() {
+@Serializable
+open class AudioItemEventSubscriber<I : AudioItem>(private val name: String) : QueryEntitySubscriberBase<I>() {
 
-    private val logger = KotlinLogging.logger {}
+    @Transient private val logger = KotlinLogging.logger {}
 
-    protected var audioItemSubscription: QueryEntitySubscriptionBase<I>? = null
+    @Transient protected var audioItemSubscription: QueryEntitySubscriptionBase<I>? = null
 
     init {
         addOnSubscribeEventAction {
@@ -17,4 +20,6 @@ open class AudioItemEventSubscriber<I : AudioItem> : QueryEntitySubscriberBase<I
             logger.info { "${toString()} subscribed to ${it.source}" }
         }
     }
+
+    override fun toString() = "AudioItemEventSubscriber(name=$name)"
 }

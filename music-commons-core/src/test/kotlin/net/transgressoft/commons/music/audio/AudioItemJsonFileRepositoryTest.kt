@@ -7,7 +7,7 @@ import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.property.arbitrary.next
-import net.transgressoft.commons.music.audio.AudioItemTestUtil2.arbitraryMp3File
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryMp3File
 import java.io.File
 import kotlin.time.Duration.Companion.seconds
 

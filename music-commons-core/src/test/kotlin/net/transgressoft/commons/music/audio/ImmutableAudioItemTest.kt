@@ -11,8 +11,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import kotlinx.serialization.json.Json
-import net.transgressoft.commons.music.audio.AudioItemTestUtil2.mp3File
-import net.transgressoft.commons.music.audio.AudioItemTestUtil2.testCoverBytes
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.mp3File
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.testCoverBytes
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import java.nio.file.Path
@@ -101,7 +101,8 @@ internal class ImmutableAudioItemTest : StringSpec({
             album = newAlbum,
             encoder = "New encoder",
             encoding = "New encoding",
-            bpm = 128f)
+            bpm = 128f
+        )
 
         audioItemWithModifiedAlbum shouldNotBe audioItem
         audioItemWithModifiedAlbum.album.albumArtist.name shouldBe "Other Artist"
@@ -122,7 +123,8 @@ internal class ImmutableAudioItemTest : StringSpec({
         var modifiedAudioItem = audioItemWithModifiedAlbum.copy(
             genre = Genre.UNDEFINED,
             album = unknownAlbum,
-            comments = "Modified")
+            comments = "Modified"
+        )
 
         modifiedAudioItem.artist shouldBe audioItem.artist
         modifiedAudioItem.album.name shouldBe ""
@@ -134,12 +136,13 @@ internal class ImmutableAudioItemTest : StringSpec({
             artist = ImmutableArtist.UNKNOWN,
             path = Path.of("/moved/song.mp3"),
             discNumber = 2.toShort(),
-            trackNumber = 3.toShort())
+            trackNumber = 3.toShort()
+        )
         modifiedAudioItem.path.toString() shouldBe "/moved/song.mp3"
         modifiedAudioItem.discNumber shouldBe 2.toShort()
         modifiedAudioItem.trackNumber shouldBe 3.toShort()
     }
-    
+
     "AudioItem writes metadata into file" {
         val file = tempfile("audioItem-test", ".mp3").also { it.deleteOnExit() }
         mp3File.copyTo(file, overwrite = true)
@@ -147,22 +150,7 @@ internal class ImmutableAudioItemTest : StringSpec({
         var updatedAudioItem: AudioItemBase = ImmutableAudioItem.createFromFile(file.toPath())
         val thisDateOfCreation = updatedAudioItem.dateOfCreation
         updatedAudioItem = updatedAudioItem.update(
-            AudioItemMetadataChange(
-                title,
-                artist,
-                albumName,
-                albumArtist,
-                isCompilation,
-                year,
-                label,
-                testCoverBytes,
-                genre,
-                comments,
-                trackNumber,
-                discNumber,
-                bpm
-            )
-        )
+            AudioItemMetadataChange(title, artist, albumName, albumArtist, isCompilation, year, label, testCoverBytes, genre, comments, trackNumber, discNumber, bpm))
 
         assertSoftly {
             updatedAudioItem.id shouldBe 0
@@ -242,48 +230,49 @@ internal class ImmutableAudioItemTest : StringSpec({
         updatedAudioItem.writeMetadata()
 
         val json = Json { serializersModule = audioItemSerializerModule; prettyPrint = true }
-        val encodedAudioItem = json.encodeToString(AudioItemBase.serializer(), audioItem)
-        encodedAudioItem shouldBe """
-        {
-            "audioItemType": "DefaultAudioItem",
-            "id": ${audioItem.id},
-            "path": "${audioItem.path}",
-            "title": "${audioItem.title}",
-            "duration": ${audioItem.duration.toSeconds()},
-            "bitRate": ${audioItem.bitRate},
-            "artist": {
-                "type": "DefaultArtist",
-                "name": "${audioItem.artist.name}",
-                "countryCode": "${audioItem.artist.countryCode}"
-            },
-            "album": {
-                "type": "DefaultAlbum",
-                "name": "${audioItem.album.name}",
-                "albumArtist": {
+        eventually(2.seconds) {
+            val encodedAudioItem = json.encodeToString(AudioItemBase.serializer(), audioItem)
+            encodedAudioItem shouldBe """
+            {
+                "audioItemType": "DefaultAudioItem",
+                "id": ${audioItem.id},
+                "path": "${audioItem.path}",
+                "title": "${audioItem.title}",
+                "duration": ${audioItem.duration.toSeconds()},
+                "bitRate": ${audioItem.bitRate},
+                "artist": {
                     "type": "DefaultArtist",
-                    "name": "${audioItem.album.albumArtist.name}",
+                    "name": "${audioItem.artist.name}",
                     "countryCode": "${audioItem.artist.countryCode}"
                 },
-                "year": ${audioItem.album.year},
-                "label": {
-                    "type": "DefaultLabel",
-                    "name": "${audioItem.album.label.name}",
-                    "countryCode": "${audioItem.album.label.countryCode}"
-                }
-            },
-            "genre": "${audioItem.genre.name}",
-            "comments": "${audioItem.comments}",
-            "trackNumber": ${audioItem.trackNumber},
-            "discNumber": ${audioItem.discNumber},
-            "bpm": ${audioItem.bpm},
-            "encoder": "${audioItem.encoder}",
-            "encoding": "${audioItem.encoding}",
-            "dateOfCreation": ${audioItem.dateOfCreation.toEpochSecond(ZoneOffset.UTC)},
-            "lastDateModified": ${audioItem.lastDateModified.toEpochSecond(ZoneOffset.UTC)}
-        }""".trimIndent()
+                "album": {
+                    "type": "DefaultAlbum",
+                    "name": "${audioItem.album.name}",
+                    "albumArtist": {
+                        "type": "DefaultArtist",
+                        "name": "${audioItem.album.albumArtist.name}",
+                        "countryCode": "${audioItem.artist.countryCode}"
+                    },
+                    "year": ${audioItem.album.year},
+                    "label": {
+                        "type": "DefaultLabel",
+                        "name": "${audioItem.album.label.name}",
+                        "countryCode": "${audioItem.album.label.countryCode}"
+                    }
+                },
+                "genre": "${audioItem.genre.name}",
+                "comments": "${audioItem.comments}",
+                "trackNumber": ${audioItem.trackNumber},
+                "discNumber": ${audioItem.discNumber},
+                "bpm": ${audioItem.bpm},
+                "encoder": "${audioItem.encoder}",
+                "encoding": "${audioItem.encoding}",
+                "dateOfCreation": ${audioItem.dateOfCreation.toEpochSecond(ZoneOffset.UTC)},
+                "lastDateModified": ${audioItem.lastDateModified.toEpochSecond(ZoneOffset.UTC)}
+            }""".trimIndent()
+            val decodedAudioItem = json.decodeFromString<AudioItemBase>(encodedAudioItem)
 
-        val decodedAudioItem = json.decodeFromString<AudioItemBase>(encodedAudioItem)
-
-        decodedAudioItem.coverImage shouldBe testCoverBytes
+            decodedAudioItem.coverImage shouldBe testCoverBytes
+        }
     }
 })

@@ -3,7 +3,6 @@ package net.transgressoft.commons.music.audio
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import mu.KotlinLogging
-import net.transgressoft.commons.query.InMemoryRepositoryBase
 import net.transgressoft.commons.query.JsonFileRepository
 import java.io.File
 import java.util.*
@@ -94,6 +93,7 @@ abstract class AudioItemJsonRepositoryBase<I : AudioItem> (
     override fun remove(entity: I): Boolean {
         val removed = super.remove(entity)
         removeAlbumByArtistInternal(entity)
+        super.serializeToJson()
         return removed
     }
 
@@ -146,4 +146,6 @@ abstract class AudioItemJsonRepositoryBase<I : AudioItem> (
     }
 
     override fun hashCode() = Objects.hash(entitiesById, albumsByArtist)
+
+    override fun toString() = "AudioItemJsonRepository[${this.hashCode()}]"
 }

@@ -7,6 +7,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
+import net.transgressoft.commons.event.QueryEntitySubscriberBase
+import net.transgressoft.commons.music.event.AudioItemEventSubscriber
 import net.transgressoft.commons.query.JsonFileRepository
 import java.io.File
 
@@ -45,6 +47,9 @@ class AudioItemJsonRepository internal constructor(
 val audioItemRepositorySerializersModule = SerializersModule {
     polymorphic(JsonFileRepository::class) {
         subclass(AudioItemJsonRepository.serializer())
+    }
+    polymorphic(QueryEntitySubscriberBase::class) {
+        subclass(AudioItemEventSubscriber.serializer(AudioItemBase.serializer()))
     }
     include(audioItemSerializerModule)
 }

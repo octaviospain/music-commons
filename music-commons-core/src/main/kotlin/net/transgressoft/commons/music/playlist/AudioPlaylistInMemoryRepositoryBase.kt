@@ -45,7 +45,7 @@ protected constructor(
         })
     }
 
-    override val audioItemEventSubscriber: QueryEntitySubscriber<I> = AudioItemEventSubscriber<I>().apply {
+    override val audioItemEventSubscriber: QueryEntitySubscriber<I> = AudioItemEventSubscriber<I>(this.toString()).apply {
         addOnNextEventAction(QueryEntityEvent.Type.DELETE) {
             removeAudioItems(it.entities)
         }
@@ -241,4 +241,6 @@ protected constructor(
     }
 
     override fun hashCode() = Objects.hash(playlistsMultiMap, playlists)
+
+    override fun toString() = "PlaylistRepository[${this.hashCode()}]"
 }

@@ -7,10 +7,10 @@ import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import io.kotest.property.arbitrary.short
-import net.transgressoft.commons.music.audio.AudioItemTestUtil2.arbitraryAudioItem
-import net.transgressoft.commons.music.audio.AudioItemTestUtil2.arbitraryWavFile
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryWavFile
 
-class AudioWaveformInMemoryRepositoryTest : StringSpec({
+internal class AudioWaveformInMemoryRepositoryTest : StringSpec({
 
     "Repository creates a waveform asynchronously" {
         val repository = AudioWaveformInMemoryRepository()

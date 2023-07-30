@@ -3,7 +3,6 @@ package net.transgressoft.commons.music.audio
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.BehaviorSpec
-import io.kotest.engine.spec.tempfile
 import io.kotest.inspectors.forAll
 import io.kotest.matchers.collections.*
 import io.kotest.matchers.optional.shouldBePresent
@@ -14,14 +13,14 @@ import io.kotest.property.arbitrary.next
 import io.kotest.property.arbitrary.set
 import io.kotest.property.checkAll
 import net.transgressoft.commons.music.AudioUtils.beautifyArtistName
-import net.transgressoft.commons.music.audio.AudioItemTestUtil2.arbitraryAudioItem
-import net.transgressoft.commons.music.audio.AudioItemTestUtil2.arbitraryAudioItemChange
-import net.transgressoft.commons.music.audio.AudioItemTestUtil2.arbitraryFlacFile
-import net.transgressoft.commons.music.audio.AudioItemTestUtil2.arbitraryM4aFile
-import net.transgressoft.commons.music.audio.AudioItemTestUtil2.arbitraryMp3File
-import net.transgressoft.commons.music.audio.AudioItemTestUtil2.arbitraryWavFile
-import net.transgressoft.commons.music.audio.AudioItemTestUtil2.setArtworkTag
-import net.transgressoft.commons.music.audio.AudioItemTestUtil2.tag
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItemChange
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryFlacFile
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryM4aFile
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryMp3File
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryWavFile
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.setArtworkTag
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.tag
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.wav.WavOptions
 import org.jaudiotagger.tag.FieldKey
@@ -31,35 +30,30 @@ import org.jaudiotagger.tag.id3.ID3v24Tag
 import org.jaudiotagger.tag.mp4.Mp4Tag
 import org.jaudiotagger.tag.wav.WavInfoTag
 import org.jaudiotagger.tag.wav.WavTag
-import java.io.File
 import java.nio.file.Path
 import java.time.Duration
-import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.absolutePathString
 
-private lateinit var jsonFile: File
 private lateinit var audioRepository: AudioItemRepository<AudioItemBase>
 
 internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
 
-    val testIdCounter = AtomicInteger(1)
-
     fun Album.audioItems(): Set<AudioItem> = audioRepository.search { it.album == this }.toSet()
-    fun createFromFileWithId(file: File) = ImmutableAudioItem.createFromFile(file.toPath()).copy(id = testIdCounter.getAndIncrement())
 
     beforeContainer {
-        jsonFile = tempfile("json-repository-test", ".json").also { it.deleteOnExit() }
         audioRepository = AudioItemJsonRepository()
     }
 
     given("An AudioItemRepository") {
-        var id = 1
         and("A mp3 file") {
             checkAll(10, arbitraryMp3File, arbitraryAudioItemChange) { mp3File, audioItemChange ->
                 When("An AudioItem is created") {
-                    val audioItem = ImmutableAudioItem.createFromFile(mp3File.toPath()).copy(id = id++).also {
+                    val audioItem = ImmutableAudioItem.createFromFile(mp3File.toPath()).let {
                         audioRepository.add(it)
                         audioRepository.shouldContainExactly(it)
+                        audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let {found ->
+                           found shouldBe it
+                        }
                     }
 
                     then("It is possible to query the repository by its artist") {
@@ -84,7 +78,7 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
                     then("its properties are modified when the audioItem is modified") {
                         val updatedAudioItem = audioItem.update(audioItemChange)
                         audioRepository.addOrReplace(updatedAudioItem)
-                        audioRepository.findById(audioItem.id).get().let {
+                        audioRepository.findById(audioItem.id) shouldBePresent {
                             it shouldNotBe audioItem
                             it.id shouldBe audioItem.id
                             assertAudioItemChange(it, audioItemChange, ID3v24Tag().apply {
@@ -100,9 +94,12 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
         and("A m4a file") {
             checkAll(10, arbitraryM4aFile, arbitraryAudioItemChange) { m4aFile, audioItemChange ->
                 When("An AudioItem is created") {
-                    val audioItem = ImmutableAudioItem.createFromFile(m4aFile.toPath()).copy(id = id++).also {
+                    val audioItem = ImmutableAudioItem.createFromFile(m4aFile.toPath()).let {
                         audioRepository.add(it)
                         audioRepository.shouldContainExactly(it)
+                        audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let {found ->
+                            found shouldBe it
+                        }
                     }
 
                     then("its properties should match the metadata of the file") {
@@ -118,7 +115,7 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
                     then("its properties are modified when the audioItem is modified") {
                         val updatedAudioItem = audioItem.update(audioItemChange)
                         audioRepository.addOrReplace(updatedAudioItem)
-                        audioRepository.findById(audioItem.id).get().let {
+                        audioRepository.findById(audioItem.id) shouldBePresent {
                             it shouldNotBe audioItem
                             it.id shouldBe audioItem.id
                             assertAudioItemChange(it, audioItemChange, Mp4Tag().apply {
@@ -133,9 +130,12 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
         and("A flac file") {
             checkAll(10, arbitraryFlacFile, arbitraryAudioItemChange) { flacFile, audioItemChange ->
                 When("An AudioItem is created") {
-                    val audioItem = ImmutableAudioItem.createFromFile(flacFile.toPath()).copy(id = id++).also {
+                    val audioItem = ImmutableAudioItem.createFromFile(flacFile.toPath()).let {
                         audioRepository.add(it)
                         audioRepository.shouldContainExactly(it)
+                        audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let {found ->
+                            found shouldBe it
+                        }
                     }
 
                     then("its properties should match the metadata of the file") {
@@ -151,7 +151,7 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
                     then("its properties are modified when the audioItem is modified") {
                         val updatedAudioItem = audioItem.update(audioItemChange)
                         audioRepository.addOrReplace(updatedAudioItem)
-                        audioRepository.findById(audioItem.id).get().let {
+                        audioRepository.findById(audioItem.id) shouldBePresent {
                             it shouldNotBe audioItem
                             it.id shouldBe audioItem.id
                             assertAudioItemChange(it, audioItemChange, FlacTag().apply {
@@ -166,9 +166,12 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
         and("A wav file") {
             checkAll(10, arbitraryWavFile, arbitraryAudioItemChange) { wavFile, audioItemChange ->
                 When("An AudioItem is created") {
-                    val audioItem = ImmutableAudioItem.createFromFile(wavFile.toPath()).copy(id = id++).also {
+                    val audioItem = ImmutableAudioItem.createFromFile(wavFile.toPath()).let {
                         audioRepository.add(it)
                         audioRepository.shouldContainExactly(it)
+                        audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let {found ->
+                            found shouldBe it
+                        }
                     }
 
                     assertSoftly {
@@ -185,7 +188,7 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
                     then("its properties are modified when the audioItem is modified") {
                         val updatedAudioItem = audioItem.update(audioItemChange)
                         audioRepository.addOrReplace(updatedAudioItem)
-                        audioRepository.findById(audioItem.id).get().let {
+                        audioRepository.findById(audioItem.id) shouldBePresent {
                             it shouldNotBe audioItem
                             it.id shouldBe audioItem.id
                             assertAudioItemChange(it, audioItemChange, WavTag(WavOptions.READ_ID3_ONLY).apply {
@@ -203,8 +206,13 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
 
             checkAll(10, arbitraryMp3File) { mp3File ->
 
-                val audioItem = ImmutableAudioItem.createFromFile(mp3File.toPath()).copy(id = id++)
-                audioRepository.add(audioItem)
+                val audioItem = ImmutableAudioItem.createFromFile(mp3File.toPath()).let {
+                    audioRepository.add(it)
+                    audioRepository.shouldContainExactly(it)
+                    audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let {found ->
+                        found shouldBe it
+                    }
+                }
 
                 then("`add` with same id does not replace the previous one") {
                     val arbAudioItem = arbitraryAudioItem(id = audioItem.id, album = audioItem.album).next()

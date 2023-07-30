@@ -10,7 +10,7 @@ class AudioWaveformInMemoryRepository(entitiesById: MutableMap<Int, ScalableAudi
     InMemoryRepositoryBase<ScalableAudioWaveform>(entitiesById),
     AudioWaveformRepository<ScalableAudioWaveform> {
 
-    override val audioItemEventSubscriber = AudioItemEventSubscriber<AudioItem>().apply {
+    override val audioItemEventSubscriber = AudioItemEventSubscriber<AudioItem>(this.toString()).apply {
         addOnNextEventAction(QueryEntityEvent.Type.DELETE) { event ->
             removeByAudioItemIds(event.entities.map { it.id }.toList())
         }
@@ -32,4 +32,6 @@ class AudioWaveformInMemoryRepository(entitiesById: MutableMap<Int, ScalableAudi
     override fun removeByAudioItemIds(audioItemIds: List<Int>) {
         audioItemIds.forEach { findById(it).ifPresent { waveform -> remove(waveform) } }
     }
+
+    override fun toString() = "WaveformRepository[${this.hashCode()}]"
 }

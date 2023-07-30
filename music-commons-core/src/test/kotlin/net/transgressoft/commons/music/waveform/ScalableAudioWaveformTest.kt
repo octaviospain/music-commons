@@ -8,14 +8,14 @@ import io.kotest.matchers.shouldNotBe
 import javafx.scene.paint.Color
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import net.transgressoft.commons.music.audio.AudioItemTestUtil2.flacFile
-import net.transgressoft.commons.music.audio.AudioItemTestUtil2.m4aFile
-import net.transgressoft.commons.music.audio.AudioItemTestUtil2.mp3File
-import net.transgressoft.commons.music.audio.AudioItemTestUtil2.wavFile
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.flacFile
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.m4aFile
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.mp3File
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.wavFile
 import java.io.File
 import javax.imageio.ImageIO
 
-class ScalableAudioWaveformTest : FunSpec({
+internal class ScalableAudioWaveformTest : FunSpec({
 
     data class AudioFile(val audioFile: File)
 
