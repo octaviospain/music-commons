@@ -131,7 +131,7 @@ internal fun randomQueenAudioItems(tempDirectory: Path, albumName: String = "", 
             val duration = Duration.ofSeconds((60 + i).toLong())
             add((AudioItemTestUtil.arbitraryAudioItem(
                 title = title,
-                artist = AudioItemTestUtil.arbitraryArtist(name = artistName).next(),
+                artist = AudioItemTestUtil.arbitraryArtist(givenName = artistName).next(),
                 path = tempDirectory.resolve("$title.mp3"), duration = duration
             ))
                 .next())

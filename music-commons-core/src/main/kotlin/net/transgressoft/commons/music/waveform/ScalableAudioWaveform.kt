@@ -1,6 +1,9 @@
 package net.transgressoft.commons.music.waveform
 
 import javafx.scene.paint.Color
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+import net.transgressoft.commons.music.audio.PathSerializer
 import ws.schild.jave.Encoder
 import ws.schild.jave.MultimediaObject
 import ws.schild.jave.encode.AudioAttributes
@@ -20,9 +23,10 @@ import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
+@Serializable
 class ScalableAudioWaveform(
     override val id: Int,
-    audioFilePath: Path,
+    @Serializable(with = PathSerializer::class) private val audioFilePath: Path,
 ) : AudioWaveform {
 
     /*
@@ -32,16 +36,14 @@ class ScalableAudioWaveform(
         Above 4.2, the waveform can be too small and is not visible
         This anyway depends on each waveform, but this value is the one I found more balanced
     */
-    private val amplitudeCoefficient = 3.9
+    @Transient private val amplitudeCoefficient = 3.9
 
-    private val rawAudioPcm: IntArray
+    @Transient private val rawAudioPcm: IntArray = getRawAudioPcm(audioFilePath)
 
     init {
         check(audioFilePath.exists()) {
             "File '${audioFilePath}' does not exist"
         }
-
-        rawAudioPcm = getRawAudioPcm(audioFilePath)
     }
 
     private fun getRawAudioPcm(audioFilePath: Path) = try {
@@ -184,10 +186,12 @@ class ScalableAudioWaveform(
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false
         val that = other as ScalableAudioWaveform
-        return com.google.common.base.Objects.equal(rawAudioPcm, that.rawAudioPcm)
+        return rawAudioPcm.contentEquals(that.rawAudioPcm)
     }
 
     override fun hashCode(): Int {
-        return com.google.common.base.Objects.hashCode(rawAudioPcm)
+        return rawAudioPcm.contentHashCode()
     }
+
+    override fun toString() = "ScalableAudioWaveform[uniqueId=$uniqueId]"
 }

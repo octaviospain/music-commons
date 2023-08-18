@@ -25,9 +25,7 @@ internal class AudioItemJsonFileRepositoryTest : StringSpec({
         val audioItem = ImmutableAudioItem.createFromFile(arbitraryMp3File.next().toPath()).let {
             it.id shouldBe 0
             repository.add(it) shouldBe true
-            repository.findByUniqueId(it.uniqueId).let { optionalFound ->
-                optionalFound shouldBePresent { found -> found shouldBe it }
-            }
+            repository.findByUniqueId(it.uniqueId) shouldBePresent { found -> found shouldBe it }
         }
 
         eventually(2.seconds) {

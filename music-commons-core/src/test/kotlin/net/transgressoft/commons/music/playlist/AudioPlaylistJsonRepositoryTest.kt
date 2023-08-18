@@ -1,21 +1,116 @@
 package net.transgressoft.commons.music.playlist
 
 import io.kotest.assertions.throwables.shouldThrowMessage
+import io.kotest.assertions.timing.eventually
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.engine.spec.tempfile
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.optional.shouldBePresent
+import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.property.arbitrary.next
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.AudioItemTestUtil
+import net.transgressoft.commons.music.audio.AudioItemRepository
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
+import org.jetbrains.kotlin.library.SkippedDeclaration.id
+import org.mockito.ArgumentMatchers.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import java.time.Duration
+import java.util.*
+import kotlin.time.Duration.Companion.seconds
 
-internal class AudioPlaylistInMemoryRepositoryTest2 : StringSpec({
+internal class AudioPlaylistJsonRepositoryTest : StringSpec({
+
     lateinit var audioPlaylistRepository: AudioPlaylistRepository<AudioItem, AudioPlaylist<AudioItem>>
 
     beforeEach {
-        audioPlaylistRepository = AudioPlaylistInMemoryRepository()
+        audioPlaylistRepository = AudioPlaylistJsonRepository()
+    }
+
+    "Repository serializes itself to file when playlists are created" {
+        val jsonFile = tempfile("playlistRepository-serialization-test", ".json").also { it.deleteOnExit() }
+        audioPlaylistRepository = AudioPlaylistJsonRepository.initialize(jsonFile)
+
+        val rockAudioItem = arbitraryAudioItem(title = "50s Rock hit 1").next()
+        val rockAudioItems = listOf(rockAudioItem)
+        val rock = audioPlaylistRepository.createPlaylistDirectory("Rock", rockAudioItems)
+
+        val rockFavAudioItem = arbitraryAudioItem(title = "Rock fav").next()
+        val rockFavoritesAudioItems = listOf(rockFavAudioItem)
+        val rockFavorites = audioPlaylistRepository.createPlaylist("Rock favorites", rockFavoritesAudioItems)
+
+        audioPlaylistRepository.movePlaylist(rockFavorites, rock)
+
+        audioPlaylistRepository.findById(rock.id) shouldBePresent {updatedRock ->
+            updatedRock.playlists.shouldContainOnly(rockFavorites)
+            updatedRock.id shouldBe rock.id
+            updatedRock.name shouldBe "Rock"
+            updatedRock.audioItems.shouldContainExactly(rockAudioItems)
+            updatedRock.playlists.shouldContainOnly(rockFavorites)
+        }
+
+        eventually(2.seconds) {
+            jsonFile.readText() shouldBe """
+            [
+                {
+                    "id": ${rock.id},
+                    "isDirectory": ${rock.isDirectory},
+                    "name": "${rock.name}",
+                    "audioItemIds": [
+                        ${rockAudioItem.id}
+                    ],
+                    "playlistIds": [
+                        ${rockFavorites.id}
+                    ]
+                },
+                {
+                    "id": ${rockFavorites.id},
+                    "isDirectory": ${rockFavorites.isDirectory},
+                    "name": "${rockFavorites.name}",
+                    "audioItemIds": [
+                        ${rockFavAudioItem.id}
+                    ],
+                    "playlistIds": [
+                    ]
+                }
+            ]
+        """.trimIndent()
+        }
+    }
+
+    "Existing repository loads from file" {
+        val jsonFile = tempfile("playlistRepository-deserialization-test", ".json").also {
+            it.writeText("""
+                [
+                    {
+                        "id": 1,
+                        "isDirectory": true,
+                        "name": "Rock",
+                        "audioItemIds": [
+                            453374921
+                        ],
+                        "playlistIds": [
+                        ]
+                    }
+                ]
+            """.trimIndent())
+            it.deleteOnExit()
+        }
+
+        val audioItem = arbitraryAudioItem(id = 453374921).next()
+        val audioItemRepository = mock<AudioItemRepository<AudioItem>> {
+            whenever(it.findById(eq(453374921))).thenReturn(Optional.of(audioItem))
+        }
+
+        audioPlaylistRepository = AudioPlaylistJsonRepository.loadFromFile(jsonFile, audioItemRepository)
+
+        audioPlaylistRepository.shouldContainExactly(
+            ImmutablePlaylist(1, true, "Rock", listOf(audioItem))
+        )
     }
 
     // ├──Best hits
@@ -30,8 +125,8 @@ internal class AudioPlaylistInMemoryRepositoryTest2 : StringSpec({
     // └──This weeks' favorites songs
     "Mixed playlists hierarchy structure and audio items search" {
         val rockAudioItems = listOf(
-            AudioItemTestUtil.arbitraryAudioItem(title = "50s Rock hit 1", duration = Duration.ofSeconds(60)).next(),
-            AudioItemTestUtil.arbitraryAudioItem(title = "50s Rock hit 2 my fav", duration = Duration.ofSeconds(230)).next()
+            arbitraryAudioItem(title = "50s Rock hit 1", duration = Duration.ofSeconds(60)).next(),
+            arbitraryAudioItem(title = "50s Rock hit 2 my fav", duration = Duration.ofSeconds(230)).next()
         )
         var rock = audioPlaylistRepository.createPlaylist("Rock", rockAudioItems)
 
@@ -75,8 +170,8 @@ internal class AudioPlaylistInMemoryRepositoryTest2 : StringSpec({
         rock = audioPlaylistRepository.findById(rock.id).get()
         fifties = audioPlaylistRepository.findByName(fifties.name)!!
         val fiftiesItems = listOf(
-            AudioItemTestUtil.arbitraryAudioItem(title = "50s hit", duration = Duration.ofSeconds(30)).next(),
-            AudioItemTestUtil.arbitraryAudioItem(title = "50s favorite song", duration = Duration.ofSeconds(120)).next()
+            arbitraryAudioItem(title = "50s hit", duration = Duration.ofSeconds(30)).next(),
+            arbitraryAudioItem(title = "50s favorite song", duration = Duration.ofSeconds(120)).next()
         )
 
         audioPlaylistRepository.addAudioItemsToPlaylist(fiftiesItems, fifties)

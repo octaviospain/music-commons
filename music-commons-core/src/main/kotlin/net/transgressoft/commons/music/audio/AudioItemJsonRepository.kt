@@ -33,6 +33,9 @@ class AudioItemJsonRepository internal constructor(
         }
 
         fun loadFromFile(file: File): JsonFileRepository<AudioItemBase> {
+            require(file.exists().and(file.canRead().and(file.canWrite()))) {
+                "Provided jsonFile does not exist or is not writable"
+            }
             return json.decodeFromString(JsonFileRepository.serializer(AudioItemBase.serializer()), file.readText())
                 .apply {
                     queryEntitySerializer = AudioItemBase.serializer()

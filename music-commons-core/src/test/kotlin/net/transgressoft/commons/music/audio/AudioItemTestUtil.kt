@@ -23,6 +23,7 @@ import java.nio.file.*
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.Month
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.toJavaDuration
 
@@ -123,10 +124,16 @@ internal object AudioItemTestUtil : TestConfiguration() {
     val defaultArtistName = "DEFAULT_ARTIST_NAME"
 
     fun arbitraryArtist(
-        name: String = defaultArtistName,
-        countryCode: CountryCode = CountryCode.values().random(),
-    ) = arbitrary {
-        ImmutableArtist(if (name == defaultArtistName) Arb.string().bind() else name, countryCode)
+        givenName: String = defaultArtistName,
+        givenCountryCode: CountryCode = CountryCode.values().random(),
+    ): Arb<Artist> = Arb.bind(
+        Arb.string(),
+        Arb.enum<CountryCode>()
+    ) { name: String, countryCode: CountryCode ->
+        ImmutableArtist(
+            if (givenName == defaultArtistName) name else givenName,
+            countryCode
+        )
     }
 
     val defaultLabelName = "DEFAULT_LABEL_NAME"
@@ -150,7 +157,7 @@ internal object AudioItemTestUtil : TestConfiguration() {
         isCompilation: Boolean = defaultIsCompilation,
         year: Short = defaultYear,
         label: Label = defaultLabel,
-    ) = arbitrary {
+    ): Arb<Album> = arbitrary {
         ImmutableAlbum(
             if (name == defaultAlbumName) Arb.string().bind() else name,
             if (albumArtist == defaultArtist) arbitraryArtist().bind() else albumArtist,
@@ -175,6 +182,8 @@ internal object AudioItemTestUtil : TestConfiguration() {
     val defaultDateOfCreation = LocalDateTime.of(1931, Month.APRIL, 14, 0, 0, 0)
     val defaultDateOfModification = defaultDateOfCreation.plusYears(23)
 
+    private val atomicInteger = AtomicInteger(9999)
+
     fun arbitraryAudioItem(
         id: Int = defaultInt,
         path: Path = defaultPath,
@@ -195,20 +204,20 @@ internal object AudioItemTestUtil : TestConfiguration() {
         lastDateModified: LocalDateTime = defaultDateOfModification,
     ) = arbitrary {
         ImmutableAudioItem(
-            if (id == defaultInt) Arb.positiveInt().bind() else id,
+            if (id == defaultInt) atomicInteger.getAndDecrement() else id,
             if (path == defaultPath) Arb.file().bind().toPath() else path,
-            if (title == defaultTitle) Arb.string().bind() else title,
+            if (title == defaultTitle) Arb.stringPattern("[a-z]{5} [a-z]{5}").bind() else title,
             if (duration == defaultDuration) Arb.long(1, Long.MAX_VALUE).bind().nanoseconds.toJavaDuration() else duration,
             if (bitRate == defaultBitRate) Arb.positiveInt().bind() else bitRate,
             if (artist == defaultArtist) arbitraryArtist().bind() else artist,
             if (album == defaultAlbum) arbitraryAlbum().bind() else album,
             genre,
-            if (comments == defaultComments) Arb.string().bind() else comments,
+            if (comments == defaultComments) Arb.stringPattern("[a-z]{5} [a-z]{5}").bind() else comments,
             if (trackNumber == defaultTrackNumber) Arb.short().bind() else trackNumber,
             if (discNumber == defaultDiscNumber) Arb.short().bind() else discNumber,
             if (bpm == defaultBpm) Arb.float(-1.0f, 220.58f).bind() else bpm,
-            if (encoder == defaultEncoder) Arb.string().bind() else encoder,
-            if (encoding == defaultEncoding) Arb.string().bind() else encoding,
+            if (encoder == defaultEncoder) Arb.stringPattern("[a-z]{5} [a-z]{5}").bind() else encoder,
+            if (encoding == defaultEncoding) Arb.stringPattern("[a-z]{5} [a-z]{5}").bind() else encoding,
             coverImage,
             if (dateOfCreation == defaultDateOfCreation) Arb.localDateTime().next() else dateOfCreation,
             if (lastDateModified == defaultDateOfModification) lastDateModified else lastDateModified

@@ -9,7 +9,6 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
 import java.util.stream.Collectors
-import kotlin.collections.HashSet
 import kotlin.streams.toList
 
 /**
@@ -21,7 +20,7 @@ abstract class AudioItemJsonRepositoryBase<I : AudioItem> (
 ): JsonFileRepository<I>(file), AudioItemRepository<I> {
 
     @Transient
-    private val logger = KotlinLogging.logger {}
+    private val logger = KotlinLogging.logger(javaClass.name)
 
     @Transient
     private val idCounter = AtomicInteger(1)

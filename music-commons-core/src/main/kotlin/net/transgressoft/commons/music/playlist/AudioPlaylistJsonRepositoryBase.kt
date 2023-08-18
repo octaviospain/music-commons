@@ -2,52 +2,100 @@ package net.transgressoft.commons.music.playlist
 
 import com.google.common.collect.Multimap
 import com.google.common.collect.MultimapBuilder
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 import mu.KotlinLogging
 import net.transgressoft.commons.event.*
 import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.AudioItemManipulationException
+import net.transgressoft.commons.music.audio.AudioItemRepository
 import net.transgressoft.commons.music.event.AudioItemEventSubscriber
+import net.transgressoft.commons.music.playlist.AudioPlaylistJsonRepositoryBase.*
 import net.transgressoft.commons.query.InMemoryRepository
+import java.io.File
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
 import java.util.concurrent.Flow
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
 import java.util.stream.Collectors
-import kotlin.collections.HashMap
+import kotlin.streams.toList
 
-abstract class AudioPlaylistInMemoryRepositoryBase<I : AudioItem, P : AudioPlaylist<I>>
+abstract class AudioPlaylistJsonRepositoryBase<I : AudioItem, P : AudioPlaylist<I>>
 protected constructor(
-    playlistsById: MutableMap<Int, P> = HashMap(),
+    initialPlaylists: Map<Int, P> = emptyMap(),
+    private val jsonFile: File? = null
 ) : QueryEntityPublisherBase<P>(), AudioPlaylistRepository<I, P> {
 
-    private val logger = KotlinLogging.logger {}
+    private val logger = KotlinLogging.logger(javaClass.name)
+
+    private val playlistsById: MutableMap<Int, MutableAudioPlaylist<I>> = ConcurrentHashMap(initialPlaylists.mapValues { it.value.toMutablePlaylist() }.toMap())
 
     private val idCounter = AtomicInteger(1)
-    private val idSet: MutableSet<Int> = HashSet()
-    private val playlistsMultiMap: Multimap<String, String> = MultimapBuilder.treeKeys().treeSetValues().build()
-    private val playlists = InMemoryRepository(playlistsById.mapValues { it.value.toMutablePlaylist() }.toMutableMap()).also {
-        it.subscribe(object: Flow.Subscriber<EntityEvent<out MutableAudioPlaylist<I>>> {
+    private val playlistsMultiMap: Multimap<String, String> = MultimapBuilder.treeKeys().treeSetValues().build()    // TODO initialize from initialPlaylists
+    private val playlists = InMemoryRepository(playlistsById).also {
+        it.subscribe(object : Flow.Subscriber<EntityEvent<out MutableAudioPlaylist<I>>> {
+
             override fun onSubscribe(subscription: Flow.Subscription) = logger.debug { "Internal playlists subscribed to MutableAudioPlaylist events" }
+
             override fun onError(throwable: Throwable) = logger.error("An error occurred on the internal playlists subscriber", throwable)
+
             override fun onComplete() = logger.debug { "Internal playlists subscriber completed the subscription" }
+
             override fun onNext(item: EntityEvent<out MutableAudioPlaylist<I>>) {
                 val audioPlaylists = item.entities.map(::toAudioPlaylist).toSet()
-                if (item.isCreate()) {
-                    this@AudioPlaylistInMemoryRepositoryBase.putCreateEvent(audioPlaylists)
-                } else if (item.isRead()) {
-                    this@AudioPlaylistInMemoryRepositoryBase.putReadEvent(audioPlaylists)
-                } else if (item.isUpdate()) {
-                    this@AudioPlaylistInMemoryRepositoryBase.putUpdateEvent(audioPlaylists)
-                } else if (item.isDelete()) {
-                    this@AudioPlaylistInMemoryRepositoryBase.putDeleteEvent(audioPlaylists)
+                when {
+                    item.isCreate() -> {
+                        this@AudioPlaylistJsonRepositoryBase.putCreateEvent(audioPlaylists)
+                        serializeToJson()
+                    }
+
+                    item.isRead() -> {
+                        this@AudioPlaylistJsonRepositoryBase.putReadEvent(audioPlaylists)
+                    }
+
+                    item.isUpdate() -> {
+                        this@AudioPlaylistJsonRepositoryBase.putUpdateEvent(audioPlaylists)
+                        serializeToJson()
+                    }
+
+                    item.isDelete() -> {
+                        this@AudioPlaylistJsonRepositoryBase.putDeleteEvent(audioPlaylists)
+                        serializeToJson()
+                    }
                 }
             }
         })
     }
 
+
+    private val executorService by lazy {
+        Executors.newFixedThreadPool(1) { runnable ->
+            Thread(runnable).apply {
+                isDaemon = true
+                name = "PlaylistJsonFileRepository-$jsonFile"
+                setUncaughtExceptionHandler { thread, exception ->
+                    logger.error(exception) { "Error in thread $thread" }
+                }
+            }
+        }
+    }
+
+    private val json by lazy { Json { prettyPrint = true } }
+
+    init {
+        require(jsonFile?.exists()?.and(jsonFile.canRead().and(jsonFile.canWrite())) ?: true) {
+            "Provided jsonFile does not exist or is not writable"
+        }
+    }
+
     override val audioItemEventSubscriber: QueryEntitySubscriber<I> = AudioItemEventSubscriber<I>(this.toString()).apply {
         addOnNextEventAction(QueryEntityEvent.Type.DELETE) {
             removeAudioItems(it.entities)
+            serializeToJson()
         }
     }
 
@@ -55,8 +103,7 @@ protected constructor(
         var id: Int
         do {
             id = idCounter.getAndIncrement()
-        } while (idSet.contains(id))
-        idSet.add(id)
+        } while (playlistsById.containsKey(id))
         return id
     }
 
@@ -141,6 +188,10 @@ protected constructor(
 
     override val isEmpty = playlists.isEmpty
 
+    /**
+     * Some of the underlying items returned by the iterator can be cast to a <tt>MutablePlaylist</tt> or a <tt>MutablePlaylistDirectory</tt>,
+     * mutable operations on them should be avoided since changes won't be reflected in the repository correctly. This bug should be fixed.
+     */
     override fun iterator(): Iterator<P> = playlists.map { toAudioPlaylist(it) }.iterator()
 
     override fun numberOfPlaylists() = playlists.size()
@@ -203,6 +254,7 @@ protected constructor(
                     }
                     playlistsMultiMap.put(playlistDirectory.uniqueId, playlist.uniqueId)
                     playlistDirectory.playlists.add(playlist)
+                    serializeToJson()
                     logger.debug { "Playlist '${playlistToMove.name}' moved to '${destinationPlaylist.name}'" }
                 }
             }
@@ -233,14 +285,65 @@ protected constructor(
 
     override fun findParentPlaylist(playlist: P): P? = findParentMutablePlaylist(playlist).map { toAudioPlaylist(it) }.orElse(null)
 
+    private fun serializeToJson() {
+        jsonFile?.run {
+            executorService.execute {
+                json.encodeToString(ListSerializer(InternalAudioPlaylist.serializer()), mapToSerializablePlaylists(playlistsById.values)).let {
+                    this@run.writeText(it)
+                    logger.debug { "PlaylistRepository serialized to file $jsonFile" }
+                }
+            }
+        }
+    }
+
+    private fun mapToSerializablePlaylists(audioPlaylists: MutableCollection<MutableAudioPlaylist<I>>): List<InternalAudioPlaylist> =
+        audioPlaylists.stream().map { InternalAudioPlaylist(it.id,
+                                                            it.isDirectory,
+                                                            it.name,
+                                                            it.audioItems.map { audioItem -> audioItem.id }.toList(),
+                                                            it.playlists.map { playlist -> playlist.id }.toSet()) }.toList()
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false
-        val that = other as AudioPlaylistInMemoryRepositoryBase<*, *>
+        val that = other as AudioPlaylistJsonRepositoryBase<*, *>
         return playlistsMultiMap == that.playlistsMultiMap && playlists == that.playlists
     }
 
     override fun hashCode() = Objects.hash(playlistsMultiMap, playlists)
 
     override fun toString() = "PlaylistRepository[${this.hashCode()}]"
+
+    @Serializable
+    internal data class InternalAudioPlaylist(
+        val id: Int,
+        val isDirectory: Boolean,
+        val name: String,
+        val audioItemIds: List<Int>,
+        val playlistIds: Set<Int>
+    )
+}
+
+internal fun mapFromSerializablePlaylists(
+    deserializedPlaylists: List<InternalAudioPlaylist>,
+    audioItemRepository: AudioItemRepository<AudioItem>
+): Map<Int, AudioPlaylist<AudioItem>> {
+    val playlistsById = deserializedPlaylists
+        .map { MutablePlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItemIds, audioItemRepository)) }
+        .associateByTo(mutableMapOf()) { it.id }
+
+    deserializedPlaylists.forEach {
+        val foundPlaylists = findDeserializedPlaylistsFromIds(it.playlistIds, playlistsById)
+        playlistsById[it.id]!!.playlists.addAll(foundPlaylists)
+    }
+    return playlistsById
+}
+
+internal fun mapAudioItemsFromIds(audioItemIds: List<Int>, audioItemRepository: AudioItemRepository<AudioItem>) =
+    audioItemIds.map { audioItemRepository.findById(it).orElseThrow { AudioItemManipulationException("AudioItem with id $it not found during deserialization") } }.toList()
+
+internal fun findDeserializedPlaylistsFromIds(playlists: Set<Int>, playlistsById: Map<Int, AudioPlaylist<AudioItem>>): List<AudioPlaylist<AudioItem>> {
+    return playlists.stream().map {
+        return@map playlistsById[it] ?: throw AudioItemManipulationException("AudioPlaylist with id $it not found during deserialization")
+    }.toList()
 }

@@ -64,7 +64,7 @@ internal data class ImmutableAudioItem(
 ) {
 
     companion object {
-        fun createFromFile(audioItemPath: Path): ImmutableAudioItem = ImmutableAudioItemBuilder(readAudioItemFields(audioItemPath).id(0)).build()
+        fun createFromFile(audioItemPath: Path): ImmutableAudioItem = ImmutableAudioItemBuilder(readAudioItemFields(audioItemPath).id(UNASSIGNED_ID)).build()
         fun builder() : AudioItemBuilder<AudioItem> = ImmutableAudioItemBuilder()
     }
 

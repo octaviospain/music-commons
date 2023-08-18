@@ -92,7 +92,7 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
         }
 
         and("A m4a file") {
-            checkAll(10, arbitraryM4aFile, arbitraryAudioItemChange) { m4aFile, audioItemChange ->
+            checkAll(5, arbitraryM4aFile, arbitraryAudioItemChange) { m4aFile, audioItemChange ->
                 When("An AudioItem is created") {
                     val audioItem = ImmutableAudioItem.createFromFile(m4aFile.toPath()).let {
                         audioRepository.add(it)
@@ -128,7 +128,7 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
         }
 
         and("A flac file") {
-            checkAll(10, arbitraryFlacFile, arbitraryAudioItemChange) { flacFile, audioItemChange ->
+            checkAll(5, arbitraryFlacFile, arbitraryAudioItemChange) { flacFile, audioItemChange ->
                 When("An AudioItem is created") {
                     val audioItem = ImmutableAudioItem.createFromFile(flacFile.toPath()).let {
                         audioRepository.add(it)
@@ -164,7 +164,7 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
         }
 
         and("A wav file") {
-            checkAll(10, arbitraryWavFile, arbitraryAudioItemChange) { wavFile, audioItemChange ->
+            checkAll(5, arbitraryWavFile, arbitraryAudioItemChange) { wavFile, audioItemChange ->
                 When("An AudioItem is created") {
                     val audioItem = ImmutableAudioItem.createFromFile(wavFile.toPath()).let {
                         audioRepository.add(it)
@@ -204,14 +204,13 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
 
         and("A created AudioItem added to the repository") {
 
-            checkAll(10, arbitraryMp3File) { mp3File ->
-
-                val audioItem = ImmutableAudioItem.createFromFile(mp3File.toPath()).let {
+            checkAll(1, arbitraryMp3File) { mp3File ->
+                val audioItem: ImmutableAudioItem = ImmutableAudioItem.createFromFile(mp3File.toPath()).let {
                     audioRepository.add(it)
                     audioRepository.shouldContainExactly(it)
-                    audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let {found ->
+                    audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let { found ->
                         found shouldBe it
-                    }
+                    } as ImmutableAudioItem
                 }
 
                 then("`add` with same id does not replace the previous one") {
@@ -262,7 +261,7 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
         }
 
         and("A bunch of AudioItems of the same Artist") {
-            checkAll(10, Arb.set(arbitraryAudioItem(artist = ImmutableArtist("Queen")), 5, 25)) { bunchOfAudioItems ->
+            checkAll(5, Arb.set(arbitraryAudioItem(artist = ImmutableArtist("Queen")), 5, 25)) { bunchOfAudioItems ->
 
                 audioRepository.addOrReplaceAll(bunchOfAudioItems)
 

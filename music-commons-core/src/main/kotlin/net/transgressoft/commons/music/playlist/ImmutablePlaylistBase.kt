@@ -21,7 +21,7 @@ abstract class ImmutablePlaylistBase<I : AudioItem>(
     override val playlists: Set<AudioPlaylist<I>> = emptySet()
 ) : AudioPlaylist<I> {
 
-    private val logger = KotlinLogging.logger {}
+    private val logger = KotlinLogging.logger(javaClass.name)
 
     override val uniqueId: String
         get() {

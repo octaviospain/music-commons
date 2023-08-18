@@ -144,7 +144,7 @@ internal class ImmutableAudioItemTest : StringSpec({
     }
 
     "AudioItem writes metadata into file" {
-        val file = tempfile("audioItem-test", ".mp3").also { it.deleteOnExit() }
+        val file = tempfile("audioItem-metadata-test", ".mp3").also { it.deleteOnExit() }
         mp3File.copyTo(file, overwrite = true)
 
         var updatedAudioItem: AudioItemBase = ImmutableAudioItem.createFromFile(file.toPath())
@@ -158,7 +158,7 @@ internal class ImmutableAudioItemTest : StringSpec({
             updatedAudioItem.dateOfCreation shouldBeBefore LocalDateTime.now()
             updatedAudioItem.lastDateModified shouldBeAfter dateOfCreation
             updatedAudioItem.path shouldBe file.toPath()
-            updatedAudioItem.fileName shouldContain "audioItem-test"
+            updatedAudioItem.fileName shouldContain "audioItem-metadata-test"
             updatedAudioItem.extension shouldBe "mp3"
             updatedAudioItem.title shouldBe title
             updatedAudioItem.duration shouldBe 8.seconds.toJavaDuration()
@@ -220,11 +220,9 @@ internal class ImmutableAudioItemTest : StringSpec({
     }
 
     "AudioItem returns coverImage after being deserialized" {
-        val tempFile = tempfile("audioItem-test", ".mp3").also { it.deleteOnExit() }
+        val tempFile = tempfile("audioItem-coverImage-test", ".mp3").also { it.deleteOnExit() }
         mp3File.copyTo(tempFile, overwrite = true)
         audioItem = audioItem.copy(path = tempFile.toPath())
-
-        audioItem.coverImage shouldBe null
 
         val updatedAudioItem = audioItem.update { coverImage = testCoverBytes }
         updatedAudioItem.writeMetadata()

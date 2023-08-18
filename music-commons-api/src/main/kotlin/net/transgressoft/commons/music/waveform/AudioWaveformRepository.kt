@@ -3,6 +3,7 @@ package net.transgressoft.commons.music.waveform
 import net.transgressoft.commons.event.QueryEntitySubscriber
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.query.Repository
+import java.util.*
 import java.util.concurrent.CompletableFuture
 
 interface AudioWaveformRepository<W : AudioWaveform> : Repository<W> {
@@ -11,7 +12,9 @@ interface AudioWaveformRepository<W : AudioWaveform> : Repository<W> {
 
     fun getOrCreateWaveformAsync(audioItem: AudioItem, width: Short, height: Short): CompletableFuture<W>
 
-    fun removeByAudioItemIds(audioItemIds: List<Int>)
+    fun removeByAudioItemIds(audioItemIds: List<Int>) {
+        audioItemIds.forEach { findById(it).ifPresent { waveform -> remove(waveform) } }
+    }
 }
 
 class AudioWaveformProcessingException : Exception {

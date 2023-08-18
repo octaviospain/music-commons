@@ -6,9 +6,7 @@ import net.transgressoft.commons.music.event.AudioItemEventSubscriber
 import net.transgressoft.commons.query.InMemoryRepositoryBase
 import java.util.concurrent.CompletableFuture
 
-class AudioWaveformInMemoryRepository(entitiesById: MutableMap<Int, ScalableAudioWaveform> = mutableMapOf()) :
-    InMemoryRepositoryBase<ScalableAudioWaveform>(entitiesById),
-    AudioWaveformRepository<ScalableAudioWaveform> {
+class AudioWaveformInMemoryRepository : InMemoryRepositoryBase<ScalableAudioWaveform>(), AudioWaveformRepository<ScalableAudioWaveform> {
 
     override val audioItemEventSubscriber = AudioItemEventSubscriber<AudioItem>(this.toString()).apply {
         addOnNextEventAction(QueryEntityEvent.Type.DELETE) { event ->
@@ -26,11 +24,6 @@ class AudioWaveformInMemoryRepository(entitiesById: MutableMap<Int, ScalableAudi
                     return@supplyAsync audioWaveform
                 }
             }
-    }
-
-    @Override
-    override fun removeByAudioItemIds(audioItemIds: List<Int>) {
-        audioItemIds.forEach { findById(it).ifPresent { waveform -> remove(waveform) } }
     }
 
     override fun toString() = "WaveformRepository[${this.hashCode()}]"
