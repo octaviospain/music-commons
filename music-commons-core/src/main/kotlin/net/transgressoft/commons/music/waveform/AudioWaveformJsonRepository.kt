@@ -36,6 +36,7 @@ class AudioWaveformJsonRepository internal constructor(@Transient val file: File
     companion object {
         private val json = Json { serializersModule = audioWaveformRepositorySerializersModule }
 
+        @JvmStatic
         fun loadFromFile(file: File): AudioWaveformJsonRepository {
             require(file.exists().and(file.canRead().and(file.canWrite()))) {
                 "Provided jsonFile does not exist or is not writable"
@@ -43,6 +44,7 @@ class AudioWaveformJsonRepository internal constructor(@Transient val file: File
             return json.decodeFromString(serializer(), file.readText())
         }
 
+        @JvmStatic
         fun initialize(file: File) = AudioWaveformJsonRepository(file)
     }
 
@@ -61,7 +63,7 @@ class AudioWaveformJsonRepository internal constructor(@Transient val file: File
     override fun toString() = "WaveformRepository[${this.hashCode()}]"
 }
 
-val audioWaveformRepositorySerializersModule = SerializersModule {
+internal val audioWaveformRepositorySerializersModule = SerializersModule {
     polymorphic(AudioWaveform::class) {
         subclass(ScalableAudioWaveform::class)
     }

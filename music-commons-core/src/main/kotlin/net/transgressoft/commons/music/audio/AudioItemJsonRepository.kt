@@ -27,6 +27,7 @@ class AudioItemJsonRepository internal constructor(
             allowStructuredMapKeys = true
         }
 
+        @JvmStatic
         fun loadFromFile(file: File): AudioItemJsonRepository {
             require(file.exists().and(file.canRead().and(file.canWrite()))) {
                 "Provided jsonFile does not exist or is not writable"
@@ -34,6 +35,7 @@ class AudioItemJsonRepository internal constructor(
             return json.decodeFromString(serializer(AudioItemBase.serializer()), file.readText()) as AudioItemJsonRepository
         }
 
+        @JvmStatic
         fun initialize(file: File) = AudioItemJsonRepository(file)
     }
 }
