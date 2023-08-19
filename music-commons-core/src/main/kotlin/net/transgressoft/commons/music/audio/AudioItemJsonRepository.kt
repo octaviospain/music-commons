@@ -5,10 +5,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.plus
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
-import net.transgressoft.commons.event.QueryEntitySubscriberBase
-import net.transgressoft.commons.music.event.AudioItemEventSubscriber
 import net.transgressoft.commons.query.JsonFileRepository
 import java.io.File
 
@@ -16,31 +15,24 @@ import java.io.File
 @SerialName("AudioItemRepository")
 class AudioItemJsonRepository internal constructor(
     @Transient val _file: File? = null
-) : AudioItemJsonRepositoryBase<AudioItemBase>(_file) {
+) : AudioItemJsonRepositoryBase<AudioItem>(_file) {
 
     @Transient
-    override var queryEntitySerializer = AudioItemBase.serializer()
-
-    @Transient
-    override var polymorphicRepositorySerializer = audioItemRepositorySerializersModule
+    override var polymorphicRepositorySerializer = audioItemRepositoryBaseSerializersModule + audioItemRepositorySerializersModule
 
     constructor() : this(null)
 
     companion object {
         private val json = Json {
-            serializersModule = audioItemRepositorySerializersModule
+            serializersModule = audioItemRepositoryBaseSerializersModule + audioItemRepositorySerializersModule
             allowStructuredMapKeys = true
         }
 
-        fun loadFromFile(file: File): JsonFileRepository<AudioItemBase> {
+        fun loadFromFile(file: File): AudioItemJsonRepository {
             require(file.exists().and(file.canRead().and(file.canWrite()))) {
                 "Provided jsonFile does not exist or is not writable"
             }
-            return json.decodeFromString(JsonFileRepository.serializer(AudioItemBase.serializer()), file.readText())
-                .apply {
-                    queryEntitySerializer = AudioItemBase.serializer()
-                    polymorphicRepositorySerializer = audioItemRepositorySerializersModule
-                }
+            return json.decodeFromString(JsonFileRepository.serializer(AudioItemBase.serializer()), file.readText()) as AudioItemJsonRepository
         }
 
         fun initialize(file: File) = AudioItemJsonRepository(file)
@@ -49,10 +41,9 @@ class AudioItemJsonRepository internal constructor(
 
 val audioItemRepositorySerializersModule = SerializersModule {
     polymorphic(JsonFileRepository::class) {
-        subclass(AudioItemJsonRepository.serializer())
+        subclass(AudioItemJsonRepository::class)
     }
-    polymorphic(QueryEntitySubscriberBase::class) {
-        subclass(AudioItemEventSubscriber.serializer(AudioItemBase.serializer()))
+    polymorphic(AudioItemBase::class) {
+        subclass(ImmutableAudioItem::class)
     }
-    include(audioItemSerializerModule)
 }

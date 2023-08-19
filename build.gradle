@@ -76,6 +76,10 @@ subprojects {
         tasks['test'].finalizedBy 'jacocoTestReport'
     }
 
+    tasks.withType(JavaCompile) {
+        options.encoding = 'UTF-8'
+    }
+
     jacocoTestReport {
         reports {
             xml.required.set true

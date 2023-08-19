@@ -97,8 +97,6 @@ abstract class AudioItemBase(
     override operator fun compareTo(other: AudioItem) =
         Comparator.comparing(QueryEntity::uniqueId, java.lang.String.CASE_INSENSITIVE_ORDER).compare(this, other)
 
-    override fun hashCode() = Objects.hashCode(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration)
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false
@@ -114,6 +112,8 @@ abstract class AudioItemBase(
                 comments == that.comments &&
                 duration == that.duration
     }
+
+    override fun hashCode() = Objects.hashCode(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration)
 
     open class AudioItemBaseBuilder(builder: AudioItemBuilder<out AudioItem>?) : AudioItemBuilder<AudioItem> {
 

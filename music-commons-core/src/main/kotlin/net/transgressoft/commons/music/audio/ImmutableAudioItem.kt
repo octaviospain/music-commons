@@ -1,16 +1,14 @@
 package net.transgressoft.commons.music.audio
 
 import com.google.common.base.Objects
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
+import kotlinx.serialization.*
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.contextual
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
 import net.transgressoft.commons.music.audio.AudioItemBase.AudioItemBaseBuilder
@@ -19,6 +17,7 @@ import java.nio.file.Paths
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import java.util.*
 
 /**
  * @author Octavio Calleya
@@ -27,9 +26,9 @@ import java.time.ZoneOffset
 @SerialName("DefaultAudioItem")
 internal data class ImmutableAudioItem(
     override val id: Int,
-    @Serializable(with = PathSerializer::class) override val path: Path,
+    @Contextual override val path: Path,
     override val title: String,
-    @Serializable(with = DurationSerializer::class) override val duration: Duration,
+    @Contextual override val duration: Duration,
     override val bitRate: Int,
     override val artist: Artist,
     override val album: Album,
@@ -41,8 +40,8 @@ internal data class ImmutableAudioItem(
     override val encoder: String?,
     override val encoding: String?,
     @Transient val _coverImage: ByteArray? = null,
-    @Serializable(with = LocalDateTimeSerializer::class) override val dateOfCreation: LocalDateTime = LocalDateTime.now(),
-    @Serializable(with = LocalDateTimeSerializer::class) override val lastDateModified: LocalDateTime = dateOfCreation
+    @Contextual override val dateOfCreation: LocalDateTime = LocalDateTime.now(),
+    @Contextual override val lastDateModified: LocalDateTime = dateOfCreation
 ) : AudioItemBase(
     id,
     path,
@@ -131,6 +130,9 @@ val audioItemSerializerModule = SerializersModule {
     polymorphic(Label::class) {
         subclass(ImmutableLabel.serializer())
     }
+    contextual(LocalDateTimeSerializer)
+    contextual(DurationSerializer)
+    contextual(PathSerializer)
 }
 
 object PathSerializer: KSerializer<Path> {
