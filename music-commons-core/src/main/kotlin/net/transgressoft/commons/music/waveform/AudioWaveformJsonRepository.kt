@@ -1,5 +1,6 @@
 package net.transgressoft.commons.music.waveform
 
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -21,10 +22,10 @@ class AudioWaveformJsonRepository internal constructor(@Transient val file: File
     AudioWaveformRepository<ScalableAudioWaveform> {
 
     @Transient
-    override var polymorphicRepositorySerializer = audioWaveformRepositorySerializersModule
+    override var repositorySerializersModule = audioWaveformRepositorySerializersModule
 
     @Transient
-    override var queryEntitySerializer = ScalableAudioWaveform.serializer()
+    override var repositorySerializer: KSerializer<*> = serializer()
 
     @Transient override val audioItemEventSubscriber = AudioItemEventSubscriber<AudioItem>(this.toString()).apply {
         addOnNextEventAction(QueryEntityEvent.Type.DELETE) { event ->
@@ -35,15 +36,11 @@ class AudioWaveformJsonRepository internal constructor(@Transient val file: File
     companion object {
         private val json = Json { serializersModule = audioWaveformRepositorySerializersModule }
 
-        fun loadFromFile(file: File): JsonFileRepository<ScalableAudioWaveform> {
+        fun loadFromFile(file: File): AudioWaveformJsonRepository {
             require(file.exists().and(file.canRead().and(file.canWrite()))) {
                 "Provided jsonFile does not exist or is not writable"
             }
-            return json.decodeFromString(JsonFileRepository.serializer(ScalableAudioWaveform.serializer()), file.readText())
-                .apply {
-                    queryEntitySerializer = ScalableAudioWaveform.serializer()
-                    polymorphicRepositorySerializer = audioWaveformRepositorySerializersModule
-                }
+            return json.decodeFromString(serializer(), file.readText())
         }
 
         fun initialize(file: File) = AudioWaveformJsonRepository(file)
@@ -65,7 +62,7 @@ class AudioWaveformJsonRepository internal constructor(@Transient val file: File
 }
 
 val audioWaveformRepositorySerializersModule = SerializersModule {
-    polymorphic(JsonFileRepository::class) {
-        subclass(AudioWaveformJsonRepository.serializer())
+    polymorphic(AudioWaveform::class) {
+        subclass(ScalableAudioWaveform::class)
     }
 }

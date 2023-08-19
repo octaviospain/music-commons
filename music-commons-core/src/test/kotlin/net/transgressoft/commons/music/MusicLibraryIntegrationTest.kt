@@ -3,17 +3,14 @@ package net.transgressoft.commons.music
 import io.kotest.assertions.timing.eventually
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
-import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
-import io.kotest.matchers.string.shouldNotContain
 import net.transgressoft.commons.music.audio.*
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.mp3File
 import net.transgressoft.commons.music.playlist.AudioPlaylist
 import net.transgressoft.commons.music.playlist.AudioPlaylistJsonRepository
 import net.transgressoft.commons.music.playlist.AudioPlaylistRepository
-import net.transgressoft.commons.music.waveform.AudioWaveformInMemoryRepository
 import net.transgressoft.commons.music.waveform.AudioWaveformJsonRepository
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
 import net.transgressoft.commons.music.waveform.ScalableAudioWaveform
@@ -98,7 +95,6 @@ internal class MusicLibraryIntegrationTest : StringSpec({
             audioWaveformRepository.isEmpty shouldBe true
             waveformsRepoFile.readText() shouldBe """
             {
-                "repository": "AudioWaveformRepository",
                 "jsonFile": "${waveformsRepoFile.absolutePath}"
             }""".trimIndent()
         }

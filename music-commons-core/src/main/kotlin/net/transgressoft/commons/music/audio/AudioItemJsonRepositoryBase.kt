@@ -1,5 +1,6 @@
 package net.transgressoft.commons.music.audio
 
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -30,10 +31,10 @@ abstract class AudioItemJsonRepositoryBase<I : AudioItem> (
     private val logger = KotlinLogging.logger(javaClass.name)
 
     @Transient
-    override var polymorphicRepositorySerializer = audioItemRepositoryBaseSerializersModule
+    override var repositorySerializersModule = audioItemRepositoryBaseSerializersModule
 
     @Transient
-    override var queryEntitySerializer = AudioItemBase.serializer()
+    override var repositorySerializer: KSerializer<*> = serializer(AudioItemBase.serializer())
 
     @Transient
     private val idCounter = AtomicInteger(1)
@@ -162,9 +163,6 @@ abstract class AudioItemJsonRepositoryBase<I : AudioItem> (
 }
 
 val audioItemRepositoryBaseSerializersModule = SerializersModule {
-    polymorphic(JsonFileRepository::class) {
-        defaultDeserializer { JsonFileRepository.serializer(AudioItemBase.serializer()) }
-    }
     polymorphic(QueryEntitySubscriberBase::class) {
         subclass(AudioItemEventSubscriber.serializer(AudioItemBase.serializer()))
     }

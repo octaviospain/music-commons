@@ -30,7 +30,6 @@ internal class AudioWaveformJsonRepositoryTest : StringSpec({
         eventually(2.seconds) {
             jsonFile.readText() shouldBe """
                 {
-                    "repository": "AudioWaveformRepository",
                     "entitiesById": {
                         "1": {
                             "id": 1,

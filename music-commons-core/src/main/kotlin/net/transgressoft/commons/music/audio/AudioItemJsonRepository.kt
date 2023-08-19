@@ -8,7 +8,6 @@ import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.plus
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
-import net.transgressoft.commons.query.JsonFileRepository
 import java.io.File
 
 @Serializable
@@ -18,7 +17,7 @@ class AudioItemJsonRepository internal constructor(
 ) : AudioItemJsonRepositoryBase<AudioItem>(_file) {
 
     @Transient
-    override var polymorphicRepositorySerializer = audioItemRepositoryBaseSerializersModule + audioItemRepositorySerializersModule
+    override var repositorySerializersModule = audioItemRepositoryBaseSerializersModule + audioItemRepositorySerializersModule
 
     constructor() : this(null)
 
@@ -32,7 +31,7 @@ class AudioItemJsonRepository internal constructor(
             require(file.exists().and(file.canRead().and(file.canWrite()))) {
                 "Provided jsonFile does not exist or is not writable"
             }
-            return json.decodeFromString(JsonFileRepository.serializer(AudioItemBase.serializer()), file.readText()) as AudioItemJsonRepository
+            return json.decodeFromString(serializer(AudioItemBase.serializer()), file.readText()) as AudioItemJsonRepository
         }
 
         fun initialize(file: File) = AudioItemJsonRepository(file)
@@ -40,7 +39,7 @@ class AudioItemJsonRepository internal constructor(
 }
 
 val audioItemRepositorySerializersModule = SerializersModule {
-    polymorphic(JsonFileRepository::class) {
+    polymorphic(AudioItemJsonRepositoryBase::class) {
         subclass(AudioItemJsonRepository::class)
     }
     polymorphic(AudioItemBase::class) {
