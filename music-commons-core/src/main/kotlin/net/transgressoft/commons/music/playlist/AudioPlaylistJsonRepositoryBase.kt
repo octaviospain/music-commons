@@ -22,9 +22,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
 import java.util.stream.Collectors
-import kotlin.streams.toList
 
-abstract class AudioPlaylistJsonRepositoryBase<I : AudioItem, P : AudioPlaylist<I>>(private val jsonFile: File? = null) :
+abstract class AudioPlaylistJsonRepositoryBase<I : AudioItem, P : AudioPlaylist<I>>(var jsonFile: File? = null) :
     QueryEntityPublisherBase<P>(), AudioPlaylistRepository<I, P> {
 
     private val logger = KotlinLogging.logger(javaClass.name)
@@ -85,7 +84,7 @@ abstract class AudioPlaylistJsonRepositoryBase<I : AudioItem, P : AudioPlaylist<
     private val json by lazy { Json { prettyPrint = true } }
 
     init {
-        require(jsonFile?.exists()?.and(jsonFile.canWrite().and(jsonFile.extension == "json")) ?: true) {
+        require(jsonFile?.exists()?.and(jsonFile!!.canWrite().and(jsonFile!!.extension == "json")) ?: true) {
             "Provided jsonFile does not exist, is not writable or is not a json file"
         }
     }
