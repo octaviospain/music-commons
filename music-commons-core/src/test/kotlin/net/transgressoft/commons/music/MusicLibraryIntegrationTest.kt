@@ -23,11 +23,11 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     val playlistRepoFile = tempfile("playlistRepository-test", ".json").apply { deleteOnExit() }
     val waveformsRepoFile = tempfile("waveformRepository-test", ".json").apply { deleteOnExit() }
 
-    val audioItemRepository: AudioItemRepository<AudioItemBase> = AudioItemJsonRepository(audioRepoFile)
+    val audioItemRepository: AudioItemRepository<AudioItem> = AudioItemJsonRepository(audioRepoFile)
     val audioWaveformRepository: AudioWaveformRepository<ScalableAudioWaveform> = AudioWaveformJsonRepository(waveformsRepoFile)
     val audioPlaylistRepository: AudioPlaylistRepository<AudioItem, AudioPlaylist<AudioItem>> = AudioPlaylistJsonRepository(playlistRepoFile)
 
-    fun AudioItemRepository<AudioItemBase>.createAudioItem(path: Path): AudioItemBase =
+    fun AudioItemRepository<AudioItem>.createAudioItem(path: Path): AudioItem =
         ImmutableAudioItem.createFromFile(path).let {
             add(it)
             findByUniqueId(it.uniqueId).get()

@@ -21,9 +21,6 @@ class AudioItemJsonRepository(@Transient val _file: File? = null) :
             polymorphic(AudioItemJsonRepositoryBase::class) {
                 subclass(AudioItemJsonRepository::class)
             }
-            polymorphic(AudioItemBase::class) {
-                subclass(ImmutableAudioItem::class)
-            }
         }
     }
 }

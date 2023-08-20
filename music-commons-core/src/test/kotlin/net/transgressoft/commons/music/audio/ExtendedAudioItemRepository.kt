@@ -47,7 +47,7 @@ val extendedAudioItemRepositorySerializersModule = SerializersModule {
     polymorphic(AudioItemJsonRepositoryBase::class) {
         subclass(ExtendedAudioItemRepository::class)
     }
-    polymorphic(AudioItemBase::class) {
+    polymorphic(ExtendedAudioItemInterface::class) {
         subclass(ExtendedAudioItem::class)
     }
 }

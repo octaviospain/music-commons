@@ -26,7 +26,7 @@ import kotlin.streams.toList
 abstract class AudioItemJsonRepositoryBase<I : AudioItem> (
     @Transient val file: File? = null,
     @Transient override val repositorySerializersModule: SerializersModule? = null
-): JsonFileRepository<AudioItemBase>(file), AudioItemRepository<AudioItemBase> {
+): JsonFileRepository<I>(file), AudioItemRepository<I> {
 
     @Transient
     private val logger = KotlinLogging.logger(javaClass.name)
@@ -44,9 +44,10 @@ abstract class AudioItemJsonRepositoryBase<I : AudioItem> (
             "Provided jsonFile does not exist, is not writable or is not a json file"
         }
         if (jsonFile?.readText()?.isNotEmpty() == true) {
-            json.decodeFromString(serializer(AudioItemBase.serializer()), file!!.readText()).let {
-                addOrReplaceAll(it.entitiesById.values.toSet())
-            }
+            val decodedRepository = json.decodeFromString(serializer(AudioItemBase.serializer()), file!!.readText())
+
+            @Suppress("UNCHECKED_CAST")
+            addOrReplaceAll(decodedRepository.entitiesById.values.map { audioItemBase -> audioItemBase as I }.toSet())
         }
     }
 
@@ -58,11 +59,12 @@ abstract class AudioItemJsonRepositoryBase<I : AudioItem> (
         return id
     }
 
-    override fun add(entity: AudioItemBase): Boolean {
+    @Suppress("UNCHECKED_CAST")
+    final override fun add(entity: I): Boolean {
         val entityToAdd = if (entity.id <= UNASSIGNED_ID) {
             entity.toBuilder().id(newId()).build().also {
                 logger.debug { "New id ${it.id} assigned to audioItem with uniqueId ${entity.uniqueId}" }
-            }
+            } as I
         } else entity
 
         val added = super.add(entityToAdd)
@@ -71,7 +73,7 @@ abstract class AudioItemJsonRepositoryBase<I : AudioItem> (
         return added
     }
 
-    private fun addOrReplaceAlbumByArtist(audioItem: AudioItemBase, added: Boolean) {
+    private fun addOrReplaceAlbumByArtist(audioItem: I, added: Boolean) {
         val artist = audioItem.artist
         val album = audioItem.album
         if (added) {
@@ -88,13 +90,13 @@ abstract class AudioItemJsonRepositoryBase<I : AudioItem> (
         }
     }
 
-    override fun addOrReplace(entity: AudioItemBase): Boolean {
+    final override fun addOrReplace(entity: I): Boolean {
         val addedOrReplaced = super.addOrReplace(entity)
         addOrReplaceAlbumByArtist(entity, addedOrReplaced)
         return addedOrReplaced
     }
 
-    override fun addOrReplaceAll(entities: Set<AudioItemBase>): Boolean {
+    final override fun addOrReplaceAll(entities: Set<I>): Boolean {
         val addedOrReplaced = super.getAddedOrReplacedEntities(entities)
         addedOrReplaced[true]?.let { addedList ->
             if (addedList.isNotEmpty()) {
@@ -111,14 +113,14 @@ abstract class AudioItemJsonRepositoryBase<I : AudioItem> (
         return addedOrReplaced.values.stream().flatMap { it.stream() }.findAny().isPresent
     }
 
-    override fun remove(entity: AudioItemBase): Boolean {
+    final override fun remove(entity: I): Boolean {
         val removed = super.remove(entity)
         removeAlbumByArtistInternal(entity)
         super.serializeToJson()
         return removed
     }
 
-    private fun removeAlbumByArtistInternal(audioItem: AudioItemBase) {
+    private fun removeAlbumByArtistInternal(audioItem: I) {
         val artist = audioItem.artist
         if (albumsByArtist.containsKey(artist)) {
             var albums = albumsByArtist[audioItem.artist]
@@ -135,17 +137,17 @@ abstract class AudioItemJsonRepositoryBase<I : AudioItem> (
 
     private fun isAlbumNotEmpty(album: Album) = searchInternal { it.album == album }.isNotEmpty()
 
-    override fun removeAll(entities: Set<AudioItemBase>): Boolean {
+    final override fun removeAll(entities: Set<I>): Boolean {
         val removed = super.removeAll(entities)
-        entities.forEach { audioItem: AudioItemBase -> removeAlbumByArtistInternal(audioItem) }
+        entities.forEach { audioItem: I -> removeAlbumByArtistInternal(audioItem) }
         return removed
     }
 
-    override fun containsAudioItemWithArtist(artistName: String): Boolean {
+    final override fun containsAudioItemWithArtist(artistName: String): Boolean {
         return searchInternal { it.artistsInvolved.stream().map(String::lowercase).toList().contains(artistName.lowercase()) }.isNotEmpty()
     }
 
-    override fun getRandomAudioItemsFromArtist(artist: Artist, size: Int): List<AudioItemBase> {
+    final override fun getRandomAudioItemsFromArtist(artist: Artist, size: Int): List<I> {
         return albumsByArtist[artist]?.stream()
             ?.flatMap { albumAudioItems(it).stream() }
             ?.limit(size.toLong())
@@ -153,11 +155,11 @@ abstract class AudioItemJsonRepositoryBase<I : AudioItem> (
             .also { it?.shuffle() } ?: emptyList()
     }
 
-    override fun artists(): Set<Artist> = albumsByArtist.keys.toSet()
+    final override fun artists(): Set<Artist> = albumsByArtist.keys.toSet()
 
-    override fun artistAlbums(artist: Artist): Set<Album> = albumsByArtist[artist]?.toSet() ?: emptySet()
+    final override fun artistAlbums(artist: Artist): Set<Album> = albumsByArtist[artist]?.toSet() ?: emptySet()
 
-    override fun albumAudioItems(album: Album): Set<AudioItemBase> = searchInternal { it.album == album }.toSet()
+    final override fun albumAudioItems(album: Album): Set<I> = searchInternal { it.album == album }.toSet()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

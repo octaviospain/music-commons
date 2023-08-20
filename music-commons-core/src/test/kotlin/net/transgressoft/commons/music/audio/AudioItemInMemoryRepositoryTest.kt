@@ -34,7 +34,7 @@ import java.nio.file.Path
 import java.time.Duration
 import kotlin.io.path.absolutePathString
 
-private lateinit var audioRepository: AudioItemRepository<AudioItemBase>
+private lateinit var audioRepository: AudioItemRepository<AudioItem>
 
 internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
 

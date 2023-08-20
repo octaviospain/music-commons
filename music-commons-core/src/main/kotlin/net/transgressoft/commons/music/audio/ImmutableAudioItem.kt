@@ -117,8 +117,11 @@ internal class ImmutableAudioItemBuilder internal constructor(builder: AudioItem
 }
 
 val audioItemSerializerModule = SerializersModule {
+    polymorphic(AudioItem::class) {
+        subclass(ImmutableAudioItem::class)
+    }
     polymorphic(AudioItemBase::class) {
-        subclass(ImmutableAudioItem.serializer())
+        subclass(ImmutableAudioItem::class)
     }
     polymorphic(Artist::class) {
         subclass(ImmutableArtist.serializer())
