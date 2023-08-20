@@ -51,8 +51,8 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
                     val audioItem = ImmutableAudioItem.createFromFile(mp3File.toPath()).let {
                         audioRepository.add(it)
                         audioRepository.shouldContainExactly(it)
-                        audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let {found ->
-                           found shouldBe it
+                        audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let { found ->
+                            found shouldBe it
                         }
                     }
 
@@ -97,7 +97,7 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
                     val audioItem = ImmutableAudioItem.createFromFile(m4aFile.toPath()).let {
                         audioRepository.add(it)
                         audioRepository.shouldContainExactly(it)
-                        audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let {found ->
+                        audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let { found ->
                             found shouldBe it
                         }
                     }
@@ -133,7 +133,7 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
                     val audioItem = ImmutableAudioItem.createFromFile(flacFile.toPath()).let {
                         audioRepository.add(it)
                         audioRepository.shouldContainExactly(it)
-                        audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let {found ->
+                        audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let { found ->
                             found shouldBe it
                         }
                     }
@@ -169,7 +169,7 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
                     val audioItem = ImmutableAudioItem.createFromFile(wavFile.toPath()).let {
                         audioRepository.add(it)
                         audioRepository.shouldContainExactly(it)
-                        audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let {found ->
+                        audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let { found ->
                             found shouldBe it
                         }
                     }
@@ -237,7 +237,7 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
 
                 then("`addOrReplaceAll works as expected`") {
                     val size = audioRepository.size()
-                    val arbAudioItems = Arb.set(arbitraryAudioItem(), 5 .. 10).next()
+                    val arbAudioItems = Arb.set(arbitraryAudioItem(), 5..10).next()
                     audioRepository.addOrReplaceAll(arbAudioItems) shouldBe true
                     audioRepository shouldHaveSize arbAudioItems.size + size
                 }
@@ -247,7 +247,7 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
                     audioRepository.remove(audioItem) shouldBe true
                     audioRepository shouldHaveSize size - 1
 
-                    val arbAudioItems = Arb.set(arbitraryAudioItem(), 5 .. 10).next()
+                    val arbAudioItems = Arb.set(arbitraryAudioItem(), 5..10).next()
                     assertSoftly {
                         audioRepository.addOrReplaceAll(arbAudioItems) shouldBe true
                         audioRepository shouldHaveSize size - 1 + arbAudioItems.size
@@ -268,11 +268,11 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
                 then("the repository can return a list of random audio items from the Artist") {
                     val itemsFromArtist = audioRepository.getRandomAudioItemsFromArtist(ImmutableArtist("Queen"), 25)
                     itemsFromArtist shouldHaveAtMostSize 25
-                    itemsFromArtist.forAll { it.artist shouldBe ImmutableArtist("Queen")}
+                    itemsFromArtist.forAll { it.artist shouldBe ImmutableArtist("Queen") }
 
                     val itemsFromArtist2 = audioRepository.getRandomAudioItemsFromArtist(ImmutableArtist("Queen"), 25)
                     itemsFromArtist shouldHaveAtMostSize 25
-                    itemsFromArtist.forAll { it.artist shouldBe ImmutableArtist("Queen")}
+                    itemsFromArtist.forAll { it.artist shouldBe ImmutableArtist("Queen") }
                     itemsFromArtist shouldNotBe itemsFromArtist2
                 }
             }
@@ -304,58 +304,56 @@ fun assertAudioItemChange(audioItem: AudioItem, audioItemChange: AudioItemMetada
 }
 
 fun assertAudioItem(audioItem: AudioItem, path: Path, tag: Tag) {
-    assertSoftly {
-        audioItem.path.absolutePathString() shouldBe path.absolutePathString()
-        audioItem.title shouldBe tag.getFirst(FieldKey.TITLE)
-        audioItem.album.name shouldBe tag.getFirst(FieldKey.ALBUM)
-        audioItem.album.albumArtist.name shouldBe beautifyArtistName(tag.getFirst(FieldKey.ALBUM_ARTIST))
-        audioItem.album.label.name shouldBe tag.getFirst(FieldKey.GROUPING)
-        audioItem.album.label.countryCode shouldBe CountryCode.UNDEFINED
-        audioItem.coverImage shouldBe tag.firstArtwork.binaryData
-        audioItem.artist.name shouldBe beautifyArtistName(tag.getFirst(FieldKey.ARTIST))
-        audioItem.artist.countryCode.name shouldBe tag.getFirst(FieldKey.COUNTRY)
-        audioItem.genre shouldBe Genre.parseGenre(tag.getFirst(FieldKey.GENRE))
-        audioItem.comments shouldBe tag.getFirst(FieldKey.COMMENT)
-        audioItem.encoder shouldBe tag.getFirst(FieldKey.ENCODER)
-        tag.getFirst(FieldKey.YEAR).toShortOrNull()?.let {
-            if (it > 0)
-                audioItem.album.year shouldBe it
-            else
-                audioItem.album.year shouldNotBe it
-        }
-        tag.getFirst(FieldKey.TRACK).toShortOrNull()?.let {
-            if (it > 0)
-                audioItem.trackNumber shouldBe it
-            else
-                audioItem.trackNumber shouldNotBe it
-        }
-        tag.getFirst(FieldKey.DISC_NO).toShortOrNull()?.let {
-            if (it > 0)
-                audioItem.discNumber shouldBe it
-            else
-                audioItem.discNumber shouldNotBe it
-        }
-        tag.getFirst(FieldKey.BPM).toFloatOrNull()?.let {
-            if (it > 0)
-                audioItem.bpm shouldBe it
-            else
-                audioItem.bpm shouldNotBe it
-        }
+    audioItem.path.absolutePathString() shouldBe path.absolutePathString()
+    audioItem.title shouldBe tag.getFirst(FieldKey.TITLE)
+    audioItem.album.name shouldBe tag.getFirst(FieldKey.ALBUM)
+    audioItem.album.albumArtist.name shouldBe beautifyArtistName(tag.getFirst(FieldKey.ALBUM_ARTIST))
+    audioItem.album.label.name shouldBe tag.getFirst(FieldKey.GROUPING)
+    audioItem.album.label.countryCode shouldBe CountryCode.UNDEFINED
+    audioItem.coverImage shouldBe tag.firstArtwork.binaryData
+    audioItem.artist.name shouldBe beautifyArtistName(tag.getFirst(FieldKey.ARTIST))
+    audioItem.artist.countryCode.name shouldBe tag.getFirst(FieldKey.COUNTRY)
+    audioItem.genre shouldBe Genre.parseGenre(tag.getFirst(FieldKey.GENRE))
+    audioItem.comments shouldBe tag.getFirst(FieldKey.COMMENT)
+    audioItem.encoder shouldBe tag.getFirst(FieldKey.ENCODER)
+    tag.getFirst(FieldKey.YEAR).toShortOrNull()?.let {
+        if (it > 0)
+            audioItem.album.year shouldBe it
+        else
+            audioItem.album.year shouldNotBe it
+    }
+    tag.getFirst(FieldKey.TRACK).toShortOrNull()?.let {
+        if (it > 0)
+            audioItem.trackNumber shouldBe it
+        else
+            audioItem.trackNumber shouldNotBe it
+    }
+    tag.getFirst(FieldKey.DISC_NO).toShortOrNull()?.let {
+        if (it > 0)
+            audioItem.discNumber shouldBe it
+        else
+            audioItem.discNumber shouldNotBe it
+    }
+    tag.getFirst(FieldKey.BPM).toFloatOrNull()?.let {
+        if (it > 0)
+            audioItem.bpm shouldBe it
+        else
+            audioItem.bpm shouldNotBe it
+    }
 
-        if (audioItem.extension == "m4a") {
-            audioItem.album.isCompilation.shouldBe(tag.getFirst(FieldKey.IS_COMPILATION) == "1")
+    if (audioItem.extension == "m4a") {
+        audioItem.album.isCompilation.shouldBe(tag.getFirst(FieldKey.IS_COMPILATION) == "1")
+    } else {
+        audioItem.album.isCompilation shouldBe tag.getFirst(FieldKey.IS_COMPILATION).toBoolean()
+    }
+
+    AudioFileIO.read(audioItem.path.toFile()).audioHeader.let {
+        it.encodingType shouldBe audioItem.encoding
+        Duration.ofSeconds(it.trackLength.toLong()) shouldBe audioItem.duration
+        if (it.bitRate.first() == '~') {
+            it.bitRate.substring(1).toInt() shouldBe audioItem.bitRate
         } else {
-            audioItem.album.isCompilation shouldBe tag.getFirst(FieldKey.IS_COMPILATION).toBoolean()
-        }
-
-        AudioFileIO.read(audioItem.path.toFile()).audioHeader.let {
-            it.encodingType shouldBe audioItem.encoding
-            Duration.ofSeconds(it.trackLength.toLong()) shouldBe audioItem.duration
-            if (it.bitRate.first() == '~') {
-                it.bitRate.substring(1).toInt() shouldBe audioItem.bitRate
-            } else {
-                it.bitRate.toInt() shouldBe audioItem.bitRate
-            }
+            it.bitRate.toInt() shouldBe audioItem.bitRate
         }
     }
 }

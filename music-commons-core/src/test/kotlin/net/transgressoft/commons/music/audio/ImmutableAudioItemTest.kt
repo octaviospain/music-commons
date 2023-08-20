@@ -147,7 +147,7 @@ internal class ImmutableAudioItemTest : StringSpec({
         val file = tempfile("audioItem-metadata-test", ".mp3").also { it.deleteOnExit() }
         mp3File.copyTo(file, overwrite = true)
 
-        var updatedAudioItem: AudioItemBase = ImmutableAudioItem.createFromFile(file.toPath())
+        var updatedAudioItem: ImmutableAudioItem = ImmutableAudioItem.createFromFile(file.toPath())
         val thisDateOfCreation = updatedAudioItem.dateOfCreation
         updatedAudioItem = updatedAudioItem.update(
             AudioItemMetadataChange(title, artist, albumName, albumArtist, isCompilation, year, label, testCoverBytes, genre, comments, trackNumber, discNumber, bpm))
@@ -187,7 +187,7 @@ internal class ImmutableAudioItemTest : StringSpec({
         updatedAudioItem.writeMetadata()
 
         eventually(2.seconds) {
-            val loadedAudioItem = ImmutableAudioItem.createFromFile(updatedAudioItem.path)
+            val loadedAudioItem: ImmutableAudioItem = ImmutableAudioItem.createFromFile(updatedAudioItem.path)
             assertSoftly {
                 loadedAudioItem.id shouldBe updatedAudioItem.id
                 loadedAudioItem.dateOfCreation shouldBeAfter updatedAudioItem.dateOfCreation
@@ -224,7 +224,7 @@ internal class ImmutableAudioItemTest : StringSpec({
         mp3File.copyTo(tempFile, overwrite = true)
         audioItem = audioItem.copy(path = tempFile.toPath())
 
-        val updatedAudioItem = audioItem.update { coverImage = testCoverBytes }
+        val updatedAudioItem: ImmutableAudioItem = audioItem.update { coverImage = testCoverBytes }
         updatedAudioItem.writeMetadata()
 
         val json = Json { serializersModule = audioItemSerializerModule; prettyPrint = true }

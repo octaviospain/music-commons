@@ -32,5 +32,9 @@ interface AudioItem : QueryEntity {
 
     fun toBuilder(): AudioItemBuilder<out AudioItem>
 
+    fun update(change: AudioItemMetadataChange): AudioItem
+
+    fun update(changeAction: AudioItemMetadataChange.() -> Unit): AudioItem
+
     suspend fun writeMetadata()
 }

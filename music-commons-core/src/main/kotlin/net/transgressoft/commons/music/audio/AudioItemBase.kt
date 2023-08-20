@@ -199,33 +199,6 @@ abstract class AudioItemBase(
     }
 }
 
-fun AudioItem.update(change: AudioItemMetadataChange): AudioItemBase =
-    AudioItemBaseBuilder(this.toBuilder())
-        .id(id)
-        .title(change.title ?: title)
-        .artist(change.artist ?: artist)
-        .album(ImmutableAlbum(
-            change.albumName ?: album.name,
-            change.albumArtist ?: album.albumArtist,
-            change.isCompilation ?: album.isCompilation,
-            change.year?.takeIf { it > 0 } ?: album.year,
-            change.label ?: album.label,
-        ))
-        .genre(change.genre ?: genre)
-        .comments(change.comments ?: comments)
-        .trackNumber(change.trackNumber?.takeIf { it > 0 } ?: trackNumber)
-        .discNumber(change.discNumber?.takeIf { it > 0 } ?: discNumber)
-        .bpm(change.bpm ?: bpm)
-        .coverImage(change.coverImage ?: coverImage)
-        .lastDateModified(LocalDateTime.now())
-        .build()
-
-fun AudioItem.update(changeAction: AudioItemMetadataChange.() -> Unit): AudioItemBase =
-    AudioItemMetadataChange().let { change ->
-        change.changeAction()
-        update(change)
-    }
-
 fun readAudioItemFields(audioItemPath: Path): AudioItemBuilder<AudioItem> {
     require(!Files.notExists(audioItemPath)) { "File '${audioItemPath.toAbsolutePath()}' does not exist" }
 

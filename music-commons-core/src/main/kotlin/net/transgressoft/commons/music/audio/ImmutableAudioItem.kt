@@ -66,6 +66,32 @@ internal data class ImmutableAudioItem(
         fun builder() : AudioItemBuilder<AudioItem> = ImmutableAudioItemBuilder()
     }
 
+    override fun update(change: AudioItemMetadataChange): ImmutableAudioItem =
+        toBuilder().also {
+            it.title = change.title ?: title
+            it.artist = change.artist ?: artist
+            it.album = ImmutableAlbum(
+                change.albumName ?: album.name,
+                change.albumArtist ?: album.albumArtist,
+                change.isCompilation ?: album.isCompilation,
+                change.year?.takeIf { year -> year > 0 } ?: album.year,
+                change.label ?: album.label
+            )
+            it.genre = change.genre ?: genre
+            it.comments = change.comments ?: comments
+            it.trackNumber = change.trackNumber?.takeIf { trackNum -> trackNum > 0 } ?: trackNumber
+            it.discNumber = change.discNumber?.takeIf { discNum -> discNum > 0 } ?: discNumber
+            it.bpm = change.bpm ?: bpm
+            it.coverImage = change.coverImage ?: coverImage
+            it.lastDateModified = LocalDateTime.now()
+        }.build()
+
+    override fun update(changeAction: AudioItemMetadataChange.() -> Unit): ImmutableAudioItem =
+        AudioItemMetadataChange().let { change ->
+            change.changeAction()
+            update(change)
+        }
+
     override fun toBuilder(): ImmutableAudioItemBuilder = ImmutableAudioItemBuilder(super.toBuilder())
 
     override fun hashCode() = Objects.hashCode(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration)

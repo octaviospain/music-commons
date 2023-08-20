@@ -100,6 +100,32 @@ class ExtendedAudioItem internal constructor(
 
     override fun toBuilder(): ExtendedAudioItemBuilder = ExtendedAudioItemBuilder(super.toBuilder())
 
+    override fun update(change: AudioItemMetadataChange): ExtendedAudioItem =
+        toBuilder().also {
+            it.title = change.title ?: title
+            it.artist = change.artist ?: artist
+            it.album = ImmutableAlbum(
+                change.albumName ?: album.name,
+                change.albumArtist ?: album.albumArtist,
+                change.isCompilation ?: album.isCompilation,
+                change.year?.takeIf { year -> year > 0 } ?: album.year,
+                change.label ?: album.label
+            )
+            it.genre = change.genre ?: genre
+            it.comments = change.comments ?: comments
+            it.trackNumber = change.trackNumber ?: trackNumber
+            it.discNumber = change.discNumber ?: discNumber
+            it.bpm = change.bpm ?: bpm
+            it.coverImage = change.coverImage ?: coverImage
+            it.lastDateModified = LocalDateTime.now()
+        }.build()
+
+    override fun update(changeAction: AudioItemMetadataChange.() -> Unit): ExtendedAudioItem =
+        AudioItemMetadataChange().let { change ->
+            change.changeAction()
+            update(change)
+        }
+
     override fun hashCode() = Objects.hashCode(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration)
 
     override fun equals(other: Any?): Boolean {
