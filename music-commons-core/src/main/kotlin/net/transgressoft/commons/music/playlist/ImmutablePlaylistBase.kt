@@ -11,6 +11,7 @@ import java.nio.file.Path
 import java.util.*
 import java.util.function.Predicate
 import kotlin.io.path.exists
+import kotlin.streams.toList
 
 abstract class ImmutablePlaylistBase<I : AudioItem>(
     override val id: Int,

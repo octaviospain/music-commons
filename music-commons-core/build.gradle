@@ -13,7 +13,7 @@ ext {
 dependencies {
     implementation 'com.google.guava:guava:32.1.1-jre'
     implementation 'net.jthink:jaudiotagger:3.0.1'
-    implementation 'net.transgressoft:soft-query-mem:0.72-SNAPSHOT'
+    implementation 'net.transgressoft:soft-query-mem:0.73-SNAPSHOT'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1'
     implementation 'ws.schild:jave-core:3.3.1'
     implementation 'ws.schild:jave-nativebin-linux64:3.3.1'

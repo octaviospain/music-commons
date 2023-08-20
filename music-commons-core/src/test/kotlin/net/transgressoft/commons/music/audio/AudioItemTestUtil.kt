@@ -123,10 +123,7 @@ internal object AudioItemTestUtil : TestConfiguration() {
 
     val defaultArtistName = "DEFAULT_ARTIST_NAME"
 
-    fun arbitraryArtist(
-        givenName: String = defaultArtistName,
-        givenCountryCode: CountryCode = CountryCode.values().random(),
-    ): Arb<Artist> = Arb.bind(
+    fun arbitraryArtist(givenName: String = defaultArtistName): Arb<Artist> = Arb.bind(
         Arb.string(),
         Arb.enum<CountryCode>()
     ) { name: String, countryCode: CountryCode ->
