@@ -58,10 +58,12 @@ class AudioWaveformJsonRepository(@Transient val file: File? = null) :
     }
 
     override fun toString() = "WaveformRepository[${this.hashCode()}]"
-}
 
-internal val audioWaveformRepositorySerializersModule = SerializersModule {
-    polymorphic(AudioWaveform::class) {
-        subclass(ScalableAudioWaveform::class)
+    companion object {
+        val audioWaveformRepositorySerializersModule = SerializersModule {
+            polymorphic(AudioWaveform::class) {
+                subclass(ScalableAudioWaveform::class)
+            }
+        }
     }
 }

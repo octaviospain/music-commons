@@ -11,18 +11,19 @@ import java.io.File
 
 @Serializable
 @SerialName("AudioItemRepository")
-class AudioItemJsonRepository internal constructor(
-    @Transient val _file: File? = null
-) : AudioItemJsonRepositoryBase<AudioItem>(_file, audioItemRepositoryBaseSerializersModule + audioItemRepositorySerializersModule) {
+class AudioItemJsonRepository(@Transient val _file: File? = null) :
+    AudioItemJsonRepositoryBase<AudioItem>(_file, audioItemRepositoryBaseSerializersModule + audioItemRepositorySerializersModule) {
 
     constructor() : this(null)
-}
 
-val audioItemRepositorySerializersModule = SerializersModule {
-    polymorphic(AudioItemJsonRepositoryBase::class) {
-        subclass(AudioItemJsonRepository::class)
-    }
-    polymorphic(AudioItemBase::class) {
-        subclass(ImmutableAudioItem::class)
+    companion object {
+        val audioItemRepositorySerializersModule = SerializersModule {
+            polymorphic(AudioItemJsonRepositoryBase::class) {
+                subclass(AudioItemJsonRepository::class)
+            }
+            polymorphic(AudioItemBase::class) {
+                subclass(ImmutableAudioItem::class)
+            }
+        }
     }
 }

@@ -169,11 +169,13 @@ abstract class AudioItemJsonRepositoryBase<I : AudioItem> (
     override fun hashCode() = Objects.hash(entitiesById, albumsByArtist)
 
     override fun toString() = "AudioItemJsonRepository[entityCount=${entitiesById.size}, albumCount=${albumsByArtist.size}]"
-}
 
-val audioItemRepositoryBaseSerializersModule = SerializersModule {
-    polymorphic(QueryEntitySubscriberBase::class) {
-        subclass(AudioItemEventSubscriber.serializer(AudioItemBase.serializer()))
+    companion object {
+        val audioItemRepositoryBaseSerializersModule = SerializersModule {
+            polymorphic(QueryEntitySubscriberBase::class) {
+                subclass(AudioItemEventSubscriber.serializer(AudioItemBase.serializer()))
+            }
+            include(audioItemSerializerModule)
+        }
     }
-    include(audioItemSerializerModule)
 }

@@ -85,10 +85,7 @@ abstract class AudioPlaylistJsonRepositoryBase<I : AudioItem, P : AudioPlaylist<
     private val json by lazy { Json { prettyPrint = true } }
 
     init {
-        require(
-            jsonFile?.exists()?.and((jsonFile.canWrite()).and(jsonFile.extension == "json"))
-                ?: true
-        ) {
+        require(jsonFile?.exists()?.and(jsonFile.canWrite().and(jsonFile.extension == "json")) ?: true) {
             "Provided jsonFile does not exist, is not writable or is not a json file"
         }
     }
@@ -307,6 +304,33 @@ abstract class AudioPlaylistJsonRepositoryBase<I : AudioItem, P : AudioPlaylist<
             )
         }.toList()
 
+    internal fun mapFromSerializablePlaylists(
+        deserializedPlaylists: List<InternalAudioPlaylist>,
+        audioItemRepository: AudioItemRepository<AudioItem>
+    ): Map<Int, AudioPlaylist<AudioItem>> {
+        val playlistsById = deserializedPlaylists
+            .map { MutablePlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItemIds, audioItemRepository)) }
+            .associateByTo(mutableMapOf()) { it.id }
+
+        deserializedPlaylists.forEach {
+            val foundPlaylists = findDeserializedPlaylistsFromIds(it.playlistIds, playlistsById)
+            val playlist = playlistsById[it.id] ?: throw AudioItemManipulationException("AudioPlaylist with id ${it.id} not found during deserialization")
+            playlist.playlists.addAll(foundPlaylists)
+        }
+        return playlistsById
+    }
+
+    private fun mapAudioItemsFromIds(audioItemIds: List<Int>, audioItemRepository: AudioItemRepository<AudioItem>) =
+        audioItemIds.map {
+            audioItemRepository.findById(it).orElseThrow { AudioItemManipulationException("AudioItem with id $it not found during deserialization") }
+        }.toList()
+
+    private fun findDeserializedPlaylistsFromIds(playlists: Set<Int>, playlistsById: Map<Int, AudioPlaylist<AudioItem>>): List<AudioPlaylist<AudioItem>> {
+        return playlists.stream().map {
+            return@map playlistsById[it] ?: throw AudioItemManipulationException("AudioPlaylist with id $it not found during deserialization")
+        }.toList()
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false
@@ -326,33 +350,4 @@ abstract class AudioPlaylistJsonRepositoryBase<I : AudioItem, P : AudioPlaylist<
         val audioItemIds: List<Int>,
         val playlistIds: Set<Int>
     )
-}
-
-internal fun mapFromSerializablePlaylists(
-    deserializedPlaylists: List<InternalAudioPlaylist>,
-    audioItemRepository: AudioItemRepository<AudioItem>
-): Map<Int, AudioPlaylist<AudioItem>> {
-    val playlistsById = deserializedPlaylists
-        .map { MutablePlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItemIds, audioItemRepository)) }
-        .associateByTo(mutableMapOf()) { it.id }
-
-    deserializedPlaylists.forEach {
-        val foundPlaylists = findDeserializedPlaylistsFromIds(it.playlistIds, playlistsById)
-        playlistsById[it.id]!!.playlists.addAll(foundPlaylists)
-    }
-    return playlistsById
-}
-
-internal fun mapAudioItemsFromIds(audioItemIds: List<Int>, audioItemRepository: AudioItemRepository<AudioItem>) =
-    audioItemIds.map {
-        audioItemRepository.findById(it).orElseThrow { AudioItemManipulationException("AudioItem with id $it not found during deserialization") }
-    }.toList()
-
-internal fun findDeserializedPlaylistsFromIds(
-    playlists: Set<Int>,
-    playlistsById: Map<Int, AudioPlaylist<AudioItem>>
-): List<AudioPlaylist<AudioItem>> {
-    return playlists.stream().map {
-        return@map playlistsById[it] ?: throw AudioItemManipulationException("AudioPlaylist with id $it not found during deserialization")
-    }.toList()
 }
