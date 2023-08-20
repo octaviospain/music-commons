@@ -23,9 +23,9 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     val playlistRepoFile = tempfile("playlistRepository-test", ".json").apply { deleteOnExit() }
     val waveformsRepoFile = tempfile("waveformRepository-test", ".json").apply { deleteOnExit() }
 
-    val audioItemRepository: AudioItemRepository<AudioItemBase> = AudioItemJsonRepository.initialize(audioRepoFile)
-    val audioWaveformRepository: AudioWaveformRepository<ScalableAudioWaveform> = AudioWaveformJsonRepository.initialize(waveformsRepoFile)
-    val audioPlaylistRepository: AudioPlaylistRepository<AudioItem, AudioPlaylist<AudioItem>> = AudioPlaylistJsonRepository.initialize(playlistRepoFile)
+    val audioItemRepository: AudioItemRepository<AudioItemBase> = AudioItemJsonRepository(audioRepoFile)
+    val audioWaveformRepository: AudioWaveformRepository<ScalableAudioWaveform> = AudioWaveformJsonRepository(waveformsRepoFile)
+    val audioPlaylistRepository: AudioPlaylistRepository<AudioItem, AudioPlaylist<AudioItem>> = AudioPlaylistJsonRepository(playlistRepoFile)
 
     fun AudioItemRepository<AudioItemBase>.createAudioItem(path: Path): AudioItemBase =
         ImmutableAudioItem.createFromFile(path).let {
@@ -74,8 +74,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         eventually(2.seconds) {
             audioRepoFile.readText() shouldBe """
             {
-                "repository": "AudioItemRepository",
-                "jsonFile": "${audioRepoFile.absolutePath}"
+                "repository": "AudioItemRepository"
             }""".trimIndent()
 
             audioPlaylistRepository.findByName("New ones")!!.audioItems.isEmpty() shouldBe true
@@ -95,7 +94,6 @@ internal class MusicLibraryIntegrationTest : StringSpec({
             audioWaveformRepository.isEmpty shouldBe true
             waveformsRepoFile.readText() shouldBe """
             {
-                "jsonFile": "${waveformsRepoFile.absolutePath}"
             }""".trimIndent()
         }
     }

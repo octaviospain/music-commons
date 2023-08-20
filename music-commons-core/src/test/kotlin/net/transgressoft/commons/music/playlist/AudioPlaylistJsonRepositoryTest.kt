@@ -30,7 +30,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
 
     "Repository serializes itself to file when playlists are created" {
         val jsonFile = tempfile("playlistRepository-serialization-test", ".json").also { it.deleteOnExit() }
-        audioPlaylistRepository = AudioPlaylistJsonRepository.initialize(jsonFile)
+        audioPlaylistRepository = AudioPlaylistJsonRepository(jsonFile)
 
         val rockAudioItem = arbitraryAudioItem(title = "50s Rock hit 1").next()
         val rockAudioItems = listOf(rockAudioItem)
@@ -103,7 +103,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
             whenever(it.findById(eq(453374921))).thenReturn(Optional.of(audioItem))
         }
 
-        audioPlaylistRepository = AudioPlaylistJsonRepository.loadFromFile(jsonFile, audioItemRepository)
+        audioPlaylistRepository = AudioPlaylistJsonRepository(jsonFile, audioItemRepository)
 
         audioPlaylistRepository.shouldContainExactly(
             ImmutablePlaylist(1, true, "Rock", listOf(audioItem))

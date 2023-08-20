@@ -24,22 +24,20 @@ import java.util.function.Predicate
 import java.util.stream.Collectors
 import kotlin.streams.toList
 
-abstract class AudioPlaylistJsonRepositoryBase<I : AudioItem, P : AudioPlaylist<I>>
-protected constructor(
-    initialPlaylists: Map<Int, P> = emptyMap(),
-    private val jsonFile: File? = null
-) : QueryEntityPublisherBase<P>(), AudioPlaylistRepository<I, P> {
+abstract class AudioPlaylistJsonRepositoryBase<I : AudioItem, P : AudioPlaylist<I>>(private val jsonFile: File? = null) :
+    QueryEntityPublisherBase<P>(), AudioPlaylistRepository<I, P> {
 
     private val logger = KotlinLogging.logger(javaClass.name)
 
-    private val playlistsById: MutableMap<Int, MutableAudioPlaylist<I>> = ConcurrentHashMap(initialPlaylists.mapValues { it.value.toMutablePlaylist() }.toMap())
+    private val playlistsById: MutableMap<Int, MutableAudioPlaylist<I>> = ConcurrentHashMap()
 
     private val idCounter = AtomicInteger(1)
-    private val playlistsMultiMap: Multimap<String, String> = MultimapBuilder.treeKeys().treeSetValues().build()    // TODO initialize from initialPlaylists
+    private val playlistsMultiMap: Multimap<String, String> = MultimapBuilder.treeKeys().treeSetValues().build()
     private val playlists = InMemoryRepository(playlistsById).also {
         it.subscribe(object : Flow.Subscriber<EntityEvent<out MutableAudioPlaylist<I>>> {
 
-            override fun onSubscribe(subscription: Flow.Subscription) = logger.debug { "Internal playlists subscribed to MutableAudioPlaylist events" }
+            override fun onSubscribe(subscription: Flow.Subscription) =
+                logger.debug { "Internal playlists subscribed to MutableAudioPlaylist events" }
 
             override fun onError(throwable: Throwable) = logger.error("An error occurred on the internal playlists subscriber", throwable)
 
@@ -87,8 +85,11 @@ protected constructor(
     private val json by lazy { Json { prettyPrint = true } }
 
     init {
-        require(jsonFile?.exists()?.and(jsonFile.canRead().and(jsonFile.canWrite())) ?: true) {
-            "Provided jsonFile does not exist or is not writable"
+        require(
+            jsonFile?.exists()?.and((jsonFile.canWrite()).and(jsonFile.extension == "json"))
+                ?: true
+        ) {
+            "Provided jsonFile does not exist, is not writable or is not a json file"
         }
     }
 
@@ -297,11 +298,14 @@ protected constructor(
     }
 
     private fun mapToSerializablePlaylists(audioPlaylists: MutableCollection<MutableAudioPlaylist<I>>): List<InternalAudioPlaylist> =
-        audioPlaylists.stream().map { InternalAudioPlaylist(it.id,
-                                                            it.isDirectory,
-                                                            it.name,
-                                                            it.audioItems.map { audioItem -> audioItem.id }.toList(),
-                                                            it.playlists.map { playlist -> playlist.id }.toSet()) }.toList()
+        audioPlaylists.stream().map {
+            InternalAudioPlaylist(it.id,
+                it.isDirectory,
+                it.name,
+                it.audioItems.map { audioItem -> audioItem.id }.toList(),
+                it.playlists.map { playlist -> playlist.id }.toSet()
+            )
+        }.toList()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -340,9 +344,14 @@ internal fun mapFromSerializablePlaylists(
 }
 
 internal fun mapAudioItemsFromIds(audioItemIds: List<Int>, audioItemRepository: AudioItemRepository<AudioItem>) =
-    audioItemIds.map { audioItemRepository.findById(it).orElseThrow { AudioItemManipulationException("AudioItem with id $it not found during deserialization") } }.toList()
+    audioItemIds.map {
+        audioItemRepository.findById(it).orElseThrow { AudioItemManipulationException("AudioItem with id $it not found during deserialization") }
+    }.toList()
 
-internal fun findDeserializedPlaylistsFromIds(playlists: Set<Int>, playlistsById: Map<Int, AudioPlaylist<AudioItem>>): List<AudioPlaylist<AudioItem>> {
+internal fun findDeserializedPlaylistsFromIds(
+    playlists: Set<Int>,
+    playlistsById: Map<Int, AudioPlaylist<AudioItem>>
+): List<AudioPlaylist<AudioItem>> {
     return playlists.stream().map {
         return@map playlistsById[it] ?: throw AudioItemManipulationException("AudioPlaylist with id $it not found during deserialization")
     }.toList()

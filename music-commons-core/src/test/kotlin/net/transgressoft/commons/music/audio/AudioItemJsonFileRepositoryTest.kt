@@ -18,7 +18,7 @@ internal class AudioItemJsonFileRepositoryTest : StringSpec({
 
     beforeEach {
         jsonFile = tempfile("json-repository-test", ".json").also { it.deleteOnExit() }
-        repository = AudioItemJsonRepository.initialize(jsonFile)
+        repository = AudioItemJsonRepository(jsonFile)
     }
 
     "Repository serializes itself to file when audio item is added" {
@@ -29,7 +29,7 @@ internal class AudioItemJsonFileRepositoryTest : StringSpec({
         }
 
         eventually(2.seconds) {
-            val loadedRepository = AudioItemJsonRepository.loadFromFile(jsonFile)
+            val loadedRepository = AudioItemJsonRepository(jsonFile)
             loadedRepository.size() shouldBe 1
             loadedRepository.findById(audioItem.id) shouldBePresent {
                 it shouldBe audioItem
@@ -49,7 +49,7 @@ internal class AudioItemJsonFileRepositoryTest : StringSpec({
         repository.addOrReplace(audioItemModified) shouldBe true
 
         eventually(2.seconds) {
-            val loadedRepository = AudioItemJsonRepository.loadFromFile(jsonFile)
+            val loadedRepository = AudioItemJsonRepository(jsonFile)
             loadedRepository.size() shouldBe 1
             loadedRepository.findById(audioItem.id) shouldBePresent {
                 it shouldBe audioItemModified

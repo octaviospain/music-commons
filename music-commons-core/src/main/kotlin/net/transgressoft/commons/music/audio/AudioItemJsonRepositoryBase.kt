@@ -24,14 +24,12 @@ import kotlin.streams.toList
 @Serializable
 @SerialName("AudioItemRepositoryBase")
 abstract class AudioItemJsonRepositoryBase<I : AudioItem> (
-    @Transient val file: File? = null
+    @Transient val file: File? = null,
+    @Transient override val repositorySerializersModule: SerializersModule? = null
 ): JsonFileRepository<AudioItemBase>(file), AudioItemRepository<AudioItemBase> {
 
     @Transient
     private val logger = KotlinLogging.logger(javaClass.name)
-
-    @Transient
-    override var repositorySerializersModule = audioItemRepositoryBaseSerializersModule
 
     @Transient
     override var repositorySerializer: KSerializer<*> = serializer(AudioItemBase.serializer())
@@ -40,6 +38,17 @@ abstract class AudioItemJsonRepositoryBase<I : AudioItem> (
     private val idCounter = AtomicInteger(1)
 
     protected val albumsByArtist: MutableMap<Artist, MutableSet<Album>> = mutableMapOf()
+
+    init {
+        require(file?.exists()?.and(file.canWrite().and(file.extension == "json")) ?: true) {
+            "Provided jsonFile does not exist, is not writable or is not a json file"
+        }
+        if (jsonFile?.readText()?.isNotEmpty() == true) {
+            json.decodeFromString(serializer(AudioItemBase.serializer()), file!!.readText()).let {
+                addOrReplaceAll(it.entitiesById.values.toSet())
+            }
+        }
+    }
 
     private fun newId(): Int {
         var id: Int
@@ -159,7 +168,7 @@ abstract class AudioItemJsonRepositoryBase<I : AudioItem> (
 
     override fun hashCode() = Objects.hash(entitiesById, albumsByArtist)
 
-    override fun toString() = "AudioItemJsonRepository[${this.hashCode()}]"
+    override fun toString() = "AudioItemJsonRepository[entityCount=${entitiesById.size}, albumCount=${albumsByArtist.size}]"
 }
 
 val audioItemRepositoryBaseSerializersModule = SerializersModule {

@@ -5,30 +5,18 @@ import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemRepository
 import java.io.File
 
-class AudioPlaylistJsonRepository internal constructor(
-    playlistsById: Map<Int, AudioPlaylist<AudioItem>> = emptyMap(),
-    jsonFile: File? = null
-) : AudioPlaylistJsonRepositoryBase<AudioItem, AudioPlaylist<AudioItem>>(playlistsById, jsonFile) {
+class AudioPlaylistJsonRepository(jsonFile: File? = null) : AudioPlaylistJsonRepositoryBase<AudioItem, AudioPlaylist<AudioItem>>(jsonFile) {
 
-    constructor() : this(emptyMap(), null)
+    constructor() : this(null)
 
-    constructor(playlistsById: Map<Int, AudioPlaylist<AudioItem>>) : this(playlistsById, null)
-
-    companion object {
-
-        @JvmStatic
-        fun loadFromFile(file: File, audioItemRepository: AudioItemRepository<AudioItem>): AudioPlaylistJsonRepository {
-            require(file.exists().and(file.canRead().and(file.canWrite()))) {
-                "Provided jsonFile does not exist or is not writable"
-            }
-            return Json.decodeFromString<List<InternalAudioPlaylist>>(file.readText()).let {
-                val initialPlaylists = mapFromSerializablePlaylists(it, audioItemRepository)
-                AudioPlaylistJsonRepository(initialPlaylists, file)
-            }
+    constructor(file: File, audioItemRepository: AudioItemRepository<AudioItem>) : this(file) {
+        require(file.exists().and(file.canWrite()).and(file.extension == "json")) {
+            "Provided jsonFile does not exist, is not writable or is not a json file"
         }
-
-        @JvmStatic
-        fun initialize(file: File) = AudioPlaylistJsonRepository(emptyMap(),  file)
+        Json.decodeFromString<List<InternalAudioPlaylist>>(file.readText()).let {
+            val initialPlaylists = mapFromSerializablePlaylists(it, audioItemRepository)
+            addOrReplaceAll(initialPlaylists.values.toSet())
+        }
     }
 
     override fun createMutablePlaylist(id: Int, isDirectory: Boolean, name: String, audioItems: List<AudioItem>): MutableAudioPlaylist<AudioItem> =

@@ -4,7 +4,6 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
@@ -17,7 +16,7 @@ import java.util.concurrent.CompletableFuture
 
 @Serializable
 @SerialName("AudioWaveformRepository")
-class AudioWaveformJsonRepository internal constructor(@Transient val file: File? = null) :
+class AudioWaveformJsonRepository(@Transient val file: File? = null) :
     JsonFileRepository<ScalableAudioWaveform>(file),
     AudioWaveformRepository<ScalableAudioWaveform> {
 
@@ -27,26 +26,24 @@ class AudioWaveformJsonRepository internal constructor(@Transient val file: File
     @Transient
     override var repositorySerializer: KSerializer<*> = serializer()
 
-    @Transient override val audioItemEventSubscriber = AudioItemEventSubscriber<AudioItem>(this.toString()).apply {
+    @Transient
+    override val audioItemEventSubscriber = AudioItemEventSubscriber<AudioItem>(this.toString()).apply {
         addOnNextEventAction(QueryEntityEvent.Type.DELETE) { event ->
             removeByAudioItemIds(event.entities.map { it.id }.toList())
         }
     }
 
-    companion object {
-        private val json = Json { serializersModule = audioWaveformRepositorySerializersModule }
-
-        @JvmStatic
-        fun loadFromFile(file: File): AudioWaveformJsonRepository {
-            require(file.exists().and(file.canRead().and(file.canWrite()))) {
-                "Provided jsonFile does not exist or is not writable"
-            }
-            return json.decodeFromString(serializer(), file.readText())
+    init {
+        require(file?.exists()?.and(file.canWrite().and(file.extension == "json")) ?: true) {
+            "Provided jsonFile does not exist, is not writable or is not a json file"
         }
-
-        @JvmStatic
-        fun initialize(file: File) = AudioWaveformJsonRepository(file)
+        if (jsonFile?.readText()?.isNotEmpty() == true) {
+            json.decodeFromString(serializer(), file!!.readText()).let {
+                entitiesById.putAll(it.entitiesById)
+            }
+        }
     }
+
 
     override fun getOrCreateWaveformAsync(audioItem: AudioItem, width: Short, height: Short): CompletableFuture<ScalableAudioWaveform> {
         return findById(audioItem.id)

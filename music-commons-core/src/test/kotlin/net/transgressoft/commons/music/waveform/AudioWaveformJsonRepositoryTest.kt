@@ -17,7 +17,7 @@ internal class AudioWaveformJsonRepositoryTest : StringSpec({
 
     beforeEach {
         jsonFile = tempfile("json-repository-test", ".json").also { it.deleteOnExit() }
-        repository = AudioWaveformJsonRepository.initialize(jsonFile)
+        repository = AudioWaveformJsonRepository(jsonFile)
     }
 
     "Repository serializes itself to file when audio waveform is added" {
@@ -35,12 +35,11 @@ internal class AudioWaveformJsonRepositoryTest : StringSpec({
                             "id": 1,
                             "audioFilePath": "$audioFilePath"
                         }
-                    },
-                    "jsonFile": "${jsonFile.absolutePath}"
+                    }
                 }
             """.trimIndent()
 
-            val loadedRepository = AudioWaveformJsonRepository.loadFromFile(jsonFile)
+            val loadedRepository = AudioWaveformJsonRepository(jsonFile)
             loadedRepository.size() shouldBe 1
             loadedRepository.findById(audioWaveform.id) shouldBePresent { found -> found shouldBe audioWaveform }
             loadedRepository shouldBe repository
