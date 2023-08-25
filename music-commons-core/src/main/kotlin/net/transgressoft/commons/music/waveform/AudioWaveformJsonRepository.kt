@@ -7,10 +7,11 @@ import kotlinx.serialization.Transient
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
-import net.transgressoft.commons.event.QueryEntityEvent
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.event.AudioItemEventSubscriber
-import net.transgressoft.commons.query.JsonFileRepository
+import net.transgressoft.commons.data.JsonFileRepository
+import net.transgressoft.commons.data.StandardDataEvent
+import net.transgressoft.commons.toIds
 import java.io.File
 import java.util.concurrent.CompletableFuture
 
@@ -28,8 +29,8 @@ class AudioWaveformJsonRepository(@Transient val file: File? = null) :
 
     @Transient
     override val audioItemEventSubscriber = AudioItemEventSubscriber<AudioItem>(this.toString()).apply {
-        addOnNextEventAction(QueryEntityEvent.Type.DELETE) { event ->
-            removeByAudioItemIds(event.entities.map { it.id }.toList())
+        addOnNextEventAction(StandardDataEvent.Type.DELETE) { event ->
+            removeByAudioItemIds(event.entities.toIds())
         }
     }
 

@@ -12,5 +12,5 @@ interface MutableAudioPlaylist<I : AudioItem> : AudioPlaylist<I> {
 
     override val playlists: MutableSet<AudioPlaylist<I>>
 
-    fun toAudioPlaylist(): AudioPlaylist<I>
+    fun <P : AudioPlaylist<I>> toAudioPlaylist(): P
 }

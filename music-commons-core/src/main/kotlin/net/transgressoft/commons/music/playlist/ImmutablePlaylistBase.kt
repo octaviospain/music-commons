@@ -1,8 +1,8 @@
 package net.transgressoft.commons.music.playlist
 
 import mu.KotlinLogging
+import net.transgressoft.commons.IdentifiableEntity
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.query.QueryEntity
 import java.io.IOException
 import java.io.PrintWriter
 import java.nio.charset.StandardCharsets
@@ -92,7 +92,7 @@ abstract class ImmutablePlaylistBase<I : AudioItem>(
     }
 
     override fun compareTo(other: AudioPlaylist<I>) =
-        Comparator.comparing(QueryEntity::uniqueId, java.lang.String.CASE_INSENSITIVE_ORDER).compare(this, other)
+        Comparator.comparing(IdentifiableEntity<Int>::uniqueId, java.lang.String.CASE_INSENSITIVE_ORDER).compare(this, other)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

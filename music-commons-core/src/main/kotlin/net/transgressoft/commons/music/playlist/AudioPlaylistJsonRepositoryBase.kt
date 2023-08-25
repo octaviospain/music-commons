@@ -6,13 +6,16 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import mu.KotlinLogging
+import net.transgressoft.commons.data.*
+import net.transgressoft.commons.data.InMemoryRepository
 import net.transgressoft.commons.event.*
 import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.AudioItemEvent
 import net.transgressoft.commons.music.audio.AudioItemManipulationException
 import net.transgressoft.commons.music.audio.AudioItemRepository
 import net.transgressoft.commons.music.event.AudioItemEventSubscriber
 import net.transgressoft.commons.music.playlist.AudioPlaylistJsonRepositoryBase.*
-import net.transgressoft.commons.query.InMemoryRepository
+import net.transgressoft.commons.toIds
 import java.io.File
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -22,10 +25,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
 import java.util.stream.Collectors
-import kotlin.streams.toList
 
 abstract class AudioPlaylistJsonRepositoryBase<I : AudioItem, P : AudioPlaylist<I>>(var jsonFile: File? = null) :
-    QueryEntityPublisherBase<P>(), AudioPlaylistRepository<I, P> {
+    StandardDataEventPublisher<P>(), AudioPlaylistRepository<I, P> {
 
     private val logger = KotlinLogging.logger(javaClass.name)
 
@@ -34,7 +36,7 @@ abstract class AudioPlaylistJsonRepositoryBase<I : AudioItem, P : AudioPlaylist<
     private val idCounter = AtomicInteger(1)
     private val playlistsMultiMap: Multimap<String, String> = MultimapBuilder.treeKeys().treeSetValues().build()
     private val playlists = InMemoryRepository(playlistsById).also {
-        it.subscribe(object : Flow.Subscriber<EntityEvent<out MutableAudioPlaylist<I>>> {
+        it.subscribe(object : Flow.Subscriber<DataEvent<MutableAudioPlaylist<I>>> {
 
             override fun onSubscribe(subscription: Flow.Subscription) =
                 logger.debug { "Internal playlists subscribed to MutableAudioPlaylist events" }
@@ -43,8 +45,8 @@ abstract class AudioPlaylistJsonRepositoryBase<I : AudioItem, P : AudioPlaylist<
 
             override fun onComplete() = logger.debug { "Internal playlists subscriber completed the subscription" }
 
-            override fun onNext(item: EntityEvent<out MutableAudioPlaylist<I>>) {
-                val audioPlaylists = item.entities.map(::toAudioPlaylist).toSet()
+            override fun onNext(item: DataEvent<MutableAudioPlaylist<I>>) {
+                val audioPlaylists: Set<P> = item.entities.toAudioPlaylists()
                 when {
                     item.isCreate() -> {
                         this@AudioPlaylistJsonRepositoryBase.putCreateEvent(audioPlaylists)
@@ -90,10 +92,9 @@ abstract class AudioPlaylistJsonRepositoryBase<I : AudioItem, P : AudioPlaylist<
         }
     }
 
-    override val audioItemEventSubscriber: QueryEntitySubscriber<I> = AudioItemEventSubscriber<I>(this.toString()).apply {
-        addOnNextEventAction(QueryEntityEvent.Type.DELETE) {
-            removeAudioItems(it.entities)
-            serializeToJson()
+    override val audioItemEventSubscriber: TransEventSubscriber<I, AudioItemEvent> = AudioItemEventSubscriber<I>(this.toString()).apply {
+        addOnNextEventAction(StandardDataEvent.Type.DELETE) {
+            removeAudioItems(it.entities.toIds())
         }
     }
 
@@ -135,7 +136,7 @@ abstract class AudioPlaylistJsonRepositoryBase<I : AudioItem, P : AudioPlaylist<
     }
 
     private fun replace(playlistToReplace: AudioPlaylist<I>) {
-        val existing = playlists.find { it.name == playlistToReplace.name }!!
+        val existing = playlists.find{ it.name == playlistToReplace.name }.get()
         existing.playlists.clear()
         existing.playlists.addAll(playlistToReplace.playlists)
         existing.audioItems.clear()
@@ -159,6 +160,49 @@ abstract class AudioPlaylistJsonRepositoryBase<I : AudioItem, P : AudioPlaylist<
         return result.get()
     }
 
+    override fun runForSingle(id: Int, entityAction: (P) -> Unit): Boolean {
+        return findById(id).map {
+            val previousHashcode = it.hashCode()
+            entityAction(it)
+            if (previousHashcode != it.hashCode()) {
+                putUpdateEvent(listOf(it))
+                true
+            } else false
+        }.orElse(false)
+    }
+
+    override fun runForMany(ids: Set<Int>, entityAction: (P) -> Unit): Boolean {
+        val entities: Set<MutableAudioPlaylist<I>> = playlists.search { ids.contains(it.id) }
+        return if (entities.isNotEmpty()) {
+            updateEntitiesAndNotify(entities.toAudioPlaylists(), entityAction)
+        } else {
+            false
+        }
+    }
+
+    private fun updateEntitiesAndNotify(entities: Set<P>, entityAction: (P) -> Unit): Boolean {
+        val updatedEntities = mutableListOf<P>()
+
+        entities.forEach {
+            val previousHashCode = it.hashCode()
+            entityAction(it)
+            if (previousHashCode != it.hashCode()) {
+                updatedEntities.add(it)
+            }
+        }
+
+        if (updatedEntities.isNotEmpty()) {
+            putUpdateEvent(updatedEntities)
+            return true
+        }
+
+        return false
+    }
+
+    override fun runMatching(predicate: Predicate<P>, entityAction: (P) -> Unit): Boolean {
+        TODO("Not yet implemented")
+    }
+
     override fun clear() {
         playlists.clear()
         playlistsMultiMap.clear()
@@ -167,14 +211,16 @@ abstract class AudioPlaylistJsonRepositoryBase<I : AudioItem, P : AudioPlaylist<
     override operator fun contains(id: Int) = playlists.contains(id)
 
     override fun contains(predicate: Predicate<P>) =
-        playlists.filter { predicate.test(toAudioPlaylist(it)) }
+        playlists.search { predicate.test(toAudioPlaylist(it)) }
             .map { toAudioPlaylist(it) }
             .isNotEmpty()
 
-    override fun search(predicate: Predicate<P>): List<P> =
-        playlists.filter { predicate.test(toAudioPlaylist(it)) }
+    override fun search(predicate: Predicate<P>): Set<P> =
+        playlists.search { predicate.test(toAudioPlaylist(it)) }
             .map { toAudioPlaylist(it) }
-            .toList()
+            .toSet()
+
+    override fun find(predicate: Predicate<P>): Optional<P> = playlists.find { predicate.test(it.toAudioPlaylist()) }.map { toAudioPlaylist(it) }
 
     override fun findById(id: Int): Optional<P> = playlists.findById(id).map { toAudioPlaylist(it) }
 
@@ -185,12 +231,6 @@ abstract class AudioPlaylistJsonRepositoryBase<I : AudioItem, P : AudioPlaylist<
     override fun size() = playlists.size()
 
     override val isEmpty = playlists.isEmpty
-
-    /**
-     * Some of the underlying items returned by the iterator can be cast to a <tt>MutablePlaylist</tt> or a <tt>MutablePlaylistDirectory</tt>,
-     * mutable operations on them should be avoided since changes won't be reflected in the repository correctly. This bug should be fixed.
-     */
-    override fun iterator(): Iterator<P> = playlists.map { toAudioPlaylist(it) }.iterator()
 
     override fun numberOfPlaylists() = playlists.size()
 
@@ -272,12 +312,14 @@ abstract class AudioPlaylistJsonRepositoryBase<I : AudioItem, P : AudioPlaylist<
         playlists.findById(playlist.id)
             .ifPresent { it.audioItems.removeAll(audioItems) }
 
-    override fun removeAudioItems(audioItems: Collection<I>) = playlists.forEach { it.audioItems.removeAll(audioItems) }
+    override fun removeAudioItems(audioItemIds: Set<Int>) {
+        playlists.runForMany(audioItemIds) { it.audioItems.removeIf { audioItem -> audioItemIds.contains(audioItem.id) } }
+    }
 
     override fun findByName(name: String): P? = playlists.search { it.name == name }.let {
         if (it.isNotEmpty()) {
             assert(it.size == 1)
-            toAudioPlaylist(it[0])
+            toAudioPlaylist(it.first())
         } else null
     }
 

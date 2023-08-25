@@ -1,10 +1,10 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.event.EntityEvent
-import net.transgressoft.commons.query.Repository
+import net.transgressoft.commons.data.DataEvent
+import net.transgressoft.commons.data.Repository
 import java.util.concurrent.Flow
 
-interface AudioItemRepository<I : AudioItem> : Repository<I>, Flow.Publisher<EntityEvent<out I>> {
+interface AudioItemRepository<I : AudioItem> : Repository<I, Int>, Flow.Publisher<DataEvent<I>> {
 
     fun containsAudioItemWithArtist(artistName: String): Boolean
 

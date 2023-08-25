@@ -6,9 +6,9 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlinx.serialization.json.JsonClassDiscriminator
+import net.transgressoft.commons.IdentifiableEntity
 import net.transgressoft.commons.music.AudioUtils
 import net.transgressoft.commons.music.audio.AudioItemBase.AudioItemBaseBuilder
-import net.transgressoft.commons.query.QueryEntity
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.AudioHeader
 import org.jaudiotagger.tag.FieldKey
@@ -95,7 +95,7 @@ abstract class AudioItemBase(
     override suspend fun writeMetadata() = JAudioTaggerMetadataWriter().writeMetadata(this)
 
     override operator fun compareTo(other: AudioItem) =
-        Comparator.comparing(QueryEntity::uniqueId, java.lang.String.CASE_INSENSITIVE_ORDER).compare(this, other)
+        Comparator.comparing(IdentifiableEntity<Int>::uniqueId, java.lang.String.CASE_INSENSITIVE_ORDER).compare(this, other)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -1,17 +1,18 @@
 package net.transgressoft.commons.music.waveform
 
-import net.transgressoft.commons.event.QueryEntitySubscriber
+import net.transgressoft.commons.data.Repository
+import net.transgressoft.commons.event.TransEventSubscriber
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.query.Repository
+import net.transgressoft.commons.music.audio.AudioItemEvent
 import java.util.concurrent.CompletableFuture
 
-interface AudioWaveformRepository<W : AudioWaveform> : Repository<W> {
+interface AudioWaveformRepository<W : AudioWaveform> : Repository<W, Int> {
 
-    val audioItemEventSubscriber: QueryEntitySubscriber<AudioItem>
+    val audioItemEventSubscriber: TransEventSubscriber<AudioItem, AudioItemEvent>
 
     fun getOrCreateWaveformAsync(audioItem: AudioItem, width: Short, height: Short): CompletableFuture<W>
 
-    fun removeByAudioItemIds(audioItemIds: List<Int>) {
+    fun removeByAudioItemIds(audioItemIds: Set<Int>) {
         audioItemIds.forEach { findById(it).ifPresent { waveform -> remove(waveform) } }
     }
 }

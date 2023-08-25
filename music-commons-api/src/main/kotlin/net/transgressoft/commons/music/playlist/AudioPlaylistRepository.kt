@@ -1,18 +1,19 @@
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.event.EntityEvent
-import net.transgressoft.commons.event.QueryEntitySubscriber
+import net.transgressoft.commons.data.DataEvent
+import net.transgressoft.commons.data.Repository
+import net.transgressoft.commons.event.TransEventSubscriber
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.query.Repository
+import net.transgressoft.commons.music.audio.AudioItemEvent
 import java.util.*
 import java.util.concurrent.Flow
 
 /**
  * @author Octavio Calleya
  */
-interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>> : Repository<P>, Flow.Publisher<EntityEvent<out P>> {
+interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>> : Repository<P, Int>, Flow.Publisher<DataEvent<P>> {
 
-    val audioItemEventSubscriber: QueryEntitySubscriber<I>
+    val audioItemEventSubscriber: TransEventSubscriber<I, AudioItemEvent>
 
     @Throws(AudioPlaylistRepositoryException::class)
     fun createPlaylist(name: String): P
@@ -54,7 +55,7 @@ interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>> : Reposit
      */
     fun removeAudioItemsFromPlaylist(audioItems: Collection<I>, playlist: P)
 
-    fun removeAudioItems(audioItems: Collection<I>)
+    fun removeAudioItems(audioItemIds: Set<Int>)
 
     /**
      * Precondition, <tt>playlistToMove</tt> and <tt>destinationPlaylist</tt> exist in the <tt>AudioPlaylistRepository</tt>.

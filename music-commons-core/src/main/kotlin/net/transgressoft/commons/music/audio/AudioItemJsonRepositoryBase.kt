@@ -8,9 +8,9 @@ import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
 import mu.KotlinLogging
-import net.transgressoft.commons.event.QueryEntitySubscriberBase
+import net.transgressoft.commons.data.JsonFileRepository
+import net.transgressoft.commons.event.TransEventSubscriberBase
 import net.transgressoft.commons.music.event.AudioItemEventSubscriber
-import net.transgressoft.commons.query.JsonFileRepository
 import java.io.File
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -174,7 +174,7 @@ abstract class AudioItemJsonRepositoryBase<I : AudioItem> (
 
     companion object {
         val audioItemRepositoryBaseSerializersModule = SerializersModule {
-            polymorphic(QueryEntitySubscriberBase::class) {
+            polymorphic(TransEventSubscriberBase::class) {
                 subclass(AudioItemEventSubscriber.serializer(AudioItemBase.serializer()))
             }
             include(audioItemSerializerModule)

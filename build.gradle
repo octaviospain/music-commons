@@ -47,7 +47,7 @@ subprojects {
     dependencies {
         implementation 'com.neovisionaries:nv-i18n:1.29'
         implementation 'io.github.microutils:kotlin-logging-jvm:3.0.5'
-        implementation 'net.transgressoft:soft-query-api:0.73-SNAPSHOT'
+        implementation 'net.transgressoft:transgressoft-commons-api:1.4'
         implementation platform('org.jetbrains.kotlin:kotlin-bom')
         implementation "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
@@ -60,8 +60,8 @@ subprojects {
         mavenCentral()
         mavenLocal()
         maven {
-            name 'transgressoft-snapshots'
-            url 'http://10.8.0.1:8081/repository/maven-snapshots/'
+            name 'transgressoft-public'
+            url 'http://10.8.0.1:8081/repository/maven-public/'
             allowInsecureProtocol = true
         }
     }

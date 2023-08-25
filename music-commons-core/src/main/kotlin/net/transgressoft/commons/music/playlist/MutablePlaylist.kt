@@ -10,9 +10,14 @@ internal class MutablePlaylist(
     playlists: Set<AudioPlaylist<AudioItem>> = setOf()
 ) : MutablePlaylistBase<AudioItem>(id, isDirectory, name, audioItems, playlists) {
 
-    override fun toAudioPlaylist(): AudioPlaylist<AudioItem> = ImmutablePlaylist(id, isDirectory, name, audioItems.toList(), playlists.toSet())
+    @Suppress("UNCHECKED_CAST")
+    override fun <P : AudioPlaylist<AudioItem>> toAudioPlaylist(): P = ImmutablePlaylist(id, isDirectory, name, audioItems.toList(), playlists.toSet()) as P
 
     override fun toMutablePlaylist(): MutableAudioPlaylist<AudioItem> = this
 
     override fun toString() = "MutablePlaylist(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$audioItems, playlists=$playlists)"
 }
+
+fun <P : AudioPlaylist<I>, I : AudioItem> Collection<MutableAudioPlaylist<I>>.toAudioPlaylists(): Set<P> = map<MutableAudioPlaylist<I>, P> { it.toAudioPlaylist() }.toSet()
+
+fun <P : AudioPlaylist<I>, I : AudioItem> Collection<P>.toMutablePlaylists(): Set<MutableAudioPlaylist<I>> = map { it.toMutablePlaylist() }.toSet()

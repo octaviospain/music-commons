@@ -1,6 +1,6 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.query.QueryEntity
+import net.transgressoft.commons.IdentifiableEntity
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
@@ -8,7 +8,7 @@ import java.time.LocalDateTime
 /**
  * @author Octavio Calleya
  */
-interface AudioItem : QueryEntity {
+interface AudioItem : IdentifiableEntity<Int> {
     val path: Path
     val fileName: String
     val extension: String

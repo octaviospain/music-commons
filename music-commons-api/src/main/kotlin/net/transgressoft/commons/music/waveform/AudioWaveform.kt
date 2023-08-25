@@ -1,13 +1,13 @@
 package net.transgressoft.commons.music.waveform
 
 import javafx.scene.paint.Color
-import net.transgressoft.commons.query.QueryEntity
+import net.transgressoft.commons.IdentifiableEntity
 import java.io.File
 
 /**
  * @author Octavio Calleya
  */
-interface AudioWaveform : QueryEntity {
+interface AudioWaveform : IdentifiableEntity<Int> {
 
     suspend fun amplitudes(width: Int, height: Int): FloatArray
 

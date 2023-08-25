@@ -61,6 +61,19 @@ publishing {
                 password = project.repoPass
             }
             mavenContent {
+                releasesOnly()
+            }
+
+            name 'transgressoft-releases'
+            url 'http://10.8.0.1:8081/repository/maven-releases/'
+            allowInsecureProtocol = true
+        }
+        maven {
+            credentials {
+                username = 'admin'
+                password = project.repoPass
+            }
+            mavenContent {
                 snapshotsOnly()
             }
 
