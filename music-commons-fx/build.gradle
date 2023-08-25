@@ -30,8 +30,6 @@ publishing {
             version version
 
             from components.java
-            artifact sourceJar
-            artifact javadocJar
 
             pom {
                 name = 'music-commons-core'

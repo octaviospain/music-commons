@@ -18,13 +18,7 @@ dependencies {
 }
 
 kotlin {
-    jvmToolchain(11)
-}
-
-gradle.projectsEvaluated {
-    tasks.withType(JavaCompile){
-        options.compilerArgs << "-Xlint:unchecked"
-    }
+    jvmToolchain(17)
 }
 
 subprojects {
@@ -39,15 +33,10 @@ subprojects {
         repoPass = project.hasProperty('repoPass') ? project.getProperty('repoPass') : ''
     }
 
-    compileJava {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-
     dependencies {
         implementation 'com.neovisionaries:nv-i18n:1.29'
         implementation 'io.github.microutils:kotlin-logging-jvm:3.0.5'
-        implementation 'net.transgressoft:transgressoft-commons-api:1.4'
+        implementation 'net.transgressoft:transgressoft-commons-api:1.6'
         implementation platform('org.jetbrains.kotlin:kotlin-bom')
         implementation "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
@@ -76,10 +65,6 @@ subprojects {
         tasks['test'].finalizedBy 'jacocoTestReport'
     }
 
-    tasks.withType(JavaCompile) {
-        options.encoding = 'UTF-8'
-    }
-
     jacocoTestReport {
         reports {
             xml.required.set true
@@ -97,61 +82,10 @@ subprojects {
         }
     }
 
-    task sourceJar(type: Jar, dependsOn: classes) {
-        classifier 'sources'
-        from sourceSets.main.allSource
-        from sourceSets.main.output
-    }
-
-    task javadocJar(type: Jar, dependsOn: javadoc) {
-        classifier 'javadoc'
-        from javadoc.destinationDir
-        javadoc.options.addStringOption('Xdoclint:none', '-quiet')
-    }
-
-    compileKotlin {
-        kotlinOptions {
-            jvmTarget = JavaVersion.VERSION_11
-            freeCompilerArgs += '-Xjvm-default=all'
-        }
-    }
-
-    compileTestKotlin {
-        kotlinOptions {
-            jvmTarget = JavaVersion.VERSION_11
-        }
-    }
-
     test {
         useJUnitPlatform()
         testLogging {
             events 'passed', 'skipped', 'failed'
         }
-    }
-}
-
-project('music-commons-core') {
-
-    compileJava {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-
-    configurations {
-        spi
-    }
-
-    task spiJar(type: Jar) {
-        archiveBaseName = 'music-commons-core-spi'
-        from sourceSets.main.output
-        include('com/transgressoft/music/**')
-    }
-
-    artifacts {
-        spi spiJar
-    }
-
-    dependencies {
-        api project(path: ':music-commons-api')
     }
 }

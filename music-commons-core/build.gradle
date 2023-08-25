@@ -11,9 +11,11 @@ ext {
 }
 
 dependencies {
+    api project(path: ':music-commons-api')
+
     implementation 'com.google.guava:guava:32.1.1-jre'
     implementation 'net.jthink:jaudiotagger:3.0.1'
-    implementation 'net.transgressoft:transgressoft-commons-core:1.4'
+    implementation 'net.transgressoft:transgressoft-commons-core:1.6'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1'
     implementation 'ws.schild:jave-core:3.3.1'
     implementation 'ws.schild:jave-nativebin-linux64:3.3.1'
@@ -36,8 +38,6 @@ publishing {
             version version
 
             from components.java
-            artifact sourceJar
-            artifact javadocJar
 
             pom {
                 name = 'music-commons-core'
