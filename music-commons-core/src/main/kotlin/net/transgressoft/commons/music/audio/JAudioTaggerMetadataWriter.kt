@@ -1,7 +1,6 @@
 package net.transgressoft.commons.music.audio
 
 import mu.KotlinLogging
-import net.transgressoft.commons.music.audio.AudioItemBase.*
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.wav.WavOptions
 import org.jaudiotagger.tag.FieldKey

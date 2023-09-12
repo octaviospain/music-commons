@@ -30,8 +30,6 @@ interface AudioItem : IdentifiableEntity<Int> {
     val dateOfCreation: LocalDateTime
     val lastDateModified: LocalDateTime
 
-    fun toBuilder(): AudioItemBuilder<out AudioItem>
-
     fun update(change: AudioItemMetadataChange): AudioItem
 
     fun update(changeAction: AudioItemMetadataChange.() -> Unit): AudioItem

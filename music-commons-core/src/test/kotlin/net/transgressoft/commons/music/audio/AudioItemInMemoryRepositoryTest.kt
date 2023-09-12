@@ -3,8 +3,12 @@ package net.transgressoft.commons.music.audio
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.engine.spec.tempfile
 import io.kotest.inspectors.forAll
-import io.kotest.matchers.collections.*
+import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.matchers.collections.shouldHaveAtMostSize
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -30,18 +34,21 @@ import org.jaudiotagger.tag.id3.ID3v24Tag
 import org.jaudiotagger.tag.mp4.Mp4Tag
 import org.jaudiotagger.tag.wav.WavInfoTag
 import org.jaudiotagger.tag.wav.WavTag
+import java.io.File
 import java.nio.file.Path
 import java.time.Duration
 import kotlin.io.path.absolutePathString
 
-private lateinit var audioRepository: AudioItemRepository<AudioItem>
-
 internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
+
+    lateinit var jsonFile: File
+    lateinit var audioRepository: AudioItemRepository<ImmutableAudioItem>
 
     fun Album.audioItems(): Set<AudioItem> = audioRepository.search { it.album == this }.toSet()
 
     beforeContainer {
-        audioRepository = AudioItemJsonRepository()
+        jsonFile = tempfile("audioItemRepository-test", ".json").also { it.deleteOnExit() }
+        audioRepository = AudioItemJsonRepository(jsonFile)
     }
 
     given("An AudioItemRepository") {
@@ -50,7 +57,7 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
                 When("An AudioItem is created") {
                     val audioItem = ImmutableAudioItem.createFromFile(mp3File.toPath()).let {
                         audioRepository.add(it)
-                        audioRepository.shouldContainExactly(it)
+                        audioRepository.contains { audioItem -> it == audioItem }
                         audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let { found ->
                             found shouldBe it
                         }
@@ -96,7 +103,7 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
                 When("An AudioItem is created") {
                     val audioItem = ImmutableAudioItem.createFromFile(m4aFile.toPath()).let {
                         audioRepository.add(it)
-                        audioRepository.shouldContainExactly(it)
+                        audioRepository.contains { audioItem -> it == audioItem }
                         audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let { found ->
                             found shouldBe it
                         }
@@ -132,7 +139,7 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
                 When("An AudioItem is created") {
                     val audioItem = ImmutableAudioItem.createFromFile(flacFile.toPath()).let {
                         audioRepository.add(it)
-                        audioRepository.shouldContainExactly(it)
+                        audioRepository.contains { audioItem -> it == audioItem }
                         audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let { found ->
                             found shouldBe it
                         }
@@ -168,7 +175,7 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
                 When("An AudioItem is created") {
                     val audioItem = ImmutableAudioItem.createFromFile(wavFile.toPath()).let {
                         audioRepository.add(it)
-                        audioRepository.shouldContainExactly(it)
+                        audioRepository.contains { audioItem -> it == audioItem }
                         audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let { found ->
                             found shouldBe it
                         }
@@ -207,10 +214,10 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
             checkAll(1, arbitraryMp3File) { mp3File ->
                 val audioItem: ImmutableAudioItem = ImmutableAudioItem.createFromFile(mp3File.toPath()).let {
                     audioRepository.add(it)
-                    audioRepository.shouldContainExactly(it)
+                    audioRepository.contains { audioItem -> it == audioItem }
                     audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let { found ->
                         found shouldBe it
-                    } as ImmutableAudioItem
+                    }
                 }
 
                 then("`add` with same id does not replace the previous one") {
@@ -225,7 +232,8 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
                     audioRepository.add(arbAudioItem) shouldBe true
                     audioRepository.findById(arbAudioItem.id) shouldBePresent { found -> found.album shouldBe audioItem.album }
                     audioItem.album.audioItems().shouldContainExactlyInAnyOrder(audioItem, arbAudioItem)
-                    audioRepository.shouldContainAll(listOf(audioItem, arbAudioItem))
+                    audioRepository.contains { audioItem == it}
+                    audioRepository.contains { arbAudioItem == it}
                 }
 
                 then("`addOrReplace` with same id does replace the previous one") {
@@ -239,20 +247,20 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
                     val size = audioRepository.size()
                     val arbAudioItems = Arb.set(arbitraryAudioItem(), 5..10).next()
                     audioRepository.addOrReplaceAll(arbAudioItems) shouldBe true
-                    audioRepository shouldHaveSize arbAudioItems.size + size
+                    audioRepository.size() shouldBe arbAudioItems.size + size
                 }
 
                 then("removing one or several audio items works as expected") {
                     val size = audioRepository.size()
                     audioRepository.remove(audioItem) shouldBe true
-                    audioRepository shouldHaveSize size - 1
+                    audioRepository.size() shouldBe size - 1
 
                     val arbAudioItems = Arb.set(arbitraryAudioItem(), 5..10).next()
                     assertSoftly {
                         audioRepository.addOrReplaceAll(arbAudioItems) shouldBe true
-                        audioRepository shouldHaveSize size - 1 + arbAudioItems.size
+                        audioRepository.size() shouldBe size - 1 + arbAudioItems.size
                         audioRepository.removeAll(arbAudioItems) shouldBe true
-                        audioRepository shouldHaveSize size - 1
+                        audioRepository.size() shouldBe size - 1
                         audioRepository.clear()
                         audioRepository.isEmpty shouldBe true
                     }

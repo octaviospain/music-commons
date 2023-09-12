@@ -6,11 +6,9 @@ interface MutableAudioPlaylist<I : AudioItem> : AudioPlaylist<I> {
 
     override var isDirectory: Boolean
 
-    override var name: String
-
     override val audioItems: MutableList<I>
 
-    override val playlists: MutableSet<AudioPlaylist<I>>
+    override val playlists: MutableSet<MutableAudioPlaylist<I>>
 
-    fun <P : AudioPlaylist<I>> toAudioPlaylist(): P
+    fun toAudioPlaylist(): AudioPlaylist<I>
 }

@@ -1,15 +1,16 @@
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.AudioItem
+import java.util.ArrayList
 
 abstract class MutablePlaylistBase<I: AudioItem>(
-    override val id: Int,
+    override var id: Int,
     override var isDirectory: Boolean,
     override var name: String,
-    _audioItems: List<I> = listOf(),
-    _playlists: Set<AudioPlaylist<I>> = setOf()
-): ImmutablePlaylistBase<I>(id, isDirectory, name), MutableAudioPlaylist<I> {
+    audioItems: List<I> = listOf(),
+    playlists: Set<MutableAudioPlaylist<I>> = setOf()
+): ImmutablePlaylistBase<I>(name), MutableAudioPlaylist<I> {
 
-    override val audioItems: MutableList<I> = _audioItems.toMutableList()
-    override val playlists: MutableSet<AudioPlaylist<I>> = _playlists.toMutableSet()
+    override val audioItems: MutableList<I> = ArrayList(audioItems)
+    override val playlists: MutableSet<MutableAudioPlaylist<I>> = HashSet(playlists)
 }

@@ -3,6 +3,7 @@ package net.transgressoft.commons.music.playlist
 import mu.KotlinLogging
 import net.transgressoft.commons.IdentifiableEntity
 import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.UNASSIGNED_ID
 import java.io.IOException
 import java.io.PrintWriter
 import java.nio.charset.StandardCharsets
@@ -11,11 +12,8 @@ import java.nio.file.Path
 import java.util.*
 import java.util.function.Predicate
 import kotlin.io.path.exists
-import kotlin.streams.toList
 
 abstract class ImmutablePlaylistBase<I : AudioItem>(
-    override val id: Int,
-    override val isDirectory: Boolean,
     override val name: String,
     override val audioItems: List<I> = emptyList(),
     override val playlists: Set<AudioPlaylist<I>> = emptySet()
@@ -23,14 +21,17 @@ abstract class ImmutablePlaylistBase<I : AudioItem>(
 
     private val logger = KotlinLogging.logger(javaClass.name)
 
+    override var id: Int = UNASSIGNED_ID
+
     override val uniqueId: String
         get() {
-            val stringJoiner = StringJoiner("-")
-                .add(id.toString())
-            if (isDirectory) {
-                stringJoiner.add("D")
+            return buildString {
+                append(id)
+                if (isDirectory) {
+                    append("-D")
+                }
+                append("-$name")
             }
-            return stringJoiner.add(name).toString()
         }
 
     override val audioItemsRecursive: List<I>
@@ -93,28 +94,4 @@ abstract class ImmutablePlaylistBase<I : AudioItem>(
 
     override fun compareTo(other: AudioPlaylist<I>) =
         Comparator.comparing(IdentifiableEntity<Int>::uniqueId, java.lang.String.CASE_INSENSITIVE_ORDER).compare(this, other)
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as ImmutablePlaylistBase<*>
-
-        if (isDirectory != other.isDirectory) return false
-        if (name != other.name) return false
-        if (audioItems != other.audioItems) return false
-        if (playlists != other.playlists) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = isDirectory.hashCode()
-        result = 31 * result + name.hashCode()
-        result = 31 * result + audioItems.hashCode()
-        result = 31 * result + playlists.hashCode()
-        return result
-    }
-
-    override fun toString() = "ImmutablePlaylistBase(id=$id, isDirectory=$isDirectory, name='$name', playlists=${playlists.size}, audioItems=$audioItems)"
 }

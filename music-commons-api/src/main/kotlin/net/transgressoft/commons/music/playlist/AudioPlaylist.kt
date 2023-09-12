@@ -24,6 +24,4 @@ interface AudioPlaylist<I : AudioItem> : IdentifiableEntity<Int>, Comparable<Aud
 
     @Throws(IOException::class)
     fun exportToM3uFile(destinationPath: Path)
-
-    fun toMutablePlaylist(): MutableAudioPlaylist<I>
 }

@@ -11,10 +11,10 @@ import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryMp3File
 import java.io.File
 import kotlin.time.Duration.Companion.seconds
 
-private lateinit var jsonFile: File
-private lateinit var repository: AudioItemJsonRepository
-
 internal class AudioItemJsonFileRepositoryTest : StringSpec({
+
+    lateinit var jsonFile: File
+    lateinit var repository: AudioItemJsonRepository
 
     beforeEach {
         jsonFile = tempfile("json-repository-test", ".json").also { it.deleteOnExit() }
@@ -56,25 +56,6 @@ internal class AudioItemJsonFileRepositoryTest : StringSpec({
                 it.title shouldBe "New Title"
             }
             loadedRepository shouldBe repository
-        }
-    }
-
-    "Child class from AudioItemRepositoryBase works as expected" {
-        val extendedRepository = ExtendedAudioItemRepository.initialize(jsonFile)
-
-        val extendedAudioItem = ExtendedAudioItem.createFromFile(arbitraryMp3File.next().toPath()).let {
-            extendedRepository.add(it) shouldBe true
-            extendedRepository.findByUniqueId(it.uniqueId) shouldBePresent { found -> found shouldBe it }
-        }
-
-        eventually(2.seconds) {
-            val loadedRepository = ExtendedAudioItemRepository.loadFromFile(jsonFile)
-            loadedRepository.size() shouldBe 1
-            loadedRepository.findById(extendedAudioItem.id) shouldBePresent {
-                it shouldBe extendedAudioItem
-                it.id shouldNotBe 0
-            }
-            loadedRepository shouldBe extendedRepository
         }
     }
 })

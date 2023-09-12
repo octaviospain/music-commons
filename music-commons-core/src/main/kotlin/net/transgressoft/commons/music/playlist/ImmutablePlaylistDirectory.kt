@@ -2,7 +2,7 @@ package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.AudioItem
 
-data class ImmutablePlaylist(
+data class ImmutablePlaylistDirectory(
     override val name: String,
     override val audioItems: List<AudioItem> = emptyList(),
     override val playlists: Set<AudioPlaylist<AudioItem>> = emptySet()
@@ -13,13 +13,13 @@ data class ImmutablePlaylist(
         this.id = id
     }
 
-    override val isDirectory = false
+    override val isDirectory = true
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as ImmutablePlaylist
+        other as ImmutablePlaylistDirectory
 
         if (name != other.name) return false
         if (audioItems != other.audioItems) return false
@@ -36,5 +36,5 @@ data class ImmutablePlaylist(
         return result
     }
 
-    override fun toString() = "ImmutablePlaylist(id=$id, name='$name', audioItems=$audioItems, playlists=$playlists)"
+    override fun toString() = "ImmutablePlaylistDirectory(id=$id, name='$name', audioItems=$audioItems, playlists=$playlists)"
 }

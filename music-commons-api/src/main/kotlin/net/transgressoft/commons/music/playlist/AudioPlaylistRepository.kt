@@ -4,28 +4,17 @@ import net.transgressoft.commons.data.DataEvent
 import net.transgressoft.commons.data.Repository
 import net.transgressoft.commons.event.TransEventSubscriber
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.AudioItemEvent
 import java.util.*
 import java.util.concurrent.Flow
 
 /**
  * @author Octavio Calleya
  */
-interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>> : Repository<P, Int>, Flow.Publisher<DataEvent<P>> {
+interface AudioPlaylistRepository<I : AudioItem, P : MutableAudioPlaylist<I>> : Repository<P, Int>, Flow.Publisher<DataEvent<P>> {
 
-    val audioItemEventSubscriber: TransEventSubscriber<I, AudioItemEvent>
+    val audioItemEventSubscriber: TransEventSubscriber<I, DataEvent<out I>>
 
-    @Throws(AudioPlaylistRepositoryException::class)
-    fun createPlaylist(name: String): P
-
-    @Throws(AudioPlaylistRepositoryException::class)
-    fun createPlaylist(name: String, audioItems: List<I>): P
-
-    @Throws(AudioPlaylistRepositoryException::class)
-    fun createPlaylistDirectory(name: String): P
-
-    @Throws(AudioPlaylistRepositoryException::class)
-    fun createPlaylistDirectory(name: String, audioItems: List<I>): P
+    fun addPlaylist(playlist: AudioPlaylist<I>): P
 
     /**
      * Precondition, <tt>playlist</tt> exist in the <tt>AudioPlaylistRepository</tt>.
@@ -57,6 +46,8 @@ interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>> : Reposit
 
     fun removeAudioItems(audioItemIds: Set<Int>)
 
+    fun removeAudioItems(audioItems: Collection<I>)
+
     /**
      * Precondition, <tt>playlistToMove</tt> and <tt>destinationPlaylist</tt> exist in the <tt>AudioPlaylistRepository</tt>.
      * Otherwise, no action is performed.
@@ -66,9 +57,9 @@ interface AudioPlaylistRepository<I : AudioItem, P : AudioPlaylist<I>> : Reposit
      */
     fun movePlaylist(playlistToMove: P, destinationPlaylist: P)
 
-    fun findByName(name: String): P?
+    fun findByName(name: String): Optional<out P>
 
-    fun findParentPlaylist(playlist: P): P?
+    fun findParentPlaylist(playlist: P): Optional<out P>
 
     fun numberOfPlaylists(): Int
 

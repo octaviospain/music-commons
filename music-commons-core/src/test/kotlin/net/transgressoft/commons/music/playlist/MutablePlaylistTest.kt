@@ -99,7 +99,7 @@ internal class MutablePlaylistTest : StringSpec({
         val aNightAtTheOperaPlaylist = randomQueenAudioItems(tempDirectory, "A night at the opera", numberOfAudioItems)
         val aKindOfMagicPlaylist = randomQueenAudioItems(tempDirectory, "A kind of magic", numberOfAudioItems)
         val playlists = setOf(aNightAtTheOperaPlaylist, aKindOfMagicPlaylist)
-        val playlist = ImmutablePlaylist(1, true, "Queen", randomQueenPlaylist.audioItems, playlists)
+        val playlist = ImmutablePlaylistDirectory("Queen", randomQueenPlaylist.audioItems, playlists)
 
         playlist.audioItems.shouldContainExactly(randomQueenPlaylist.audioItems)
         playlist.playlists.shouldContainExactlyInAnyOrder(aKindOfMagicPlaylist, aNightAtTheOperaPlaylist)
@@ -124,7 +124,7 @@ internal class MutablePlaylistTest : StringSpec({
 })
 
 internal fun randomQueenAudioItems(tempDirectory: Path, albumName: String = "", size: Int) =
-    ImmutablePlaylist(-1, false, albumName, buildList {
+    ImmutablePlaylist(albumName, buildList {
         for (i in 0 until size) {
             val title = "Song $i - $albumName"
             val artistName = "Queen"

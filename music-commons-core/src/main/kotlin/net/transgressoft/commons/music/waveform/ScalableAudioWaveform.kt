@@ -13,7 +13,6 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import java.util.*
 import javax.imageio.ImageIO
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
@@ -175,12 +174,7 @@ class ScalableAudioWaveform(
     }
 
     override val uniqueId: String
-        get() {
-            val joiner = StringJoiner("-")
-            joiner.add(id.toString())
-            joiner.add(rawAudioPcm.contentHashCode().toString())
-            return joiner.toString()
-        }
+        get() = "${id}-${rawAudioPcm.contentHashCode()}"
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -3,6 +3,7 @@ package net.transgressoft.commons.music
 import io.kotest.assertions.timing.eventually
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
+import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
@@ -11,13 +12,13 @@ import net.transgressoft.commons.music.audio.AudioItemJsonRepository
 import net.transgressoft.commons.music.audio.AudioItemRepository
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.mp3File
 import net.transgressoft.commons.music.audio.ImmutableAudioItem
-import net.transgressoft.commons.music.playlist.AudioPlaylist
 import net.transgressoft.commons.music.playlist.AudioPlaylistJsonRepository
 import net.transgressoft.commons.music.playlist.AudioPlaylistRepository
+import net.transgressoft.commons.music.playlist.ImmutablePlaylist
+import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
 import net.transgressoft.commons.music.waveform.AudioWaveformJsonRepository
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
 import net.transgressoft.commons.music.waveform.ScalableAudioWaveform
-import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
 
 internal class MusicLibraryIntegrationTest : StringSpec({
@@ -26,15 +27,9 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     val playlistRepoFile = tempfile("playlistRepository-test", ".json").apply { deleteOnExit() }
     val waveformsRepoFile = tempfile("waveformRepository-test", ".json").apply { deleteOnExit() }
 
-    val audioItemRepository: AudioItemRepository<AudioItem> = AudioItemJsonRepository(audioRepoFile)
+    val audioItemRepository: AudioItemRepository<ImmutableAudioItem> = AudioItemJsonRepository(audioRepoFile)
     val audioWaveformRepository: AudioWaveformRepository<ScalableAudioWaveform> = AudioWaveformJsonRepository(waveformsRepoFile)
-    val audioPlaylistRepository: AudioPlaylistRepository<AudioItem, AudioPlaylist<AudioItem>> = AudioPlaylistJsonRepository(playlistRepoFile)
-
-    fun AudioItemRepository<AudioItem>.createAudioItem(path: Path): AudioItem =
-        ImmutableAudioItem.createFromFile(path).let {
-            add(it)
-            findByUniqueId(it.uniqueId).get()
-        }
+    val audioPlaylistRepository: AudioPlaylistRepository<AudioItem, MutableAudioPlaylist<AudioItem>> = AudioPlaylistJsonRepository(playlistRepoFile)
 
     beforeEach {
         audioItemRepository.clear()
@@ -46,7 +41,8 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         audioItemRepository.subscribe(audioWaveformRepository.audioItemEventSubscriber)
         audioItemRepository.subscribe(audioPlaylistRepository.audioItemEventSubscriber)
 
-        val audioItem = audioItemRepository.createAudioItem(mp3File.toPath())
+        val audioItem = ImmutableAudioItem.createFromFile(mp3File.toPath())
+        audioItemRepository.add(audioItem)
         eventually(1.seconds) {
             audioRepoFile.readText() shouldContain audioItem.path.toString()
         }
@@ -59,7 +55,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
             waveformsRepoFile.readText() shouldContain waveform.get().id.toString()
         }
 
-        audioPlaylistRepository.createPlaylist("New ones").let {
+        audioPlaylistRepository.addPlaylist(ImmutablePlaylist("New ones")).let {
             audioPlaylistRepository.addAudioItemsToPlaylist(listOf(audioItem), it)
         }
 
@@ -80,7 +76,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
                 "repository": "AudioItemRepository"
             }""".trimIndent()
 
-            audioPlaylistRepository.findByName("New ones")!!.audioItems.isEmpty() shouldBe true
+            audioPlaylistRepository.findByName("New ones") shouldBePresent { it.audioItems.isEmpty() shouldBe true }
             playlistRepoFile.readText() shouldBe """
             [
                 {

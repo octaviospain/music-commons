@@ -85,7 +85,7 @@ internal class ImmutableAudioItemTest : StringSpec({
         }
 
         val previousDateModified = audioItem.lastDateModified
-        audioItem = audioItem.copy(comments = "modified", lastDateModified = LocalDateTime.now())
+        audioItem = audioItem.toBuilder().comments("modified").lastDateModified(LocalDateTime.now()).build()
         audioItem.lastDateModified shouldBeAfter previousDateModified
         audioItem.comments shouldBe "modified"
 
@@ -96,13 +96,13 @@ internal class ImmutableAudioItemTest : StringSpec({
             on { this@on.year } doReturn 1999.toShort()
             on { this@on.label } doReturn ImmutableLabel.UNKNOWN
         }
-        val audioItemWithModifiedAlbum = audioItem.copy(
-            title = "Other title",
-            album = newAlbum,
-            encoder = "New encoder",
-            encoding = "New encoding",
-            bpm = 128f
-        )
+        val audioItemWithModifiedAlbum = audioItem.toBuilder()
+            .title("Other title")
+            .album(newAlbum)
+            .encoder("New encoder")
+            .encoding("New encoding")
+            .bpm(128f)
+            .build()
 
         audioItemWithModifiedAlbum shouldNotBe audioItem
         audioItemWithModifiedAlbum.album.albumArtist.name shouldBe "Other Artist"
@@ -120,11 +120,11 @@ internal class ImmutableAudioItemTest : StringSpec({
             on { this@on.year } doReturn 1999.toShort()
             on { this@on.label } doReturn ImmutableLabel.UNKNOWN
         }
-        var modifiedAudioItem = audioItemWithModifiedAlbum.copy(
-            genre = Genre.UNDEFINED,
-            album = unknownAlbum,
-            comments = "Modified"
-        )
+        var modifiedAudioItem = audioItemWithModifiedAlbum.toBuilder()
+            .genre(Genre.UNDEFINED)
+            .album(unknownAlbum)
+            .comments("Modified")
+            .build()
 
         modifiedAudioItem.artist shouldBe audioItem.artist
         modifiedAudioItem.album.name shouldBe ""
@@ -132,12 +132,13 @@ internal class ImmutableAudioItemTest : StringSpec({
         modifiedAudioItem.comments shouldBe "Modified"
         modifiedAudioItem.artist shouldBe artist
 
-        modifiedAudioItem = modifiedAudioItem.copy(
-            artist = ImmutableArtist.UNKNOWN,
-            path = Path.of("/moved/song.mp3"),
-            discNumber = 2.toShort(),
-            trackNumber = 3.toShort()
-        )
+        modifiedAudioItem = modifiedAudioItem.toBuilder()
+            .artist(ImmutableArtist.UNKNOWN)
+            .path(Path.of("/moved/song.mp3"))
+            .discNumber(2.toShort())
+            .trackNumber(3.toShort())
+            .build()
+
         modifiedAudioItem.path.toString() shouldBe "/moved/song.mp3"
         modifiedAudioItem.discNumber shouldBe 2.toShort()
         modifiedAudioItem.trackNumber shouldBe 3.toShort()
@@ -222,7 +223,7 @@ internal class ImmutableAudioItemTest : StringSpec({
     "AudioItem returns coverImage after being deserialized" {
         val tempFile = tempfile("audioItem-coverImage-test", ".mp3").also { it.deleteOnExit() }
         mp3File.copyTo(tempFile, overwrite = true)
-        audioItem = audioItem.copy(path = tempFile.toPath())
+        audioItem = audioItem.toBuilder().path(tempFile.toPath()).build()
 
         val updatedAudioItem: ImmutableAudioItem = audioItem.update { coverImage = testCoverBytes }
         updatedAudioItem.writeMetadata()
