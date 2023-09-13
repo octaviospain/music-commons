@@ -4,7 +4,6 @@ import net.transgressoft.commons.data.DataEvent
 import net.transgressoft.commons.data.Repository
 import net.transgressoft.commons.event.TransEventSubscriber
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.AudioItemEvent
 import java.util.concurrent.CompletableFuture
 
 interface AudioWaveformRepository<W : AudioWaveform> : Repository<W, Int> {

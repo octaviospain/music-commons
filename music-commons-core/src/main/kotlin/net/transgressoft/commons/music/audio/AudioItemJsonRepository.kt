@@ -34,7 +34,11 @@ class AudioItemJsonRepository(file: File) :
 
     private val idCounter = AtomicInteger(1)
 
-    protected val albumsByArtist: MutableMap<Artist, MutableSet<Album>> = mutableMapOf()
+    private val albumsByArtist: MutableMap<Artist, MutableSet<Album>> = mutableMapOf()
+
+    init {
+        entitiesById.values.forEach { addOrReplaceAlbumByArtist(it, true) }
+    }
 
     override fun add(entity: ImmutableAudioItem): Boolean {
         val entityToAdd = fillMissingId(entity)

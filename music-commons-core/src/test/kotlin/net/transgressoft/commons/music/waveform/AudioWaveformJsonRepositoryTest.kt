@@ -34,11 +34,9 @@ internal class AudioWaveformJsonRepositoryTest : StringSpec({
         eventually(2.seconds) {
             jsonFile.readText() shouldBe """
                 {
-                    "entitiesById": {
-                        "1": {
-                            "id": 1,
-                            "audioFilePath": "$audioFilePath"
-                        }
+                    "1": {
+                        "id": 1,
+                        "audioFilePath": "$audioFilePath"
                     }
                 }
             """.trimIndent()

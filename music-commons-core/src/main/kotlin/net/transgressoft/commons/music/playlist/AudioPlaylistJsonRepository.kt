@@ -4,7 +4,6 @@ import com.google.common.collect.Multimap
 import com.google.common.collect.MultimapBuilder
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.serializer
-import kotlinx.serialization.json.Json
 import mu.KotlinLogging
 import net.transgressoft.commons.IdentifiableEntity
 import net.transgressoft.commons.data.DataEvent
@@ -12,7 +11,10 @@ import net.transgressoft.commons.data.JsonFileRepository
 import net.transgressoft.commons.data.RepositoryBase
 import net.transgressoft.commons.data.StandardDataEvent
 import net.transgressoft.commons.event.TransEventSubscriber
-import net.transgressoft.commons.music.audio.*
+import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.AudioItemManipulationException
+import net.transgressoft.commons.music.audio.AudioItemRepository
+import net.transgressoft.commons.music.audio.UNASSIGNED_ID
 import net.transgressoft.commons.music.event.AudioItemEventSubscriber
 import net.transgressoft.commons.toIds
 import java.io.File
@@ -34,27 +36,32 @@ class AudioPlaylistJsonRepository(jsonFile: File) : RepositoryBase<MutableAudioP
         require(file.exists().and(file.canWrite()).and(file.extension == "json")) {
             "Provided jsonFile does not exist, is not writable or is not a json file"
         }
-        Json.decodeFromString<List<InternalAudioPlaylist>>(file.readText()).let {
-            val initialPlaylists = mapFromSerializablePlaylists(it, audioItemRepository)
-            addOrReplaceAll(initialPlaylists.values.toSet())
+
+        serializablePlaylistsRepository.runMatching({ true }) {
+            val playlistsWithAudioItems = MutablePlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItemIds, audioItemRepository))
+            entitiesById[it.id] = playlistsWithAudioItems
+        }
+        serializablePlaylistsRepository.runMatching({ true }) {
+            val playlistsMissingPlaylists = entitiesById[it.id] ?: throw AudioItemManipulationException("AudioPlaylist with id ${it.id} not found during deserialization")
+            val foundPlaylists = findDeserializedPlaylistsFromIds(it.playlistIds, entitiesById)
+            playlistsMissingPlaylists.playlists.addAll(foundPlaylists)
         }
     }
 
-    private fun mapFromSerializablePlaylists(deserializedPlaylists: List<InternalAudioPlaylist>,
-                                             audioItemRepository: AudioItemRepository<AudioItem>): Map<Int, MutableAudioPlaylist<AudioItem>> {
-        return deserializedPlaylists
-            .map { MutablePlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItemIds, audioItemRepository)) }
-            .associateByTo(mutableMapOf()) { it.id }
-            .also { playlistsById ->
-                deserializedPlaylists.forEach {
-                    val foundPlaylists = findDeserializedPlaylistsFromIds(it.playlistIds, playlistsById)
-                    val playlist = playlistsById[it.id] ?: throw AudioItemManipulationException("AudioPlaylist with id ${it.id} not found during deserialization")
-                    playlist.playlists.addAll(foundPlaylists)
-                }
-            }
+    private fun mapAudioItemsFromIds(audioItemIds: List<Int>, audioItemRepository: AudioItemRepository<AudioItem>) =
+        audioItemIds.map {
+            audioItemRepository.findById(it).orElseThrow { AudioItemManipulationException("AudioItem with id $it not found during deserialization") }
+        }.toList()
+
+    private fun findDeserializedPlaylistsFromIds(playlists: Set<Int>, playlistsById: Map<Int, MutableAudioPlaylist<AudioItem>>): List<MutableAudioPlaylist<AudioItem>> {
+        return playlists.stream().map {
+            return@map playlistsById[it] ?: throw AudioItemManipulationException("AudioPlaylist with id $it not found during deserialization")
+        }.toList()
     }
 
     override fun addPlaylist(playlist: AudioPlaylist<AudioItem>): MutableAudioPlaylist<AudioItem> {
+        require(findByName(playlist.name).isEmpty) { "Playlist with name '${playlist.name}' already exists" }
+
         var playlistId = playlist.id
         val playlistToAdd = if (playlist.id <= UNASSIGNED_ID) {
             playlist.toMutablePlaylist().apply { id = newId() }.also { playlistId = it.id }
@@ -71,17 +78,6 @@ class AudioPlaylistJsonRepository(jsonFile: File) : RepositoryBase<MutableAudioP
             id = idCounter.getAndIncrement()
         } while (contains(id))
         return id
-    }
-
-    private fun mapAudioItemsFromIds(audioItemIds: List<Int>, audioItemRepository: AudioItemRepository<AudioItem>) =
-        audioItemIds.map {
-            audioItemRepository.findById(it).orElseThrow { AudioItemManipulationException("AudioItem with id $it not found during deserialization") }
-        }.toList()
-
-    private fun findDeserializedPlaylistsFromIds(playlists: Set<Int>, playlistsById: Map<Int, MutableAudioPlaylist<AudioItem>>): List<MutableAudioPlaylist<AudioItem>> {
-        return playlists.stream().map {
-            return@map playlistsById[it] ?: throw AudioItemManipulationException("AudioPlaylist with id $it not found during deserialization")
-        }.toList()
     }
 
     override val audioItemEventSubscriber: TransEventSubscriber<AudioItem, DataEvent<out AudioItem>> =
@@ -104,6 +100,9 @@ class AudioPlaylistJsonRepository(jsonFile: File) : RepositoryBase<MutableAudioP
         }
         return added
     }
+
+    private fun AudioPlaylist<AudioItem>.toSerializablePlaylist() =
+        InternalAudioPlaylist(id, isDirectory, name, audioItems.map { it.id }.toList(), playlists.map { it.id }.toSet())
 
     override fun addOrReplace(entity: MutableAudioPlaylist<AudioItem>) = addOrReplaceAll(setOf(entity))
 
@@ -147,6 +146,8 @@ class AudioPlaylistJsonRepository(jsonFile: File) : RepositoryBase<MutableAudioP
             serializablePlaylistsRepository.removeAll(entities.toSerializablePlaylists())
         }
     }
+
+    private fun Collection<AudioPlaylist<AudioItem>>.toSerializablePlaylists() = map { it.toSerializablePlaylist() }.toSet()
 
     override fun removeAudioItems(audioItemIds: Set<Int>) {
         runMatching({ true }) {
@@ -222,11 +223,6 @@ class AudioPlaylistJsonRepository(jsonFile: File) : RepositoryBase<MutableAudioP
     override fun size(): Int {
         return serializablePlaylistsRepository.size()
     }
-
-    private fun AudioPlaylist<AudioItem>.toSerializablePlaylist() =
-        InternalAudioPlaylist(id, isDirectory, name, audioItems.map { it.id }.toList(), playlists.map { it.id }.toSet())
-
-    private fun Collection<AudioPlaylist<AudioItem>>.toSerializablePlaylists() = map { it.toSerializablePlaylist() }.toSet()
 
     @Serializable
     internal data class InternalAudioPlaylist(

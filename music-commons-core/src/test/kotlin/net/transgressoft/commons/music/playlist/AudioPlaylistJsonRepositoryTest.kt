@@ -52,8 +52,8 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
 
         eventually(2.seconds) {
             jsonFile.readText() shouldBe """
-            [
-                {
+            {
+                "${rock.id}": {
                     "id": ${rock.id},
                     "isDirectory": ${rock.isDirectory},
                     "name": "${rock.name}",
@@ -64,7 +64,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
                         ${rockFavorites.id}
                     ]
                 },
-                {
+                "${rockFavorites.id}": {
                     "id": ${rockFavorites.id},
                     "isDirectory": ${rockFavorites.isDirectory},
                     "name": "${rockFavorites.name}",
@@ -74,25 +74,25 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
                     "playlistIds": [
                     ]
                 }
-            ]
-        """.trimIndent()
+            }
+            """.trimIndent()
         }
     }
 
     "Existing repository loads from file" {
         jsonFile.writeText("""
-            [
-                {
-                    "id": 1,
-                    "isDirectory": true,
-                    "name": "Rock",
-                    "audioItemIds": [
-                        453374921
-                    ],
-                    "playlistIds": [
-                    ]
-                }
-            ]
+        {
+            "1": {
+                "id": 1,
+                "isDirectory": true,
+                "name": "Rock",
+                "audioItemIds": [
+                    453374921
+                ],
+                "playlistIds": [
+                ]
+            }
+        }
         """.trimIndent())
 
         val audioItem = arbitraryAudioItem(id = 453374921).next()
@@ -114,7 +114,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
     // │  │  ├──Pop
     // │  │  ├──:50s hit 1
     // │  │  └──:50s favorite song
-    // │  └──60s favorites
+    // │  └──60s
     // └──This weeks' favorites songs
     "Mixed playlists hierarchy structure and audio items search" {
         val rockAudioItems = listOf(
@@ -123,7 +123,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         )
         var rock = audioPlaylistRepository.addPlaylist(ImmutablePlaylist("Rock", rockAudioItems))
 
-        audioPlaylistRepository.findByName(rock.name) shouldBe rock
+        audioPlaylistRepository.findByName(rock.name) shouldBePresent { it shouldBe rock }
         val playlistsThatContainsAllAudioItemsWith50sInTitle =
             audioPlaylistRepository.search { it.audioItemsAllMatch { audioItem -> audioItem.title.contains("50s") } }
         playlistsThatContainsAllAudioItemsWith50sInTitle.shouldContainExactly(rock)
@@ -132,9 +132,9 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         audioPlaylistRepository.size() shouldBe 2
         audioPlaylistRepository.numberOfPlaylists() shouldBe 2
 
-        var fifties = audioPlaylistRepository.addPlaylist(ImmutablePlaylist("50s"))
+        var fifties = audioPlaylistRepository.addPlaylist(ImmutablePlaylistDirectory("50s"))
         audioPlaylistRepository.addPlaylistsToDirectory(setOf(pop, rock), fifties)
-        audioPlaylistRepository.findByName(fifties.name) shouldBePresent { it.playlists.shouldContainExactly(pop, rock) }
+        audioPlaylistRepository.findByName(fifties.name) shouldBePresent { it.playlists shouldContainExactly setOf(pop, rock) }
         audioPlaylistRepository.numberOfPlaylistDirectories() shouldBe 1
 
         var sixties = audioPlaylistRepository.addPlaylist(ImmutablePlaylistDirectory("60s"))
@@ -144,21 +144,21 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
 
         var bestHits = audioPlaylistRepository.addPlaylist(ImmutablePlaylistDirectory("Best hits"))
         audioPlaylistRepository.addPlaylistsToDirectory(setOf(fifties, sixties), bestHits)
-        bestHits.playlists.isEmpty() shouldBe true  // Fails because bestHits is an old immutable copy
-        audioPlaylistRepository.findByName(bestHits.name) shouldBePresent { it.playlists.shouldContainExactly(fifties, sixties) }
+        bestHits.playlists.isEmpty() shouldBe false
+        audioPlaylistRepository.findByName(bestHits.name) shouldBePresent { it.playlists shouldContainExactly setOf(fifties, sixties) }
 
         val thisWeeksFavorites = audioPlaylistRepository.addPlaylist(ImmutablePlaylist("This weeks' favorites songs"))
         audioPlaylistRepository.search { it.name.contains("favorites") }.shouldContainExactly(thisWeeksFavorites)
         audioPlaylistRepository.size() shouldBe 6
         audioPlaylistRepository.addOrReplaceAll(setOf(bestHits, thisWeeksFavorites))
         audioPlaylistRepository.size() shouldBe 6
-        audioPlaylistRepository.search { it.isDirectory.not() }.shouldContainExactly(rock, pop, thisWeeksFavorites)
+        audioPlaylistRepository.search { it.isDirectory.not() } shouldContainExactly setOf(rock, pop, thisWeeksFavorites)
 
         fifties = audioPlaylistRepository.findByName(fifties.name).get()
         sixties = audioPlaylistRepository.findByName(sixties.name).get()
         bestHits = audioPlaylistRepository.findByName(bestHits.name).get()
 
-        audioPlaylistRepository.search { it.isDirectory}.shouldContainExactly(fifties, sixties, bestHits)
+        audioPlaylistRepository.search { it.isDirectory} shouldContainExactly setOf(fifties, sixties, bestHits)
 
         rock = audioPlaylistRepository.findById(rock.id).get()
         fifties = audioPlaylistRepository.findByName(fifties.name).get()
@@ -172,12 +172,12 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
             audioPlaylistRepository.search { it.audioItemsAnyMatch { audioItem -> audioItem.title.contains("hit") } }
         fifties = audioPlaylistRepository.findByName(fifties.name).get()
         rock = audioPlaylistRepository.findByName(rock.name).get()
-        playlistsThatContainsAnyAudioItemsWithHitInTitle.shouldContainExactly(rock, fifties)
+        playlistsThatContainsAnyAudioItemsWithHitInTitle shouldContainExactly setOf(rock, fifties)
         val playlistsThatContainsAudioItemsWithDurationBelow60 = audioPlaylistRepository.search {
             it.audioItemsAnyMatch { audioItem: AudioItem -> audioItem.duration <= Duration.ofSeconds(60) }
         }
 
-        playlistsThatContainsAudioItemsWithDurationBelow60.shouldContainExactly(rock, fifties)
+        playlistsThatContainsAudioItemsWithDurationBelow60 shouldContainExactly setOf(rock, fifties)
 
         audioPlaylistRepository.removeAudioItemsFromPlaylist(fiftiesItems, fifties)
 
@@ -196,7 +196,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
     // └──Selection of playlists
     "Move playlists in the hierarchy" {
         val rock = audioPlaylistRepository.addPlaylist(ImmutablePlaylist("Rock"))
-        audioPlaylistRepository.findByName(rock.name) shouldBe rock
+        audioPlaylistRepository.findByName(rock.name) shouldBePresent { it == rock }
         val pop = audioPlaylistRepository.addPlaylist(ImmutablePlaylist("Pop"))
         var fifties = audioPlaylistRepository.addPlaylist(ImmutablePlaylistDirectory("50s"))
         audioPlaylistRepository.addPlaylistsToDirectory(setOf(rock, pop), fifties)
@@ -232,7 +232,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
 
         audioPlaylistRepository.size() shouldBe 5
         audioPlaylistRepository.findByName(selection.name) shouldBePresent { it.playlists.shouldContainExactly(rock) }
-        audioPlaylistRepository.findByName(fifties.name) shouldBePresent { it.playlists.shouldContainExactly(pop, selection) }
+        audioPlaylistRepository.findByName(fifties.name) shouldBePresent { it.playlists shouldContainExactly setOf(pop, selection) }
     }
 
     "Create playlists with existing name" {

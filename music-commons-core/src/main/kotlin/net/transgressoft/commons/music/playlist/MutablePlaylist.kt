@@ -17,6 +17,28 @@ internal class MutablePlaylist(
             ImmutablePlaylist(id, name, audioItems.toList(), playlists.toSet())
         }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as MutablePlaylist
+
+        if (isDirectory != other.isDirectory) return false
+        if (name != other.name) return false
+        if (audioItems != other.audioItems) return false
+        if (playlists != other.playlists) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = isDirectory.hashCode()
+        result = 31 * result + name.hashCode()
+        result = 31 * result + audioItems.hashCode()
+        result = 31 * result + playlists.hashCode()
+        return result
+    }
+
     override fun toString() = "MutablePlaylist(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$audioItems, playlists=$playlists)"
 }
 

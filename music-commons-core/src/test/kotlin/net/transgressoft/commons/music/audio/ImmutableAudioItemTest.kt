@@ -28,7 +28,7 @@ import kotlin.time.toJavaDuration
 internal class ImmutableAudioItemTest : StringSpec({
 
     val id = 9
-    val path = Path.of("testfiles", "testeable.mp3")
+    val path = mp3File.toPath()
     val title = "Yesterday"
     val duration = Duration.ofMinutes(2)
     val bitRate = 320
@@ -81,7 +81,7 @@ internal class ImmutableAudioItemTest : StringSpec({
             audioItem.encoding shouldBe encoding
             audioItem.encoder shouldBe encoder
             audioItem.uniqueId shouldBe "testeable.mp3-Yesterday-120-320"
-            audioItem.toString() shouldBe "ImmutableAudioItem(id=9, path=testfiles/testeable.mp3, title=Yesterday, artist=The Beatles)"
+            audioItem.toString() shouldBe "ImmutableAudioItem(id=9, path=/home/kaord/Software/Transgressoft/music-commons/music-commons-core/build/resources/test/testfiles/testeable.mp3, title=Yesterday, artist=The Beatles)"
         }
 
         val previousDateModified = audioItem.lastDateModified
@@ -111,7 +111,7 @@ internal class ImmutableAudioItemTest : StringSpec({
         audioItemWithModifiedAlbum.encoder shouldBe "New encoder"
         audioItemWithModifiedAlbum.encoding shouldBe "New encoding"
         audioItemWithModifiedAlbum.bpm shouldBe 128f
-        audioItem.length shouldBe 0
+        audioItem.length shouldBe mp3File.length()
 
         val unknownAlbum = mock<Album> {
             on { this@on.name } doReturn ""
@@ -230,10 +230,9 @@ internal class ImmutableAudioItemTest : StringSpec({
 
         val json = Json { serializersModule = audioItemSerializerModule; prettyPrint = true }
         eventually(2.seconds) {
-            val encodedAudioItem = json.encodeToString(AudioItemBase.serializer(), audioItem)
+            val encodedAudioItem = json.encodeToString(ImmutableAudioItem.serializer(), audioItem)
             encodedAudioItem shouldBe """
             {
-                "audioItemType": "DefaultAudioItem",
                 "id": ${audioItem.id},
                 "path": "${audioItem.path}",
                 "title": "${audioItem.title}",
@@ -269,7 +268,7 @@ internal class ImmutableAudioItemTest : StringSpec({
                 "dateOfCreation": ${audioItem.dateOfCreation.toEpochSecond(ZoneOffset.UTC)},
                 "lastDateModified": ${audioItem.lastDateModified.toEpochSecond(ZoneOffset.UTC)}
             }""".trimIndent()
-            val decodedAudioItem = json.decodeFromString<AudioItemBase>(encodedAudioItem)
+            val decodedAudioItem = json.decodeFromString<ImmutableAudioItem>(encodedAudioItem)
 
             decodedAudioItem.coverImage shouldBe testCoverBytes
         }

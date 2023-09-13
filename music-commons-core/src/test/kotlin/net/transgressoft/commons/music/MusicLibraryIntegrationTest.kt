@@ -41,8 +41,10 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         audioItemRepository.subscribe(audioWaveformRepository.audioItemEventSubscriber)
         audioItemRepository.subscribe(audioPlaylistRepository.audioItemEventSubscriber)
 
-        val audioItem = ImmutableAudioItem.createFromFile(mp3File.toPath())
-        audioItemRepository.add(audioItem)
+        val audioItem = ImmutableAudioItem.createFromFile(mp3File.toPath()).let {
+            audioItemRepository.add(it)
+            audioItemRepository.findByUniqueId(it.uniqueId).get()
+        }
         eventually(1.seconds) {
             audioRepoFile.readText() shouldContain audioItem.path.toString()
         }
@@ -71,15 +73,12 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         audioItemRepository.albumAudioItems(audioItem.album).isEmpty() shouldBe true
 
         eventually(2.seconds) {
-            audioRepoFile.readText() shouldBe """
-            {
-                "repository": "AudioItemRepository"
-            }""".trimIndent()
+            audioRepoFile.readText() shouldBe "{\n}"
 
             audioPlaylistRepository.findByName("New ones") shouldBePresent { it.audioItems.isEmpty() shouldBe true }
             playlistRepoFile.readText() shouldBe """
-            [
-                {
+            {
+                "1": {
                     "id": 1,
                     "isDirectory": false,
                     "name": "New ones",
@@ -88,12 +87,11 @@ internal class MusicLibraryIntegrationTest : StringSpec({
                     "playlistIds": [
                     ]
                 }
-            ]""".trimIndent()
+            }
+            """.trimIndent()
 
             audioWaveformRepository.isEmpty shouldBe true
-            waveformsRepoFile.readText() shouldBe """
-            {
-            }""".trimIndent()
+            waveformsRepoFile.readText() shouldBe "{\n}"
         }
     }
 })

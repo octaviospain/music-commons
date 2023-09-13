@@ -1,7 +1,6 @@
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.AudioItem
-import java.util.ArrayList
 
 abstract class MutablePlaylistBase<I: AudioItem>(
     override var id: Int,
