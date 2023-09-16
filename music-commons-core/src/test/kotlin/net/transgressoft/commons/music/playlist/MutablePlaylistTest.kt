@@ -2,93 +2,117 @@ package net.transgressoft.commons.music.playlist
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempdir
+import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.comparables.shouldBeEqualComparingTo
+import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.list
 import io.kotest.property.arbitrary.next
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemTestUtil
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
 import java.nio.file.Path
 import java.time.Duration
 import java.util.*
 import kotlin.io.path.exists
 
-/**
- * @author Octavio Calleya
- */
+lateinit var audioPlaylistRepository: AudioPlaylistRepository<AudioItem, MutableAudioPlaylist<AudioItem>>
+
 internal class MutablePlaylistTest : StringSpec({
 
+    beforeEach {
+        audioPlaylistRepository = AudioPlaylistJsonRepository(tempfile("mutablePlaylist-test", ".json").also { it.deleteOnExit() })
+    }
+
     "Mutable audio playlist attributes and operations" {
-        val playlist1 = MutablePlaylist(1, false, "Playlist1")
+        val playlist1 = audioPlaylistRepository.createPlaylist( "Playlist1")
 
         playlist1.id shouldBe 1
         playlist1.isDirectory shouldBe false
         playlist1.name shouldBe "Playlist1"
-        playlist1.uniqueId shouldBe "1-Playlist1"
+        playlist1.uniqueId shouldBe "Playlist1"
         playlist1.audioItems.isEmpty() shouldBe true
         playlist1.toString() shouldBe "MutablePlaylist(id=1, isDirectory=false, name='Playlist1', audioItems=[], playlists=[])"
 
         playlist1.name = "Modified playlist1"
 
         playlist1.name shouldBe "Modified playlist1"
-        playlist1.uniqueId shouldBe "1-Modified playlist1"
+        playlist1.uniqueId shouldBe "Modified playlist1"
 
-        val audioItems = Arb.list(AudioItemTestUtil.arbitraryAudioItem(), 4..4).next().also {
-            playlist1.audioItems.addAll(it)
+        val audioItems = Arb.list(arbitraryAudioItem(), 4..4).next().also {
+            playlist1.addAudioItems(it)
         }
 
         playlist1.audioItems.size shouldBe 4
         playlist1.audioItemsAllMatch { it.title == "Song title" } shouldBe false
 
-        val customAudioItem = AudioItemTestUtil.arbitraryAudioItem(title = "Song title").next().also {
-            playlist1.audioItems.add(it)
+        val customAudioItem = arbitraryAudioItem(title = "Song title").next().also {
+            playlist1.addAudioItems(listOf(it))
         }
 
         playlist1.audioItems.size shouldBe 5
         playlist1.audioItemsAnyMatch { it.title == "Song title"} shouldBe true
-        playlist1.audioItems.removeAll(audioItems)
+        playlist1.removeAudioItem(audioItems[0].id)
+        playlist1.removeAudioItem(audioItems[1])
+        playlist1.removeAudioItems(audioItems)
         playlist1.audioItems.size shouldBe 1
         playlist1.audioItemsAllMatch { it.title == "Song title" } shouldBe true
 
-        val playlist2 = MutablePlaylist(1, false, "Modified playlist1", listOf(customAudioItem))
-        playlist1 shouldBe playlist2
+        val playlist2 = ImmutablePlaylist(8, false, "Modified playlist1", listOf(customAudioItem))
+        playlist1.uniqueId shouldBe playlist2.uniqueId
+        playlist1 should {
+            it.id shouldNotBe playlist2.id
+            it.uniqueId shouldBe playlist2.uniqueId
+            it.isDirectory shouldBe playlist2.isDirectory
+            it.name shouldBe playlist2.name
+            it.audioItems shouldBe playlist2.audioItems
+        }
         playlist1 shouldBeEqualComparingTo playlist2
 
-        playlist1.audioItems.clear()
+        playlist1.clearAudioItems()
         playlist1.audioItems.isEmpty() shouldBe true
     }
 
     "Mutable audio directory attributes and operations" {
-        val directory1 = MutablePlaylist(1, true, "Directory1")
+        val directory1 = audioPlaylistRepository.createPlaylistDirectory("Directory1")
 
         directory1.isDirectory shouldBe true
         directory1.playlists.isEmpty() shouldBe true
         directory1.audioItems.isEmpty() shouldBe true
         directory1.toString() shouldBe "MutablePlaylist(id=1, isDirectory=true, name='Directory1', audioItems=[], playlists=[])"
 
-        val audioItems = Arb.list(AudioItemTestUtil.arbitraryAudioItem(), 5..5).next()
-        val p1 = MutablePlaylist(10, true, "p1", audioItems = audioItems)
-        val p2 = MutablePlaylist(11, true, "p2")
-        val d1 = MutablePlaylist(12, true, "d1", audioItems = listOf(AudioItemTestUtil.arbitraryAudioItem(title = "One").next()))
+        val audioItems = Arb.list(arbitraryAudioItem(), 5..5).next()
+        val p1 = audioPlaylistRepository.createPlaylistDirectory( "p1", audioItems = audioItems)
+        val p2 = audioPlaylistRepository.createPlaylistDirectory("p2")
+        val d1AudioItem = arbitraryAudioItem(title = "One").next()
+        val d1 = audioPlaylistRepository.createPlaylistDirectory( "d1", audioItems = listOf(d1AudioItem))
 
-        directory1.playlists.addAll(listOf(p1, p2, d1))
+        directory1.addPlaylists(listOf(p1, p2, d1))
         directory1.playlists.size shouldBe 3
-        directory1.audioItems.isEmpty() shouldBe true
-        directory1.audioItemsRecursive.size shouldBe 6
         directory1.playlists.contains(d1) shouldBe true
+        directory1.audioItemsRecursive.size shouldBe 6
+        directory1.audioItemsRecursive shouldContainExactlyInAnyOrder setOf(audioItems.plusElement(d1AudioItem)).flatten()
 
-        d1.audioItems.clear()
-        p1.audioItems.clear()
+        d1.clearAudioItems()
+        p1.clearAudioItems()
         directory1.audioItems.isEmpty() shouldBe true
-        directory1.audioItemsRecursive.isEmpty() shouldBe true
+        directory1.audioItemsRecursive.size shouldBe 0
 
-        directory1.playlists.clear()
+        d1.addAudioItem(d1AudioItem)
+        directory1.audioItemsRecursive.shouldContainExactly(d1AudioItem)
+        p1.addAudioItems(audioItems)
+        directory1.audioItemsRecursive shouldContainExactlyInAnyOrder setOf(audioItems.plusElement(d1AudioItem)).flatten()
 
-        val directory2 = MutablePlaylist(1, true, "Directory1")
-        directory1 shouldBe directory2
+        directory1.removePlaylist(p1.id)
+        directory1.removePlaylist(p2)
+        directory1.removePlaylist(d1)
+        directory1.playlists.isEmpty() shouldBe true
+        directory1.audioItems.isEmpty() shouldBe true
+        directory1.audioItemsRecursive.size shouldBe 0
     }
 
     "Export playlist to .m3u file" {
@@ -99,7 +123,7 @@ internal class MutablePlaylistTest : StringSpec({
         val aNightAtTheOperaPlaylist = randomQueenAudioItems(tempDirectory, "A night at the opera", numberOfAudioItems)
         val aKindOfMagicPlaylist = randomQueenAudioItems(tempDirectory, "A kind of magic", numberOfAudioItems)
         val playlists = setOf(aNightAtTheOperaPlaylist, aKindOfMagicPlaylist)
-        val playlist = ImmutablePlaylistDirectory("Queen", randomQueenPlaylist.audioItems, playlists)
+        val playlist = audioPlaylistRepository.createPlaylistDirectory("Queen", randomQueenPlaylist.audioItems).also { it.addPlaylists(playlists) }
 
         playlist.audioItems.shouldContainExactly(randomQueenPlaylist.audioItems)
         playlist.playlists.shouldContainExactlyInAnyOrder(aKindOfMagicPlaylist, aNightAtTheOperaPlaylist)
@@ -124,12 +148,12 @@ internal class MutablePlaylistTest : StringSpec({
 })
 
 internal fun randomQueenAudioItems(tempDirectory: Path, albumName: String = "", size: Int) =
-    ImmutablePlaylist(albumName, buildList {
+    audioPlaylistRepository.createPlaylist(albumName, buildList {
         for (i in 0 until size) {
             val title = "Song $i - $albumName"
             val artistName = "Queen"
             val duration = Duration.ofSeconds((60 + i).toLong())
-            add((AudioItemTestUtil.arbitraryAudioItem(
+            add((arbitraryAudioItem(
                 title = title,
                 artist = AudioItemTestUtil.arbitraryArtist(givenName = artistName).next(),
                 path = tempDirectory.resolve("$title.mp3"), duration = duration

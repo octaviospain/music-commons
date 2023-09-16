@@ -1,9 +1,6 @@
 package net.transgressoft.commons.music.waveform
 
 import kotlinx.serialization.builtins.serializer
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
-import kotlinx.serialization.modules.subclass
 import net.transgressoft.commons.data.JsonFileRepository
 import net.transgressoft.commons.data.StandardDataEvent
 import net.transgressoft.commons.music.audio.AudioItem
@@ -35,12 +32,4 @@ class AudioWaveformJsonRepository(file: File) :
     }
 
     override fun toString() = "WaveformRepository[${this.hashCode()}]"
-
-    companion object {
-        val audioWaveformRepositorySerializersModule = SerializersModule {
-            polymorphic(AudioWaveform::class) {
-                subclass(ScalableAudioWaveform::class)
-            }
-        }
-    }
 }

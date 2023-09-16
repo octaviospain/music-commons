@@ -1,10 +1,104 @@
 package net.transgressoft.commons.music
 
+import com.neovisionaries.i18n.CountryCode
+import net.transgressoft.commons.music.audio.*
+import org.jaudiotagger.audio.AudioFileIO
+import org.jaudiotagger.audio.AudioHeader
+import org.jaudiotagger.tag.FieldKey
+import org.jaudiotagger.tag.Tag
 import org.jetbrains.kotlin.com.google.common.base.CharMatcher
 import org.jetbrains.kotlin.com.google.common.base.Splitter
+import java.nio.file.Files
+import java.nio.file.Path
+import java.time.Duration
+import java.time.LocalDateTime
 import java.util.regex.Pattern
+import kotlin.io.path.extension
 
 object AudioUtils {
+
+    fun readAudioItemFields(audioItemPath: Path): AudioItemBuilder<AudioItem> {
+        require(Files.exists(audioItemPath)) { "File '${audioItemPath.toAbsolutePath()}' does not exist" }
+
+        val audioFile = AudioFileIO.read(audioItemPath.toFile())
+        val audioHeader = audioFile.audioHeader
+        val encoding = audioHeader.encodingType
+        val duration = Duration.ofSeconds(audioHeader.trackLength.toLong())
+        val bitRate = getBitRate(audioHeader)
+        val extension = audioItemPath.extension
+        val tag: Tag = audioFile.tag
+
+        val title = getFieldIfExisting(tag, FieldKey.TITLE) ?: ""
+        val artist = readArtist(tag)
+        val album = readAlbum(tag, extension)
+        val genre = getFieldIfExisting(tag, FieldKey.GENRE)?.let { Genre.parseGenre(it) } ?: Genre.UNDEFINED
+        val comments = getFieldIfExisting(tag, FieldKey.COMMENT)
+        val trackNumber = getFieldIfExisting(tag, FieldKey.TRACK)?.takeIf { it.isNotEmpty().and(it != "0") }?.toShortOrNull()?.takeIf { it > 0 }
+        val discNumber = getFieldIfExisting(tag, FieldKey.DISC_NO)?.takeIf { it.isNotEmpty().and(it != "0") }?.toShortOrNull()?.takeIf { it > 0 }
+        val bpm = getFieldIfExisting(tag, FieldKey.BPM)?.takeIf { it.isNotEmpty().and(it != "0") }?.toFloatOrNull()?.takeIf { it > 0 }
+        val encoder = getFieldIfExisting(tag, FieldKey.ENCODER)
+        val coverBytes = getCoverBytes(tag)
+
+        val now = LocalDateTime.now()
+        return ImmutableAudioItemBuilder()
+            .path(audioItemPath)
+            .title(title)
+            .duration(duration)
+            .bitRate(bitRate)
+            .artist(artist)
+            .album(album)
+            .genre(genre)
+            .comments(comments)
+            .trackNumber(trackNumber)
+            .discNumber(discNumber)
+            .bpm(bpm)
+            .encoder(encoder)
+            .encoding(encoding)
+            .coverImage(coverBytes)
+            .lastDateModified(now)
+            .dateOfCreation(now)
+    }
+
+    fun getCoverBytes(audioItem: AudioItem) = getCoverBytes(AudioFileIO.read(audioItem.path.toFile()).tag)
+
+    private fun getCoverBytes(tag: Tag): ByteArray? = tag.artworkList.isNotEmpty().takeIf { it }?.let { tag.firstArtwork.binaryData }
+
+    private fun getFieldIfExisting(tag: Tag, fieldKey: FieldKey): String? = tag.hasField(fieldKey).takeIf { it }.run { tag.getFirst(fieldKey) }
+
+    private fun getBitRate(audioHeader: AudioHeader): Int {
+        val bitRate = audioHeader.bitRate
+        return if ("~" == bitRate.substring(0, 1)) {
+            bitRate.substring(1).toInt()
+        } else {
+            bitRate.toInt()
+        }
+    }
+
+    private fun readArtist(tag: Tag): Artist =
+        getFieldIfExisting(tag, FieldKey.ARTIST)?.let { artistName ->
+            val country = getFieldIfExisting(tag, FieldKey.COUNTRY)?.let { _country ->
+                if (_country.isNotEmpty())
+                    CountryCode.valueOf(_country)
+                else CountryCode.UNDEFINED
+            } ?: CountryCode.UNDEFINED
+            ImmutableArtist(beautifyArtistName(artistName), country)
+        } ?: ImmutableArtist.UNKNOWN
+
+    private fun readAlbum(tag: Tag, extension: String): Album =
+        with(getFieldIfExisting(tag, FieldKey.ALBUM)) {
+            return if (this == null) {
+                ImmutableAlbum.UNKNOWN
+            } else {
+                val albumArtistName = getFieldIfExisting(tag, FieldKey.ALBUM_ARTIST) ?: ""
+                val isCompilation = getFieldIfExisting(tag, FieldKey.IS_COMPILATION)?.let {
+                    if ("m4a" == extension) "1" == tag.getFirst(FieldKey.IS_COMPILATION)
+                    else "true" == tag.getFirst(FieldKey.IS_COMPILATION)
+                } ?: false
+                val year = getFieldIfExisting(tag, FieldKey.YEAR)?.toShortOrNull()?.takeIf { it > 0 }
+                val label = getFieldIfExisting(tag, FieldKey.GROUPING)?.let { ImmutableLabel(it) } as Label
+                ImmutableAlbum(this, ImmutableArtist(beautifyArtistName(albumArtistName)), isCompilation, year, label)
+            }
+        }
 
     /**********************************************************************************
      *  Function to get artist names in the title, artist field and album artist field

@@ -2,6 +2,7 @@ package net.transgressoft.commons.music.audio
 
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.assertSoftly
+import io.kotest.assertions.timing.eventually
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.inspectors.forAll
@@ -38,8 +39,9 @@ import java.io.File
 import java.nio.file.Path
 import java.time.Duration
 import kotlin.io.path.absolutePathString
+import kotlin.time.Duration.Companion.seconds
 
-internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
+internal class AudioItemJsonRepositoryTest : BehaviorSpec({
 
     lateinit var jsonFile: File
     lateinit var audioRepository: AudioItemRepository<ImmutableAudioItem>
@@ -52,18 +54,18 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
     }
 
     given("An AudioItemRepository") {
+
         and("A mp3 file") {
             checkAll(10, arbitraryMp3File, arbitraryAudioItemChange) { mp3File, audioItemChange ->
                 When("An AudioItem is created") {
                     val audioItem = ImmutableAudioItem.createFromFile(mp3File.toPath()).let {
-                        audioRepository.add(it)
+                        it.id shouldBe UNASSIGNED_ID
+                        audioRepository.add(it) shouldBe true
                         audioRepository.contains { audioItem -> it == audioItem }
-                        audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let { found ->
-                            found shouldBe it
-                        }
+                        audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let { found -> found shouldBe it }
                     }
 
-                    then("It is possible to query the repository by its artist") {
+                    then("it is possible to query the repository by its artist") {
                         audioRepository.containsAudioItemWithArtist(audioItem.artist.name) shouldBe true
                         audioRepository.containsAudioItemWithArtist(audioItem.album.albumArtist.name) shouldBe true
                         audioRepository.artistAlbums(audioItem.artist).let {
@@ -220,6 +222,16 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
                     }
                 }
 
+                eventually(2.seconds) {
+                    val loadedRepository = AudioItemJsonRepository(jsonFile)
+                    loadedRepository.size() shouldBe 1
+                    loadedRepository.findById(audioItem.id) shouldBePresent {
+                        it shouldBe audioItem
+                        it.id shouldNotBe UNASSIGNED_ID
+                    }
+                    loadedRepository shouldBe audioRepository
+                }
+
                 then("`add` with same id does not replace the previous one") {
                     val arbAudioItem = arbitraryAudioItem(id = audioItem.id, album = audioItem.album).next()
                     audioRepository.add(arbAudioItem) shouldBe false
@@ -229,7 +241,9 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
 
                 then("`add` with same album allows to query all items from the same album") {
                     val arbAudioItem = arbitraryAudioItem(album = audioItem.album).next()
+                    audioRepository.size() shouldBe 1
                     audioRepository.add(arbAudioItem) shouldBe true
+                    audioRepository.size() shouldBe 2
                     audioRepository.findById(arbAudioItem.id) shouldBePresent { found -> found.album shouldBe audioItem.album }
                     audioItem.album.audioItems().shouldContainExactlyInAnyOrder(audioItem, arbAudioItem)
                     audioRepository.contains { audioItem == it}
@@ -237,10 +251,21 @@ internal class AudioItemInMemoryRepositoryTest : BehaviorSpec({
                 }
 
                 then("`addOrReplace` with same id does replace the previous one") {
-                    val arbAudioItem = arbitraryAudioItem(id = audioItem.id, album = audioItem.album).next()
-                    audioRepository.addOrReplace(arbAudioItem) shouldBe true
-                    audioItem.album.audioItems().shouldContain(arbAudioItem)
+                    val audioItemModified = audioItem.update { title = "New title" }
+                    audioRepository.size() shouldBe 2
+                    audioRepository.addOrReplace(audioItemModified) shouldBe true
+                    audioItem.album.audioItems().shouldContain(audioItemModified)
                     audioRepository.findById(audioItem.id) shouldBePresent { found -> found.id shouldBe audioItem.id }
+                    audioRepository.contains { it.title == "New title" } shouldBe true
+
+                    eventually(2.seconds) {
+                        val loadedRepository = AudioItemJsonRepository(jsonFile)
+                        loadedRepository.size() shouldBe 2
+                        loadedRepository.findById(audioItem.id) shouldBePresent {
+                            it shouldBe audioItemModified
+                            it.title shouldBe "New title"
+                        }
+                    }
                 }
 
                 then("`addOrReplaceAll works as expected`") {

@@ -9,19 +9,20 @@ import net.transgressoft.commons.IdentifiableEntity
 import net.transgressoft.commons.data.DataEvent
 import net.transgressoft.commons.data.JsonFileRepository
 import net.transgressoft.commons.data.RepositoryBase
-import net.transgressoft.commons.data.StandardDataEvent
+import net.transgressoft.commons.data.StandardDataEvent.Type.DELETE
+import net.transgressoft.commons.data.StandardDataEvent.Type.UPDATE
 import net.transgressoft.commons.event.TransEventSubscriber
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemManipulationException
 import net.transgressoft.commons.music.audio.AudioItemRepository
-import net.transgressoft.commons.music.audio.UNASSIGNED_ID
 import net.transgressoft.commons.music.event.AudioItemEventSubscriber
 import net.transgressoft.commons.toIds
+import org.jetbrains.kotlin.com.google.common.collect.Sets
 import java.io.File
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.stream.Collectors
 import java.util.stream.Collectors.partitioningBy
+import kotlin.properties.Delegates.observable
 
 class AudioPlaylistJsonRepository(jsonFile: File) : RepositoryBase<MutableAudioPlaylist<AudioItem>, Int>(),
     AudioPlaylistRepository<AudioItem, MutableAudioPlaylist<AudioItem>> {
@@ -29,7 +30,7 @@ class AudioPlaylistJsonRepository(jsonFile: File) : RepositoryBase<MutableAudioP
     private val logger = KotlinLogging.logger {}
 
     private val idCounter: AtomicInteger = AtomicInteger(1)
-    private val playlistsMultiMap: Multimap<String, String> = MultimapBuilder.treeKeys().treeSetValues().build()
+    private val playlistsHierarchyMultiMap: Multimap<String, MutableAudioPlaylist<AudioItem>> = MultimapBuilder.treeKeys().treeSetValues().build()
     private val serializablePlaylistsRepository = JsonFileRepository(jsonFile, Int.serializer(), InternalAudioPlaylist.serializer())
 
     constructor(file: File, audioItemRepository: AudioItemRepository<AudioItem>) : this(file) {
@@ -42,9 +43,13 @@ class AudioPlaylistJsonRepository(jsonFile: File) : RepositoryBase<MutableAudioP
             entitiesById[it.id] = playlistsWithAudioItems
         }
         serializablePlaylistsRepository.runMatching({ true }) {
-            val playlistsMissingPlaylists = entitiesById[it.id] ?: throw AudioItemManipulationException("AudioPlaylist with id ${it.id} not found during deserialization")
+            val playlistsMissingPlaylists =
+                entitiesById[it.id] ?: throw AudioItemManipulationException("AudioPlaylist with id ${it.id} not found during deserialization")
             val foundPlaylists = findDeserializedPlaylistsFromIds(it.playlistIds, entitiesById)
-            playlistsMissingPlaylists.playlists.addAll(foundPlaylists)
+            playlistsMissingPlaylists.addPlaylists(foundPlaylists)
+        }
+        if (entitiesById.isNotEmpty()) {
+            logger.info { "Loaded ${entitiesById.size} playlists from file ${file.absolutePath}" }
         }
     }
 
@@ -53,23 +58,33 @@ class AudioPlaylistJsonRepository(jsonFile: File) : RepositoryBase<MutableAudioP
             audioItemRepository.findById(it).orElseThrow { AudioItemManipulationException("AudioItem with id $it not found during deserialization") }
         }.toList()
 
-    private fun findDeserializedPlaylistsFromIds(playlists: Set<Int>, playlistsById: Map<Int, MutableAudioPlaylist<AudioItem>>): List<MutableAudioPlaylist<AudioItem>> {
+    private fun findDeserializedPlaylistsFromIds(
+        playlists: Set<Int>,
+        playlistsById: Map<Int, MutableAudioPlaylist<AudioItem>>
+    ): List<MutableAudioPlaylist<AudioItem>> {
         return playlists.stream().map {
             return@map playlistsById[it] ?: throw AudioItemManipulationException("AudioPlaylist with id $it not found during deserialization")
         }.toList()
     }
 
-    override fun addPlaylist(playlist: AudioPlaylist<AudioItem>): MutableAudioPlaylist<AudioItem> {
-        require(findByName(playlist.name).isEmpty) { "Playlist with name '${playlist.name}' already exists" }
+    override fun createPlaylist(name: String): MutableAudioPlaylist<AudioItem> = createPlaylist(name, emptyList())
 
-        var playlistId = playlist.id
-        val playlistToAdd = if (playlist.id <= UNASSIGNED_ID) {
-            playlist.toMutablePlaylist().apply { id = newId() }.also { playlistId = it.id }
-        } else {
-            playlist.toMutablePlaylist()
+    override fun createPlaylist(name: String, audioItems: List<AudioItem>): MutableAudioPlaylist<AudioItem> {
+        require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
+        return MutablePlaylist(newId(), false, name, audioItems).also {
+            logger.debug { "Created playlist $it" }
+            add(it)
         }
-        assert(add(playlistToAdd)) { "Result of addition of new playlist is expected to be true" }
-        return findById(playlistId).get()
+    }
+
+    override fun createPlaylistDirectory(name: String): MutableAudioPlaylist<AudioItem> = createPlaylistDirectory(name, emptyList())
+
+    override fun createPlaylistDirectory(name: String, audioItems: List<AudioItem>): MutableAudioPlaylist<AudioItem> {
+        require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
+        return MutablePlaylist(newId(), true, name, audioItems).also {
+            logger.debug { "Created playlist directory $it" }
+            add(it)
+        }
     }
 
     private fun newId(): Int {
@@ -82,8 +97,20 @@ class AudioPlaylistJsonRepository(jsonFile: File) : RepositoryBase<MutableAudioP
 
     override val audioItemEventSubscriber: TransEventSubscriber<AudioItem, DataEvent<out AudioItem>> =
         AudioItemEventSubscriber<AudioItem>(this.toString()).apply {
-            addOnNextEventAction(StandardDataEvent.Type.DELETE) {
-                removeAudioItems(it.entities.toIds())
+            addOnNextEventAction(DELETE) { event ->
+                runMatching({ true }) {
+                    it.removeAudioItems(event.entities.toIds())
+                }
+            }
+            addOnNextEventAction(UPDATE) { event ->
+                runMatching({ true }) {
+                    val updatedAudioItems = event.entities
+                    val audioItemsToUpdate = Sets.intersection(updatedAudioItems.toIds().toSet(), it.audioItems.toIds().toSet()).toSet()
+                    if (audioItemsToUpdate.isNotEmpty()) {
+                        it.removeAudioItems(updatedAudioItems.toIds())
+                        it.addAudioItems(updatedAudioItems)
+                    }
+                }
             }
         }
 
@@ -95,7 +122,7 @@ class AudioPlaylistJsonRepository(jsonFile: File) : RepositoryBase<MutableAudioP
         var added = super.add(playlist)
         serializablePlaylistsRepository.add(playlist.toSerializablePlaylist())
         for (p in playlist.playlists) {
-            playlistsMultiMap.put(playlist.uniqueId, p.uniqueId)
+            playlistsHierarchyMultiMap.put(playlist.uniqueId, p)
             added = added or addInternal(p)
         }
         return added
@@ -136,32 +163,151 @@ class AudioPlaylistJsonRepository(jsonFile: File) : RepositoryBase<MutableAudioP
     }
 
     override fun remove(entity: MutableAudioPlaylist<AudioItem>): Boolean {
-        return super.remove(entity).also {
-            serializablePlaylistsRepository.remove(entity.toSerializablePlaylist())
+        return super.remove(entity).also { removed ->
+            if (removed) {
+                removeFromPlaylistsHierarchy(entity)
+                serializablePlaylistsRepository.remove(entity.toSerializablePlaylist())
+            }
         }
     }
 
+    private fun removeFromPlaylistsHierarchy(playlist: MutableAudioPlaylist<AudioItem>) {
+        playlistsHierarchyMultiMap.removeAll(playlist.uniqueId)
+        if (playlistsHierarchyMultiMap.containsValue(playlist)) {
+            playlistsHierarchyMultiMap.entries().stream()
+                .filter { playlist == it.value }
+                .forEach { entry ->
+                    playlistsHierarchyMultiMap.remove(entry.key, entry.value)
+                }
+        }
+        removeAll(playlist.playlists)
+    }
+
     override fun removeAll(entities: Set<MutableAudioPlaylist<AudioItem>>): Boolean {
-        return super.removeAll(entities).also {
-            serializablePlaylistsRepository.removeAll(entities.toSerializablePlaylists())
+        return super.removeAll(entities).also { removed ->
+            if (removed) {
+                entities.forEach(::removeFromPlaylistsHierarchy)
+                serializablePlaylistsRepository.removeAll(entities.toSerializablePlaylists())
+            }
         }
     }
 
     private fun Collection<AudioPlaylist<AudioItem>>.toSerializablePlaylists() = map { it.toSerializablePlaylist() }.toSet()
 
-    override fun removeAudioItems(audioItemIds: Set<Int>) {
-        runMatching({ true }) {
-            it.audioItems.removeIf { audioItem -> audioItemIds.contains(audioItem.id) }
-        }
-    }
-
-    override fun removeAudioItems(audioItems: Collection<AudioItem>) {
-        runMatching({ true }) {
-            it.audioItems.removeIf { audioItem -> audioItems.contains(audioItem) }
-        }
-    }
-
     override fun findByName(name: String): Optional<MutableAudioPlaylist<AudioItem>> = find { it.name == name }
+
+    override fun findParentPlaylist(playlist: MutableAudioPlaylist<AudioItem>): Optional<MutableAudioPlaylist<AudioItem>> =
+        if (playlistsHierarchyMultiMap.containsValue(playlist)) {
+            playlistsHierarchyMultiMap.entries().stream()
+                .filter { playlist == it.value }
+                .map { findByUniqueId(it.key).get() }
+                .findFirst()
+        } else {
+            Optional.empty()
+        }
+
+    override fun movePlaylist(playlistNameToMove: String, destinationPlaylistName: String) {
+        val playlistToMove = findByName(playlistNameToMove)
+        val destinationPlaylist = findByName(destinationPlaylistName)
+
+        require(playlistToMove.isPresent) { "Playlist '$playlistNameToMove' does not exist" }
+        require(destinationPlaylist.isPresent) { "Playlist '$destinationPlaylistName' does not exist" }
+
+        findParentPlaylist(playlistToMove.get()).ifPresent { parentPlaylist: MutableAudioPlaylist<AudioItem> ->
+            parentPlaylist.removePlaylist(playlistToMove.get())
+            logger.debug { "Playlist '$playlistNameToMove' removed from '$parentPlaylist'" }
+        }
+
+        destinationPlaylist.get().addPlaylist(playlistToMove.get())
+        logger.debug { "Playlist '$playlistNameToMove' moved to '$destinationPlaylistName'" }
+    }
+
+    override fun addAudioItemsToPlaylist(audioItems: Collection<AudioItem>, playlistName: String): Boolean {
+        return findByName(playlistName).let {
+            require(it.isPresent) { "Playlist '$playlistName' does not exist" }
+            it.get().addAudioItems(audioItems)
+        }
+    }
+
+    override fun removeAudioItemsFromPlaylist(audioItems: Collection<AudioItem>, playlistName: String): Boolean {
+        return findByName(playlistName).let {
+            require(it.isPresent) { "Playlist '$playlistName' does not exist" }
+            it.get().removeAudioItems(audioItems)
+        }
+    }
+
+    @Suppress("INAPPLICABLE_JVM_NAME")
+    @JvmName("removeAudioItemIdsFromPlaylist")
+    override fun removeAudioItemsFromPlaylist(audioItemIds: Collection<Int>, playlistName: String): Boolean {
+        return findByName(playlistName).let {
+            require(it.isPresent) { "Playlist '$playlistName' does not exist" }
+            it.get().removeAudioItems(audioItemIds)
+        }
+    }
+
+    override fun addPlaylistsToDirectory(playlistsToAdd: Set<MutableAudioPlaylist<AudioItem>>, directoryName: String): Boolean {
+        return findByName(directoryName).let {
+            require(it.isPresent) { "Directory '$directoryName' does not exist" }
+            it.get().addPlaylists(playlistsToAdd).also { added ->
+                if (added) {
+                    playlistsHierarchyMultiMap.putAll(
+                        it.get().uniqueId,
+                        playlistsToAdd
+                    )
+                }
+            }
+        }
+    }
+
+    @Suppress("INAPPLICABLE_JVM_NAME")
+    @JvmName("addPlaylistNamesToDirectory")
+    override fun addPlaylistsToDirectory(playlistNamesToAdd: Set<String>, directoryName: String): Boolean {
+        return findByName(directoryName).let {
+            require(it.isPresent) { "Directory '$directoryName' does not exist" }
+            playlistNamesToAdd.stream().map { playlistName ->
+                findByName(playlistName).orElseThrow { IllegalArgumentException("Playlist '$playlistName' does not exist") }
+            }.toList().let { playlistsToAdd ->
+                it.get().addPlaylists(playlistsToAdd).also { added ->
+                    if (added) {
+                        playlistsHierarchyMultiMap.putAll(
+                            it.get().uniqueId,
+                            playlistsToAdd
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    override fun removePlaylistsFromDirectory(playlistsToRemove: Set<MutableAudioPlaylist<AudioItem>>, directoryName: String): Boolean {
+        return findByName(directoryName).let {
+            require(it.isPresent) { "Directory '$directoryName' does not exist" }
+            it.get().removePlaylists(playlistsToRemove).also { removed ->
+                if (removed) {
+                    removeAll(playlistsToRemove)
+                    playlistsToRemove.forEach { playlist -> playlistsHierarchyMultiMap.remove(it.get().uniqueId, playlist) }
+                }
+            }
+        }
+    }
+
+    @Suppress("INAPPLICABLE_JVM_NAME")
+    @JvmName("removePlaylistNamesFromDirectory")
+    override fun removePlaylistsFromDirectory(playlistsNamesToRemove: Set<String>, directoryName: String): Boolean {
+        return findByName(directoryName).let {
+            require(it.isPresent) { "Directory '$directoryName' does not exist" }
+            playlistsNamesToRemove.stream().map { playlistName ->
+                findByName(playlistName).orElseThrow { IllegalArgumentException("Playlist '$playlistName' does not exist") }
+            }.toList().let { playlistsToRemove ->
+                it.get().removePlaylists(playlistsToRemove).also { removed ->
+                    if (removed) {
+                        removeAll(playlistsToRemove.toSet())
+                        playlistsToRemove.forEach { playlist -> playlistsHierarchyMultiMap.remove(it.get().uniqueId, playlist) }
+                    }
+                }
+            }
+        }
+    }
 
     override fun numberOfPlaylists() =
         entitiesById.values.stream()
@@ -173,56 +319,12 @@ class AudioPlaylistJsonRepository(jsonFile: File) : RepositoryBase<MutableAudioP
             .filter { it.isDirectory }
             .count().toInt()
 
-    override fun findParentPlaylist(playlist: MutableAudioPlaylist<AudioItem>): Optional<MutableAudioPlaylist<AudioItem>> =
-        if (playlistsMultiMap.containsValue(playlist.uniqueId)) {
-            playlistsMultiMap.entries().stream()
-                .filter { playlist.uniqueId == it.value }
-                .map { findByUniqueId(it.key).get() }
-                .findFirst()
-        } else {
-            Optional.empty()
-        }
-
-    override fun movePlaylist(playlistToMove: MutableAudioPlaylist<AudioItem>, destinationPlaylist: MutableAudioPlaylist<AudioItem>) {
-        findById(playlistToMove.id)
-            .ifPresent { playlist: MutableAudioPlaylist<AudioItem> ->
-                findById(destinationPlaylist.id).ifPresent { playlistDirectory: MutableAudioPlaylist<AudioItem> ->
-                    findParentPlaylist(playlistToMove).ifPresent { ancestor: MutableAudioPlaylist<AudioItem> ->
-                        playlistsMultiMap.remove(ancestor.uniqueId, playlist.uniqueId)
-                        ancestor.playlists.remove(playlist)
-                        serializablePlaylistsRepository.addOrReplace(ancestor.toSerializablePlaylist())
-                    }
-                    playlistsMultiMap.put(playlistDirectory.uniqueId, playlist.uniqueId)
-                    playlistDirectory.playlists.add(playlist)
-                    serializablePlaylistsRepository.addOrReplace(playlistDirectory.toSerializablePlaylist())
-                    logger.debug { "Playlist '${playlistToMove.name}' moved to '${destinationPlaylist.name}'" }
-                }
-            }
-    }
-
-    override fun removeAudioItemsFromPlaylist(audioItems: Collection<AudioItem>, playlist: MutableAudioPlaylist<AudioItem>) {
-        entitiesById[playlist.id]?.audioItems?.removeAll(audioItems)
-    }
-
-    override fun addPlaylistsToDirectory(playlistsToAdd: Set<MutableAudioPlaylist<AudioItem>>, directory: MutableAudioPlaylist<AudioItem>) {
-        entitiesById[directory.id]?.let {
-            if (it.isDirectory) {
-                it.playlists.addAll(playlistsToAdd)
-                playlistsMultiMap.putAll(
-                    it.uniqueId,
-                    playlistsToAdd.stream().map { d -> d.uniqueId }.collect(Collectors.toSet())
-                )
-            }
-        }
-    }
-
-    override fun addAudioItemsToPlaylist(audioItems: Collection<AudioItem>, playlist: MutableAudioPlaylist<AudioItem>) {
-        entitiesById[playlist.id]?.audioItems?.addAll(audioItems)
-    }
-
     override fun size(): Int {
+        assert(entitiesById.size == serializablePlaylistsRepository.size())
         return serializablePlaylistsRepository.size()
     }
+
+    override fun toString() = "PlaylistRepository[${this.hashCode()}]"
 
     @Serializable
     internal data class InternalAudioPlaylist(
@@ -236,12 +338,160 @@ class AudioPlaylistJsonRepository(jsonFile: File) : RepositoryBase<MutableAudioP
         override val uniqueId: String
             get() {
                 return buildString {
-                    append(id)
                     if (isDirectory) {
-                        append("-D")
+                        append("D")
                     }
-                    append("-$name")
+                    append(name)
                 }
             }
+    }
+
+    internal inner class MutablePlaylist(
+        override val id: Int,
+        isDirectory: Boolean,
+        name: String,
+        audioItems: List<AudioItem> = listOf(),
+        playlists: Set<MutableAudioPlaylist<AudioItem>> = setOf()
+    ) : MutableAudioPlaylist<AudioItem> {
+
+        override val audioItems: MutableList<AudioItem> = ArrayList(audioItems)
+        override val playlists: MutableSet<MutableAudioPlaylist<AudioItem>> = HashSet(playlists)
+
+        override var isDirectory: Boolean by observable(isDirectory) { _, oldValue, newValue ->
+            if (newValue != oldValue) {
+                serializeRepository()
+                logger.trace { "Playlist $uniqueId changed isDirectory from $oldValue to $newValue" }
+            }
+        }
+
+        private fun serializeRepository() {
+            serializablePlaylistsRepository.addOrReplace(this.toSerializablePlaylist())
+            putUpdateEvent(setOf(this))
+        }
+
+        override var name: String by observable(name) { _, oldValue, newValue ->
+            require(findByName(newValue).isPresent) { "Playlist with name '$newValue' already exists" }
+            if (newValue != oldValue) {
+                serializeRepository()
+                logger.trace { "Playlist $uniqueId changed name from $oldValue to $newValue" }
+            }
+        }
+
+        override fun addAudioItems(audioItems: Collection<AudioItem>): Boolean {
+            return this.audioItems.addAll(audioItems).also {
+                if (it) {
+                    serializeRepository()
+                    logger.debug { "Added $audioItems to playlist $uniqueId" }
+                }
+            }
+        }
+
+        override fun removeAudioItems(audioItems: Collection<AudioItem>): Boolean {
+            return this.audioItems.removeAll(audioItems).also {
+                if (it) {
+                    serializeRepository()
+                    logger.debug { "Removed $audioItems from playlist $uniqueId" }
+                }
+            }
+        }
+
+        @Suppress("INAPPLICABLE_JVM_NAME")
+        @JvmName("removeAudioItemIds")
+        override fun removeAudioItems(audioItemIds: Collection<Int>): Boolean {
+            return this.audioItems.removeIf { audioItem -> audioItemIds.contains(audioItem.id) }.also {
+                if (it) {
+                    serializeRepository()
+                    logger.debug { "Removed audio items with ids $audioItemIds from playlist $uniqueId" }
+                }
+            }
+        }
+
+        override fun addPlaylists(playlists: Collection<MutableAudioPlaylist<AudioItem>>): Boolean {
+            playlists.forEach {
+                findParentPlaylist(it).ifPresent { parentPlaylist: MutableAudioPlaylist<AudioItem> ->
+                    parentPlaylist.removePlaylist(it)
+                    logger.debug { "Playlist '${it.name}' removed from '$parentPlaylist'" }
+                }
+            }
+            return this.playlists.addAll(playlists).also {
+                if (it) {
+                    serializeRepository()
+                    playlistsHierarchyMultiMap.putAll(uniqueId, playlists)
+                    logger.debug { "Added $playlists to playlist $uniqueId" }
+                }
+            }
+        }
+
+        override fun removePlaylists(playlists: Collection<MutableAudioPlaylist<AudioItem>>): Boolean {
+            return this.playlists.removeAll(playlists.toSet()).also {
+                if (it) {
+                    serializeRepository()
+                    playlists.forEach { playlist ->
+                        playlistsHierarchyMultiMap.remove(uniqueId, playlist)
+                    }
+                    logger.debug { "Removed $playlists from playlist $uniqueId" }
+                }
+            }
+        }
+
+        @Suppress("INAPPLICABLE_JVM_NAME")
+        @JvmName("removePlaylistIds")
+        override fun removePlaylists(playlistIds: Collection<Int>): Boolean {
+            return this.playlists.removeIf { playlist -> playlistIds.contains(playlist.id) }.also {
+                if (it) {
+                    serializeRepository()
+                    playlistIds.forEach { playlistId ->
+                        findById(playlistId).ifPresent { playlist ->
+                            playlistsHierarchyMultiMap.remove(uniqueId, playlist)
+                        }
+                    }
+                    logger.debug { "Removed playlists with ids $playlistIds from playlist $uniqueId" }
+                }
+            }
+        }
+
+        override fun clearAudioItems() {
+            if (audioItems.isNotEmpty()) {
+                val audioItemsSize = audioItems.size
+                audioItems.clear()
+                serializeRepository()
+                logger.debug { "Cleared $audioItemsSize audio items from playlist $uniqueId" }
+            }
+        }
+
+        override fun clearPlaylists() {
+            if (playlists.isNotEmpty()) {
+                val playlistSize = playlists.size
+                playlists.clear()
+                serializeRepository()
+                logger.debug { "Cleared $playlistSize playlists from playlist $uniqueId" }
+            }
+        }
+
+        override fun toImmutableAudioPlaylist() = ImmutablePlaylist(id, isDirectory, name, audioItems.toList(), playlists.toSet())
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as MutablePlaylist
+
+            if (isDirectory != other.isDirectory) return false
+            if (name != other.name) return false
+            if (audioItems != other.audioItems) return false
+            if (playlists != other.playlists) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = isDirectory.hashCode()
+            result = 31 * result + name.hashCode()
+            result = 31 * result + audioItems.hashCode()
+            result = 31 * result + playlists.hashCode()
+            return result
+        }
+
+        override fun toString() = "MutablePlaylist(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$audioItems, playlists=$playlists)"
     }
 }

@@ -34,15 +34,15 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
     "Repository serializes itself to file when playlists are added" {
         val rockAudioItem = arbitraryAudioItem(title = "50s Rock hit 1").next()
         val rockAudioItems = listOf(rockAudioItem)
-        val rock = audioPlaylistRepository.addPlaylist(ImmutablePlaylistDirectory("Rock", rockAudioItems))
+        val rock = audioPlaylistRepository.createPlaylist("Rock", rockAudioItems)
 
         val rockFavAudioItem = arbitraryAudioItem(title = "Rock fav").next()
         val rockFavoritesAudioItems = listOf(rockFavAudioItem)
-        val rockFavorites = audioPlaylistRepository.addPlaylist(ImmutablePlaylist("Rock favorites", rockFavoritesAudioItems))
+        val rockFavorites = audioPlaylistRepository.createPlaylist("Rock favorites", rockFavoritesAudioItems)
 
-        audioPlaylistRepository.movePlaylist(rockFavorites, rock)
+        audioPlaylistRepository.movePlaylist(rockFavorites.name, rock.name)
 
-        audioPlaylistRepository.findById(rock.id) shouldBePresent {updatedRock ->
+        audioPlaylistRepository.findById(rock.id) shouldBePresent { updatedRock ->
             updatedRock.playlists.shouldContainOnly(rockFavorites)
             updatedRock.id shouldBe rock.id
             updatedRock.name shouldBe "Rock"
@@ -80,7 +80,8 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
     }
 
     "Existing repository loads from file" {
-        jsonFile.writeText("""
+        jsonFile.writeText(
+            """
         {
             "1": {
                 "id": 1,
@@ -93,7 +94,8 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
                 ]
             }
         }
-        """.trimIndent())
+        """.trimIndent()
+        )
 
         val audioItem = arbitraryAudioItem(id = 453374921).next()
         val audioItemRepository = mock<AudioItemRepository<AudioItem>> {
@@ -103,7 +105,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         audioPlaylistRepository = AudioPlaylistJsonRepository(jsonFile, audioItemRepository)
 
         audioPlaylistRepository.size() shouldBe 1
-        audioPlaylistRepository.contains { it.id == 1 && it.isDirectory && it.name == "Rock" && it.audioItems == listOf(audioItem) && it.playlists.isEmpty()} shouldBe true
+        audioPlaylistRepository.contains { it.id == 1 && it.isDirectory && it.name == "Rock" && it.audioItems == listOf(audioItem) && it.playlists.isEmpty() } shouldBe true
     }
 
     // ├──Best hits
@@ -121,57 +123,51 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
             arbitraryAudioItem(title = "50s Rock hit 1", duration = Duration.ofSeconds(60)).next(),
             arbitraryAudioItem(title = "50s Rock hit 2 my fav", duration = Duration.ofSeconds(230)).next()
         )
-        var rock = audioPlaylistRepository.addPlaylist(ImmutablePlaylist("Rock", rockAudioItems))
+        val rock = audioPlaylistRepository.createPlaylist("Rock", rockAudioItems)
 
         audioPlaylistRepository.findByName(rock.name) shouldBePresent { it shouldBe rock }
         val playlistsThatContainsAllAudioItemsWith50sInTitle =
             audioPlaylistRepository.search { it.audioItemsAllMatch { audioItem -> audioItem.title.contains("50s") } }
         playlistsThatContainsAllAudioItemsWith50sInTitle.shouldContainExactly(rock)
 
-        val pop = audioPlaylistRepository.addPlaylist(ImmutablePlaylist("Pop"))
+        val pop = audioPlaylistRepository.createPlaylist("Pop")
         audioPlaylistRepository.size() shouldBe 2
         audioPlaylistRepository.numberOfPlaylists() shouldBe 2
 
-        var fifties = audioPlaylistRepository.addPlaylist(ImmutablePlaylistDirectory("50s"))
-        audioPlaylistRepository.addPlaylistsToDirectory(setOf(pop, rock), fifties)
+        val fifties = audioPlaylistRepository.createPlaylistDirectory("50s")
+        audioPlaylistRepository.addPlaylistToDirectory(rock, fifties.name)
+        audioPlaylistRepository.addPlaylistToDirectory(pop.name, fifties.name)
         audioPlaylistRepository.findByName(fifties.name) shouldBePresent { it.playlists shouldContainExactly setOf(pop, rock) }
         audioPlaylistRepository.numberOfPlaylistDirectories() shouldBe 1
 
-        var sixties = audioPlaylistRepository.addPlaylist(ImmutablePlaylistDirectory("60s"))
+        val sixties = audioPlaylistRepository.createPlaylistDirectory("60s")
         sixties.playlists.isEmpty() shouldBe true
         audioPlaylistRepository.numberOfPlaylistDirectories() shouldBe 2
-        audioPlaylistRepository.findByUniqueId(sixties.id.toString() + "-D-" + sixties.name) shouldBePresent { it shouldBe sixties }
+        audioPlaylistRepository.findByUniqueId("D-" + sixties.name) shouldBePresent { it shouldBe sixties }
 
-        var bestHits = audioPlaylistRepository.addPlaylist(ImmutablePlaylistDirectory("Best hits"))
-        audioPlaylistRepository.addPlaylistsToDirectory(setOf(fifties, sixties), bestHits)
+        val bestHits = audioPlaylistRepository.createPlaylistDirectory("Best hits")
+        audioPlaylistRepository.addPlaylistsToDirectory(setOf(fifties, sixties), bestHits.name)
         bestHits.playlists.isEmpty() shouldBe false
         audioPlaylistRepository.findByName(bestHits.name) shouldBePresent { it.playlists shouldContainExactly setOf(fifties, sixties) }
 
-        val thisWeeksFavorites = audioPlaylistRepository.addPlaylist(ImmutablePlaylist("This weeks' favorites songs"))
+        val thisWeeksFavorites = audioPlaylistRepository.createPlaylist("This weeks' favorites songs")
         audioPlaylistRepository.search { it.name.contains("favorites") }.shouldContainExactly(thisWeeksFavorites)
         audioPlaylistRepository.size() shouldBe 6
         audioPlaylistRepository.addOrReplaceAll(setOf(bestHits, thisWeeksFavorites))
         audioPlaylistRepository.size() shouldBe 6
         audioPlaylistRepository.search { it.isDirectory.not() } shouldContainExactly setOf(rock, pop, thisWeeksFavorites)
 
-        fifties = audioPlaylistRepository.findByName(fifties.name).get()
-        sixties = audioPlaylistRepository.findByName(sixties.name).get()
-        bestHits = audioPlaylistRepository.findByName(bestHits.name).get()
+        audioPlaylistRepository.search { it.isDirectory } shouldContainExactly setOf(fifties, sixties, bestHits)
 
-        audioPlaylistRepository.search { it.isDirectory} shouldContainExactly setOf(fifties, sixties, bestHits)
-
-        rock = audioPlaylistRepository.findById(rock.id).get()
-        fifties = audioPlaylistRepository.findByName(fifties.name).get()
         val fiftiesItems = listOf(
             arbitraryAudioItem(title = "50s hit", duration = Duration.ofSeconds(30)).next(),
             arbitraryAudioItem(title = "50s favorite song", duration = Duration.ofSeconds(120)).next()
         )
 
-        audioPlaylistRepository.addAudioItemsToPlaylist(fiftiesItems, fifties)
+        audioPlaylistRepository.addAudioItemToPlaylist(fiftiesItems[0], fifties.name)
+        audioPlaylistRepository.addAudioItemsToPlaylist(fiftiesItems, fifties.name)
         val playlistsThatContainsAnyAudioItemsWithHitInTitle =
             audioPlaylistRepository.search { it.audioItemsAnyMatch { audioItem -> audioItem.title.contains("hit") } }
-        fifties = audioPlaylistRepository.findByName(fifties.name).get()
-        rock = audioPlaylistRepository.findByName(rock.name).get()
         playlistsThatContainsAnyAudioItemsWithHitInTitle shouldContainExactly setOf(rock, fifties)
         val playlistsThatContainsAudioItemsWithDurationBelow60 = audioPlaylistRepository.search {
             it.audioItemsAnyMatch { audioItem: AudioItem -> audioItem.duration <= Duration.ofSeconds(60) }
@@ -179,10 +175,11 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
 
         playlistsThatContainsAudioItemsWithDurationBelow60 shouldContainExactly setOf(rock, fifties)
 
-        audioPlaylistRepository.removeAudioItemsFromPlaylist(fiftiesItems, fifties)
+        audioPlaylistRepository.removeAudioItemFromPlaylist(fiftiesItems[0], fifties.name)
+        audioPlaylistRepository.removeAudioItemFromPlaylist(fiftiesItems[1].id, fifties.name)
 
         audioPlaylistRepository.findById(fifties.id) shouldBePresent { it.audioItems.isEmpty() shouldBe true }
-        audioPlaylistRepository.removeAudioItems(rockAudioItems)
+        audioPlaylistRepository.runMatching({ true }) { it.removeAudioItems(rockAudioItems) }
         audioPlaylistRepository.findById(rock.id) shouldBePresent { it.audioItems.isEmpty() shouldBe true }
 
         audioPlaylistRepository.clear()
@@ -195,17 +192,19 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
     // │     └──Pop
     // └──Selection of playlists
     "Move playlists in the hierarchy" {
-        val rock = audioPlaylistRepository.addPlaylist(ImmutablePlaylist("Rock"))
-        audioPlaylistRepository.findByName(rock.name) shouldBePresent { it == rock }
-        val pop = audioPlaylistRepository.addPlaylist(ImmutablePlaylist("Pop"))
-        var fifties = audioPlaylistRepository.addPlaylist(ImmutablePlaylistDirectory("50s"))
-        audioPlaylistRepository.addPlaylistsToDirectory(setOf(rock, pop), fifties)
-        val bestHits = audioPlaylistRepository.addPlaylist(ImmutablePlaylistDirectory("Best hits"))
-        audioPlaylistRepository.addPlaylistsToDirectory(setOf(fifties), bestHits)
-        var selection = audioPlaylistRepository.addPlaylist(ImmutablePlaylistDirectory("Selection of playlists"))
+        val rock = audioPlaylistRepository.createPlaylist("Rock")
+        audioPlaylistRepository.findByName(rock.name) shouldBePresent { it shouldBe  rock }
+        val pop = audioPlaylistRepository.createPlaylist("Pop")
+        val fifties = audioPlaylistRepository.createPlaylistDirectory("50s")
+        audioPlaylistRepository.addPlaylistsToDirectory(setOf(rock.name, pop.name), fifties.name)
+        val bestHits = audioPlaylistRepository.createPlaylistDirectory("Best hits")
+        audioPlaylistRepository.addPlaylistsToDirectory(setOf(fifties.name), bestHits.name)
+        val selection = audioPlaylistRepository.createPlaylistDirectory("Selection of playlists")
         audioPlaylistRepository.size() shouldBe 5
 
-        audioPlaylistRepository.movePlaylist(rock, selection)
+        selection.addPlaylist(rock)
+        // same result as doing
+        // audioPlaylistRepository.movePlaylist(rock.name, selection.name)
 
         // ├──Best hits
         // │  └──50s
@@ -216,13 +215,68 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         audioPlaylistRepository.size() shouldBe 5
         audioPlaylistRepository.findByName(selection.name) shouldBePresent { it.playlists.shouldContainExactly(rock) }
         audioPlaylistRepository.findById(fifties.id) shouldBePresent { it.playlists.shouldNotContain(rock) }
+        audioPlaylistRepository.findByName(bestHits.name) shouldBePresent { it.playlists.shouldContainExactly(fifties) }
+
+        eventually(2.seconds) {
+            jsonFile.readText() shouldBe """
+            {
+                "${rock.id}": {
+                    "id": ${rock.id},
+                    "isDirectory": ${rock.isDirectory},
+                    "name": "${rock.name}",
+                    "audioItemIds": [
+                    ],
+                    "playlistIds": [
+                    ]
+                },
+                "${pop.id}": {
+                    "id": ${pop.id},
+                    "isDirectory": ${pop.isDirectory},
+                    "name": "${pop.name}",
+                    "audioItemIds": [
+                    ],
+                    "playlistIds": [
+                    ]
+                },
+                "${fifties.id}": {
+                    "id": ${fifties.id},
+                    "isDirectory": ${fifties.isDirectory},
+                    "name": "${fifties.name}",
+                    "audioItemIds": [
+                    ],
+                    "playlistIds": [
+                        ${pop.id}
+                    ]
+                },
+                "${bestHits.id}": {
+                    "id": ${bestHits.id},
+                    "isDirectory": ${bestHits.isDirectory},
+                    "name": "${bestHits.name}",
+                    "audioItemIds": [
+                    ],
+                    "playlistIds": [
+                        ${fifties.id}
+                    ]
+                },
+                "${selection.id}": {
+                    "id": ${selection.id},
+                    "isDirectory": ${selection.isDirectory},
+                    "name": "${selection.name}",
+                    "audioItemIds": [
+                    ],
+                    "playlistIds": [
+                        ${rock.id}
+                    ]
+                }
+            }
+            """.trimIndent()
+        }
 
         // --
 
-        fifties = audioPlaylistRepository.findByName(fifties.name).get()
-        selection = audioPlaylistRepository.findByName(selection.name).get()
-
-        audioPlaylistRepository.movePlaylist(selection, fifties)
+        audioPlaylistRepository.movePlaylist(selection.name, fifties.name)
+        // same result as doing
+        // fifties.addPlaylist(selection)
 
         // └──Best hits
         //    └──50s
@@ -233,15 +287,125 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         audioPlaylistRepository.size() shouldBe 5
         audioPlaylistRepository.findByName(selection.name) shouldBePresent { it.playlists.shouldContainExactly(rock) }
         audioPlaylistRepository.findByName(fifties.name) shouldBePresent { it.playlists shouldContainExactly setOf(pop, selection) }
+
+        eventually(2.seconds) {
+            jsonFile.readText() shouldBe """
+            {
+                "${rock.id}": {
+                    "id": ${rock.id},
+                    "isDirectory": ${rock.isDirectory},
+                    "name": "${rock.name}",
+                    "audioItemIds": [
+                    ],
+                    "playlistIds": [
+                    ]
+                },
+                "${pop.id}": {
+                    "id": ${pop.id},
+                    "isDirectory": ${pop.isDirectory},
+                    "name": "${pop.name}",
+                    "audioItemIds": [
+                    ],
+                    "playlistIds": [
+                    ]
+                },
+                "${fifties.id}": {
+                    "id": ${fifties.id},
+                    "isDirectory": ${fifties.isDirectory},
+                    "name": "${fifties.name}",
+                    "audioItemIds": [
+                    ],
+                    "playlistIds": [
+                        ${pop.id},
+                        ${selection.id}
+                    ]
+                },
+                "${bestHits.id}": {
+                    "id": ${bestHits.id},
+                    "isDirectory": ${bestHits.isDirectory},
+                    "name": "${bestHits.name}",
+                    "audioItemIds": [
+                    ],
+                    "playlistIds": [
+                        ${fifties.id}
+                    ]
+                },
+                "${selection.id}": {
+                    "id": ${selection.id},
+                    "isDirectory": ${selection.isDirectory},
+                    "name": "${selection.name}",
+                    "audioItemIds": [
+                    ],
+                    "playlistIds": [
+                        ${rock.id}
+                    ]
+                }
+            }
+            """.trimIndent()
+        }
+
+        audioPlaylistRepository.removeAll(setOf(bestHits))
+
+        audioPlaylistRepository.size() shouldBe 0
+        audioPlaylistRepository.isEmpty shouldBe true
+        bestHits.playlists.shouldContainExactly(fifties)
+        fifties.playlists shouldContainExactly setOf(pop, selection)
+        selection.playlists.shouldContainExactly(rock)
+        rock.playlists.isEmpty() shouldBe true
+        pop.playlists.isEmpty() shouldBe true
+
+        eventually(2.seconds) {
+            jsonFile.readText() shouldBe "{\n}"
+        }
+
+    }
+
+    "Removing playlist directory from repository is recursive and changes reflected on playlists" {
+        val pop = audioPlaylistRepository.createPlaylist("Pop")
+        val fifties = audioPlaylistRepository.createPlaylistDirectory("50s").also { it.addPlaylist(pop) }
+        val bestHits = audioPlaylistRepository.createPlaylistDirectory("Best hits").also { it.addPlaylist(fifties) }
+        val rock = audioPlaylistRepository.createPlaylist("Rock")
+        val selection = audioPlaylistRepository.createPlaylistDirectory("Selection of playlists").also { it.addPlaylist(rock) }
+
+        // ├──Best hits
+        // │  └──50s
+        // │     └──Pop
+        // └──Selection of playlists
+        //    └──Rock
+
+        audioPlaylistRepository.size() shouldBe 5
+        audioPlaylistRepository.findByName(selection.name) shouldBePresent { it.playlists.shouldContainExactly(rock) }
+        audioPlaylistRepository.findById(fifties.id) shouldBePresent { it.playlists.shouldNotContain(rock) }
+        audioPlaylistRepository.findByName(bestHits.name) shouldBePresent { it.playlists.shouldContainExactly(fifties) }
+
+        audioPlaylistRepository.removePlaylistFromDirectory(fifties.name, bestHits.name)
+
+        // ├──Best hits
+        // └──Selection of playlists
+        //    └──Rock
+
+        audioPlaylistRepository.size() shouldBe 3
+        audioPlaylistRepository.findByName(pop.name).isEmpty shouldBe true
+        audioPlaylistRepository.findByUniqueId(fifties.uniqueId).isEmpty shouldBe true
+        bestHits.playlists.isEmpty() shouldBe true
+        fifties.playlists.shouldContainExactly(pop)
+
+        audioPlaylistRepository.removePlaylistFromDirectory(rock, selection.name)
+
+        // ├──Best hits
+        // └──Selection of playlists
+
+        audioPlaylistRepository.size() shouldBe 2
+        selection.playlists.isEmpty() shouldBe true
     }
 
     "Create playlists with existing name" {
-        val newPlaylistDirectory = audioPlaylistRepository.addPlaylist(ImmutablePlaylistDirectory("New playlist"))
+        val newPlaylistDirectory = audioPlaylistRepository.createPlaylistDirectory("New playlist")
 
-        shouldThrowMessage("Playlist with name 'New playlist' already exists") { audioPlaylistRepository.addPlaylist(ImmutablePlaylistDirectory("New playlist")) }
+        shouldThrowMessage("Playlist with name 'New playlist' already exists") { audioPlaylistRepository.createPlaylistDirectory("New playlist") }
         audioPlaylistRepository.size() shouldBe 1
 
-        shouldThrowMessage("Playlist with name 'New playlist' already exists") { audioPlaylistRepository.addPlaylist(ImmutablePlaylist("New playlist")) }
+        shouldThrowMessage("Playlist with name 'New playlist' already exists") { audioPlaylistRepository.createPlaylist("New playlist") }
         audioPlaylistRepository.size() shouldBe 1
 
         audioPlaylistRepository.remove(newPlaylistDirectory) shouldBe true

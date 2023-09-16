@@ -14,7 +14,6 @@ import net.transgressoft.commons.music.audio.AudioItemTestUtil.mp3File
 import net.transgressoft.commons.music.audio.ImmutableAudioItem
 import net.transgressoft.commons.music.playlist.AudioPlaylistJsonRepository
 import net.transgressoft.commons.music.playlist.AudioPlaylistRepository
-import net.transgressoft.commons.music.playlist.ImmutablePlaylist
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
 import net.transgressoft.commons.music.waveform.AudioWaveformJsonRepository
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
@@ -37,7 +36,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         audioPlaylistRepository.clear()
     }
 
-    "Operations from Audio Item repository impact other subscribed repositories" {
+    "Operations on audio items impact subscribed repositories" {
         audioItemRepository.subscribe(audioWaveformRepository.audioItemEventSubscriber)
         audioItemRepository.subscribe(audioPlaylistRepository.audioItemEventSubscriber)
 
@@ -57,13 +56,22 @@ internal class MusicLibraryIntegrationTest : StringSpec({
             waveformsRepoFile.readText() shouldContain waveform.get().id.toString()
         }
 
-        audioPlaylistRepository.addPlaylist(ImmutablePlaylist("New ones")).let {
-            audioPlaylistRepository.addAudioItemsToPlaylist(listOf(audioItem), it)
-        }
+        audioPlaylistRepository.createPlaylist("New ones").also { it.addAudioItem(audioItem) }
 
         eventually(2.seconds) {
             playlistRepoFile.readText() shouldContain "New ones"
             playlistRepoFile.readText() shouldContain audioItem.id.toString()
+        }
+
+        audioItemRepository.addOrReplace(audioItem.update { title = "New title" })
+        val updatedAudioItem = audioItemRepository.findById(audioItem.id).get()
+
+        eventually(2.seconds) {
+            audioItemRepository.contains { it.title == "New title" }
+            audioItemRepository.size() shouldBe 1
+            audioRepoFile.readText() shouldContain "New title"
+            val updatedPlaylist = audioPlaylistRepository.findByName("New ones").get()
+            updatedPlaylist.audioItems.contains(updatedAudioItem) shouldBe true
         }
 
         audioItemRepository.remove(audioItem) shouldBe true

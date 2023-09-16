@@ -4,6 +4,7 @@ import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import net.transgressoft.commons.music.AudioUtils
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
@@ -51,7 +52,7 @@ class ImmutableAudioItem internal constructor(
 ) {
 
     companion object {
-        fun createFromFile(audioItemPath: Path): ImmutableAudioItem = ImmutableAudioItemBuilder(readAudioItemFields(audioItemPath)).build()
+        fun createFromFile(audioItemPath: Path): ImmutableAudioItem = ImmutableAudioItemBuilder(AudioUtils.readAudioItemFields(audioItemPath)).build()
     }
 
     override fun update(change: AudioItemMetadataChange): ImmutableAudioItem =

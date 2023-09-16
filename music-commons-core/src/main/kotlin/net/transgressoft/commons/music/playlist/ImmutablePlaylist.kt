@@ -1,19 +1,15 @@
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.UNASSIGNED_ID
 
-data class ImmutablePlaylist(
+internal class ImmutablePlaylist(
+    override var id: Int = UNASSIGNED_ID,
+    override val isDirectory: Boolean,
     override val name: String,
     override val audioItems: List<AudioItem> = emptyList(),
     override val playlists: Set<AudioPlaylist<AudioItem>> = emptySet()
-) : ImmutablePlaylistBase<AudioItem>(name, audioItems, playlists) {
-
-    internal constructor(id: Int, name: String, audioItems: List<AudioItem>, playlists: Set<AudioPlaylist<AudioItem>>)
-            : this(name, audioItems, playlists) {
-        this.id = id
-    }
-
-    override val isDirectory = false
+) : AudioPlaylist<AudioItem> {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -21,6 +17,7 @@ data class ImmutablePlaylist(
 
         other as ImmutablePlaylist
 
+        if (isDirectory != other.isDirectory) return false
         if (name != other.name) return false
         if (audioItems != other.audioItems) return false
         if (playlists != other.playlists) return false
@@ -36,5 +33,5 @@ data class ImmutablePlaylist(
         return result
     }
 
-    override fun toString() = "ImmutablePlaylist(id=$id, name='$name', audioItems=$audioItems, playlists=$playlists)"
+    override fun toString() = "ImmutablePlaylist(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$audioItems, playlists=$playlists)"
 }
