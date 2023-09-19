@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 @SerialName("DefaultAlbum")
-data class ImmutableAlbum(
+open class ImmutableAlbum(
     override val name: String,
     override val albumArtist: Artist,
     override val isCompilation: Boolean = false,

@@ -5,7 +5,6 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlinx.serialization.json.JsonClassDiscriminator
-import net.transgressoft.commons.IdentifiableEntity
 import net.transgressoft.commons.music.AudioUtils
 import java.nio.file.Path
 import java.time.Duration
@@ -32,15 +31,15 @@ abstract class AudioItemBase(
     @Transient override val bpm: Float? = null,
     @Transient override val encoder: String? = null,
     @Transient override val encoding: String? = null,
-    @Transient private val _coverImage: ByteArray? = null,
+    @Transient private val initialCoverImage: ByteArray? = null,
     @Transient override val dateOfCreation: LocalDateTime = LocalDateTime.now(),
     @Transient override val lastDateModified: LocalDateTime = dateOfCreation
 ) : AudioItem, Comparable<AudioItem> {
 
     @Transient override val id: Int = UNASSIGNED_ID
 
-    override val coverImage: ByteArray?
-        get() = _coverImage ?: AudioUtils.getCoverBytes(this)
+    override val coverImage: ByteArray? = initialCoverImage
+        get() = field ?: AudioUtils.getCoverBytes(this)
 
     override val uniqueId by lazy {
         val fileName = path.fileName.toString().replace(' ', '_')
@@ -63,12 +62,11 @@ abstract class AudioItemBase(
         path.toFile().length()
     }
 
-    fun toBuilder() = ImmutableAudioItemBuilder(this)
+    override fun toBuilder(): AudioItemBuilder<out AudioItem> = ImmutableAudioItemBuilder(this)
 
     override suspend fun writeMetadata() = JAudioTaggerMetadataWriter().writeMetadata(this)
 
-    override operator fun compareTo(other: AudioItem) =
-        Comparator.comparing(IdentifiableEntity<Int>::uniqueId, java.lang.String.CASE_INSENSITIVE_ORDER).compare(this, other)
+    override operator fun compareTo(other: AudioItem) = audioItemTrackDiscNumberComparator.compare(this, other)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -87,4 +85,35 @@ abstract class AudioItemBase(
     }
 
     override fun hashCode() = Objects.hashCode(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration)
+}
+
+internal val audioItemTrackDiscNumberComparator = Comparator<AudioItem> { audioItem1, audioItem2 ->
+    when {
+        audioItem1.discNumber == null && audioItem2.discNumber == null -> {
+            // Both discNumbers are null, compare by trackNumber
+            when {
+                audioItem1.trackNumber == null && audioItem2.trackNumber == null -> 0
+                audioItem1.trackNumber == null -> 1
+                audioItem2.trackNumber == null -> -1
+                else -> audioItem1.trackNumber!! - audioItem2.trackNumber!!
+            }
+        }
+        audioItem1.discNumber == null -> 1
+        audioItem2.discNumber == null -> -1
+        else -> {
+            // Compare non-null discNumbers
+            if (audioItem1.discNumber == audioItem2.discNumber) {
+                // If discNumbers are equal, compare by trackNumber
+                when {
+                    audioItem1.trackNumber == null && audioItem2.trackNumber == null -> 0
+                    audioItem1.trackNumber == null -> 1
+                    audioItem2.trackNumber == null -> -1
+                    else -> audioItem1.trackNumber!! - audioItem2.trackNumber!!
+                }
+            } else {
+                // Different discNumbers, compare by discNumber
+                audioItem1.discNumber!! - audioItem2.discNumber!!
+            }
+        }
+    }
 }

@@ -6,7 +6,7 @@ import net.transgressoft.commons.event.TransEventSubscriber
 import net.transgressoft.commons.music.audio.AudioItem
 import java.util.concurrent.CompletableFuture
 
-interface AudioWaveformRepository<W : AudioWaveform> : Repository<W, Int> {
+interface AudioWaveformRepository<W : AudioWaveform> : Repository<Int, W> {
 
     val audioItemEventSubscriber: TransEventSubscriber<AudioItem, DataEvent<out AudioItem>>
 

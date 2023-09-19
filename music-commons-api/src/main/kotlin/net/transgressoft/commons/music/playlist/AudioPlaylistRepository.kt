@@ -10,7 +10,7 @@ import java.util.concurrent.Flow
 /**
  * @author Octavio Calleya
  */
-interface AudioPlaylistRepository<I : AudioItem, P : MutableAudioPlaylist<I>> : Repository<P, Int>, Flow.Publisher<DataEvent<P>> {
+interface AudioPlaylistRepository<I : AudioItem, P : MutableAudioPlaylist<I>> : Repository<Int, P>, Flow.Publisher<DataEvent<P>> {
 
     val audioItemEventSubscriber: TransEventSubscriber<I, DataEvent<out I>>
 

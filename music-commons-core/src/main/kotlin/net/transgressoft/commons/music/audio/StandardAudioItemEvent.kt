@@ -14,4 +14,7 @@ sealed class StandardAudioItemEvent : AudioItemEvent<ImmutableAudioItem> {
 }
 
 fun StandardAudioItemEvent.isPlayed(): Boolean = this.type == StandardAudioItemEvent.Type.PLAYED
-fun StandardAudioItemEvent.Type.of(entities: Collection<ImmutableAudioItem>): AudioItemEvent<ImmutableAudioItem> = StandardAudioItemEvent.Played(entities)
+fun StandardAudioItemEvent.Type.of(entities: Collection<ImmutableAudioItem>): AudioItemEvent<ImmutableAudioItem> =
+    when(this) {
+        StandardAudioItemEvent.Type.PLAYED -> StandardAudioItemEvent.Played(entities)
+    }

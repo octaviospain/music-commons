@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.stream.Collectors.partitioningBy
 import kotlin.properties.Delegates.observable
 
-class AudioPlaylistJsonRepository(jsonFile: File) : RepositoryBase<MutableAudioPlaylist<AudioItem>, Int>(),
+class AudioPlaylistJsonRepository(jsonFile: File) : RepositoryBase<Int, MutableAudioPlaylist<AudioItem>>(),
     AudioPlaylistRepository<AudioItem, MutableAudioPlaylist<AudioItem>> {
 
     private val logger = KotlinLogging.logger {}
@@ -194,7 +194,7 @@ class AudioPlaylistJsonRepository(jsonFile: File) : RepositoryBase<MutableAudioP
 
     private fun Collection<AudioPlaylist<AudioItem>>.toSerializablePlaylists() = map { it.toSerializablePlaylist() }.toSet()
 
-    override fun findByName(name: String): Optional<MutableAudioPlaylist<AudioItem>> = find { it.name == name }
+    override fun findByName(name: String): Optional<MutableAudioPlaylist<AudioItem>> = findFirst { it.name == name }
 
     override fun findParentPlaylist(playlist: MutableAudioPlaylist<AudioItem>): Optional<MutableAudioPlaylist<AudioItem>> =
         if (playlistsHierarchyMultiMap.containsValue(playlist)) {

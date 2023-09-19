@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 @SerialName("DefaultLabel")
-data class ImmutableLabel(override val name: String, override val countryCode: CountryCode = CountryCode.UNDEFINED) : Label {
+internal data class ImmutableLabel(override val name: String, override val countryCode: CountryCode = CountryCode.UNDEFINED) : Label {
 
     override fun compareTo(other: Label): Int {
         val result = compareValues(name, other.name)

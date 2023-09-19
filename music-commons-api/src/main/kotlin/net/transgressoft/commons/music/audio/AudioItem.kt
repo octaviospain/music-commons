@@ -34,5 +34,7 @@ interface AudioItem : IdentifiableEntity<Int> {
 
     fun update(changeAction: AudioItemMetadataChange.() -> Unit): AudioItem
 
+    fun toBuilder(): AudioItemBuilder<out AudioItem>
+
     suspend fun writeMetadata()
 }

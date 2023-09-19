@@ -44,7 +44,7 @@ import kotlin.time.Duration.Companion.seconds
 internal class AudioItemJsonRepositoryTest : BehaviorSpec({
 
     lateinit var jsonFile: File
-    lateinit var audioRepository: AudioItemRepository<ImmutableAudioItem>
+    lateinit var audioRepository: AudioItemRepository<MutableAudioItem>
 
     fun Album.audioItems(): Set<AudioItem> = audioRepository.search { it.album == this }.toSet()
 

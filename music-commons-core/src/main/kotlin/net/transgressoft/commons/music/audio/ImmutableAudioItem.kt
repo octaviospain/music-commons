@@ -14,7 +14,7 @@ import java.time.LocalDateTime
  */
 @Serializable
 @SerialName("DefaultAudioItem")
-class ImmutableAudioItem internal constructor(
+internal class ImmutableAudioItem internal constructor(
     override val id: Int,
     @Contextual override val path: Path,
     override val title: String,
@@ -52,11 +52,11 @@ class ImmutableAudioItem internal constructor(
 ) {
 
     companion object {
-        fun createFromFile(audioItemPath: Path): ImmutableAudioItem = ImmutableAudioItemBuilder(AudioUtils.readAudioItemFields(audioItemPath)).build()
+        fun createFromFile(audioItemPath: Path): AudioItem = ImmutableAudioItemBuilder(AudioUtils.readAudioItemFields(audioItemPath)).build()
     }
 
     override fun update(change: AudioItemMetadataChange): ImmutableAudioItem =
-        toBuilder().also {
+        ImmutableAudioItemBuilder(this).also {
             it.title = change.title ?: title
             it.artist = change.artist ?: artist
             it.album = ImmutableAlbum(

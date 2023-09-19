@@ -12,7 +12,13 @@ import kotlinx.serialization.modules.contextual
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
 import mu.KotlinLogging
+import net.transgressoft.commons.data.DataEvent
 import net.transgressoft.commons.data.JsonFileRepository
+import net.transgressoft.commons.data.RepositoryBase
+import net.transgressoft.commons.data.StandardDataEvent.Type.CREATE
+import net.transgressoft.commons.event.TransEventSubscriber
+import net.transgressoft.commons.music.AudioUtils
+import net.transgressoft.commons.music.event.AudioItemEventSubscriber
 import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -23,38 +29,31 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
 import java.util.stream.Collectors
+import kotlin.collections.HashMap
 
 /**
  * @author Octavio Calleya
  */
-class AudioItemJsonRepository(file: File) :
-    JsonFileRepository<ImmutableAudioItem, Int>(file, Int.serializer(), ImmutableAudioItem.serializer(), audioItemSerializerModule), AudioItemRepository<ImmutableAudioItem> {
+class AudioItemJsonRepository(file: File) : RepositoryBase<Int, MutableAudioItem>(), AudioItemRepository<MutableAudioItem> {
 
     private val logger = KotlinLogging.logger(javaClass.name)
 
     private val idCounter = AtomicInteger(1)
+    private val serializableAudioItemsRepository =
+        JsonFileRepository(file, Int.serializer(), ImmutableAudioItem.serializer(), audioItemSerializerModule)
+    private val artisCatalogAudioItemSubscriber = AudioItemEventSubscriber<MutableAudioItem>("InnerAudioItemSubscriber")
 
-    private val albumsByArtist: MutableMap<Artist, MutableSet<Album>> = mutableMapOf()
+    override val artistCatalogRegistry: ArtistCatalogRegistry = ArtistCatalogInnerRegistry()
 
     init {
-        entitiesById.values.forEach { addOrReplaceAlbumByArtist(it, true) }
+        subscribe(artisCatalogAudioItemSubscriber)
     }
 
-    override fun add(entity: ImmutableAudioItem): Boolean {
-        val entityToAdd = fillMissingId(entity)
-
-        val added = super.add(entityToAdd)
-        addOrReplaceAlbumByArtist(entityToAdd, added)
-
-        return added
+    override fun add(entity: MutableAudioItem) = super.add(entity).also {
+        serializableAudioItemsRepository.add(entity.toImmutableAudioItem())
     }
 
-    private fun fillMissingId(entity: ImmutableAudioItem) =
-        if (entity.id <= UNASSIGNED_ID) {
-            entity.toBuilder().id(newId()).build().also {
-                logger.debug { "New id ${it.id} assigned to audioItem with uniqueId ${entity.uniqueId}" }
-            }
-        } else entity
+    override fun createFromFile(audioItemPath: Path): MutableAudioItem = MutableAudioItemImpl(newId(), AudioUtils.readAudioItemFields(audioItemPath))
 
     private fun newId(): Int {
         var id: Int
@@ -62,30 +61,6 @@ class AudioItemJsonRepository(file: File) :
             id = idCounter.getAndIncrement()
         } while (contains(id))
         return id
-    }
-
-    private fun addOrReplaceAlbumByArtist(audioItem: ImmutableAudioItem, added: Boolean) {
-        val artist = audioItem.artist
-        val album = audioItem.album
-        if (added) {
-            albumsByArtist[artist]?.let {
-                val mappedAlbums = albumsByArtist[artist]
-                if (!it.contains(album)) {
-                    mappedAlbums!!.add(album)
-                }
-            } ?: run {
-                val newSet = HashSet<Album>()
-                newSet.add(album)
-                albumsByArtist[artist] = newSet
-            }
-        }
-    }
-
-    override fun addOrReplace(entity: ImmutableAudioItem): Boolean {
-        val entityToAdd = fillMissingId(entity)
-        val addedOrReplaced = super.addOrReplace(entityToAdd)
-        addOrReplaceAlbumByArtist(entityToAdd, addedOrReplaced)
-        return addedOrReplaced
     }
 
     override fun addOrReplaceAll(entities: Set<ImmutableAudioItem>): Boolean {
@@ -149,22 +124,164 @@ class AudioItemJsonRepository(file: File) :
             .also { it?.shuffle() } ?: emptyList()
     }
 
-    override fun artists(): Set<Artist> = albumsByArtist.keys.toSet()
-
-    override fun artistAlbums(artist: Artist): Set<Album> = albumsByArtist[artist]?.toSet() ?: emptySet()
-
-    override fun albumAudioItems(album: Album): Set<ImmutableAudioItem> = entitiesById.values.filter { it.album == album }.toSet()
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false
         val that = other as AudioItemJsonRepository
-        return entitiesById == that.entitiesById && albumsByArtist == that.albumsByArtist
+        return entitiesById == that.entitiesById && artistCatalogRegistry == that.artistCatalogRegistry
     }
 
-    override fun hashCode() = Objects.hash(entitiesById, albumsByArtist)
+    override fun hashCode() = Objects.hash(entitiesById, artistCatalogRegistry)
 
-    override fun toString() = "AudioItemJsonRepository[entityCount=${entitiesById.size}, albumCount=${albumsByArtist.size}]"
+    override fun toString() = "AudioItemJsonRepository[entityCount=${entitiesById.size}, albumCount=${artistCatalogRegistry.size()}]"
+
+    internal inner class MutableAudioItemImpl internal constructor(
+        override val id: Int,
+        audioItemBuilder: AudioItemBuilder<AudioItem>
+    ) : MutableAudioItem, AudioItemBase(
+        audioItemBuilder.path,
+        audioItemBuilder.title,
+        audioItemBuilder.duration,
+        audioItemBuilder.bitRate,
+        audioItemBuilder.artist,
+        audioItemBuilder.album,
+        audioItemBuilder.genre,
+        audioItemBuilder.comments,
+        audioItemBuilder.trackNumber,
+        audioItemBuilder.discNumber,
+        audioItemBuilder.bpm,
+        audioItemBuilder.encoder,
+        audioItemBuilder.encoding,
+        audioItemBuilder.coverImage,
+        audioItemBuilder.dateOfCreation,
+        audioItemBuilder.lastDateModified
+    ) {
+
+        override var coverImage: ByteArray? = audioItemBuilder.coverImage
+            get() = field ?: AudioUtils.getCoverBytes(this)
+
+        override var lastDateModified: LocalDateTime = audioItemBuilder.lastDateModified
+
+        override fun update(change: AudioItemMetadataChange): MutableAudioItem {
+            change.let { theChange ->
+                theChange.title?.let { title = it }
+                theChange.artist?.let { artist = it }
+                theChange.coverImage?.let { coverImage = it }
+                theChange.genre?.let { genre = it }
+                theChange.comments?.let { comments = it }
+                theChange.trackNumber?.let { trackNumber = it }
+                theChange.discNumber?.let { discNumber = it }
+                theChange.bpm?.let { bpm = it }
+                val newAlbum = ImmutableAlbum(
+                    theChange.albumName ?: album.name,
+                    theChange.artist ?: album.albumArtist,
+                    theChange.isCompilation ?: album.isCompilation,
+                    theChange.year ?: album.year,
+                    theChange.label ?: album.label
+                )
+                if (newAlbum != album)
+                    album = newAlbum
+            }
+            lastDateModified = LocalDateTime.now()
+            return this
+        }
+
+        override fun update(changeAction: AudioItemMetadataChange.() -> Unit): MutableAudioItem =
+            AudioItemMetadataChange().let { change ->
+                change.changeAction()
+                update(change)
+            }
+
+        override fun toImmutableAudioItem(): AudioItem =
+            ImmutableAudioItem(
+                id,
+                path,
+                title,
+                duration,
+                bitRate,
+                artist,
+                album,
+                genre,
+                comments,
+                trackNumber,
+                discNumber,
+                bpm,
+                encoder,
+                encoding,
+                coverImage,
+                dateOfCreation,
+                lastDateModified
+            )
+
+        override fun toString() = "MutableAudioItem(id=$id, path=$path, title=$title, artist=${artist.name})"
+    }
+
+    internal inner class MutableArtistCatalog(override val artist: Artist, override val albums: MutableMap<String, MutableExtendedAlbum> = HashMap()) : ArtistCatalog {
+
+        internal constructor(audioItem: AudioItem) : this(audioItem.artist) {
+            audioItem.album.let { album ->
+                val newAlbum = MutableExtendedAlbum(album.name, album.albumArtist, album.isCompilation, album.year, album.label)
+                newAlbum.audioItems.add(audioItem)
+                albums[album.name] = newAlbum
+            }
+        }
+
+        override val id: String = "${artist.name}-${artist.countryCode.name}"
+
+        override val uniqueId: String = "${artist.name}-${artist.countryCode.name}"
+
+        internal fun addAudioItem(audioItem: AudioItem) {
+            albums.merge(audioItem.album.name, MutableExtendedAlbum(audioItem)) { album, _ ->
+                album.addAudioItem(audioItem)
+                album
+            }
+        }
+    }
+
+    internal inner class MutableExtendedAlbum(
+        name: String,
+        albumArtist: Artist,
+        isCompilation: Boolean,
+        year: Short?,
+        label: Label,
+        override var audioItems: SortedSet<AudioItem> = sortedSetOf(audioItemTrackDiscNumberComparator)
+    ) : ExtendedAlbum, ImmutableAlbum(name, albumArtist, isCompilation, year, label) {
+
+        internal constructor(audioItem: AudioItem) : this(audioItem.album.name, audioItem.album.albumArtist, audioItem.album.isCompilation, audioItem.album.year, audioItem.album.label) {
+            audioItems.add(audioItem)
+        }
+
+        internal fun addAudioItem(audioItem: AudioItem) {
+            audioItems.add(audioItem)
+        }
+    }
+
+    internal inner class ArtistCatalogInnerRegistry :
+        ArtistCatalogRegistry,
+        RepositoryBase<String, ArtistCatalog>(),
+        TransEventSubscriber<MutableAudioItem, DataEvent<out MutableAudioItem>> by artisCatalogAudioItemSubscriber {
+
+        private val artistCatalogsById: MutableMap<String, MutableArtistCatalog> = HashMap()
+
+        init {
+            addOnNextEventAction(CREATE) {
+                it.entities.forEach(::addAudioItem)
+            }
+        }
+
+        private fun addAudioItem(audioItem: AudioItem) {
+            artistCatalogsById.merge(audioItem.artistUniqueId(), MutableArtistCatalog(audioItem)) { artistCatalog, _ ->
+                artistCatalog.addAudioItem(audioItem)
+                artistCatalog
+            }
+        }
+
+        private fun AudioItem.artistUniqueId() = "${artist.name}-${artist.countryCode.name}"
+
+        override fun findFirstByName(artistName: String): Optional<ArtistCatalog> {
+            TODO("Not yet implemented")
+        }
+    }
 }
 
 val audioItemSerializerModule = SerializersModule {
