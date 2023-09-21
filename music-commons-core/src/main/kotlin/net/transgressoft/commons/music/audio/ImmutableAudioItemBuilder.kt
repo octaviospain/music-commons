@@ -24,7 +24,7 @@ class ImmutableAudioItemBuilder(audioItem: AudioItem?) : AudioItemBuilderBase<Au
         lastDateModified = builder.lastDateModified
     }
 
-    override fun build(): ImmutableAudioItem =
+    override fun build(): AudioItem =
         ImmutableAudioItem(
             id,
             path,

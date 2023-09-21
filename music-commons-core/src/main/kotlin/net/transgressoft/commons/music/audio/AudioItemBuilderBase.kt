@@ -1,5 +1,6 @@
 package net.transgressoft.commons.music.audio
 
+import net.transgressoft.commons.music.AudioUtils.UNASSIGNED_ID
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
@@ -46,7 +47,7 @@ abstract class AudioItemBuilderBase<I : AudioItem>(audioItem: I?) : AudioItemBui
         }
     }
 
-    internal fun id(id: Int) = apply { this.id = id }
+    override fun id(id: Int) = apply { this.id = id }
     override fun path(path: Path) = apply { this.path = path }
     override fun title(title: String) = apply { this.title = title }
     override fun duration(duration: Duration) = apply { this.duration = duration }

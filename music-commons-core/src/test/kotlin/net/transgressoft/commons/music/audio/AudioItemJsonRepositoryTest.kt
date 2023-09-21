@@ -1,22 +1,6 @@
 package net.transgressoft.commons.music.audio
 
-import com.neovisionaries.i18n.CountryCode
-import io.kotest.assertions.assertSoftly
-import io.kotest.assertions.timing.eventually
-import io.kotest.core.spec.style.BehaviorSpec
-import io.kotest.engine.spec.tempfile
-import io.kotest.inspectors.forAll
-import io.kotest.matchers.collections.shouldContain
-import io.kotest.matchers.collections.shouldContainExactly
-import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
-import io.kotest.matchers.collections.shouldHaveAtMostSize
-import io.kotest.matchers.optional.shouldBePresent
-import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
-import io.kotest.property.Arb
-import io.kotest.property.arbitrary.next
-import io.kotest.property.arbitrary.set
-import io.kotest.property.checkAll
+import net.transgressoft.commons.music.AudioUtils.UNASSIGNED_ID
 import net.transgressoft.commons.music.AudioUtils.beautifyArtistName
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItemChange
@@ -26,6 +10,20 @@ import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryMp3File
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryWavFile
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.setArtworkTag
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.tag
+import com.neovisionaries.i18n.CountryCode
+import io.kotest.assertions.assertSoftly
+import io.kotest.assertions.timing.eventually
+import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.engine.spec.tempfile
+import io.kotest.inspectors.forAll
+import io.kotest.matchers.collections.*
+import io.kotest.matchers.optional.shouldBePresent
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+import io.kotest.property.Arb
+import io.kotest.property.arbitrary.next
+import io.kotest.property.arbitrary.set
+import io.kotest.property.checkAll
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.wav.WavOptions
 import org.jaudiotagger.tag.FieldKey
@@ -50,7 +48,7 @@ internal class AudioItemJsonRepositoryTest : BehaviorSpec({
 
     beforeContainer {
         jsonFile = tempfile("audioItemRepository-test", ".json").also { it.deleteOnExit() }
-        audioRepository = AudioItemJsonRepository(jsonFile)
+        audioRepository = AudioItemJsonRepository("AudioRepo", jsonFile)
     }
 
     given("An AudioItemRepository") {
@@ -58,19 +56,18 @@ internal class AudioItemJsonRepositoryTest : BehaviorSpec({
         and("A mp3 file") {
             checkAll(10, arbitraryMp3File, arbitraryAudioItemChange) { mp3File, audioItemChange ->
                 When("An AudioItem is created") {
-                    val audioItem = ImmutableAudioItem.createFromFile(mp3File.toPath()).let {
-                        it.id shouldBe UNASSIGNED_ID
-                        audioRepository.add(it) shouldBe true
-                        audioRepository.contains { audioItem -> it == audioItem }
-                        audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let { found -> found shouldBe it }
-                    }
+                    val audioItem = audioRepository.createFromFile(mp3File.toPath())
+                    audioItem.id shouldNotBe UNASSIGNED_ID
+                    audioRepository.add(audioItem) shouldBe false
+                    audioRepository.contains { it == audioItem } shouldBe true
+                    audioRepository.findByUniqueId(audioItem.uniqueId) shouldBePresent { found -> found shouldBe audioItem }
 
                     then("it is possible to query the repository by its artist") {
                         audioRepository.containsAudioItemWithArtist(audioItem.artist.name) shouldBe true
                         audioRepository.containsAudioItemWithArtist(audioItem.album.albumArtist.name) shouldBe true
-                        audioRepository.artistAlbums(audioItem.artist).let {
-                            it.shouldContainExactly(audioItem.album)
-                            audioItem.album.audioItems().shouldContainExactly(it.iterator().next().audioItems())
+                        audioRepository.artistCatalogRegistry.findFirst(audioItem.artist.name) shouldBePresent {
+                            it.albums.containsKey(audioItem.album.name) shouldBe true
+                            it.albums[audioItem.album.name]!!.audioItems shouldContainExactly audioItem.album.audioItems()
                         }
                     }
 
@@ -86,14 +83,11 @@ internal class AudioItemJsonRepositoryTest : BehaviorSpec({
 
                     then("its properties are modified when the audioItem is modified") {
                         val updatedAudioItem = audioItem.update(audioItemChange)
-                        audioRepository.addOrReplace(updatedAudioItem)
+                        audioRepository.addOrReplace(updatedAudioItem) shouldBe false
                         audioRepository.findById(audioItem.id) shouldBePresent {
-                            it shouldNotBe audioItem
-                            it.id shouldBe audioItem.id
                             assertAudioItemChange(it, audioItemChange, ID3v24Tag().apply {
                                 setField(FieldKey.ENCODER, audioItem.encoder)
                             })
-
                         }
                     }
                 }
@@ -103,13 +97,11 @@ internal class AudioItemJsonRepositoryTest : BehaviorSpec({
         and("A m4a file") {
             checkAll(5, arbitraryM4aFile, arbitraryAudioItemChange) { m4aFile, audioItemChange ->
                 When("An AudioItem is created") {
-                    val audioItem = ImmutableAudioItem.createFromFile(m4aFile.toPath()).let {
-                        audioRepository.add(it)
-                        audioRepository.contains { audioItem -> it == audioItem }
-                        audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let { found ->
-                            found shouldBe it
-                        }
-                    }
+                    val audioItem = audioRepository.createFromFile(m4aFile.toPath())
+                    audioItem.id shouldNotBe UNASSIGNED_ID
+                    audioRepository.add(audioItem) shouldBe false
+                    audioRepository.contains { it == audioItem } shouldBe true
+                    audioRepository.findByUniqueId(audioItem.uniqueId) shouldBePresent { found -> found shouldBe audioItem }
 
                     then("its properties should match the metadata of the file") {
                         assertSoftly {
@@ -123,10 +115,8 @@ internal class AudioItemJsonRepositoryTest : BehaviorSpec({
 
                     then("its properties are modified when the audioItem is modified") {
                         val updatedAudioItem = audioItem.update(audioItemChange)
-                        audioRepository.addOrReplace(updatedAudioItem)
+                        audioRepository.addOrReplace(updatedAudioItem) shouldBe false
                         audioRepository.findById(audioItem.id) shouldBePresent {
-                            it shouldNotBe audioItem
-                            it.id shouldBe audioItem.id
                             assertAudioItemChange(it, audioItemChange, Mp4Tag().apply {
                                 setField(FieldKey.ENCODER, audioItem.encoder)
                             })
@@ -139,13 +129,11 @@ internal class AudioItemJsonRepositoryTest : BehaviorSpec({
         and("A flac file") {
             checkAll(5, arbitraryFlacFile, arbitraryAudioItemChange) { flacFile, audioItemChange ->
                 When("An AudioItem is created") {
-                    val audioItem = ImmutableAudioItem.createFromFile(flacFile.toPath()).let {
-                        audioRepository.add(it)
-                        audioRepository.contains { audioItem -> it == audioItem }
-                        audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let { found ->
-                            found shouldBe it
-                        }
-                    }
+                    val audioItem = audioRepository.createFromFile(flacFile.toPath())
+                    audioItem.id shouldNotBe UNASSIGNED_ID
+                    audioRepository.add(audioItem) shouldBe false
+                    audioRepository.contains { it == audioItem } shouldBe true
+                    audioRepository.findByUniqueId(audioItem.uniqueId) shouldBePresent { found -> found shouldBe audioItem }
 
                     then("its properties should match the metadata of the file") {
                         assertAudioItem(audioItem, flacFile.toPath(), flacFile.tag())
@@ -159,10 +147,8 @@ internal class AudioItemJsonRepositoryTest : BehaviorSpec({
 
                     then("its properties are modified when the audioItem is modified") {
                         val updatedAudioItem = audioItem.update(audioItemChange)
-                        audioRepository.addOrReplace(updatedAudioItem)
+                        audioRepository.addOrReplace(updatedAudioItem) shouldBe false
                         audioRepository.findById(audioItem.id) shouldBePresent {
-                            it shouldNotBe audioItem
-                            it.id shouldBe audioItem.id
                             assertAudioItemChange(it, audioItemChange, FlacTag().apply {
                                 setField(FieldKey.ENCODER, audioItem.encoder)
                             })
@@ -175,13 +161,11 @@ internal class AudioItemJsonRepositoryTest : BehaviorSpec({
         and("A wav file") {
             checkAll(5, arbitraryWavFile, arbitraryAudioItemChange) { wavFile, audioItemChange ->
                 When("An AudioItem is created") {
-                    val audioItem = ImmutableAudioItem.createFromFile(wavFile.toPath()).let {
-                        audioRepository.add(it)
-                        audioRepository.contains { audioItem -> it == audioItem }
-                        audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let { found ->
-                            found shouldBe it
-                        }
-                    }
+                    val audioItem = audioRepository.createFromFile(wavFile.toPath())
+                    audioItem.id shouldNotBe UNASSIGNED_ID
+                    audioRepository.add(audioItem) shouldBe false
+                    audioRepository.contains { it == audioItem } shouldBe true
+                    audioRepository.findByUniqueId(audioItem.uniqueId) shouldBePresent { found -> found shouldBe audioItem }
 
                     assertSoftly {
                         audioItem.id shouldNotBe null
@@ -196,10 +180,8 @@ internal class AudioItemJsonRepositoryTest : BehaviorSpec({
 
                     then("its properties are modified when the audioItem is modified") {
                         val updatedAudioItem = audioItem.update(audioItemChange)
-                        audioRepository.addOrReplace(updatedAudioItem)
+                        audioRepository.addOrReplace(updatedAudioItem) shouldBe false
                         audioRepository.findById(audioItem.id) shouldBePresent {
-                            it shouldNotBe audioItem
-                            it.id shouldBe audioItem.id
                             assertAudioItemChange(it, audioItemChange, WavTag(WavOptions.READ_ID3_ONLY).apply {
                                 iD3Tag = ID3v24Tag()
                                 infoTag = WavInfoTag()
@@ -214,16 +196,14 @@ internal class AudioItemJsonRepositoryTest : BehaviorSpec({
         and("A created AudioItem added to the repository") {
 
             checkAll(1, arbitraryMp3File) { mp3File ->
-                val audioItem: ImmutableAudioItem = ImmutableAudioItem.createFromFile(mp3File.toPath()).let {
-                    audioRepository.add(it)
-                    audioRepository.contains { audioItem -> it == audioItem }
-                    audioRepository.findByUniqueId(it.uniqueId).shouldBePresent().let { found ->
-                        found shouldBe it
-                    }
-                }
-
+                val audioItem = audioRepository.createFromFile(mp3File.toPath())
+                audioItem.id shouldNotBe UNASSIGNED_ID
+                audioRepository.add(audioItem) shouldBe false
+                audioRepository.contains { it == audioItem } shouldBe true
+                audioRepository.findByUniqueId(audioItem.uniqueId) shouldBePresent { found -> found shouldBe audioItem }
                 eventually(2.seconds) {
-                    val loadedRepository = AudioItemJsonRepository(jsonFile)
+
+                val loadedRepository = AudioItemJsonRepository("AudioRepo", jsonFile)
                     loadedRepository.size() shouldBe 1
                     loadedRepository.findById(audioItem.id) shouldBePresent {
                         it shouldBe audioItem
@@ -253,13 +233,13 @@ internal class AudioItemJsonRepositoryTest : BehaviorSpec({
                 then("`addOrReplace` with same id does replace the previous one") {
                     val audioItemModified = audioItem.update { title = "New title" }
                     audioRepository.size() shouldBe 2
-                    audioRepository.addOrReplace(audioItemModified) shouldBe true
+                    audioRepository.addOrReplace(audioItemModified) shouldBe false
                     audioItem.album.audioItems().shouldContain(audioItemModified)
                     audioRepository.findById(audioItem.id) shouldBePresent { found -> found.id shouldBe audioItem.id }
                     audioRepository.contains { it.title == "New title" } shouldBe true
 
                     eventually(2.seconds) {
-                        val loadedRepository = AudioItemJsonRepository(jsonFile)
+                        val loadedRepository = AudioItemJsonRepository("AudioRepo", jsonFile)
                         loadedRepository.size() shouldBe 2
                         loadedRepository.findById(audioItem.id) shouldBePresent {
                             it shouldBe audioItemModified
@@ -299,11 +279,11 @@ internal class AudioItemJsonRepositoryTest : BehaviorSpec({
                 audioRepository.addOrReplaceAll(bunchOfAudioItems)
 
                 then("the repository can return a list of random audio items from the Artist") {
-                    val itemsFromArtist = audioRepository.getRandomAudioItemsFromArtist(ImmutableArtist("Queen"), 25)
+                    val itemsFromArtist = audioRepository.getRandomAudioItemsFromArtist("Queen", 25)
                     itemsFromArtist shouldHaveAtMostSize 25
                     itemsFromArtist.forAll { it.artist shouldBe ImmutableArtist("Queen") }
 
-                    val itemsFromArtist2 = audioRepository.getRandomAudioItemsFromArtist(ImmutableArtist("Queen"), 25)
+                    val itemsFromArtist2 = audioRepository.getRandomAudioItemsFromArtist("Queen", 25)
                     itemsFromArtist shouldHaveAtMostSize 25
                     itemsFromArtist.forAll { it.artist shouldBe ImmutableArtist("Queen") }
                     itemsFromArtist shouldNotBe itemsFromArtist2

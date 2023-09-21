@@ -26,6 +26,7 @@ interface AudioItemBuilder<I : AudioItem> {
     
     fun build(): I
 
+    fun id(id: Int): AudioItemBuilder<I>
     fun path(path: Path): AudioItemBuilder<I>
     fun title(title: String): AudioItemBuilder<I>
     fun duration(duration: Duration): AudioItemBuilder<I>

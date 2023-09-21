@@ -1,21 +1,21 @@
 package net.transgressoft.commons.music.waveform
 
-import kotlinx.serialization.builtins.serializer
 import net.transgressoft.commons.data.JsonFileRepository
 import net.transgressoft.commons.data.StandardDataEvent
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.event.AudioItemEventSubscriber
-import net.transgressoft.commons.toIds
 import java.io.File
 import java.util.concurrent.CompletableFuture
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 
-class AudioWaveformJsonRepository(file: File) :
-    JsonFileRepository<ScalableAudioWaveform, Int>(file, Int.serializer(), ScalableAudioWaveform.serializer()),
+class AudioWaveformJsonRepository(name: String, file: File) :
+    JsonFileRepository<Int, ScalableAudioWaveform>(name, file, MapSerializer(Int.serializer(), ScalableAudioWaveform.serializer())),
     AudioWaveformRepository<ScalableAudioWaveform> {
 
     override val audioItemEventSubscriber = AudioItemEventSubscriber<AudioItem>(this.toString()).apply {
         addOnNextEventAction(StandardDataEvent.Type.DELETE) { event ->
-            removeByAudioItemIds(event.entities.toIds())
+            removeByAudioItemIds(event.entitiesById.keys)
         }
     }
 
@@ -31,5 +31,5 @@ class AudioWaveformJsonRepository(file: File) :
             }
     }
 
-    override fun toString() = "WaveformRepository[${this.hashCode()}]"
+    override fun toString() = "WaveformRepository(name=$name, waveformsCount=${size()})"
 }

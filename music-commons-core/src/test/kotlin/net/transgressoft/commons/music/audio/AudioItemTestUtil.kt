@@ -1,11 +1,11 @@
 package net.transgressoft.commons.music.audio
 
+import net.transgressoft.commons.music.AudioUtils
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.core.TestConfiguration
 import io.kotest.engine.spec.tempfile
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.*
-import net.transgressoft.commons.music.AudioUtils
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.wav.WavOptions
 import org.jaudiotagger.tag.FieldKey
@@ -76,7 +76,7 @@ internal object AudioItemTestUtil : TestConfiguration() {
             year = Arb.short().bind(),
             label = ImmutableLabel(Arb.stringPattern("[a-z]{5} [a-z]{5}").bind()),
             coverImage = Files.readAllBytes(testCover2.toPath()),
-            genre = Genre.values().random(),
+            genre = Genre.entries.toTypedArray().random(),
             comments = Arb.stringPattern("[a-z]{5} [a-z]{5}").bind(),
             trackNumber = Arb.short().bind(),
             discNumber = Arb.short().bind(),
@@ -93,7 +93,7 @@ internal object AudioItemTestUtil : TestConfiguration() {
         tag.setField(FieldKey.COUNTRY, CountryCode.values().random().name)
         tag.setField(FieldKey.ALBUM_ARTIST, Arb.stringPattern("[a-z]{5} [a-z]{5}").next())
         tag.setField(FieldKey.ARTIST, Arb.stringPattern("[a-z]{5} [a-z]{5}").next())
-        tag.setField(FieldKey.GENRE, Genre.values().random().name)
+        tag.setField(FieldKey.GENRE, Genre.entries.toTypedArray().random().name)
         tag.setField(FieldKey.COMMENT, Arb.stringPattern("[a-z]{5} [a-z]{5}").next())
         tag.setField(FieldKey.GENRE, Arb.stringPattern("[a-z]{5} [a-z]{5}").next())
         tag.setField(FieldKey.TRACK, Arb.short().next().toString())
@@ -189,7 +189,7 @@ internal object AudioItemTestUtil : TestConfiguration() {
         bitRate: Int = defaultBitRate,
         artist: Artist = defaultArtist,
         album: Album = defaultAlbum,
-        genre: Genre = Genre.values().random(),
+        genre: Genre = Genre.entries.toTypedArray().random(),
         comments: String? = defaultComments,
         trackNumber: Short? = defaultTrackNumber,
         discNumber: Short? = defaultDiscNumber,
@@ -218,6 +218,6 @@ internal object AudioItemTestUtil : TestConfiguration() {
             coverImage,
             if (dateOfCreation == defaultDateOfCreation) Arb.localDateTime().next() else dateOfCreation,
             if (lastDateModified == defaultDateOfModification) lastDateModified else lastDateModified
-        )
+        ).toInternalMutableAudioItem()
     }
 }

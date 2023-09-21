@@ -14,5 +14,9 @@ interface MutableAudioItem : AudioItem {
     override var bpm: Float?
     override var coverImage: ByteArray?
 
+    override fun update(change: AudioItemMetadataChange): MutableAudioItem
+
+    override fun update(changeAction: AudioItemMetadataChange.() -> Unit): MutableAudioItem
+
     fun toImmutableAudioItem(): AudioItem
 }

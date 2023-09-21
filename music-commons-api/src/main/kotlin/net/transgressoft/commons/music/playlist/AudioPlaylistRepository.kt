@@ -10,9 +10,9 @@ import java.util.concurrent.Flow
 /**
  * @author Octavio Calleya
  */
-interface AudioPlaylistRepository<I : AudioItem, P : MutableAudioPlaylist<I>> : Repository<Int, P>, Flow.Publisher<DataEvent<P>> {
+interface AudioPlaylistRepository<I : AudioItem, P : MutableAudioPlaylist<I>> : Repository<Int, P>, Flow.Publisher<DataEvent<Int, P>> {
 
-    val audioItemEventSubscriber: TransEventSubscriber<I, DataEvent<out I>>
+    val audioItemEventSubscriber: TransEventSubscriber<I, DataEvent<Int, out I>>
 
     @Throws(IllegalArgumentException::class)
     fun createPlaylist(name: String): P

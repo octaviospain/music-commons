@@ -4,5 +4,5 @@ import java.util.*
 
 interface ExtendedAlbum : Album {
 
-    val audioItems: SortedSet<AudioItem>
+    val audioItems: SortedSet<MutableAudioItem>
 }

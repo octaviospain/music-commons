@@ -1,13 +1,11 @@
 package net.transgressoft.commons.music.audio
 
-import kotlinx.serialization.Contextual
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 import net.transgressoft.commons.music.AudioUtils
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
+import kotlin.io.path.extension
+import kotlinx.serialization.*
 
 /**
  * @author Octavio Calleya
@@ -29,33 +27,41 @@ internal class ImmutableAudioItem internal constructor(
     override val bpm: Float?,
     override val encoder: String?,
     override val encoding: String?,
-    @Transient val _coverImage: ByteArray? = null,
+    @Transient val initialCoverImage: ByteArray? = null,
     @Contextual override val dateOfCreation: LocalDateTime = LocalDateTime.now(),
     @Contextual override val lastDateModified: LocalDateTime = dateOfCreation
-) : AudioItemBase(
-    path,
-    title,
-    duration,
-    bitRate,
-    artist,
-    album,
-    genre,
-    comments,
-    trackNumber,
-    discNumber,
-    bpm,
-    encoder,
-    encoding,
-    _coverImage,
-    dateOfCreation,
-    lastDateModified
-) {
+) : AudioItem, Comparable<AudioItem> {
 
     companion object {
         fun createFromFile(audioItemPath: Path): AudioItem = ImmutableAudioItemBuilder(AudioUtils.readAudioItemFields(audioItemPath)).build()
     }
 
-    override fun update(change: AudioItemMetadataChange): ImmutableAudioItem =
+    @Transient
+    override val coverImage: ByteArray? = initialCoverImage
+        get() = field ?: AudioUtils.getCoverBytes(this)
+
+    override val uniqueId by lazy {
+        val fileName = path.fileName.toString().replace(' ', '_')
+        "$fileName-$title-${duration.toSeconds()}-$bitRate"
+    }
+
+    override val fileName by lazy {
+        path.fileName.toString()
+    }
+
+    override val extension by lazy {
+        path.extension
+    }
+
+    override val artistsInvolved by lazy {
+        AudioUtils.getArtistsNamesInvolved(title, artist.name, album.albumArtist.name)
+    }
+
+    override val length by lazy {
+        path.toFile().length()
+    }
+
+    override fun update(change: AudioItemMetadataChange): AudioItem =
         ImmutableAudioItemBuilder(this).also {
             it.title = change.title ?: title
             it.artist = change.artist ?: artist
@@ -75,11 +81,19 @@ internal class ImmutableAudioItem internal constructor(
             it.lastDateModified = LocalDateTime.now()
         }.build()
 
-    override fun update(changeAction: AudioItemMetadataChange.() -> Unit): ImmutableAudioItem =
+    override fun update(changeAction: AudioItemMetadataChange.() -> Unit): AudioItem =
         AudioItemMetadataChange().let { change ->
             change.changeAction()
             update(change)
         }
+
+    override fun toBuilder(): AudioItemBuilder<out AudioItem> = ImmutableAudioItemBuilder(this)
+
+    override suspend fun writeMetadata() = JAudioTaggerMetadataWriter().writeMetadata(this)
+
+    override operator fun compareTo(other: AudioItem) = AudioUtils.audioItemTrackDiscNumberComparator.compare(this, other)
+
+    internal fun toInternalMutableAudioItem(): MutableAudioItem = InternalMutableAudioItem(toBuilder())
 
     override fun toString() = "ImmutableAudioItem(id=$id, path=$path, title=$title, artist=${artist.name})"
 }

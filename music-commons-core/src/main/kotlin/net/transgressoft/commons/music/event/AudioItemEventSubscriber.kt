@@ -1,12 +1,12 @@
 package net.transgressoft.commons.music.event
 
-import mu.KotlinLogging
 import net.transgressoft.commons.data.DataEvent
 import net.transgressoft.commons.event.TransEventSubscriberBase
 import net.transgressoft.commons.event.TransEventSubscription
 import net.transgressoft.commons.music.audio.AudioItem
+import mu.KotlinLogging
 
-open class AudioItemEventSubscriber<I : AudioItem>(private val name: String) : TransEventSubscriberBase<I, DataEvent<out I>>() {
+open class AudioItemEventSubscriber<I : AudioItem>(override val name: String) : TransEventSubscriberBase<I, DataEvent<Int, out I>>() {
 
     private val logger = KotlinLogging.logger {}
 
@@ -15,9 +15,15 @@ open class AudioItemEventSubscriber<I : AudioItem>(private val name: String) : T
     init {
         addOnSubscribeEventAction {
             audioItemSubscription = it
-            logger.info { "${toString()} subscribed to ${it.source}" }
+            logger.info { "$name subscribed to ${it.source}" }
         }
     }
 
-    override fun toString() = "AudioItemEventSubscriber(name=$name)"
+    override fun toString() = buildString {
+        append("AudioItemEventSubscriber(name=$name")
+        audioItemSubscription?.let {
+            append(", source=${it.source}")
+        }
+        append(")")
+    }
 }

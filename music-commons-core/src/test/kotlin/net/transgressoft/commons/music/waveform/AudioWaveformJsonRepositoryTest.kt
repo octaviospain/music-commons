@@ -1,5 +1,8 @@
 package net.transgressoft.commons.music.waveform
 
+import net.transgressoft.commons.music.audio.AudioItemTestUtil
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryWavFile
 import io.kotest.assertions.timing.eventually
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
@@ -8,9 +11,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import io.kotest.property.arbitrary.short
-import net.transgressoft.commons.music.audio.AudioItemTestUtil
-import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
-import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryWavFile
 import java.io.File
 import kotlin.time.Duration.Companion.seconds
 
@@ -21,7 +21,7 @@ internal class AudioWaveformJsonRepositoryTest : StringSpec({
 
     beforeEach {
         jsonFile = tempfile("audioWaveformRepository-test", ".json").also { it.deleteOnExit() }
-        audioWaveformRepository = AudioWaveformJsonRepository(jsonFile)
+        audioWaveformRepository = AudioWaveformJsonRepository("Waveforms", jsonFile)
     }
 
     "Repository serializes itself to file when audio waveform is added" {
@@ -41,7 +41,7 @@ internal class AudioWaveformJsonRepositoryTest : StringSpec({
                 }
             """.trimIndent()
 
-            val loadedRepository = AudioWaveformJsonRepository(jsonFile)
+            val loadedRepository = AudioWaveformJsonRepository("Waveforms", jsonFile)
             loadedRepository.size() shouldBe 1
             loadedRepository.findById(audioWaveform.id) shouldBePresent { found -> found shouldBe audioWaveform }
             loadedRepository shouldBe audioWaveformRepository

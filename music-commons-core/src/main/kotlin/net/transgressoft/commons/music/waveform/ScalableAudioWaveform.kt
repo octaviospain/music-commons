@@ -1,9 +1,7 @@
 package net.transgressoft.commons.music.waveform
 
-import javafx.scene.paint.Color
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 import net.transgressoft.commons.music.audio.PathSerializer
+import javafx.scene.paint.Color
 import ws.schild.jave.Encoder
 import ws.schild.jave.MultimediaObject
 import ws.schild.jave.encode.AudioAttributes
@@ -21,6 +19,8 @@ import kotlin.io.path.extension
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 @Serializable
 class ScalableAudioWaveform(
@@ -187,5 +187,5 @@ class ScalableAudioWaveform(
         return rawAudioPcm.contentHashCode()
     }
 
-    override fun toString() = "ScalableAudioWaveform[uniqueId=$uniqueId]"
+    override fun toString() = "ScalableAudioWaveform(uniqueId=$uniqueId)"
 }

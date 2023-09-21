@@ -5,5 +5,7 @@ import java.util.*
 
 interface ArtistCatalogRegistry : Registry<String, ArtistCatalog> {
 
-    fun findFirstByName(artistName: String): Optional<ArtistCatalog>
+    fun findFirst(artist: Artist) = findFirst(artist.name)
+
+    fun findFirst(artistName: String): Optional<ArtistCatalog>
 }

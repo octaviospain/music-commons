@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-@SerialName("DefaultAlbum")
+@SerialName("ImmutableAlbum")
 open class ImmutableAlbum(
     override val name: String,
     override val albumArtist: Artist,

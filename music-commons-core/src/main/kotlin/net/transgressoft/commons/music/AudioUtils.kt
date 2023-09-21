@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music
 
-import com.neovisionaries.i18n.CountryCode
 import net.transgressoft.commons.music.audio.*
+import com.neovisionaries.i18n.CountryCode
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.AudioHeader
 import org.jaudiotagger.tag.FieldKey
@@ -16,6 +16,8 @@ import java.util.regex.Pattern
 import kotlin.io.path.extension
 
 object AudioUtils {
+
+    const val UNASSIGNED_ID = 0
 
     fun readAudioItemFields(audioItemPath: Path): AudioItemBuilder<AudioItem> {
         require(Files.exists(audioItemPath)) { "File '${audioItemPath.toAbsolutePath()}' does not exist" }
@@ -59,7 +61,12 @@ object AudioUtils {
             .dateOfCreation(now)
     }
 
-    fun getCoverBytes(audioItem: AudioItem) = getCoverBytes(AudioFileIO.read(audioItem.path.toFile()).tag)
+    fun getCoverBytes(audioItem: AudioItem): ByteArray? =
+        audioItem.path.toFile().let {
+            if (it.exists() && it.canRead())
+                getCoverBytes(AudioFileIO.read(it).tag)
+            else null
+        }
 
     private fun getCoverBytes(tag: Tag): ByteArray? = tag.artworkList.isNotEmpty().takeIf { it }?.let { tag.firstArtwork.binaryData }
 
@@ -99,6 +106,37 @@ object AudioUtils {
                 ImmutableAlbum(this, ImmutableArtist(beautifyArtistName(albumArtistName)), isCompilation, year, label)
             }
         }
+
+    val audioItemTrackDiscNumberComparator = Comparator<AudioItem> { audioItem1, audioItem2 ->
+        when {
+            audioItem1.discNumber == null && audioItem2.discNumber == null -> {
+                // Both discNumbers are null, compare by trackNumber
+                when {
+                    audioItem1.trackNumber == null && audioItem2.trackNumber == null -> 0
+                    audioItem1.trackNumber == null -> 1
+                    audioItem2.trackNumber == null -> -1
+                    else -> audioItem1.trackNumber!! - audioItem2.trackNumber!!
+                }
+            }
+            audioItem1.discNumber == null -> 1
+            audioItem2.discNumber == null -> -1
+            else -> {
+                // Compare non-null discNumbers
+                if (audioItem1.discNumber == audioItem2.discNumber) {
+                    // If discNumbers are equal, compare by trackNumber
+                    when {
+                        audioItem1.trackNumber == null && audioItem2.trackNumber == null -> 0
+                        audioItem1.trackNumber == null -> 1
+                        audioItem2.trackNumber == null -> -1
+                        else -> audioItem1.trackNumber!! - audioItem2.trackNumber!!
+                    }
+                } else {
+                    // Different discNumbers, compare by discNumber
+                    audioItem1.discNumber!! - audioItem2.discNumber!!
+                }
+            }
+        }
+    }
 
     /**********************************************************************************
      *  Function to get artist names in the title, artist field and album artist field

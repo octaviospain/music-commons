@@ -1,5 +1,8 @@
 package net.transgressoft.commons.music.playlist
 
+import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.AudioItemTestUtil
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempdir
 import io.kotest.engine.spec.tempfile
@@ -12,9 +15,6 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.list
 import io.kotest.property.arbitrary.next
-import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.AudioItemTestUtil
-import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
 import java.nio.file.Path
 import java.time.Duration
 import java.util.*
@@ -25,7 +25,7 @@ lateinit var audioPlaylistRepository: AudioPlaylistRepository<AudioItem, Mutable
 internal class MutablePlaylistTest : StringSpec({
 
     beforeEach {
-        audioPlaylistRepository = AudioPlaylistJsonRepository(tempfile("mutablePlaylist-test", ".json").also { it.deleteOnExit() })
+        audioPlaylistRepository = AudioPlaylistJsonRepository("Playlists", tempfile("mutablePlaylist-test", ".json").also { it.deleteOnExit() })
     }
 
     "Mutable audio playlist attributes and operations" {

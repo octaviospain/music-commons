@@ -6,7 +6,7 @@
     </appender>
     <logger name="org.jaudiotagger.audio" level="WARN" />
     <logger name="ws.schild.jave" level="WARN" />
-    <logger name="net.transgressoft" level="TRACE" />
+    <logger name="net.transgressoft" level="DEBUG" />
 
     <root level="INFO">
         <appender-ref ref="STDOUT" />

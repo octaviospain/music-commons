@@ -1,5 +1,7 @@
 package net.transgressoft.commons.music.audio
 
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.mp3File
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.testCoverBytes
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.timing.eventually
@@ -10,9 +12,6 @@ import io.kotest.matchers.date.shouldBeBefore
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
-import kotlinx.serialization.json.Json
-import net.transgressoft.commons.music.audio.AudioItemTestUtil.mp3File
-import net.transgressoft.commons.music.audio.AudioItemTestUtil.testCoverBytes
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import java.nio.file.Path
@@ -21,6 +20,7 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
+import kotlinx.serialization.json.Json
 
 /**
  * @author Octavio Calleya
@@ -50,7 +50,7 @@ internal class ImmutableAudioItemTest : StringSpec({
     val albumArtist = ImmutableArtist(albumArtistName, CountryCode.UK)
     val album = ImmutableAlbum(albumName, albumArtist, isCompilation, year, label)
 
-    var audioItem = ImmutableAudioItem(id, path, title, duration, bitRate, artist, album, genre, comments, trackNumber, discNumber, bpm, encoder, encoding, null, dateOfCreation)
+    var audioItem: AudioItem = ImmutableAudioItem(id, path, title, duration, bitRate, artist, album, genre, comments, trackNumber, discNumber, bpm, encoder, encoding, null, dateOfCreation)
 
     "AudioItem properties" {
         assertSoftly {
@@ -148,7 +148,7 @@ internal class ImmutableAudioItemTest : StringSpec({
         val file = tempfile("audioItem-metadata-test", ".mp3").also { it.deleteOnExit() }
         mp3File.copyTo(file, overwrite = true)
 
-        var updatedAudioItem: ImmutableAudioItem = ImmutableAudioItem.createFromFile(file.toPath())
+        var updatedAudioItem: AudioItem = ImmutableAudioItem.createFromFile(file.toPath())
         val thisDateOfCreation = updatedAudioItem.dateOfCreation
         updatedAudioItem = updatedAudioItem.update(
             AudioItemMetadataChange(title, artist, albumName, albumArtist, isCompilation, year, label, testCoverBytes, genre, comments, trackNumber, discNumber, bpm))
@@ -188,7 +188,7 @@ internal class ImmutableAudioItemTest : StringSpec({
         updatedAudioItem.writeMetadata()
 
         eventually(2.seconds) {
-            val loadedAudioItem: ImmutableAudioItem = ImmutableAudioItem.createFromFile(updatedAudioItem.path)
+            val loadedAudioItem: AudioItem = ImmutableAudioItem.createFromFile(updatedAudioItem.path)
             assertSoftly {
                 loadedAudioItem.id shouldBe updatedAudioItem.id
                 loadedAudioItem.dateOfCreation shouldBeAfter updatedAudioItem.dateOfCreation
@@ -225,12 +225,12 @@ internal class ImmutableAudioItemTest : StringSpec({
         mp3File.copyTo(tempFile, overwrite = true)
         audioItem = audioItem.toBuilder().path(tempFile.toPath()).build()
 
-        val updatedAudioItem: ImmutableAudioItem = audioItem.update { coverImage = testCoverBytes }
+        val updatedAudioItem: AudioItem = audioItem.update { coverImage = testCoverBytes }
         updatedAudioItem.writeMetadata()
 
         val json = Json { serializersModule = audioItemSerializerModule; prettyPrint = true }
         eventually(2.seconds) {
-            val encodedAudioItem = json.encodeToString(ImmutableAudioItem.serializer(), audioItem)
+            val encodedAudioItem = json.encodeToString(ImmutableAudioItem.serializer(), audioItem as ImmutableAudioItem)
             encodedAudioItem shouldBe """
             {
                 "id": ${audioItem.id},
@@ -239,21 +239,21 @@ internal class ImmutableAudioItemTest : StringSpec({
                 "duration": ${audioItem.duration.toSeconds()},
                 "bitRate": ${audioItem.bitRate},
                 "artist": {
-                    "type": "DefaultArtist",
+                    "type": "ImmutableArtist",
                     "name": "${audioItem.artist.name}",
                     "countryCode": "${audioItem.artist.countryCode}"
                 },
                 "album": {
-                    "type": "DefaultAlbum",
+                    "type": "ImmutableAlbum",
                     "name": "${audioItem.album.name}",
                     "albumArtist": {
-                        "type": "DefaultArtist",
+                        "type": "ImmutableArtist",
                         "name": "${audioItem.album.albumArtist.name}",
                         "countryCode": "${audioItem.artist.countryCode}"
                     },
                     "year": ${audioItem.album.year},
                     "label": {
-                        "type": "DefaultLabel",
+                        "type": "ImmutableLabel",
                         "name": "${audioItem.album.label.name}",
                         "countryCode": "${audioItem.album.label.countryCode}"
                     }

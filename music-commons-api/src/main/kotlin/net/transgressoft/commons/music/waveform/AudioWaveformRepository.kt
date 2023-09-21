@@ -8,7 +8,7 @@ import java.util.concurrent.CompletableFuture
 
 interface AudioWaveformRepository<W : AudioWaveform> : Repository<Int, W> {
 
-    val audioItemEventSubscriber: TransEventSubscriber<AudioItem, DataEvent<out AudioItem>>
+    val audioItemEventSubscriber: TransEventSubscriber<AudioItem, DataEvent<Int, out AudioItem>>
 
     fun getOrCreateWaveformAsync(audioItem: AudioItem, width: Short, height: Short): CompletableFuture<W>
 

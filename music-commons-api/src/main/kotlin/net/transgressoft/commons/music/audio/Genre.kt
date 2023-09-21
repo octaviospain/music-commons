@@ -18,7 +18,7 @@ enum class Genre {
     companion object {
         @JvmStatic
         fun parseGenre(value: String): Genre {
-            for (genre in values()) {
+            for (genre in entries) {
                 if (genre.name.equals(value.replace(" ", "_"), ignoreCase = true)) return genre
             }
             return UNDEFINED

@@ -2,10 +2,11 @@ package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.data.DataEvent
 import net.transgressoft.commons.data.Repository
+import com.neovisionaries.i18n.CountryCode
 import java.nio.file.Path
 import java.util.concurrent.Flow
 
-interface AudioItemRepository<I : AudioItem> : Repository<Int, I>, Flow.Publisher<DataEvent<I>> {
+interface AudioItemRepository<I : AudioItem> : Repository<Int, I>, Flow.Publisher<DataEvent<Int, I>> {
 
     val artistCatalogRegistry: ArtistCatalogRegistry
 
@@ -13,5 +14,5 @@ interface AudioItemRepository<I : AudioItem> : Repository<Int, I>, Flow.Publishe
 
     fun containsAudioItemWithArtist(artistName: String): Boolean
 
-    fun getRandomAudioItemsFromArtist(artist: Artist, size: Int): List<I>
+    fun getRandomAudioItemsFromArtist(artistName: String, size: Short = 100, countryCode: CountryCode = CountryCode.UNDEFINED): List<I>
 }

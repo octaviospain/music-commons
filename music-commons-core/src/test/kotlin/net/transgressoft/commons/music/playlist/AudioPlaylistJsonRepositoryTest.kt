@@ -1,5 +1,8 @@
 package net.transgressoft.commons.music.playlist
 
+import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.AudioItemRepository
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
 import io.kotest.assertions.throwables.shouldThrowMessage
 import io.kotest.assertions.timing.eventually
 import io.kotest.core.spec.style.StringSpec
@@ -10,10 +13,7 @@ import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import io.kotest.property.arbitrary.next
-import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.AudioItemRepository
-import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
-import org.mockito.ArgumentMatchers.eq
+import org.mockito.ArgumentMatchers.*
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.io.File
@@ -28,7 +28,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
 
     beforeEach {
         jsonFile = tempfile("playlistRepository-test", ".json").also { it.deleteOnExit() }
-        audioPlaylistRepository = AudioPlaylistJsonRepository(jsonFile)
+        audioPlaylistRepository = AudioPlaylistJsonRepository("Playlists", jsonFile)
     }
 
     "Repository serializes itself to file when playlists are added" {
@@ -102,7 +102,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
             whenever(it.findById(eq(453374921))).thenReturn(Optional.of(audioItem))
         }
 
-        audioPlaylistRepository = AudioPlaylistJsonRepository(jsonFile, audioItemRepository)
+        audioPlaylistRepository = AudioPlaylistJsonRepository("Playlists", jsonFile, audioItemRepository)
 
         audioPlaylistRepository.size() shouldBe 1
         audioPlaylistRepository.contains { it.id == 1 && it.isDirectory && it.name == "Rock" && it.audioItems == listOf(audioItem) && it.playlists.isEmpty() } shouldBe true

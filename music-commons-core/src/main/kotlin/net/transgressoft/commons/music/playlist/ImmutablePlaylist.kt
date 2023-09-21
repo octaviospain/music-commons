@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music.playlist
 
+import net.transgressoft.commons.music.AudioUtils.UNASSIGNED_ID
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.UNASSIGNED_ID
 
 internal class ImmutablePlaylist(
     override var id: Int = UNASSIGNED_ID,
