@@ -1,4 +1,4 @@
-package net.transgressoft.commons.music.event
+package net.transgressoft.commons.music.audio.event
 
 import net.transgressoft.commons.data.DataEvent
 import net.transgressoft.commons.event.TransEventSubscriberBase

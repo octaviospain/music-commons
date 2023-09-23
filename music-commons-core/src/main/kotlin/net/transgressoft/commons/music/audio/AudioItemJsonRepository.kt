@@ -5,7 +5,7 @@ import net.transgressoft.commons.data.RepositoryBase
 import net.transgressoft.commons.data.StandardDataEvent.Type.*
 import net.transgressoft.commons.data.UpdatedDataEvent
 import net.transgressoft.commons.music.AudioUtils
-import net.transgressoft.commons.music.event.AudioItemEventSubscriber
+import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import com.neovisionaries.i18n.CountryCode
 import mu.KotlinLogging
 import java.io.File
@@ -29,7 +29,8 @@ import kotlinx.serialization.modules.*
 /**
  * @author Octavio Calleya
  */
-class AudioItemJsonRepository(override val name: String, file: File) : RepositoryBase<Int, MutableAudioItem>(), AudioItemRepository<MutableAudioItem> {
+class AudioItemJsonRepository(override val name: String, file: File) : RepositoryBase<Int, MutableAudioItem>(),
+    AudioItemRepository<MutableAudioItem> {
 
     private val logger = KotlinLogging.logger(javaClass.name)
 
@@ -40,13 +41,13 @@ class AudioItemJsonRepository(override val name: String, file: File) : Repositor
         .apply {
             addOnNextEventAction(UPDATE) {
                 it as UpdatedDataEvent
-                assert(it.entitiesById.size == 1)
+                check(it.entitiesById.size == 1) { "An AudioItem is only supposed to publish events of himself alone" }
                 addOrReplace(it.entitiesById.values.elementAt(0))
             }
         }
 
     init {
-        serializableAudioItemsRepository.runMatching({ true }) { serializedAudioItem ->
+        serializableAudioItemsRepository.runForAll { serializedAudioItem ->
             InternalMutableAudioItem(serializedAudioItem).apply {
                 subscribe(audioItemChangesSubscriber)
                 add(this)
@@ -58,14 +59,20 @@ class AudioItemJsonRepository(override val name: String, file: File) : Repositor
 
     override val artistCatalogRegistry: ArtistCatalogRegistry = ArtistCatalogVolatileRegistry().also { subscribe(it) }
 
-    override fun entityClone(entity: MutableAudioItem): MutableAudioItem = InternalMutableAudioItem(ImmutableAudioItemBuilder(entity))
+    override fun entityClone(entity: MutableAudioItem): MutableAudioItem = InternalMutableAudioItem(entity)
 
     override fun createFromFile(audioItemPath: Path): MutableAudioItem =
         InternalMutableAudioItem(AudioUtils.readAudioItemFields(audioItemPath).id(newId()))
-            .also {
-                it.subscribe(audioItemChangesSubscriber)
-                add(it)
-                logger.debug { "New AudioItem was created from file $audioItemPath with id ${it.id}" }
+            .also { audioItem ->
+                artistCatalogRegistry.findAlbum(audioItem.album.name, audioItem.artist)
+                    .ifPresent { album -> audioItem.album = album }
+
+                // This subscription ensures that when an audio item is updated, the repository is notified
+                audioItem.subscribe(audioItemChangesSubscriber)
+
+                // As a result of the addition, a CREATE event is published and the artist catalog registry is updated too
+                add(audioItem)
+                logger.debug { "New AudioItem was created from file $audioItemPath with id ${audioItem.id}" }
             }
 
     private fun newId(): Int {

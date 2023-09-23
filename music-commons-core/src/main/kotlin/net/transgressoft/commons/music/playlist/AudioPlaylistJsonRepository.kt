@@ -9,7 +9,7 @@ import net.transgressoft.commons.event.TransEventSubscriber
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemManipulationException
 import net.transgressoft.commons.music.audio.AudioItemRepository
-import net.transgressoft.commons.music.event.AudioItemEventSubscriber
+import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import net.transgressoft.commons.toIds
 import com.google.common.collect.Multimap
 import com.google.common.collect.MultimapBuilder
@@ -41,11 +41,11 @@ class AudioPlaylistJsonRepository(override val name: String, jsonFile: File) : R
             "Provided jsonFile does not exist, is not writable or is not a json file"
         }
 
-        serializablePlaylistsRepository.runMatching({ true }) {
+        serializablePlaylistsRepository.runForAll {
             val playlistsWithAudioItems = MutablePlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItemIds, audioItemRepository))
             entitiesById[it.id] = playlistsWithAudioItems
         }
-        serializablePlaylistsRepository.runMatching({ true }) {
+        serializablePlaylistsRepository.runForAll {
             val playlistsMissingPlaylists =
                 entitiesById[it.id] ?: throw AudioItemManipulationException("AudioPlaylist with id ${it.id} not found during deserialization")
             val foundPlaylists = findDeserializedPlaylistsFromIds(it.playlistIds, entitiesById)
@@ -101,12 +101,12 @@ class AudioPlaylistJsonRepository(override val name: String, jsonFile: File) : R
     override val audioItemEventSubscriber: TransEventSubscriber<AudioItem, DataEvent<Int, out AudioItem>> =
         AudioItemEventSubscriber<AudioItem>(this.toString()).apply {
             addOnNextEventAction(DELETE) { event ->
-                runMatching({ true }) {
+                runForAll {
                     it.removeAudioItems(event.entitiesById.keys)
                 }
             }
             addOnNextEventAction(UPDATE) { event ->
-                runMatching({ true }) {
+                runForAll {
                     val updatedAudioItems = event.entitiesById
                     val audioItemsToUpdate = Sets.intersection(updatedAudioItems.keys, it.audioItems.toIds().toSet()).toSet()
                     if (audioItemsToUpdate.isNotEmpty()) {
@@ -323,7 +323,7 @@ class AudioPlaylistJsonRepository(override val name: String, jsonFile: File) : R
             .count().toInt()
 
     override fun size(): Int {
-        assert(entitiesById.size == serializablePlaylistsRepository.size())
+        check(entitiesById.size == serializablePlaylistsRepository.size()) { "The size of the repository and its internal serialization is supposed to be the same" }
         return serializablePlaylistsRepository.size()
     }
 

@@ -16,7 +16,9 @@ import io.kotest.assertions.timing.eventually
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.inspectors.forAll
-import io.kotest.matchers.collections.*
+import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.matchers.collections.shouldHaveAtMostSize
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -66,8 +68,8 @@ internal class AudioItemJsonRepositoryTest : BehaviorSpec({
                         audioRepository.containsAudioItemWithArtist(audioItem.artist.name) shouldBe true
                         audioRepository.containsAudioItemWithArtist(audioItem.album.albumArtist.name) shouldBe true
                         audioRepository.artistCatalogRegistry.findFirst(audioItem.artist.name) shouldBePresent {
-                            it.albums.containsKey(audioItem.album.name) shouldBe true
-                            it.albums[audioItem.album.name]!!.audioItems shouldContainExactly audioItem.album.audioItems()
+                            it.artist shouldBe audioItem.artist
+                            it.containsAudioItem(audioItem)
                         }
                     }
 

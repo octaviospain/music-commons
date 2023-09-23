@@ -41,6 +41,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
 
         eventually(1.seconds) {
             audioRepoFile.readText() shouldContain audioItem.path.toString()
+            audioItemRepository.artistCatalogRegistry.findFirst(audioItem.artist) shouldBePresent { it.containsAudioItem(audioItem) shouldBe true }
         }
 
         val waveform = audioWaveformRepository.getOrCreateWaveformAsync(audioItem, 780, 335)
@@ -51,39 +52,41 @@ internal class MusicLibraryIntegrationTest : StringSpec({
             waveformsRepoFile.readText() shouldContain waveform.get().id.toString()
         }
 
-        audioPlaylistRepository.createPlaylist("New ones").also { it.addAudioItem(audioItem) }
+        audioPlaylistRepository.createPlaylist("Test Playlist").also { it.addAudioItem(audioItem) }
 
         eventually(2.seconds) {
-            playlistRepoFile.readText() shouldContain "New ones"
+            playlistRepoFile.readText() shouldContain "Test Playlist"
             playlistRepoFile.readText() shouldContain audioItem.id.toString()
         }
 
         audioItem.title = "New title"
-        val updatedAudioItem = audioItemRepository.findById(audioItem.id).get()
 
         eventually(2.seconds) {
             audioItemRepository.contains { it.title == "New title" }
             audioItemRepository.size() shouldBe 1
+            audioItemRepository.artistCatalogRegistry.findFirst(audioItem.artist) shouldBePresent { it.containsAudioItem(audioItem) shouldBe true }
+
             audioRepoFile.readText() shouldContain "New title"
-            val updatedPlaylist = audioPlaylistRepository.findByName("New ones").get()
-            updatedPlaylist.audioItems.contains(updatedAudioItem) shouldBe true
+            val updatedPlaylist = audioPlaylistRepository.findByName("Test Playlist").get()
+            updatedPlaylist.audioItems.contains(audioItem) shouldBe true
         }
 
         audioItemRepository.remove(audioItem) shouldBe true
         audioItemRepository.isEmpty shouldBe true
-        audioItemRepository.artistCatalogRegistry.isEmpty shouldBe true
-        audioItemRepository.artistCatalogRegistry.findFirst(audioItem.artist).isEmpty shouldBe true
 
         eventually(2.seconds) {
+            audioItemRepository.artistCatalogRegistry.isEmpty shouldBe true
+            audioItemRepository.artistCatalogRegistry.findFirst(audioItem.artist).isEmpty shouldBe true
+
             audioRepoFile.readText() shouldBe "{\n}"
 
-            audioPlaylistRepository.findByName("New ones") shouldBePresent { it.audioItems.isEmpty() shouldBe true }
+            audioPlaylistRepository.findByName("Test Playlist") shouldBePresent { it.audioItems.isEmpty() shouldBe true }
             playlistRepoFile.readText() shouldBe """
             {
                 "1": {
                     "id": 1,
                     "isDirectory": false,
-                    "name": "New ones",
+                    "name": "Test Playlist",
                     "audioItemIds": [
                     ],
                     "playlistIds": [

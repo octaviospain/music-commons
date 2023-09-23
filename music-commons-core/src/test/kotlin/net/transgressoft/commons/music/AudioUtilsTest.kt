@@ -4,7 +4,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
 
-class AudioUtilsTest : FunSpec({
+internal class AudioUtilsTest : FunSpec({
 
     data class AudioItemFields(
         val titleField: String = "",

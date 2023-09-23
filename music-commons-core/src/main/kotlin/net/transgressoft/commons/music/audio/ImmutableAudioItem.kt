@@ -1,6 +1,7 @@
 package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.music.AudioUtils
+import com.google.common.base.Objects
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
@@ -92,6 +93,24 @@ internal class ImmutableAudioItem internal constructor(
     override suspend fun writeMetadata() = JAudioTaggerMetadataWriter().writeMetadata(this)
 
     override operator fun compareTo(other: AudioItem) = AudioUtils.audioItemTrackDiscNumberComparator.compare(this, other)
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || javaClass != other.javaClass) return false
+        val that = other as ImmutableAudioItem
+        return trackNumber == that.trackNumber &&
+                discNumber == that.discNumber &&
+                bpm == that.bpm &&
+                path == that.path &&
+                title == that.title &&
+                artist == that.artist &&
+                album == that.album &&
+                genre == that.genre &&
+                comments == that.comments &&
+                duration == that.duration
+    }
+
+    override fun hashCode() = Objects.hashCode(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration)
 
     internal fun toInternalMutableAudioItem(): MutableAudioItem = InternalMutableAudioItem(toBuilder())
 

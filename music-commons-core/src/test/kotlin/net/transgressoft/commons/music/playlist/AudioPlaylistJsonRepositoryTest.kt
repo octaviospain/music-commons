@@ -47,7 +47,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
             updatedRock.id shouldBe rock.id
             updatedRock.name shouldBe "Rock"
             updatedRock.audioItems.shouldContainExactly(rockAudioItems)
-            updatedRock.playlists.shouldContainOnly(rockFavorites)
+            updatedRock.playlists.shouldContainExactly(rockFavorites)
         }
 
         eventually(2.seconds) {
@@ -179,7 +179,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         audioPlaylistRepository.removeAudioItemFromPlaylist(fiftiesItems[1].id, fifties.name)
 
         audioPlaylistRepository.findById(fifties.id) shouldBePresent { it.audioItems.isEmpty() shouldBe true }
-        audioPlaylistRepository.runMatching({ true }) { it.removeAudioItems(rockAudioItems) }
+        audioPlaylistRepository.runForAll { it.removeAudioItems(rockAudioItems) }
         audioPlaylistRepository.findById(rock.id) shouldBePresent { it.audioItems.isEmpty() shouldBe true }
 
         audioPlaylistRepository.clear()
@@ -213,9 +213,9 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         //    └──Rock
 
         audioPlaylistRepository.size() shouldBe 5
-        audioPlaylistRepository.findByName(selection.name) shouldBePresent { it.playlists.shouldContainExactly(rock) }
+        audioPlaylistRepository.findByName(selection.name) shouldBePresent { it.playlists.shouldContainOnly(rock) }
         audioPlaylistRepository.findById(fifties.id) shouldBePresent { it.playlists.shouldNotContain(rock) }
-        audioPlaylistRepository.findByName(bestHits.name) shouldBePresent { it.playlists.shouldContainExactly(fifties) }
+        audioPlaylistRepository.findByName(bestHits.name) shouldBePresent { it.playlists.shouldContainOnly(fifties) }
 
         eventually(2.seconds) {
             jsonFile.readText() shouldBe """
@@ -285,7 +285,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         //          └──Rock
 
         audioPlaylistRepository.size() shouldBe 5
-        audioPlaylistRepository.findByName(selection.name) shouldBePresent { it.playlists.shouldContainExactly(rock) }
+        audioPlaylistRepository.findByName(selection.name) shouldBePresent { it.playlists.shouldContainOnly(rock) }
         audioPlaylistRepository.findByName(fifties.name) shouldBePresent { it.playlists shouldContainExactly setOf(pop, selection) }
 
         eventually(2.seconds) {
@@ -348,9 +348,9 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
 
         audioPlaylistRepository.size() shouldBe 0
         audioPlaylistRepository.isEmpty shouldBe true
-        bestHits.playlists.shouldContainExactly(fifties)
+        bestHits.playlists.shouldContainOnly(fifties)
         fifties.playlists shouldContainExactly setOf(pop, selection)
-        selection.playlists.shouldContainExactly(rock)
+        selection.playlists.shouldContainOnly(rock)
         rock.playlists.isEmpty() shouldBe true
         pop.playlists.isEmpty() shouldBe true
 
@@ -374,9 +374,9 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         //    └──Rock
 
         audioPlaylistRepository.size() shouldBe 5
-        audioPlaylistRepository.findByName(selection.name) shouldBePresent { it.playlists.shouldContainExactly(rock) }
+        audioPlaylistRepository.findByName(selection.name) shouldBePresent { it.playlists.shouldContainOnly(rock) }
         audioPlaylistRepository.findById(fifties.id) shouldBePresent { it.playlists.shouldNotContain(rock) }
-        audioPlaylistRepository.findByName(bestHits.name) shouldBePresent { it.playlists.shouldContainExactly(fifties) }
+        audioPlaylistRepository.findByName(bestHits.name) shouldBePresent { it.playlists.shouldContainOnly(fifties) }
 
         audioPlaylistRepository.removePlaylistFromDirectory(fifties.name, bestHits.name)
 
@@ -388,7 +388,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         audioPlaylistRepository.findByName(pop.name).isEmpty shouldBe true
         audioPlaylistRepository.findByUniqueId(fifties.uniqueId).isEmpty shouldBe true
         bestHits.playlists.isEmpty() shouldBe true
-        fifties.playlists.shouldContainExactly(pop)
+        fifties.playlists.shouldContainOnly(pop)
 
         audioPlaylistRepository.removePlaylistFromDirectory(rock, selection.name)
 

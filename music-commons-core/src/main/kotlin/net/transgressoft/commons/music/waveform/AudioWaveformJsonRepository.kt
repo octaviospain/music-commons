@@ -3,7 +3,7 @@ package net.transgressoft.commons.music.waveform
 import net.transgressoft.commons.data.JsonFileRepository
 import net.transgressoft.commons.data.StandardDataEvent
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.event.AudioItemEventSubscriber
+import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import java.io.File
 import java.util.concurrent.CompletableFuture
 import kotlinx.serialization.builtins.MapSerializer

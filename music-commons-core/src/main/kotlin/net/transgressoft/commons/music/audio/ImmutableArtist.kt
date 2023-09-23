@@ -1,6 +1,7 @@
 package net.transgressoft.commons.music.audio
 
 import com.neovisionaries.i18n.CountryCode
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -39,14 +40,14 @@ class ImmutableArtist internal constructor(override val name: String, override v
         return result
     }
 
-    override fun toString() = "Artist($name, ${countryCode.name}"
+    override fun toString() = "Artist(name=$name, countryCode=${countryCode.name})"
 
     companion object {
 
-        private val artistMap: MutableMap<String, Artist> = HashMap<String, Artist>().apply { put("", UNKNOWN) }
-
         @JvmField
         val UNKNOWN: Artist = ImmutableArtist("")
+
+        private val artistMap: MutableMap<String, Artist> = ConcurrentHashMap(HashMap<String, Artist>().apply { put("", UNKNOWN) })
 
         @JvmStatic
         fun of(name: String, countryCode: CountryCode = CountryCode.UNDEFINED) =

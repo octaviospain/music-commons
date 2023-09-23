@@ -8,4 +8,6 @@ interface ArtistCatalogRegistry : Registry<String, ArtistCatalog> {
     fun findFirst(artist: Artist) = findFirst(artist.name)
 
     fun findFirst(artistName: String): Optional<ArtistCatalog>
+
+    fun findAlbum(albumName: String, artist: Artist): Optional<Album>
 }

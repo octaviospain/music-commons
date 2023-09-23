@@ -8,6 +8,7 @@ import io.kotest.engine.spec.tempdir
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.comparables.shouldBeEqualComparingTo
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
@@ -103,7 +104,7 @@ internal class MutablePlaylistTest : StringSpec({
         directory1.audioItemsRecursive.size shouldBe 0
 
         d1.addAudioItem(d1AudioItem)
-        directory1.audioItemsRecursive.shouldContainExactly(d1AudioItem)
+        directory1.audioItemsRecursive.shouldContainOnly(d1AudioItem)
         p1.addAudioItems(audioItems)
         directory1.audioItemsRecursive shouldContainExactlyInAnyOrder setOf(audioItems.plusElement(d1AudioItem)).flatten()
 
