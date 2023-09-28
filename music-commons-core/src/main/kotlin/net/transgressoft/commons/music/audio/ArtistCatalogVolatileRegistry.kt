@@ -1,49 +1,26 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.data.DataEvent
 import net.transgressoft.commons.data.RegistryBase
 import net.transgressoft.commons.data.StandardDataEvent.Type.*
-import net.transgressoft.commons.data.UpdatedDataEvent
-import net.transgressoft.commons.event.TransEventSubscriber
-import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import mu.KotlinLogging
 import java.util.*
 import java.util.stream.Collectors.*
 
-internal class ArtistCatalogVolatileRegistry(override val name: String = "ArtistCatalog") :
-    ArtistCatalogRegistry,
-    RegistryBase<String, ArtistCatalog>(),
-    TransEventSubscriber<MutableAudioItem, DataEvent<Int, out MutableAudioItem>> by AudioItemEventSubscriber("$name-AudioItemSubscriber") {
+internal class ArtistCatalogVolatileRegistry(override val name: String = "ArtistCatalog") : ArtistCatalogRegistry, RegistryBase<String, MutableArtistCatalog>() {
 
     private val log = KotlinLogging.logger {}
 
-    private val artistCatalogsById: MutableMap<String, MutableArtistCatalog> = HashMap()
-
     init {
-        addOnNextEventAction(CREATE) {
-            addAudioItems(it.entitiesById.values)
-        }
-        addOnNextEventAction(UPDATE) {
-            it as UpdatedDataEvent
-            it.entitiesById.forEach { (id, updatedAudioItem) ->
-                val oldAudioItem = it.oldEntitiesById[id] ?: error("Old audio item not found for updated one with uniqueId ${updatedAudioItem.uniqueId}")
-                if (artistOrAlbumChanged(updatedAudioItem, oldAudioItem) || audioItemOrderingChanged(updatedAudioItem, oldAudioItem)) {
-                    updateCatalog(updatedAudioItem, oldAudioItem)
-                }
-            }
-        }
-        addOnNextEventAction(DELETE) {
-            removeAudioItems(it.entitiesById.values)
-        }
+        disableEvents(CREATE, UPDATE, DELETE)
     }
 
-    private fun addAudioItems(audioItems: Collection<MutableAudioItem>): Boolean {
-        val catalogsBeforeUpdate = mutableListOf<ArtistCatalog>()
+    fun addAudioItems(audioItems: Collection<MutableAudioItem>): Boolean {
+        val catalogsBeforeUpdate = mutableListOf<MutableArtistCatalog>()
 
-        val addedOrReplacedCatalogs: Map<Boolean, List<ArtistCatalog>> =
-            audioItems.stream().filter { audioItem -> artistCatalogsById.any { it.value.containsAudioItem(audioItem) }.not() }
+        val addedOrReplacedCatalogs: Map<Boolean, List<MutableArtistCatalog>> =
+            audioItems.stream().filter { audioItem -> entitiesById.any { it.value.containsAudioItem(audioItem) }.not() }
                 .map { audioItem ->
-                    artistCatalogsById.merge(audioItem.artistUniqueId(), MutableArtistCatalog(audioItem)) { artistCatalog, _ ->
+                    entitiesById.merge(audioItem.artistUniqueId(), MutableArtistCatalog(audioItem)) { artistCatalog, _ ->
                         artistCatalog.addAudioItem(audioItem)
                         artistCatalog.also { catalogsBeforeUpdate.add(it) }
                     }!!
@@ -78,7 +55,7 @@ internal class ArtistCatalogVolatileRegistry(override val name: String = "Artist
         return trackNumberChanged || discNumberChanged
     }
 
-    private fun updateCatalog(updatedAudioItem: MutableAudioItem, oldAudioItem: MutableAudioItem) {
+    fun updateCatalog(updatedAudioItem: MutableAudioItem, oldAudioItem: MutableAudioItem) {
         if (artistOrAlbumChanged(updatedAudioItem, oldAudioItem)) {
             val removed = removeAudioItems(listOf(oldAudioItem))
             val added = addAudioItems(listOf(updatedAudioItem))
@@ -86,26 +63,26 @@ internal class ArtistCatalogVolatileRegistry(override val name: String = "Artist
 
             log.debug { "Artist catalog of ${updatedAudioItem.artist.name} was updated as a result of updating $updatedAudioItem" }
         } else if (audioItemOrderingChanged(updatedAudioItem, oldAudioItem)) {
-            val artistCatalog = artistCatalogsById[updatedAudioItem.artistUniqueId()] ?: error("Artist catalog for ${updatedAudioItem.artistUniqueId()} should exist already at this point")
+            val artistCatalog = entitiesById[updatedAudioItem.artistUniqueId()] ?: error("Artist catalog for ${updatedAudioItem.artistUniqueId()} should exist already at this point")
             val artistCatalogBeforeUpdate = artistCatalog.copy()
             artistCatalog.mergeAudioItem(updatedAudioItem)
             putUpdateEvent(listOf(artistCatalog), listOf(artistCatalogBeforeUpdate))
         }
     }
 
-    private fun removeAudioItems(audioItems: Collection<MutableAudioItem>): Boolean {
-        val removedCatalogs = mutableListOf<ArtistCatalog>()
-        val catalogsBeforeUpdate = mutableListOf<ArtistCatalog>()
-        val updatedCatalogs = mutableListOf<ArtistCatalog>()
+    fun removeAudioItems(audioItems: Collection<MutableAudioItem>): Boolean {
+        val removedCatalogs = mutableListOf<MutableArtistCatalog>()
+        val catalogsBeforeUpdate = mutableListOf<MutableArtistCatalog>()
+        val updatedCatalogs = mutableListOf<MutableArtistCatalog>()
 
         audioItems.forEach { audioItem ->
-            artistCatalogsById[audioItem.artistUniqueId()]?.let {
+            entitiesById[audioItem.artistUniqueId()]?.let {
                 val oldArtistCatalog = it.copy()
                 val wasRemoved = it.removeAudioItem(audioItem)
                 if (wasRemoved) {
                     if (it.isEmpty) {
                         removedCatalogs.add(it)
-                        artistCatalogsById.remove(audioItem.artistUniqueId())
+                        entitiesById.remove(audioItem.artistUniqueId())
                     } else {
                         updatedCatalogs.add(it)
                         catalogsBeforeUpdate.add(oldArtistCatalog)
@@ -131,15 +108,18 @@ internal class ArtistCatalogVolatileRegistry(override val name: String = "Artist
 
     private fun AudioItem.artistUniqueId() = ImmutableArtist.id(artist.name, artist.countryCode)
 
-    override fun entityClone(entity: ArtistCatalog) = (entity as MutableArtistCatalog).copy()
+    override fun entityClone(entity: MutableArtistCatalog) = entity.copy()
 
-    override fun findFirst(artistName: String): Optional<ArtistCatalog> =
-        Optional.ofNullable(artistCatalogsById.entries.firstOrNull { it.key.lowercase().contains(artistName.lowercase()) }?.value)
+    override fun findFirst(artistName: String): Optional<MutableArtistCatalog> =
+        Optional.ofNullable(entitiesById.entries.firstOrNull { it.key.lowercase().contains(artistName.lowercase()) }?.value)
+
+    override fun findFirst(artist: Artist): Optional<MutableArtistCatalog> =
+        Optional.ofNullable(entitiesById[artist.id()])
 
     override fun findAlbum(albumName: String, artist: Artist): Optional<Album> =
-        artistCatalogsById[artist.id()]?.findAlbum(albumName) ?: Optional.empty()
+        entitiesById[artist.id()]?.findAlbum(albumName) ?: Optional.empty()
 
-    override val isEmpty = artistCatalogsById.isEmpty()
+    override val isEmpty = entitiesById.isEmpty()
 
-    override fun toString() = "ArtistCatalogRegistry(numberOfArtists=${artistCatalogsById.size})"
+    override fun toString() = "ArtistCatalogRegistry(numberOfArtists=${entitiesById.size})"
 }

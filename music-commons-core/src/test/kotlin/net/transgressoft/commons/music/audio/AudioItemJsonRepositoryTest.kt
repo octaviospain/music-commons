@@ -74,8 +74,8 @@ internal class AudioItemJsonRepositoryTest : StringSpec({
 
                 eventually(1.seconds) {
                     val currentAlbumItems = audioRepository.search { it.album.name == "Doolittle" }
-                    audioItem.album.audioItems shouldContainExactlyInAnyOrder currentAlbumItems
                     currentAlbumItems.size shouldBe index + 1
+                    audioItem.album.audioItems shouldContainExactlyInAnyOrder currentAlbumItems
                 }
             }
         }

@@ -2,9 +2,9 @@ package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.IdentifiableEntity
 import net.transgressoft.commons.data.DataEvent
-import net.transgressoft.commons.data.JsonFileRepository
 import net.transgressoft.commons.data.RepositoryBase
 import net.transgressoft.commons.data.StandardDataEvent.Type.*
+import net.transgressoft.commons.data.json.JsonFileRepository
 import net.transgressoft.commons.event.TransEventSubscriber
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemManipulationException

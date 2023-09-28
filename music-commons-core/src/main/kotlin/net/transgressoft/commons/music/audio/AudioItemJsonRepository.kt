@@ -1,9 +1,9 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.data.JsonFileRepository
 import net.transgressoft.commons.data.RepositoryBase
 import net.transgressoft.commons.data.StandardDataEvent.Type.*
 import net.transgressoft.commons.data.UpdatedDataEvent
+import net.transgressoft.commons.data.json.JsonFileRepository
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import com.neovisionaries.i18n.CountryCode
 import mu.KotlinLogging
@@ -56,7 +56,7 @@ class AudioItemJsonRepository(override val name: String, file: File) : Repositor
 
     private val idCounter = AtomicInteger(1)
 
-    private val artistCatalogRegistry: ArtistCatalogRegistry = ArtistCatalogVolatileRegistry().also { subscribe(it) }
+    private val artistCatalogRegistry = ArtistCatalogVolatileRegistry()
 
     override fun entityClone(entity: MutableAudioItem): MutableAudioItem = InternalMutableAudioItem(entity)
 
@@ -69,7 +69,6 @@ class AudioItemJsonRepository(override val name: String, file: File) : Repositor
                 // This subscription ensures that when an audio item is updated, the repository is notified
                 audioItem.subscribe(audioItemChangesSubscriber)
 
-                // As a result of the addition, a CREATE event is published and the artist catalog registry is updated too
                 add(audioItem)
                 logger.debug { "New AudioItem was created from file $audioItemPath with id ${audioItem.id}" }
             }
@@ -82,46 +81,38 @@ class AudioItemJsonRepository(override val name: String, file: File) : Repositor
         return id
     }
 
-    override fun getArtistCatalog(artist: Artist) = artistCatalogRegistry.findFirst(artist)
+    override fun getArtistCatalog(artist: Artist): Optional<ArtistCatalog> = artistCatalogRegistry.findFirst(artist).map { it as ArtistCatalog }
 
-    override fun getArtistCatalog(artistName: String) = artistCatalogRegistry.findFirst(artistName)
+    override fun getArtistCatalog(artistName: String): Optional<ArtistCatalog> = artistCatalogRegistry.findFirst(artistName).map { it as ArtistCatalog }
 
     override fun getAlbum(albumName: String, artist: Artist) = artistCatalogRegistry.findAlbum(albumName, artist)
 
-    override fun add(entity: MutableAudioItem) = super.add(entity).also { serializableAudioItemsRepository.add(entity.toImmutable()) }
+    override fun putCreateEvent(entity: MutableAudioItem) = super.putCreateEvent(entity).also {
+        artistCatalogRegistry.addAudioItems(listOf(entity))
+    }
 
-    private fun MutableAudioItem.toImmutable() = ImmutableAudioItem(
-        id,
-        path,
-        title,
-        duration,
-        bitRate,
-        artist,
-        album,
-        genre,
-        comments,
-        trackNumber,
-        discNumber,
-        bpm,
-        encoder,
-        encoding,
-        coverImageBytes,
-        dateOfCreation,
-        lastDateModified
-    )
+    override fun putCreateEvent(entities: Collection<MutableAudioItem>) = super.putCreateEvent(entities).also {
+        artistCatalogRegistry.addAudioItems(entities)
+    }
 
-    private fun Set<MutableAudioItem>.toImmutable() = map { it.toImmutable() }.toSet()
+    override fun putUpdateEvent(entity: MutableAudioItem, oldEntity: MutableAudioItem) = super.putUpdateEvent(entity, oldEntity).also {
+        artistCatalogRegistry.updateCatalog(entity, oldEntity)
+    }
 
-    override fun addOrReplace(entity: MutableAudioItem) =
-        super.addOrReplace(entity).also { serializableAudioItemsRepository.addOrReplace(entity.toImmutable()) }
+    override fun putUpdateEvent(entities: Collection<MutableAudioItem>, oldEntities: Collection<MutableAudioItem>) = super.putUpdateEvent(entities, oldEntities).also {
+        entities.forEach {
+            val oldEntity = oldEntities.firstOrNull { old -> old.id == it.id } ?: error("Old entity not found for updated one with id ${it.id}")
+            artistCatalogRegistry.updateCatalog(it, oldEntity)
+        }
+    }
 
-    override fun addOrReplaceAll(entities: Set<MutableAudioItem>) =
-        super.addOrReplaceAll(entities).also { serializableAudioItemsRepository.addOrReplaceAll(entities.toImmutable()) }
+    override fun putDeleteEvent(entity: MutableAudioItem) = super.putDeleteEvent(entity).also {
+        artistCatalogRegistry.removeAudioItems(listOf(entity))
+    }
 
-    override fun remove(entity: MutableAudioItem) = super.remove(entity).also { serializableAudioItemsRepository.remove(entity.toImmutable()) }
-
-    override fun removeAll(entities: Set<MutableAudioItem>) =
-        super.removeAll(entities).also { serializableAudioItemsRepository.removeAll(entities.toImmutable()) }
+    override fun putDeleteEvent(entities: Collection<MutableAudioItem>) = super.putDeleteEvent(entities).also {
+        artistCatalogRegistry.removeAudioItems(entities)
+    }
 
     override fun clear() = super.clear().also { serializableAudioItemsRepository.clear() }
 
