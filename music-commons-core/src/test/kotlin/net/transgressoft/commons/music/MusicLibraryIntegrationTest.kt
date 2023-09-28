@@ -8,7 +8,7 @@ import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
 import net.transgressoft.commons.music.waveform.AudioWaveformJsonRepository
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
 import net.transgressoft.commons.music.waveform.ScalableAudioWaveform
-import io.kotest.assertions.timing.eventually
+import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.optional.shouldBePresent
@@ -41,7 +41,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
 
         eventually(1.seconds) {
             audioRepoFile.readText() shouldContain audioItem.path.toString()
-            audioItemRepository.artistCatalogRegistry.findFirst(audioItem.artist) shouldBePresent { it.containsAudioItem(audioItem) shouldBe true }
+            audioItemRepository.getArtistCatalog(audioItem.artist) shouldBePresent { it.containsAudioItem(audioItem) shouldBe true }
         }
 
         val waveform = audioWaveformRepository.getOrCreateWaveformAsync(audioItem, 780, 335)
@@ -64,7 +64,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         eventually(2.seconds) {
             audioItemRepository.contains { it.title == "New title" }
             audioItemRepository.size() shouldBe 1
-            audioItemRepository.artistCatalogRegistry.findFirst(audioItem.artist) shouldBePresent { it.containsAudioItem(audioItem) shouldBe true }
+            audioItemRepository.getArtistCatalog(audioItem.artist) shouldBePresent { it.containsAudioItem(audioItem) shouldBe true }
 
             audioRepoFile.readText() shouldContain "New title"
             val updatedPlaylist = audioPlaylistRepository.findByName("Test Playlist").get()
@@ -75,8 +75,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         audioItemRepository.isEmpty shouldBe true
 
         eventually(2.seconds) {
-            audioItemRepository.artistCatalogRegistry.isEmpty shouldBe true
-            audioItemRepository.artistCatalogRegistry.findFirst(audioItem.artist).isEmpty shouldBe true
+            audioItemRepository.getArtistCatalog(audioItem.artist).isEmpty shouldBe true
 
             audioRepoFile.readText() shouldBe "{\n}"
 

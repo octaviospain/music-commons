@@ -1,7 +1,6 @@
 package net.transgressoft.commons.fx.music
 
 import net.transgressoft.commons.music.AudioUtils
-import net.transgressoft.commons.music.AudioUtils.readAudioItemFields
 import net.transgressoft.commons.music.audio.*
 import com.google.common.base.Objects
 import javafx.beans.property.*
@@ -15,66 +14,48 @@ import java.util.stream.Stream
 import kotlin.properties.Delegates.observable
 import kotlinx.serialization.Transient
 
-class ObservableAudioItem internal constructor(audioItemBuilder: AudioItemBuilder<out AudioItem>) : MutableAudioItem,
-    MutableAudioItemBase(
-        audioItemBuilder.id,
-        audioItemBuilder.path,
-        audioItemBuilder.title,
-        audioItemBuilder.duration,
-        audioItemBuilder.bitRate,
-        audioItemBuilder.artist,
-        audioItemBuilder.album,
-        audioItemBuilder.genre,
-        audioItemBuilder.comments,
-        audioItemBuilder.trackNumber,
-        audioItemBuilder.discNumber,
-        audioItemBuilder.bpm,
-        audioItemBuilder.encoder,
-        audioItemBuilder.encoding,
-        audioItemBuilder.coverImage,
-        audioItemBuilder.dateOfCreation,
-        audioItemBuilder.lastDateModified
-    ) {
+class ObservableAudioItem internal constructor(id: Int, attributes: AudioItemAttributes) : MutableAudioItem,
+    MutableAudioItemBase(id, attributes) {
 
     companion object {
-        fun createFromFile(audioItemPath: Path): ObservableAudioItem = ObservableAudioItemBuilder(readAudioItemFields(audioItemPath)).build()
+        fun createFromFile(audioItemPath: Path): ObservableAudioItem = ObservableAudioItem(UNASSIGNED_ID, readAudioItemFields(audioItemPath))
     }
 
     @Transient
-    private val titleProperty = SimpleStringProperty(this, "title", audioItemBuilder.title)
+    private val titleProperty = SimpleStringProperty(this, "title", attributes.title)
 
     @Transient
-    private val artistNameProperty = SimpleStringProperty(this, "artist", audioItemBuilder.artist.name)
+    private val artistNameProperty = SimpleStringProperty(this, "artist", attributes.artist.name)
 
     @Transient
-    private val albumNameProperty = SimpleStringProperty(this, "album", audioItemBuilder.album.name)
+    private val albumNameProperty = SimpleStringProperty(this, "album", attributes.album.name)
 
     @Transient
-    private val albumYearProperty = SimpleIntegerProperty(this, "album year", audioItemBuilder.album.year?.toInt() ?: -1)
+    private val albumYearProperty = SimpleIntegerProperty(this, "album year", attributes.album.year?.toInt() ?: -1)
 
     @Transient
-    private val albumArtistNameProperty = SimpleStringProperty(this, "album artist", audioItemBuilder.album.albumArtist.name)
+    private val albumArtistNameProperty = SimpleStringProperty(this, "album artist", attributes.album.albumArtist.name)
 
     @Transient
-    private val genreNameProperty = SimpleStringProperty(this, "genre", audioItemBuilder.genre.name)
+    private val genreNameProperty = SimpleStringProperty(this, "genre", attributes.genre.name)
 
     @Transient
-    private val labelNameProperty = SimpleStringProperty(this, "genre", audioItemBuilder.album.label.name)
+    private val labelNameProperty = SimpleStringProperty(this, "genre", attributes.album.label.name)
 
     @Transient
-    private val commentsProperty = SimpleStringProperty(this, "comments", audioItemBuilder.comments ?: "")
+    private val commentsProperty = SimpleStringProperty(this, "comments", attributes.comments ?: "")
 
     @Transient
-    private val trackNumberProperty = SimpleIntegerProperty(this, "track number", audioItemBuilder.trackNumber?.toInt() ?: -1)
+    private val trackNumberProperty = SimpleIntegerProperty(this, "track number", attributes.trackNumber?.toInt() ?: -1)
 
     @Transient
-    private val discNumberProperty = SimpleIntegerProperty(this, "disc number", audioItemBuilder.discNumber?.toInt() ?: -1)
+    private val discNumberProperty = SimpleIntegerProperty(this, "disc number", attributes.discNumber?.toInt() ?: -1)
 
     @Transient
-    private val bpmProperty = SimpleFloatProperty(this, "bpm", audioItemBuilder.bpm ?: -1f)
+    private val bpmProperty = SimpleFloatProperty(this, "bpm", attributes.bpm ?: -1f)
 
     @Transient
-    private val lastDateModifiedProperty = SimpleObjectProperty(this, "date modified", audioItemBuilder.lastDateModified)
+    private val lastDateModifiedProperty = SimpleObjectProperty(this, "date modified", attributes.lastDateModified)
 
     @Transient
     private val artistsInvolvedProperty = SimpleSetProperty<String>(this, "artists involved", FXCollections.observableSet())
@@ -86,15 +67,15 @@ class ObservableAudioItem internal constructor(audioItemBuilder: AudioItemBuilde
         artistsInvolvedProperty.set(
             FXCollections.observableSet(
                 AudioUtils.getArtistsNamesInvolved(
-                    audioItemBuilder.title,
-                    audioItemBuilder.artist.name,
-                    audioItemBuilder.album.albumArtist.name
+                    attributes.title,
+                    attributes.artist.name,
+                    attributes.album.albumArtist.name
                 )
             )
         )
     }
 
-    override var title: String by observable(audioItemBuilder.title) { _, _, newValue ->
+    override var title: String by observable(attributes.title) { _, _, newValue ->
         titleProperty.set(newValue)
         artistsInvolvedProperty.clear()
         artistsInvolvedProperty.addAll(
@@ -106,7 +87,7 @@ class ObservableAudioItem internal constructor(audioItemBuilder: AudioItemBuilde
         )
     }
 
-    override var artist: Artist by observable(audioItemBuilder.artist) { _, _, newValue ->
+    override var artist: Artist by observable(attributes.artist) { _, _, newValue ->
         artistNameProperty.set(newValue.name)
         artistsInvolvedProperty.clear()
         artistsInvolvedProperty.addAll(
@@ -118,7 +99,7 @@ class ObservableAudioItem internal constructor(audioItemBuilder: AudioItemBuilde
         )
     }
 
-    override var album: Album by observable(audioItemBuilder.album) { _, _, newValue ->
+    override var album: Album by observable(attributes.album) { _, _, newValue ->
         albumNameProperty.set(newValue.name)
         albumArtistNameProperty.set(newValue.albumArtist.name)
         newValue.year?.toInt()?.let { albumYearProperty.set(it) } ?: albumYearProperty.set(-1)
@@ -135,30 +116,27 @@ class ObservableAudioItem internal constructor(audioItemBuilder: AudioItemBuilde
         )
     }
 
-    override var genre: Genre by observable(audioItemBuilder.genre) { _, _, newValue ->
+    override var genre: Genre by observable(attributes.genre) { _, _, newValue ->
         newValue.takeIf { it != Genre.UNDEFINED }?.let {
             genreNameProperty.set(it.name)
         } ?: genreNameProperty.set("")
     }
 
-    override var comments: String? by observable(audioItemBuilder.comments) { _, _, newValue ->
+    override var comments: String? by observable(attributes.comments) { _, _, newValue ->
         newValue?.let {
             commentsProperty.set(it)
         } ?: commentsProperty.set("")
     }
 
-    override var trackNumber: Short? by observable(audioItemBuilder.trackNumber) { _, _, newValue -> newValue?.let { trackNumberProperty.set(it.toInt()) } }
+    override var trackNumber: Short? by observable(attributes.trackNumber) { _, _, newValue -> newValue?.let { trackNumberProperty.set(it.toInt()) } }
 
-    override var discNumber: Short? by observable(audioItemBuilder.discNumber) { _, _, newValue -> newValue?.let { discNumberProperty.set(it.toInt()) } }
+    override var discNumber: Short? by observable(attributes.discNumber) { _, _, newValue -> newValue?.let { discNumberProperty.set(it.toInt()) } }
 
-    override var bpm: Float? by observable(audioItemBuilder.bpm) { _, _, newValue -> newValue?.let { bpmProperty.set(it) } ?: -1f }
+    override var bpm: Float? by observable(attributes.bpm) { _, _, newValue -> newValue?.let { bpmProperty.set(it) } ?: -1f }
 
-    override val artistsInvolved: Set<String>
-        get() = artistsInvolvedProperty
+    override var coverImageBytes: ByteArray? = attributes.coverImageBytes
 
-    override var coverImage: ByteArray? = audioItemBuilder.coverImage
-
-    override var lastDateModified: LocalDateTime = audioItemBuilder.lastDateModified
+    override var lastDateModified: LocalDateTime = attributes.lastDateModified
         get() = lastDateModifiedProperty.get()
         set(value) {
             lastDateModifiedProperty.set(value)
@@ -167,7 +145,7 @@ class ObservableAudioItem internal constructor(audioItemBuilder: AudioItemBuilde
 
     fun isPlayable() = Stream.of("mp3", "m4a", "wav").anyMatch { fileFormat: String? -> extension.equals(fileFormat, ignoreCase = true) }
 
-    fun albumImage(): Optional<Image> = Optional.ofNullable(coverImage).map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) }
+    fun albumImage(): Optional<Image> = Optional.ofNullable(coverImageBytes).map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) }
 
     fun titleProperty() = titleProperty
 
@@ -197,7 +175,7 @@ class ObservableAudioItem internal constructor(audioItemBuilder: AudioItemBuilde
 
     fun playCountProperty(): ReadOnlyIntegerProperty = playCountProperty
 
-    override fun update(change: AudioItemMetadataChange): ObservableAudioItem {
+    override fun update(change: AudioItemChange): ObservableAudioItem {
         title = change.title ?: title
         artist = change.artist ?: artist
         album = ImmutableAlbum(
@@ -211,19 +189,17 @@ class ObservableAudioItem internal constructor(audioItemBuilder: AudioItemBuilde
         comments = change.comments ?: comments
         trackNumber = change.trackNumber?.takeIf { trackNum -> trackNum > 0 } ?: trackNumber
         discNumber = change.discNumber?.takeIf { discNum -> discNum > 0 } ?: discNumber
-        bpm = change.bpm ?: bpm
-        coverImage = change.coverImage ?: coverImage
+        bpm = change.bpm?.takeIf { bpm -> bpm > 0 } ?: bpm
+        coverImageBytes = change.coverImageBytes ?: coverImageBytes
         lastDateModified = LocalDateTime.now()
         return this
     }
 
-    override fun update(changeAction: AudioItemMetadataChange.() -> Unit): ObservableAudioItem =
-        AudioItemMetadataChange().let { change ->
+    override fun update(changeAction: AudioItemChange.() -> Unit): ObservableAudioItem =
+        AudioItemChange(id).let { change ->
             change.changeAction()
             update(change)
         }
-
-    override fun toBuilder(): ObservableAudioItemBuilder = ObservableAudioItemBuilder(this)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -244,29 +220,4 @@ class ObservableAudioItem internal constructor(audioItemBuilder: AudioItemBuilde
     override fun hashCode() = Objects.hashCode(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration)
 
     override fun toString() = "MusicottAudioItem(id=$id, path=$path, title=$title, artist=${artist.name}, album=${album.name})"
-}
-
-class ObservableAudioItemBuilder(audioItem: ObservableAudioItem?) : AudioItemBuilderBase<ObservableAudioItem>(audioItem) {
-
-    internal constructor(builder: AudioItemBuilder<AudioItem>) : this(null) {
-        id = builder.id
-        path = builder.path
-        title = builder.title
-        duration = builder.duration
-        bitRate = builder.bitRate
-        artist = builder.artist
-        album = builder.album
-        genre = builder.genre
-        comments = builder.comments
-        trackNumber = builder.trackNumber
-        discNumber = builder.discNumber
-        bpm = builder.bpm
-        encoder = builder.encoder
-        encoding = builder.encoding
-        coverImage = builder.coverImage
-        dateOfCreation = builder.dateOfCreation
-        lastDateModified = builder.lastDateModified
-    }
-
-    override fun build() = ObservableAudioItem(this)
 }

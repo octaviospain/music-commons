@@ -1,36 +1,40 @@
 package net.transgressoft.commons.music.audio
 
 import com.google.common.base.Objects
+import java.nio.file.Path
+import java.time.Duration
 import java.time.LocalDateTime
 
-internal class InternalMutableAudioItem internal constructor(audioItemBuilder: AudioItemBuilder<out AudioItem>) : MutableAudioItem,
-    MutableAudioItemBase(
-        audioItemBuilder.id,
-        audioItemBuilder.path,
-        audioItemBuilder.title,
-        audioItemBuilder.duration,
-        audioItemBuilder.bitRate,
-        audioItemBuilder.artist,
-        audioItemBuilder.album,
-        audioItemBuilder.genre,
-        audioItemBuilder.comments,
-        audioItemBuilder.trackNumber,
-        audioItemBuilder.discNumber,
-        audioItemBuilder.bpm,
-        audioItemBuilder.encoder,
-        audioItemBuilder.encoding,
-        audioItemBuilder.coverImage,
-        audioItemBuilder.dateOfCreation,
-        audioItemBuilder.lastDateModified
-    ) {
+internal class InternalMutableAudioItem internal constructor(id: Int, attributes: AudioItemAttributes) :
+    MutableAudioItem, MutableAudioItemBase(id, attributes) {
 
-    internal constructor(audioItem: AudioItem) : this(audioItem.toBuilder())
+    internal constructor(audioItem: AudioItem) : this(audioItem.id, audioItem.attributes())
 
-    override fun update(change: AudioItemMetadataChange): MutableAudioItem {
+    internal constructor(
+        id: Int,
+        path: Path,
+        title: String,
+        duration: Duration,
+        bitRate: Int,
+        artist: Artist,
+        album: Album,
+        genre: Genre,
+        comments: String?,
+        trackNumber: Short?,
+        discNumber: Short?,
+        bpm: Float?,
+        encoder: String?,
+        encoding: String?,
+        coverImageBytes: ByteArray?,
+        dateOfCreation: LocalDateTime,
+        lastDateModified: LocalDateTime
+    ) : this(id, AudioItemAttributes(path, title, duration, bitRate, artist, album, genre, comments, trackNumber, discNumber, bpm, encoder, encoding, coverImageBytes, dateOfCreation, lastDateModified))
+
+    override fun update(change: AudioItemChange): MutableAudioItem {
         change.let { theChange ->
             theChange.title?.let { title = it }
             theChange.artist?.let { artist = it }
-            theChange.coverImage?.let { coverImage = it }
+            theChange.coverImageBytes?.let { coverImageBytes = it }
             theChange.genre?.let { genre = it }
             theChange.comments?.let { comments = it }
             theChange.trackNumber?.takeIf { it > 0 }.let { trackNumber = it }
@@ -50,8 +54,8 @@ internal class InternalMutableAudioItem internal constructor(audioItemBuilder: A
         return this
     }
 
-    override fun update(changeAction: AudioItemMetadataChange.() -> Unit): MutableAudioItem =
-        AudioItemMetadataChange().let { change ->
+    override fun update(changeAction: AudioItemChange.() -> Unit): MutableAudioItem =
+        AudioItemChange(id).let { change ->
             change.changeAction()
             update(change)
         }

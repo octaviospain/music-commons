@@ -26,15 +26,13 @@ interface AudioItem : IdentifiableEntity<Int> {
     val encoder: String?
     val encoding: String?
     val length: Long
-    val coverImage: ByteArray?
+    val coverImageBytes: ByteArray?
     val dateOfCreation: LocalDateTime
     val lastDateModified: LocalDateTime
 
-    fun update(change: AudioItemMetadataChange): AudioItem
+    fun update(change: AudioItemChange): AudioItem
 
-    fun update(changeAction: AudioItemMetadataChange.() -> Unit): AudioItem
-
-    fun toBuilder(): AudioItemBuilder<out AudioItem>
+    fun update(changeAction: AudioItemChange.() -> Unit): AudioItem
 
     suspend fun writeMetadata()
 }

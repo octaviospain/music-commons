@@ -1,193 +1,113 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.audio.AudioItemTestUtil.mp3File
+import net.transgressoft.commons.music.AudioUtils
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItemChange
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryFlacFile
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryM4aFile
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryMp3File
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryWavFile
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.testCoverBytes
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.assertSoftly
-import io.kotest.assertions.timing.eventually
-import io.kotest.core.spec.style.StringSpec
-import io.kotest.engine.spec.tempfile
+import io.kotest.core.spec.style.FunSpec
+import io.kotest.datatest.withData
+import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.date.shouldBeAfter
-import io.kotest.matchers.date.shouldBeBefore
+import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
-import io.kotest.matchers.string.shouldContain
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
-import java.nio.file.Path
+import io.kotest.property.arbitrary.next
+import org.jaudiotagger.audio.AudioFileIO
+import java.io.File
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import kotlin.time.Duration.Companion.seconds
-import kotlin.time.toJavaDuration
 import kotlinx.serialization.json.Json
 
-/**
- * @author Octavio Calleya
- */
-internal class ImmutableAudioItemTest : StringSpec({
+internal const val expectedTitle = "Yesterday"
+internal const val expectedArtistName = "The Beatles"
+internal val expectedLabel: Label = ImmutableLabel("EMI", CountryCode.US)
+internal const val expectedAlbumName = "Help!"
+internal const val expectedAlbumArtistName = "The Beatles Band"
+internal const val expectedIsCompilation = true
+internal const val expectedYear: Short = 1965
+internal const val expectedBpm = 120f
+internal const val expectedTrackNumber: Short = 13
+internal const val expectedDiscNumber: Short = 1
+internal const val expectedComments = "Best song ever!"
+internal val expectedGenre = Genre.ROCK
+internal const val expectedEncoder = "transgressoft"
+internal val expectedDateOfCreation = LocalDateTime.now()
+internal val expectedArtist = ImmutableArtist(expectedArtistName, CountryCode.UK)
+internal val expectedAlbumArtist = ImmutableArtist(expectedAlbumArtistName, CountryCode.UK)
+internal val expectedAlbum = ImmutableAlbum(expectedAlbumName, expectedAlbumArtist, expectedIsCompilation, expectedYear, expectedLabel)
 
-    val id = 9
-    val path = mp3File.toPath()
-    val title = "Yesterday"
-    val duration = Duration.ofMinutes(2)
-    val bitRate = 320
-    val artistName = "The Beatles"
-    val label: Label = ImmutableLabel("EMI", CountryCode.US)
-    val albumName = "Help!"
-    val albumArtistName = "The Beatles Band"
-    val isCompilation = false
-    val year: Short = 1965
-    val bpm = 120f
-    val trackNumber: Short = 13
-    val discNumber: Short = 1
-    val comments = "Best song ever!"
-    val genre = Genre.ROCK
-    val encoding = "Lame MP3"
-    val encoder = "transgressoft"
-    val dateOfCreation = LocalDateTime.now()
-    val artist = ImmutableArtist(artistName, CountryCode.UK)
-    val albumArtist = ImmutableArtist(albumArtistName, CountryCode.UK)
-    val album = ImmutableAlbum(albumName, albumArtist, isCompilation, year, label)
+internal class ImmutableAudioItemTest : FunSpec({
 
-    var audioItem: AudioItem = ImmutableAudioItem(id, path, title, duration, bitRate, artist, album, genre, comments, trackNumber, discNumber, bpm, encoder, encoding, null, dateOfCreation)
-
-    "AudioItem properties" {
-        assertSoftly {
-            audioItem.id shouldBe 9
-            audioItem.lastDateModified shouldBe dateOfCreation
-            audioItem.dateOfCreation shouldBe dateOfCreation
-            audioItem.dateOfCreation shouldBeBefore LocalDateTime.now()
-            audioItem.path shouldBe path
-            audioItem.fileName shouldBe "testeable.mp3"
-            audioItem.extension shouldBe "mp3"
-            audioItem.title shouldBe title
-            audioItem.duration shouldBe duration
-            audioItem.bitRate shouldBe bitRate
-            audioItem.album.name shouldBe album.name
-            audioItem.album.albumArtist.name shouldBe album.albumArtist.name
-            audioItem.album.albumArtist.countryCode shouldBe CountryCode.UK
-            audioItem.album.isCompilation shouldBe false
-            audioItem.album.year shouldBe album.year
-            audioItem.album.label.name shouldBe album.label.name
-            audioItem.album.label.countryCode shouldBe CountryCode.US
-            audioItem.artist.name shouldBe artist.name
-            audioItem.artist.countryCode shouldBe CountryCode.UK
-            audioItem.bpm shouldBe bpm
-            audioItem.trackNumber shouldBe trackNumber
-            audioItem.discNumber shouldBe discNumber
-            audioItem.comments shouldBe comments
-            audioItem.genre shouldBe genre
-            audioItem.encoding shouldBe encoding
-            audioItem.encoder shouldBe encoder
-            audioItem.uniqueId shouldBe "testeable.mp3-Yesterday-120-320"
-            audioItem.toString() shouldBe "ImmutableAudioItem(id=9, path=/home/kaord/Software/Transgressoft/music-commons/music-commons-core/build/resources/test/testfiles/testeable.mp3, title=Yesterday, artist=The Beatles)"
-        }
-
-        val previousDateModified = audioItem.lastDateModified
-        audioItem = audioItem.toBuilder().comments("modified").lastDateModified(LocalDateTime.now()).build()
-        audioItem.lastDateModified shouldBeAfter previousDateModified
-        audioItem.comments shouldBe "modified"
-
-        val newAlbum = mock<Album> {
-            on { this@on.name } doReturn "OtherAlbum"
-            on { this@on.albumArtist } doReturn ImmutableArtist("Other Artist")
-            on { this@on.isCompilation } doReturn true
-            on { this@on.year } doReturn 1999.toShort()
-            on { this@on.label } doReturn ImmutableLabel.UNKNOWN
-        }
-        val audioItemWithModifiedAlbum = audioItem.toBuilder()
-            .title("Other title")
-            .album(newAlbum)
-            .encoder("New encoder")
-            .encoding("New encoding")
-            .bpm(128f)
-            .build()
-
-        audioItemWithModifiedAlbum shouldNotBe audioItem
-        audioItemWithModifiedAlbum.album.albumArtist.name shouldBe "Other Artist"
-        audioItemWithModifiedAlbum.title shouldBe "Other title"
-        audioItemWithModifiedAlbum.album.isCompilation shouldBe true
-        audioItemWithModifiedAlbum.encoder shouldBe "New encoder"
-        audioItemWithModifiedAlbum.encoding shouldBe "New encoding"
-        audioItemWithModifiedAlbum.bpm shouldBe 128f
-        audioItem.length shouldBe mp3File.length()
-
-        val unknownAlbum = mock<Album> {
-            on { this@on.name } doReturn ""
-            on { this@on.albumArtist } doReturn ImmutableArtist.UNKNOWN
-            on { this@on.isCompilation } doReturn true
-            on { this@on.year } doReturn 1999.toShort()
-            on { this@on.label } doReturn ImmutableLabel.UNKNOWN
-        }
-        var modifiedAudioItem = audioItemWithModifiedAlbum.toBuilder()
-            .genre(Genre.UNDEFINED)
-            .album(unknownAlbum)
-            .comments("Modified")
-            .build()
-
-        modifiedAudioItem.artist shouldBe audioItem.artist
-        modifiedAudioItem.album.name shouldBe ""
-        modifiedAudioItem.genre shouldBe Genre.UNDEFINED
-        modifiedAudioItem.comments shouldBe "Modified"
-        modifiedAudioItem.artist shouldBe artist
-
-        modifiedAudioItem = modifiedAudioItem.toBuilder()
-            .artist(ImmutableArtist.UNKNOWN)
-            .path(Path.of("/moved/song.mp3"))
-            .discNumber(2.toShort())
-            .trackNumber(3.toShort())
-            .build()
-
-        modifiedAudioItem.path.toString() shouldBe "/moved/song.mp3"
-        modifiedAudioItem.discNumber shouldBe 2.toShort()
-        modifiedAudioItem.trackNumber shouldBe 3.toShort()
+    val json = Json {
+        serializersModule = audioItemSerializerModule
+        prettyPrint = true
     }
 
-    "AudioItem writes metadata into file" {
-        val file = tempfile("audioItem-metadata-test", ".mp3").also { it.deleteOnExit() }
-        mp3File.copyTo(file, overwrite = true)
+    data class TestAudioFile(
+        val file: File,
+        val duration: Duration,
+        val bitRate: Int,
+        val encoding: String
+    )
 
-        var updatedAudioItem: AudioItem = ImmutableAudioItem.createFromFile(file.toPath())
-        val thisDateOfCreation = updatedAudioItem.dateOfCreation
-        updatedAudioItem = updatedAudioItem.update(
-            AudioItemMetadataChange(title, artist, albumName, albumArtist, isCompilation, year, label, testCoverBytes, genre, comments, trackNumber, discNumber, bpm))
-
-        assertSoftly {
-            updatedAudioItem.id shouldBe 0
-            updatedAudioItem.dateOfCreation shouldBe thisDateOfCreation
-            updatedAudioItem.dateOfCreation shouldBeBefore LocalDateTime.now()
-            updatedAudioItem.lastDateModified shouldBeAfter dateOfCreation
-            updatedAudioItem.path shouldBe file.toPath()
-            updatedAudioItem.fileName shouldContain "audioItem-metadata-test"
-            updatedAudioItem.extension shouldBe "mp3"
-            updatedAudioItem.title shouldBe title
-            updatedAudioItem.duration shouldBe 8.seconds.toJavaDuration()
-            updatedAudioItem.bitRate shouldBe 143
-            updatedAudioItem.album.name shouldBe album.name
-            updatedAudioItem.album.albumArtist.name shouldBe album.albumArtist.name
-            updatedAudioItem.album.albumArtist.countryCode shouldBe CountryCode.UK
-            updatedAudioItem.album.isCompilation shouldBe false
-            updatedAudioItem.album.year shouldBe album.year
-            updatedAudioItem.album.label.name shouldBe album.label.name
-            updatedAudioItem.album.label.countryCode shouldBe CountryCode.US
-            updatedAudioItem.artist.name shouldBe artist.name
-            updatedAudioItem.artist.countryCode shouldBe CountryCode.UK
-            updatedAudioItem.bpm shouldBe bpm
-            updatedAudioItem.trackNumber shouldBe trackNumber
-            updatedAudioItem.discNumber shouldBe discNumber
-            updatedAudioItem.comments shouldBe comments
-            updatedAudioItem.genre shouldBe genre
-            updatedAudioItem.encoding shouldBe "MPEG-1 Layer 3"
-            updatedAudioItem.encoder shouldBe ""
-            updatedAudioItem.coverImage shouldBe testCoverBytes
-            updatedAudioItem.uniqueId shouldBe "${updatedAudioItem.fileName}-Yesterday-8-143"
-            updatedAudioItem.toString() shouldBe "ImmutableAudioItem(id=0, path=${file.toPath()}, title=Yesterday, artist=The Beatles)"
+    fun File.createTestAudioFile(): TestAudioFile =
+        AudioFileIO.read(this).let {
+            TestAudioFile(
+                this,
+                Duration.ofSeconds(it.audioHeader.trackLength.toLong()),
+                getBitRate(it.audioHeader),
+                it.audioHeader.encodingType
+            )
         }
 
-        updatedAudioItem.writeMetadata()
+    fun AudioItemTestAttributes.setExpectedAttributes() {
+        title = expectedTitle
+        artist = expectedArtist
+        album = expectedAlbum
+        bpm = expectedBpm
+        trackNumber = expectedTrackNumber
+        discNumber = expectedDiscNumber
+        comments = expectedComments
+        genre = expectedGenre
+        encoder = expectedEncoder
+        dateOfCreation = expectedDateOfCreation
+    }
 
-        eventually(2.seconds) {
+    context("should create an audio item, that is serializable to json, and write changes from/to a") {
+        withData(
+            mapOf(
+                "mp3 file" to arbitraryMp3File(AudioItemTestAttributes::setExpectedAttributes).next().createTestAudioFile(),
+                "m4a file" to arbitraryM4aFile(AudioItemTestAttributes::setExpectedAttributes).next().createTestAudioFile(),
+                "wav file" to arbitraryWavFile(AudioItemTestAttributes::setExpectedAttributes).next().createTestAudioFile(),
+                "flac file" to arbitraryFlacFile(AudioItemTestAttributes::setExpectedAttributes).next().createTestAudioFile()
+            )
+        ) { testAudioFile ->
+            val audioItem = ImmutableAudioItem.createFromFile(testAudioFile.file.toPath()).also { audioItem ->
+                audioItem.path shouldBe testAudioFile.file.toPath()
+                audioItem.fileName shouldBe testAudioFile.file.toPath().fileName.toString()
+                audioItem.length shouldBe testAudioFile.file.length()
+                audioItem.extension shouldBe testAudioFile.file.extension
+                audioItem.duration shouldBe testAudioFile.duration
+                audioItem.bitRate shouldBe testAudioFile.bitRate
+                audioItem.encoding shouldBe testAudioFile.encoding
+                audioItem.should(::matchAudioItemProperties)
+            }
+
+            json.encodeToString(ImmutableAudioItem.serializer(), audioItem as ImmutableAudioItem).let {
+                it shouldBe expectedJsonString(audioItem)
+                json.decodeFromString<ImmutableAudioItem>(it) shouldBe audioItem
+            }
+
+            val audioItemChanges = arbitraryAudioItemChange.next()
+            val updatedAudioItem = audioItem.update(audioItemChanges)
+
+            updatedAudioItem.writeMetadata()
+
             val loadedAudioItem: AudioItem = ImmutableAudioItem.createFromFile(updatedAudioItem.path)
             assertSoftly {
                 loadedAudioItem.id shouldBe updatedAudioItem.id
@@ -206,71 +126,107 @@ internal class ImmutableAudioItemTest : StringSpec({
                 loadedAudioItem.album.label.countryCode shouldBe CountryCode.UNDEFINED  // label country code is not updated because there is no ID3 tag for it
                 loadedAudioItem.artist.name shouldBe updatedAudioItem.artist.name
                 loadedAudioItem.artist.countryCode shouldBe updatedAudioItem.artist.countryCode // artist country code is saved into COUNTRY ID3 tag
-                loadedAudioItem.bpm shouldBe updatedAudioItem.bpm
+                if (testAudioFile.file.extension == "m4a") {
+                    loadedAudioItem.bpm shouldBe updatedAudioItem.bpm?.toInt()?.toFloat()
+                } else {
+                    loadedAudioItem.bpm shouldBe updatedAudioItem.bpm
+                }
                 loadedAudioItem.trackNumber shouldBe updatedAudioItem.trackNumber
                 loadedAudioItem.discNumber shouldBe updatedAudioItem.discNumber
                 loadedAudioItem.comments shouldBe updatedAudioItem.comments
                 loadedAudioItem.genre shouldBe updatedAudioItem.genre
                 loadedAudioItem.encoding shouldBe updatedAudioItem.encoding
                 loadedAudioItem.encoder shouldBe updatedAudioItem.encoder
-                loadedAudioItem.coverImage shouldBe updatedAudioItem.coverImage
+                loadedAudioItem.coverImageBytes shouldBe updatedAudioItem.coverImageBytes
                 loadedAudioItem.uniqueId shouldBe updatedAudioItem.uniqueId
                 loadedAudioItem.toString() shouldBe updatedAudioItem.toString()
             }
         }
     }
 
-    "AudioItem returns coverImage after being deserialized" {
-        val tempFile = tempfile("audioItem-coverImage-test", ".mp3").also { it.deleteOnExit() }
-        mp3File.copyTo(tempFile, overwrite = true)
-        audioItem = audioItem.toBuilder().path(tempFile.toPath()).build()
+    context("return coverImage after being deserialized") {
+        val audioItem = ImmutableAudioItem.createFromFile(arbitraryMp3File { coverImageBytes = null }.next().toPath())
+        audioItem.coverImageBytes shouldBe null
 
-        val updatedAudioItem: AudioItem = audioItem.update { coverImage = testCoverBytes }
+        val updatedAudioItem = audioItem.update { coverImageBytes = testCoverBytes }
+        updatedAudioItem.coverImageBytes shouldBe testCoverBytes
+
         updatedAudioItem.writeMetadata()
 
-        val json = Json { serializersModule = audioItemSerializerModule; prettyPrint = true }
-        eventually(2.seconds) {
-            val encodedAudioItem = json.encodeToString(ImmutableAudioItem.serializer(), audioItem as ImmutableAudioItem)
-            encodedAudioItem shouldBe """
-            {
-                "id": ${audioItem.id},
-                "path": "${audioItem.path}",
-                "title": "${audioItem.title}",
-                "duration": ${audioItem.duration.toSeconds()},
-                "bitRate": ${audioItem.bitRate},
-                "artist": {
-                    "type": "ImmutableArtist",
-                    "name": "${audioItem.artist.name}",
-                    "countryCode": "${audioItem.artist.countryCode}"
-                },
-                "album": {
-                    "type": "ImmutableAlbum",
-                    "name": "${audioItem.album.name}",
-                    "albumArtist": {
-                        "type": "ImmutableArtist",
-                        "name": "${audioItem.album.albumArtist.name}",
-                        "countryCode": "${audioItem.artist.countryCode}"
-                    },
-                    "year": ${audioItem.album.year},
-                    "label": {
-                        "type": "ImmutableLabel",
-                        "name": "${audioItem.album.label.name}",
-                        "countryCode": "${audioItem.album.label.countryCode}"
-                    }
-                },
-                "genre": "${audioItem.genre.name}",
-                "comments": "${audioItem.comments}",
-                "trackNumber": ${audioItem.trackNumber},
-                "discNumber": ${audioItem.discNumber},
-                "bpm": ${audioItem.bpm},
-                "encoder": "${audioItem.encoder}",
-                "encoding": "${audioItem.encoding}",
-                "dateOfCreation": ${audioItem.dateOfCreation.toEpochSecond(ZoneOffset.UTC)},
-                "lastDateModified": ${audioItem.lastDateModified.toEpochSecond(ZoneOffset.UTC)}
-            }""".trimIndent()
-            val decodedAudioItem = json.decodeFromString<ImmutableAudioItem>(encodedAudioItem)
+        val encodedAudioItem = json.encodeToString(ImmutableAudioItem.serializer(), updatedAudioItem as ImmutableAudioItem)
+        val decodedAudioItem = json.decodeFromString<ImmutableAudioItem>(encodedAudioItem)
 
-            decodedAudioItem.coverImage shouldBe testCoverBytes
-        }
+        decodedAudioItem.coverImageBytes shouldBe testCoverBytes
     }
 })
+
+fun expectedJsonString(audioItem: AudioItem) =
+    """
+        {
+            "id": ${audioItem.id},
+            "path": "${audioItem.path}",
+            "title": "${audioItem.title}",
+            "duration": ${audioItem.duration.toSeconds()},
+            "bitRate": ${audioItem.bitRate},
+            "artist": {
+                "type": "ImmutableArtist",
+                "name": "${audioItem.artist.name}",
+                "countryCode": "${audioItem.artist.countryCode}"
+            },
+            "album": {
+                "type": "ImmutableAlbum",
+                "name": "${audioItem.album.name}",
+                "albumArtist": {
+                    "type": "ImmutableArtist",
+                    "name": "${audioItem.album.albumArtist.name}"
+                },
+                "isCompilation": ${audioItem.album.isCompilation},
+                "year": ${audioItem.album.year},
+                "label": {
+                    "type": "ImmutableLabel",
+                    "name": "${audioItem.album.label.name}"
+                }
+            },
+            "genre": "${audioItem.genre.name}",
+            "comments": "${audioItem.comments}",
+            "trackNumber": ${audioItem.trackNumber},
+            "discNumber": ${audioItem.discNumber},
+            "bpm": ${audioItem.bpm},
+            "encoder": "${audioItem.encoder}",
+            "encoding": "${audioItem.encoding}",
+            "dateOfCreation": ${audioItem.dateOfCreation.toEpochSecond(ZoneOffset.UTC)},
+            "lastDateModified": ${audioItem.lastDateModified.toEpochSecond(ZoneOffset.UTC)}
+        }""".trimIndent()
+
+fun matchAudioItemProperties(audioItem: AudioItem) {
+    audioItem.id shouldBe UNASSIGNED_ID
+    audioItem.dateOfCreation shouldBeAfter expectedDateOfCreation
+    audioItem.lastDateModified shouldBe audioItem.dateOfCreation
+    audioItem.title shouldBe expectedTitle
+    audioItem.album.name shouldBe expectedAlbumName
+    audioItem.album.albumArtist.name shouldBe expectedAlbumArtistName
+    audioItem.album.albumArtist.countryCode shouldBe CountryCode.UNDEFINED
+    audioItem.album.label.name shouldBe expectedLabel.name
+    audioItem.album.label.countryCode shouldBe CountryCode.UNDEFINED
+    audioItem.artist shouldBe expectedArtist
+    audioItem.bpm shouldBe expectedBpm
+    audioItem.trackNumber shouldBe expectedTrackNumber
+    audioItem.discNumber shouldBe expectedDiscNumber
+    audioItem.comments shouldBe expectedComments
+    audioItem.genre shouldBe expectedGenre
+    audioItem.encoder shouldBe expectedEncoder
+    audioItem.uniqueId shouldBe buildString {
+        append(audioItem.path.fileName.toString().replace(' ', '_'))
+        append('-')
+        append(audioItem.title)
+        append('-')
+        append(audioItem.duration.toSeconds())
+        append('-')
+        append(audioItem.bitRate)
+    }
+    audioItem.artistsInvolved shouldContainExactly AudioUtils.getArtistsNamesInvolved(
+        audioItem.title,
+        audioItem.artist.name,
+        audioItem.album.albumArtist.name
+    )
+}

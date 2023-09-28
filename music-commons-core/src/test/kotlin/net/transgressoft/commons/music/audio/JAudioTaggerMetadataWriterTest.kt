@@ -1,13 +1,13 @@
 package net.transgressoft.commons.music.audio
 
-import com.neovisionaries.i18n.CountryCode
-import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.shouldBe
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.flacFile
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.m4aFile
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.mp3File
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.testCoverBytes
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.wavFile
+import com.neovisionaries.i18n.CountryCode
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.shouldBe
 import org.jaudiotagger.audio.AudioFile
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.wav.WavOptions
@@ -68,7 +68,7 @@ internal class JAudioTaggerMetadataWriterTest : StringSpec({
         on { this@on.bitRate } doReturn bitRate
         on { this@on.encoder } doReturn encoder
         on { this@on.encoding } doReturn encoding
-        on { this@on.coverImage } doReturn testCoverBytes
+        on { this@on.coverImageBytes } doReturn testCoverBytes
     }
 
     lateinit var metadataWriter: JAudioTaggerMetadataWriter

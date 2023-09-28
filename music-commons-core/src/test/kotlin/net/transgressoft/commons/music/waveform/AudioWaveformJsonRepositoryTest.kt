@@ -3,7 +3,7 @@ package net.transgressoft.commons.music.waveform
 import net.transgressoft.commons.music.audio.AudioItemTestUtil
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryWavFile
-import io.kotest.assertions.timing.eventually
+import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.optional.shouldBePresent
@@ -49,7 +49,7 @@ internal class AudioWaveformJsonRepositoryTest : StringSpec({
     }
 
     "Repository creates a waveform asynchronously" {
-        val audioItem = arbitraryAudioItem(path = arbitraryWavFile.next().toPath()).next()
+        val audioItem = arbitraryAudioItem { path = arbitraryWavFile.next().toPath() }.next()
         val audioWaveform = audioWaveformRepository.getOrCreateWaveformAsync(audioItem, Arb.short(1, 100).next(), Arb.short(1, 100).next()).join()
 
         audioWaveform.id shouldBe audioItem.id

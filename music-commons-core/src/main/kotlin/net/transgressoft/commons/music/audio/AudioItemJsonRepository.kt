@@ -4,7 +4,6 @@ import net.transgressoft.commons.data.JsonFileRepository
 import net.transgressoft.commons.data.RepositoryBase
 import net.transgressoft.commons.data.StandardDataEvent.Type.*
 import net.transgressoft.commons.data.UpdatedDataEvent
-import net.transgressoft.commons.music.AudioUtils
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import com.neovisionaries.i18n.CountryCode
 import mu.KotlinLogging
@@ -57,12 +56,12 @@ class AudioItemJsonRepository(override val name: String, file: File) : Repositor
 
     private val idCounter = AtomicInteger(1)
 
-    override val artistCatalogRegistry: ArtistCatalogRegistry = ArtistCatalogVolatileRegistry().also { subscribe(it) }
+    private val artistCatalogRegistry: ArtistCatalogRegistry = ArtistCatalogVolatileRegistry().also { subscribe(it) }
 
     override fun entityClone(entity: MutableAudioItem): MutableAudioItem = InternalMutableAudioItem(entity)
 
     override fun createFromFile(audioItemPath: Path): MutableAudioItem =
-        InternalMutableAudioItem(AudioUtils.readAudioItemFields(audioItemPath).id(newId()))
+        InternalMutableAudioItem(newId(), readAudioItemFields(audioItemPath))
             .also { audioItem ->
                 artistCatalogRegistry.findAlbum(audioItem.album.name, audioItem.artist)
                     .ifPresent { album -> audioItem.album = album }
@@ -83,6 +82,12 @@ class AudioItemJsonRepository(override val name: String, file: File) : Repositor
         return id
     }
 
+    override fun getArtistCatalog(artist: Artist) = artistCatalogRegistry.findFirst(artist)
+
+    override fun getArtistCatalog(artistName: String) = artistCatalogRegistry.findFirst(artistName)
+
+    override fun getAlbum(albumName: String, artist: Artist) = artistCatalogRegistry.findAlbum(albumName, artist)
+
     override fun add(entity: MutableAudioItem) = super.add(entity).also { serializableAudioItemsRepository.add(entity.toImmutable()) }
 
     private fun MutableAudioItem.toImmutable() = ImmutableAudioItem(
@@ -100,7 +105,7 @@ class AudioItemJsonRepository(override val name: String, file: File) : Repositor
         bpm,
         encoder,
         encoding,
-        coverImage,
+        coverImageBytes,
         dateOfCreation,
         lastDateModified
     )

@@ -8,7 +8,7 @@ import net.transgressoft.commons.event.EventType
 import net.transgressoft.commons.event.TransEventSubscriberBase
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
 import com.neovisionaries.i18n.CountryCode
-import io.kotest.assertions.timing.eventually
+import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainOnly
@@ -23,12 +23,12 @@ internal class ArtistCatalogVolatileRegistryTest : BehaviorSpec({
 
     class TestAudioItemEventPublisher(override val name: String = "Audio items publisher") : StandardDataEventPublisher<Int, MutableAudioItem>() {
         fun publishCreateEvent(artistName: String, albumName: String, albumArtistName: String = artistName): MutableAudioItem =
-            arbitraryAudioItem(
-                artist = ImmutableArtist.of(artistName, CountryCode.US),
-                album = ImmutableAlbum(albumName, ImmutableArtist.of(albumArtistName, CountryCode.US)),
-                trackNumber = 1,
-                discNumber = 1,
-            ).next().also { putCreateEvent(it) }
+            arbitraryAudioItem {
+                artist = ImmutableArtist.of(artistName, CountryCode.US)
+                album = ImmutableAlbum(albumName, ImmutableArtist.of(albumArtistName, CountryCode.US))
+                trackNumber = 1
+                discNumber = 1
+            }.next().also { putCreateEvent(it) }
 
         fun publishDeleteEvent(audioItem: MutableAudioItem) = putDeleteEvent(audioItem)
 

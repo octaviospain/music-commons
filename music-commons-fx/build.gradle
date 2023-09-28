@@ -1,5 +1,5 @@
 plugins {
-    id "org.openjfx.javafxplugin" version "0.0.14"
+    id "org.openjfx.javafxplugin" version "0.1.0"
 }
 
 group 'net.transgressoft'
@@ -15,11 +15,11 @@ dependencies {
 
     testImplementation(platform('org.junit:junit-bom:5.10.0-M1'))
     testImplementation('org.junit.jupiter:junit-jupiter')
-    testImplementation 'io.kotest:kotest-runner-junit5:5.6.2'
+    testImplementation 'io.kotest:kotest-runner-junit5:5.7.2'
 }
 
 javafx {
-    version = JavaVersion.VERSION_11
+    version = JavaVersion.VERSION_17
     modules = ['javafx.controls']
 }
 

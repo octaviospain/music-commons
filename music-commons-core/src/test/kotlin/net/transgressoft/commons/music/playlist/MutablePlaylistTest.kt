@@ -44,14 +44,14 @@ internal class MutablePlaylistTest : StringSpec({
         playlist1.name shouldBe "Modified playlist1"
         playlist1.uniqueId shouldBe "Modified playlist1"
 
-        val audioItems = Arb.list(arbitraryAudioItem(), 4..4).next().also {
+        val audioItems = Arb.list(arbitraryAudioItem, 4..4).next().also {
             playlist1.addAudioItems(it)
         }
 
         playlist1.audioItems.size shouldBe 4
         playlist1.audioItemsAllMatch { it.title == "Song title" } shouldBe false
 
-        val customAudioItem = arbitraryAudioItem(title = "Song title").next().also {
+        val customAudioItem = arbitraryAudioItem { title = "Song title" }.next().also {
             playlist1.addAudioItems(listOf(it))
         }
 
@@ -86,10 +86,10 @@ internal class MutablePlaylistTest : StringSpec({
         directory1.audioItems.isEmpty() shouldBe true
         directory1.toString() shouldBe "MutablePlaylist(id=1, isDirectory=true, name='Directory1', audioItems=[], playlists=[])"
 
-        val audioItems = Arb.list(arbitraryAudioItem(), 5..5).next()
+        val audioItems = Arb.list(arbitraryAudioItem, 5..5).next()
         val p1 = audioPlaylistRepository.createPlaylistDirectory( "p1", audioItems = audioItems)
         val p2 = audioPlaylistRepository.createPlaylistDirectory("p2")
-        val d1AudioItem = arbitraryAudioItem(title = "One").next()
+        val d1AudioItem = arbitraryAudioItem { title = "One" }.next()
         val d1 = audioPlaylistRepository.createPlaylistDirectory( "d1", audioItems = listOf(d1AudioItem))
 
         directory1.addPlaylists(listOf(p1, p2, d1))
@@ -151,15 +151,15 @@ internal class MutablePlaylistTest : StringSpec({
 internal fun randomQueenAudioItems(tempDirectory: Path, albumName: String = "", size: Int) =
     audioPlaylistRepository.createPlaylist(albumName, buildList {
         for (i in 0 until size) {
-            val title = "Song $i - $albumName"
+            val song = "Song $i - $albumName"
             val artistName = "Queen"
-            val duration = Duration.ofSeconds((60 + i).toLong())
-            add((arbitraryAudioItem(
-                title = title,
-                artist = AudioItemTestUtil.arbitraryArtist(givenName = artistName).next(),
-                path = tempDirectory.resolve("$title.mp3"), duration = duration
-            ))
-                .next())
+            val songDuration = Duration.ofSeconds((60 + i).toLong())
+            add(arbitraryAudioItem {
+                title = song
+                artist = AudioItemTestUtil.arbitraryArtist(givenName = artistName).next()
+                path = tempDirectory.resolve("$title.mp3")
+                duration = songDuration
+                }.next())
         }
     })
 
