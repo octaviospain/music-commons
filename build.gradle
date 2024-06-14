@@ -1,8 +1,8 @@
 plugins {
-    id 'com.palantir.git-version' version '3.0.0'
+    id 'com.palantir.git-version' version '3.1.0'
     id 'org.jetbrains.kotlin.jvm' version '1.9.0'
     id 'org.jetbrains.kotlin.plugin.serialization' version '1.9.0'
-    id 'org.sonarqube' version '4.2.0.3129'
+    id 'org.sonarqube' version '5.0.0.4638'
     id 'jacoco'
 }
 
@@ -41,8 +41,8 @@ subprojects {
         implementation "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
 
-        testImplementation 'ch.qos.logback:logback-core:1.4.8'
-        testRuntimeOnly 'ch.qos.logback:logback-classic:1.4.8'
+        testImplementation 'ch.qos.logback:logback-core:1.5.6'
+        testRuntimeOnly 'ch.qos.logback:logback-classic:1.5.6'
     }
 
     repositories {

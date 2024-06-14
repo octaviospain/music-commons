@@ -9,16 +9,16 @@ description 'Transgressoft Music Commons - JavaFX'
 
 dependencies {
     api project(path: ':music-commons-core')
-    implementation 'com.google.guava:guava:32.1.1-jre'
+    implementation 'com.google.guava:guava:33.2.1-jre'
     implementation 'net.jthink:jaudiotagger:3.0.1'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-javafx:1.7.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-javafx:1.8.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1'
-    implementation 'org.openjfx:javafx-controls:17+'
+    implementation 'org.openjfx:javafx-controls:22.0.1+'
 
-    testImplementation(platform('org.junit:junit-bom:5.10.0-M1'))
+    testImplementation(platform('org.junit:junit-bom:5.10.2'))
     testImplementation('org.junit.jupiter:junit-jupiter')
-    testImplementation 'io.kotest:kotest-runner-junit5:5.7.2'
+    testImplementation 'io.kotest:kotest-runner-junit5:5.9.0'
 }
 
 javafx {

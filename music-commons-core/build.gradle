@@ -13,18 +13,18 @@ ext {
 dependencies {
     api project(path: ':music-commons-api')
 
-    implementation 'com.google.guava:guava:32.1.1-jre'
+    implementation 'com.google.guava:guava:33.2.1-jre'
     implementation 'net.jthink:jaudiotagger:3.0.1'
     implementation 'net.transgressoft:transgressoft-commons-core:1.21'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1'
-    implementation 'ws.schild:jave-core:3.3.1'
-    implementation 'ws.schild:jave-nativebin-linux64:3.3.1'
+    implementation 'ws.schild:jave-core:3.5.0'
+    implementation 'ws.schild:jave-nativebin-linux64:3.5.0'
 
-    testImplementation 'org.mockito.kotlin:mockito-kotlin:5.0.0'
-    testImplementation(platform('org.junit:junit-bom:5.10.0-M1'))
+    testImplementation 'org.mockito.kotlin:mockito-kotlin:5.3.1'
+    testImplementation(platform('org.junit:junit-bom:5.10.2'))
 
-    testImplementation 'io.mockk:mockk:1.13.5'
+    testImplementation 'io.mockk:mockk:1.13.11'
     testImplementation "io.kotest:kotest-runner-junit5:$kotestVersion"
     testImplementation "io.kotest:kotest-assertions-core:$kotestVersion"
     testImplementation "io.kotest:kotest-property:$kotestVersion"
