@@ -43,7 +43,7 @@ publishing {
             }
 
             name 'transgressoft-releases'
-            url 'http://10.8.0.1:8081/repository/maven-releases/'
+            url 'http://nexus.transgressoft.net/repository/maven-releases/'
             allowInsecureProtocol = true
         }
         maven {
@@ -56,7 +56,7 @@ publishing {
             }
 
             name 'transgressoft-snapshots'
-            url 'http://10.8.0.1:8081/repository/maven-snapshots/'
+            url 'http://nexus.transgressoft.net/repository/maven-snapshots/'
             allowInsecureProtocol = true
         }
     }

@@ -3,6 +3,8 @@ package net.transgressoft.commons.music.playlist
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemRepository
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
+import net.transgressoft.commons.music.playlist.AudioPlaylistTestUtil.asJsonKeyValues
+import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrowMessage
 import io.kotest.core.spec.style.StringSpec
@@ -19,7 +21,7 @@ import org.mockito.kotlin.whenever
 import java.io.File
 import java.time.Duration
 import java.util.*
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.milliseconds
 
 internal class AudioPlaylistJsonRepositoryTest : StringSpec({
 
@@ -50,54 +52,18 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
             updatedRock.playlists.shouldContainExactly(rockFavorites)
         }
 
-        eventually(2.seconds) {
-            jsonFile.readText() shouldBe """
-            {
-                "${rock.id}": {
-                    "id": ${rock.id},
-                    "isDirectory": ${rock.isDirectory},
-                    "name": "${rock.name}",
-                    "audioItemIds": [
-                        ${rockAudioItem.id}
-                    ],
-                    "playlistIds": [
-                        ${rockFavorites.id}
-                    ]
-                },
-                "${rockFavorites.id}": {
-                    "id": ${rockFavorites.id},
-                    "isDirectory": ${rockFavorites.isDirectory},
-                    "name": "${rockFavorites.name}",
-                    "audioItemIds": [
-                        ${rockFavAudioItem.id}
-                    ],
-                    "playlistIds": [
-                    ]
-                }
-            }
-            """.trimIndent()
-        }
+        val json = listOf(rock, rockFavorites).asJsonKeyValues()
+
+        eventually(100.milliseconds) { jsonFile.readText().shouldEqualJson(json) }
     }
 
     "Existing repository loads from file" {
+        val audioItem = arbitraryAudioItem { id = 453374921 }.next()
         jsonFile.writeText(
-            """
-        {
-            "1": {
-                "id": 1,
-                "isDirectory": true,
-                "name": "Rock",
-                "audioItemIds": [
-                    453374921
-                ],
-                "playlistIds": [
-                ]
-            }
-        }
-        """.trimIndent()
+            listOf(ImmutablePlaylist(1, true, "Rock", listOf(audioItem)))
+                .asJsonKeyValues()
         )
 
-        val audioItem = arbitraryAudioItem { id = 453374921 }.next()
         val audioItemRepository = mock<AudioItemRepository<AudioItem>> {
             whenever(it.findById(eq(453374921))).thenReturn(Optional.of(audioItem))
         }
@@ -128,7 +94,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         audioPlaylistRepository.findByName(rock.name) shouldBePresent { it shouldBe rock }
         val playlistsThatContainsAllAudioItemsWith50sInTitle =
             audioPlaylistRepository.search { it.audioItemsAllMatch { audioItem -> audioItem.title.contains("50s") } }
-        playlistsThatContainsAllAudioItemsWith50sInTitle.shouldContainExactly(rock)
+        playlistsThatContainsAllAudioItemsWith50sInTitle.shouldContainOnly(rock)
 
         val pop = audioPlaylistRepository.createPlaylist("Pop")
         audioPlaylistRepository.size() shouldBe 2
@@ -217,59 +183,8 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         audioPlaylistRepository.findById(fifties.id) shouldBePresent { it.playlists.shouldNotContain(rock) }
         audioPlaylistRepository.findByName(bestHits.name) shouldBePresent { it.playlists.shouldContainOnly(fifties) }
 
-        eventually(2.seconds) {
-            jsonFile.readText() shouldBe """
-            {
-                "${rock.id}": {
-                    "id": ${rock.id},
-                    "isDirectory": ${rock.isDirectory},
-                    "name": "${rock.name}",
-                    "audioItemIds": [
-                    ],
-                    "playlistIds": [
-                    ]
-                },
-                "${pop.id}": {
-                    "id": ${pop.id},
-                    "isDirectory": ${pop.isDirectory},
-                    "name": "${pop.name}",
-                    "audioItemIds": [
-                    ],
-                    "playlistIds": [
-                    ]
-                },
-                "${fifties.id}": {
-                    "id": ${fifties.id},
-                    "isDirectory": ${fifties.isDirectory},
-                    "name": "${fifties.name}",
-                    "audioItemIds": [
-                    ],
-                    "playlistIds": [
-                        ${pop.id}
-                    ]
-                },
-                "${bestHits.id}": {
-                    "id": ${bestHits.id},
-                    "isDirectory": ${bestHits.isDirectory},
-                    "name": "${bestHits.name}",
-                    "audioItemIds": [
-                    ],
-                    "playlistIds": [
-                        ${fifties.id}
-                    ]
-                },
-                "${selection.id}": {
-                    "id": ${selection.id},
-                    "isDirectory": ${selection.isDirectory},
-                    "name": "${selection.name}",
-                    "audioItemIds": [
-                    ],
-                    "playlistIds": [
-                        ${rock.id}
-                    ]
-                }
-            }
-            """.trimIndent()
+        eventually(100.milliseconds) {
+            jsonFile.readText().shouldEqualJson(listOf(rock, pop, fifties, bestHits, selection).asJsonKeyValues())
         }
 
         // --
@@ -288,61 +203,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         audioPlaylistRepository.findByName(selection.name) shouldBePresent { it.playlists.shouldContainOnly(rock) }
         audioPlaylistRepository.findByName(fifties.name) shouldBePresent { it.playlists shouldContainExactly setOf(pop, selection) }
 
-        eventually(2.seconds) {
-            jsonFile.readText() shouldBe """
-            {
-                "${rock.id}": {
-                    "id": ${rock.id},
-                    "isDirectory": ${rock.isDirectory},
-                    "name": "${rock.name}",
-                    "audioItemIds": [
-                    ],
-                    "playlistIds": [
-                    ]
-                },
-                "${pop.id}": {
-                    "id": ${pop.id},
-                    "isDirectory": ${pop.isDirectory},
-                    "name": "${pop.name}",
-                    "audioItemIds": [
-                    ],
-                    "playlistIds": [
-                    ]
-                },
-                "${fifties.id}": {
-                    "id": ${fifties.id},
-                    "isDirectory": ${fifties.isDirectory},
-                    "name": "${fifties.name}",
-                    "audioItemIds": [
-                    ],
-                    "playlistIds": [
-                        ${pop.id},
-                        ${selection.id}
-                    ]
-                },
-                "${bestHits.id}": {
-                    "id": ${bestHits.id},
-                    "isDirectory": ${bestHits.isDirectory},
-                    "name": "${bestHits.name}",
-                    "audioItemIds": [
-                    ],
-                    "playlistIds": [
-                        ${fifties.id}
-                    ]
-                },
-                "${selection.id}": {
-                    "id": ${selection.id},
-                    "isDirectory": ${selection.isDirectory},
-                    "name": "${selection.name}",
-                    "audioItemIds": [
-                    ],
-                    "playlistIds": [
-                        ${rock.id}
-                    ]
-                }
-            }
-            """.trimIndent()
-        }
+        eventually(100.milliseconds) { jsonFile.readText().shouldEqualJson(listOf(rock, pop, fifties, bestHits, selection).asJsonKeyValues()) }
 
         audioPlaylistRepository.removeAll(setOf(bestHits))
 
@@ -354,10 +215,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         rock.playlists.isEmpty() shouldBe true
         pop.playlists.isEmpty() shouldBe true
 
-        eventually(2.seconds) {
-            jsonFile.readText() shouldBe "{\n}"
-        }
-
+        eventually(100.milliseconds) { jsonFile.readText() shouldBe "{}"}
     }
 
     "Removing playlist directory from repository is recursive and changes reflected on playlists" {

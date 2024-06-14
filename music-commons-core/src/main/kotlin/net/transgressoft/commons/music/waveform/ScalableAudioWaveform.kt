@@ -1,11 +1,12 @@
 package net.transgressoft.commons.music.waveform
 
-import net.transgressoft.commons.music.audio.PathSerializer
-import javafx.scene.paint.Color
+import net.transgressoft.commons.ReactiveEntity
+import net.transgressoft.commons.data.json.PathSerializer
 import ws.schild.jave.Encoder
 import ws.schild.jave.MultimediaObject
 import ws.schild.jave.encode.AudioAttributes
 import ws.schild.jave.encode.EncodingAttributes
+import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.File
 import java.nio.file.Files
@@ -26,7 +27,7 @@ import kotlinx.serialization.Transient
 class ScalableAudioWaveform(
     override val id: Int,
     @Serializable(with = PathSerializer::class) private val audioFilePath: Path,
-) : AudioWaveform {
+) : AudioWaveform, ReactiveEntity<Int, ScalableAudioWaveform>() {
 
     /*
         This constant is used to scale the amplitude height of the waveform
@@ -140,19 +141,6 @@ class ScalableAudioWaveform(
         check(height > 0) { "Height must be greater than 0" }
 
         val amplitudes = amplitudes(width, height)
-        val backgroundRgb = java.awt.Color(
-            backgroundColor.red.toFloat(),
-            backgroundColor.green.toFloat(),
-            backgroundColor.blue.toFloat(),
-            backgroundColor.opacity.toFloat()
-        ).rgb
-
-        val waveformRgb = java.awt.Color(
-            waveformColor.red.toFloat(),
-            waveformColor.green.toFloat(),
-            waveformColor.blue.toFloat(),
-            waveformColor.opacity.toFloat()
-        ).rgb
 
         val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB).apply {
             for (x in 0 until width) {
@@ -162,9 +150,9 @@ class ScalableAudioWaveform(
                     val y2: Int = y1 + 2 * absoluteAmplitude
 
                     if (y in y1..y2) {
-                        setRGB(x, y, waveformRgb)
+                        setRGB(x, y, waveformColor.rgb)
                     } else {
-                        setRGB(x, y, backgroundRgb)
+                        setRGB(x, y, backgroundColor.rgb)
                     }
                 }
             }

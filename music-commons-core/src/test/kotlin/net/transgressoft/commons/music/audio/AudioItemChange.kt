@@ -2,7 +2,7 @@ package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.IdentifiableEntity
 
-data class AudioItemChange (
+data class AudioItemChange(
     override val id: Int,
     var title: String? = null,
     var artist: Artist? = null,

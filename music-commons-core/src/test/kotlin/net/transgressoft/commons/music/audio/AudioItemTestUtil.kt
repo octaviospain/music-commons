@@ -22,6 +22,7 @@ import java.net.URI
 import java.nio.file.*
 import java.time.Duration
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.toJavaDuration
@@ -80,35 +81,6 @@ internal object AudioItemTestUtil : TestConfiguration() {
     val arbitraryWavFile: Arb<File>
         get() = arbitraryWavFile {}
 
-    private fun createTempFileWithTag(testFile: File, tag: Tag): File =
-        tempfile(suffix = ".${testFile.extension}")
-            .also { file ->
-                Files.copy(testFile.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
-                file.deleteOnExit()
-                AudioFileIO.read(file).apply {
-                    this.tag = tag
-                    commit() } }
-
-    val arbitraryAudioItemChange: Arb<AudioItemChange> = arbitrary {
-        val attributes = arbitraryAudioAttributes().bind()
-        AudioItemChange(
-            attributes.id,
-            attributes.title,
-            attributes.artist,
-            attributes.album.name,
-            attributes.album.albumArtist,
-            attributes.album.isCompilation,
-            attributes.album.year,
-            attributes.album.label,
-            attributes.genre,
-            attributes.comments,
-            attributes.trackNumber,
-            attributes.discNumber,
-            attributes.bpm,
-            attributes.coverImageBytes
-        )
-    }
-
     private fun fillTagWithRandomValues(attributes: AudioItemTestAttributes, tag: Tag): Tag {
         TagOptionSingleton.getInstance().isWriteMp4GenresAsText = true
         TagOptionSingleton.getInstance().isWriteMp3GenresAsText = true
@@ -144,6 +116,35 @@ internal object AudioItemTestUtil : TestConfiguration() {
                 tag.addField(artwork)
             }
         }
+    }
+
+    private fun createTempFileWithTag(testFile: File, tag: Tag): File =
+        tempfile(suffix = ".${testFile.extension}")
+            .also { file ->
+                Files.copy(testFile.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                file.deleteOnExit()
+                AudioFileIO.read(file).apply {
+                    this.tag = tag
+                    commit() } }
+
+    val arbitraryAudioItemChange: Arb<AudioItemChange> = arbitrary {
+        val attributes = arbitraryAudioAttributes().bind()
+        AudioItemChange(
+            attributes.id,
+            attributes.title,
+            attributes.artist,
+            attributes.album.name,
+            attributes.album.albumArtist,
+            attributes.album.isCompilation,
+            attributes.album.year,
+            attributes.album.label,
+            attributes.genre,
+            attributes.comments,
+            attributes.trackNumber,
+            attributes.discNumber,
+            attributes.bpm,
+            attributes.coverImageBytes
+        )
     }
 
     private val atomicInteger = AtomicInteger(9999)
@@ -200,8 +201,8 @@ internal object AudioItemTestUtil : TestConfiguration() {
             album ?: arbitraryAlbum().bind(),
             genre ?: Genre.entries.toTypedArray().random(),
             comments ?: Arb.stringPattern("[a-z]{5} [a-z]{5}").bind(),
-            trackNumber ?: Arb.short().bind(),
-            discNumber ?: Arb.short().bind(),
+            trackNumber ?: Arb.positiveShort().bind(),
+            discNumber ?: Arb.positiveShort().bind(),
             bpm ?: Arb.float(10.0f, 220.58f).bind(),
             encoder ?: Arb.stringPattern("[a-z]{5} [a-z]{5}").bind(),
             encoding ?: Arb.stringPattern("[a-z]{5} [a-z]{5}").bind(),
@@ -212,15 +213,96 @@ internal object AudioItemTestUtil : TestConfiguration() {
         )
     }
 
-    fun arbitraryAudioItem(attributes: AudioItemTestAttributes.() -> Unit): Arb<InternalMutableAudioItem> = arbitrary {
-        arbitraryAudioAttributes().next().let {
-            attributes(it)
-            InternalMutableAudioItem(it.id, it.toAudioAttributes())
-        }
+    fun arbitraryAudioItem(attributesAction: AudioItemTestAttributes.() -> Unit): Arb<MutableAudioItem> = arbitrary {
+        val attributes = arbitraryAudioAttributes().bind()
+        attributesAction(attributes)
+        MutableAudioItem(arbitraryMp3File(attributes).bind().toPath(), attributes.id)
     }
 
     val arbitraryAudioItem
         get() = arbitraryAudioItem {}
+
+    fun arbitraryAlbumAudioItems(
+        artist: Artist? = null,
+        album: Album? = null,
+        size: IntRange = 3 .. 10
+    ): Arb<List<AudioItem>> = arbitrary {
+        val arbitraryArtist = artist ?: arbitraryArtist().bind()
+        val arbitraryAlbum = album ?: arbitraryAlbum().bind()
+        buildList {
+            repeat(Arb.int(size).bind()) {
+                add(arbitraryAudioItem {
+                    this.artist = arbitraryArtist
+                    this.album = arbitraryAlbum
+                    this.trackNumber = (it.plus(1)).toShort()
+                    this.coverImageBytes = null
+                }.bind())
+            }
+        }
+    }
+
+    fun AudioItem.update(change: AudioItemChange) {
+        change.title?.let { title = it }
+        change.artist?.let { artist = it }
+        album = ImmutableAlbum(
+            change.albumName ?: album.name,
+            change.albumArtist ?: album.albumArtist,
+            change.isCompilation ?: album.isCompilation,
+            change.year?.takeIf { year -> year > 0 } ?: album.year,
+            change.label ?: album.label
+        )
+        change.genre ?: genre
+        change.comments ?: comments
+        change.trackNumber?.takeIf { trackNum -> trackNum > 0 } ?: trackNumber
+        change.discNumber?.takeIf { discNum -> discNum > 0 } ?: discNumber
+        change.bpm?.takeIf { bpm -> bpm > 0 } ?: bpm
+        change.coverImageBytes ?: coverImageBytes
+    }
+
+    fun AudioItem.update(changeAction: AudioItemChange.() -> Unit) {
+        val change = AudioItemChange(id).also(changeAction)
+        update(change)
+    }
+
+    fun AudioItem.asJsonKeyValue() = """
+        {
+            "$id": ${asJsonValue()}
+        }
+    """
+
+    fun AudioItem.asJsonValue() = """
+       {
+            "id": $id,
+            "path": "$path",
+            "title": "$title",
+            "duration": ${duration.toSeconds()},
+            "bitRate": ${bitRate},
+            "artist": {
+                "name": "${artist.name}",
+                "countryCode": "${artist.countryCode.name}"
+            },
+            "album": {
+                "name": "${album.name}",
+                "albumArtist": {
+                    "name": "${album.albumArtist.name}"
+                },
+                "isCompilation": ${album.isCompilation},
+                "year": ${album.year},
+                "label": {
+                    "name": "${album.label.name}"
+                }
+            },
+            "genre": "${genre.name}",
+            "comments": "${comments}",
+            "trackNumber": ${trackNumber},
+            "discNumber": ${discNumber},
+            "bpm": ${bpm},
+            "encoder": "${encoder}",
+            "encoding": "${encoding}",
+            "dateOfCreation": ${dateOfCreation.toEpochSecond(ZoneOffset.UTC)},
+            "lastDateModified": ${lastDateModified.toEpochSecond(ZoneOffset.UTC)}
+        }
+    """
 }
 
 data class AudioItemTestAttributes(
@@ -241,25 +323,4 @@ data class AudioItemTestAttributes(
     var dateOfCreation: LocalDateTime,
     var lastDateModified: LocalDateTime,
     var id: Int = UNASSIGNED_ID
-) {
-
-    fun toAudioAttributes() = AudioItemAttributes(
-        path,
-        title,
-        duration,
-        bitRate,
-        artist,
-        album,
-        genre,
-        comments,
-        trackNumber,
-        discNumber,
-        bpm,
-        encoder,
-        encoding,
-        coverImageBytes,
-        dateOfCreation,
-        lastDateModified,
-        id
-    )
-}
+)

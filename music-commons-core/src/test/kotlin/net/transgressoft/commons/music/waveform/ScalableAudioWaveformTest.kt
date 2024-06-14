@@ -1,19 +1,19 @@
 package net.transgressoft.commons.music.waveform
 
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.flacFile
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.m4aFile
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.mp3File
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.wavFile
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import javafx.scene.paint.Color
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import net.transgressoft.commons.music.audio.AudioItemTestUtil.flacFile
-import net.transgressoft.commons.music.audio.AudioItemTestUtil.m4aFile
-import net.transgressoft.commons.music.audio.AudioItemTestUtil.mp3File
-import net.transgressoft.commons.music.audio.AudioItemTestUtil.wavFile
+import java.awt.Color
 import java.io.File
 import javax.imageio.ImageIO
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 internal class ScalableAudioWaveformTest : FunSpec({
 

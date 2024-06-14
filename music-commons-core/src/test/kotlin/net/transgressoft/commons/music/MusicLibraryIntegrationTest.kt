@@ -1,21 +1,26 @@
 package net.transgressoft.commons.music
 
-import net.transgressoft.commons.music.audio.*
+import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.AudioItemJsonRepository
+import net.transgressoft.commons.music.audio.AudioItemRepository
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.mp3File
 import net.transgressoft.commons.music.playlist.AudioPlaylistJsonRepository
 import net.transgressoft.commons.music.playlist.AudioPlaylistRepository
+import net.transgressoft.commons.music.playlist.AudioPlaylistTestUtil.asJsonKeyValues
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
 import net.transgressoft.commons.music.waveform.AudioWaveformJsonRepository
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
 import net.transgressoft.commons.music.waveform.ScalableAudioWaveform
+import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
+import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.milliseconds
 
 internal class MusicLibraryIntegrationTest : StringSpec({
 
@@ -23,7 +28,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     val playlistRepoFile = tempfile("playlistRepository-test", ".json").apply { deleteOnExit() }
     val waveformsRepoFile = tempfile("waveformRepository-test", ".json").apply { deleteOnExit() }
 
-    val audioItemRepository: AudioItemRepository<MutableAudioItem> = AudioItemJsonRepository("AudioItems", audioRepoFile)
+    val audioItemRepository: AudioItemRepository<AudioItem> = AudioItemJsonRepository("AudioItems", audioRepoFile)
     val audioWaveformRepository: AudioWaveformRepository<ScalableAudioWaveform> = AudioWaveformJsonRepository("Waveforms", waveformsRepoFile)
     val audioPlaylistRepository: AudioPlaylistRepository<AudioItem, MutableAudioPlaylist<AudioItem>> = AudioPlaylistJsonRepository("Playlists", playlistRepoFile)
 
@@ -39,13 +44,13 @@ internal class MusicLibraryIntegrationTest : StringSpec({
 
         val audioItem = audioItemRepository.createFromFile(mp3File.toPath())
 
-        eventually(1.seconds) {
+        eventually(100.milliseconds) {
             audioRepoFile.readText() shouldContain audioItem.path.toString()
-            audioItemRepository.getArtistCatalog(audioItem.artist) shouldBePresent { it.containsAudioItem(audioItem) shouldBe true }
+            audioItemRepository.findAlbumAudioItems(audioItem.artist, audioItem.album.name).shouldContainOnly(audioItem)
         }
 
         val waveform = audioWaveformRepository.getOrCreateWaveformAsync(audioItem, 780, 335)
-        eventually(3.seconds) {
+        eventually(100.milliseconds) {
             waveform.get() shouldNotBe null
             waveform.get().id shouldBe audioItem.id
             waveformsRepoFile.readText() shouldContain audioItem.path.toString()
@@ -54,17 +59,17 @@ internal class MusicLibraryIntegrationTest : StringSpec({
 
         audioPlaylistRepository.createPlaylist("Test Playlist").also { it.addAudioItem(audioItem) }
 
-        eventually(2.seconds) {
+        eventually(100.milliseconds) {
             playlistRepoFile.readText() shouldContain "Test Playlist"
             playlistRepoFile.readText() shouldContain audioItem.id.toString()
         }
 
         audioItem.title = "New title"
 
-        eventually(2.seconds) {
+        eventually(100.milliseconds) {
             audioItemRepository.contains { it.title == "New title" }
             audioItemRepository.size() shouldBe 1
-            audioItemRepository.getArtistCatalog(audioItem.artist) shouldBePresent { it.containsAudioItem(audioItem) shouldBe true }
+            audioItemRepository.findAlbumAudioItems(audioItem.artist, audioItem.album.name).shouldContainOnly(audioItem)
 
             audioRepoFile.readText() shouldContain "New title"
             val updatedPlaylist = audioPlaylistRepository.findByName("Test Playlist").get()
@@ -74,28 +79,17 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         audioItemRepository.remove(audioItem) shouldBe true
         audioItemRepository.isEmpty shouldBe true
 
-        eventually(2.seconds) {
-            audioItemRepository.getArtistCatalog(audioItem.artist).isEmpty shouldBe true
+        eventually(100.milliseconds) {
+            audioItemRepository.findAlbumAudioItems(audioItem.artist, audioItem.album.name).isEmpty() shouldBe true
+            audioRepoFile.readText() shouldBe "{}"
 
-            audioRepoFile.readText() shouldBe "{\n}"
-
-            audioPlaylistRepository.findByName("Test Playlist") shouldBePresent { it.audioItems.isEmpty() shouldBe true }
-            playlistRepoFile.readText() shouldBe """
-            {
-                "1": {
-                    "id": 1,
-                    "isDirectory": false,
-                    "name": "Test Playlist",
-                    "audioItemIds": [
-                    ],
-                    "playlistIds": [
-                    ]
-                }
+            audioPlaylistRepository.findByName("Test Playlist") shouldBePresent {
+                it.audioItems.isEmpty() shouldBe true
+                playlistRepoFile.readText() shouldEqualJson listOf(it).asJsonKeyValues()
             }
-            """.trimIndent()
 
             audioWaveformRepository.isEmpty shouldBe true
-            waveformsRepoFile.readText() shouldBe "{\n}"
+            waveformsRepoFile.readText() shouldBe "{}"
         }
     }
 })

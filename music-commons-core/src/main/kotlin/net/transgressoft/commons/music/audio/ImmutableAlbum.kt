@@ -1,7 +1,5 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.AudioUtils
-import java.util.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -13,7 +11,6 @@ open class ImmutableAlbum(
     override val isCompilation: Boolean = false,
     override val year: Short? = null,
     override val label: Label = ImmutableLabel.UNKNOWN,
-    override val audioItems: SortedSet<in MutableAudioItem> = sortedSetOf(AudioUtils.audioItemTrackDiscNumberComparator)
 ) : Album {
 
     override fun compareTo(other: Album): Int {
@@ -21,13 +18,11 @@ open class ImmutableAlbum(
         val artistComparison = compareValues(albumArtist.name, other.albumArtist.name)
         val labelComparison = compareValues(label.name, other.label.name)
         val yearComparison = compareValues(year, other.year)
-        val audioItemsComparison = compareValues(audioItems.size, other.audioItems.size)
         return when {
             labelComparison != 0 -> labelComparison
             yearComparison != 0 -> yearComparison
             artistComparison != 0 -> artistComparison
-            nameComparison != 0 -> nameComparison
-            else -> audioItemsComparison
+            else -> nameComparison
         }
     }
 
@@ -53,7 +48,7 @@ open class ImmutableAlbum(
         return label == other.label
     }
 
-    override fun toString() = "ImmutableAlbum(name='$name', albumArtist=$albumArtist, isCompilation=$isCompilation, year=$year, label=$label, audioItemsCount=${audioItems.size})"
+    override fun toString() = "ImmutableAlbum(name='$name', albumArtist=$albumArtist, isCompilation=$isCompilation, year=$year, label=$label)"
 
     companion object {
         val UNKNOWN = ImmutableAlbum("", ImmutableArtist.UNKNOWN)

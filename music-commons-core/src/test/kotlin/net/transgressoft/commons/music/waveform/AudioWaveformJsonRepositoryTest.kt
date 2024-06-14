@@ -3,6 +3,7 @@ package net.transgressoft.commons.music.waveform
 import net.transgressoft.commons.music.audio.AudioItemTestUtil
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryWavFile
+import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
@@ -32,14 +33,14 @@ internal class AudioWaveformJsonRepositoryTest : StringSpec({
         audioWaveformRepository.findById(audioWaveform.id) shouldBePresent { found -> found shouldBe audioWaveform }
 
         eventually(2.seconds) {
-            jsonFile.readText() shouldBe """
+            jsonFile.readText() shouldEqualJson  """
                 {
                     "1": {
                         "id": 1,
                         "audioFilePath": "$audioFilePath"
                     }
                 }
-            """.trimIndent()
+            """
 
             val loadedRepository = AudioWaveformJsonRepository("Waveforms", jsonFile)
             loadedRepository.size() shouldBe 1

@@ -1,7 +1,5 @@
 package net.transgressoft.commons.music.audio
 
-import java.util.*
-
 /**
  * @author Octavio Calleya
  */
@@ -11,5 +9,4 @@ interface Album : Comparable<Album> {
     val isCompilation: Boolean
     val year: Short?
     val label: Label
-    val audioItems: SortedSet<in MutableAudioItem>
 }

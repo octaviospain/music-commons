@@ -1,6 +1,6 @@
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.IdentifiableEntity
+import net.transgressoft.commons.ReactiveEntity
 import net.transgressoft.commons.data.DataEvent
 import net.transgressoft.commons.data.RepositoryBase
 import net.transgressoft.commons.data.StandardDataEvent.Type.*
@@ -11,9 +11,9 @@ import net.transgressoft.commons.music.audio.AudioItemManipulationException
 import net.transgressoft.commons.music.audio.AudioItemRepository
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import net.transgressoft.commons.toIds
-import com.google.common.collect.Multimap
-import com.google.common.collect.MultimapBuilder
 import mu.KotlinLogging
+import org.jetbrains.kotlin.com.google.common.collect.Multimap
+import org.jetbrains.kotlin.com.google.common.collect.MultimapBuilder
 import org.jetbrains.kotlin.com.google.common.collect.Sets
 import java.io.File
 import java.util.*
@@ -339,7 +339,7 @@ class AudioPlaylistJsonRepository(override val name: String, jsonFile: File) : R
         val name: String,
         val audioItemIds: List<Int>,
         val playlistIds: Set<Int>,
-    ) : IdentifiableEntity<Int> {
+    ) : ReactiveEntity<Int, InternalAudioPlaylist>() {
 
         override val uniqueId: String
             get() {

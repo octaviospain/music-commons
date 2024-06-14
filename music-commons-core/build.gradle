@@ -7,7 +7,7 @@ version gitVersion()
 description 'Transgressoft Music Commons - Core'
 
 ext {
-    kotestVersion = '5.7.2'
+    kotestVersion = '5.9.0'
 }
 
 dependencies {
@@ -15,7 +15,8 @@ dependencies {
 
     implementation 'com.google.guava:guava:32.1.1-jre'
     implementation 'net.jthink:jaudiotagger:3.0.1'
-    implementation 'net.transgressoft:transgressoft-commons-core:1.19'
+    implementation 'net.transgressoft:transgressoft-commons-core:1.21'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1'
     implementation 'ws.schild:jave-core:3.3.1'
     implementation 'ws.schild:jave-nativebin-linux64:3.3.1'
@@ -28,6 +29,7 @@ dependencies {
     testImplementation "io.kotest:kotest-assertions-core:$kotestVersion"
     testImplementation "io.kotest:kotest-property:$kotestVersion"
     testImplementation "io.kotest:kotest-framework-datatest:$kotestVersion"
+    testImplementation "io.kotest:kotest-assertions-json:$kotestVersion"
 }
 
 publishing {
@@ -71,7 +73,7 @@ publishing {
             }
 
             name 'transgressoft-releases'
-            url 'http://10.8.0.1:8081/repository/maven-releases/'
+            url 'http://nexus.transgressoft.net/repository/maven-releases/'
             allowInsecureProtocol = true
         }
         maven {
@@ -84,7 +86,7 @@ publishing {
             }
 
             name 'transgressoft-snapshots'
-            url 'http://10.8.0.1:8081/repository/maven-snapshots/'
+            url 'http://nexus.transgressoft.net/repository/maven-snapshots/'
             allowInsecureProtocol = true
         }
     }

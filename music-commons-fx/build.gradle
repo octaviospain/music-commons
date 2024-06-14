@@ -1,5 +1,6 @@
 plugins {
     id "org.openjfx.javafxplugin" version "0.1.0"
+    id 'org.jetbrains.kotlin.plugin.serialization' version '1.9.0'
 }
 
 group 'net.transgressoft'
@@ -9,9 +10,11 @@ description 'Transgressoft Music Commons - JavaFX'
 dependencies {
     api project(path: ':music-commons-core')
     implementation 'com.google.guava:guava:32.1.1-jre'
+    implementation 'net.jthink:jaudiotagger:3.0.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-javafx:1.7.3'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1'
+    implementation 'org.openjfx:javafx-controls:17+'
 
     testImplementation(platform('org.junit:junit-bom:5.10.0-M1'))
     testImplementation('org.junit.jupiter:junit-jupiter')
@@ -64,7 +67,7 @@ publishing {
             }
 
             name 'transgressoft-releases'
-            url 'http://10.8.0.1:8081/repository/maven-releases/'
+            url 'http://nexus.transgressoft.net/repository/maven-releases/'
             allowInsecureProtocol = true
         }
         maven {
@@ -77,7 +80,7 @@ publishing {
             }
 
             name 'transgressoft-snapshots'
-            url 'http://10.8.0.1:8081/repository/maven-snapshots/'
+            url 'http://nexus.transgressoft.net/repository/maven-snapshots/'
             allowInsecureProtocol = true
         }
     }

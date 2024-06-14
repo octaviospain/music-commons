@@ -1,143 +1,162 @@
 package net.transgressoft.commons.music.audio
 
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAlbumAudioItems
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.update
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.BehaviorSpec
-import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.property.arbitrary.next
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.milliseconds
 
 internal class ArtistCatalogVolatileRegistryTest : BehaviorSpec({
 
     lateinit var registry: ArtistCatalogVolatileRegistry
 
-    fun testAudioItem(artistName: String, albumName: String, albumArtistName: String = artistName): MutableAudioItem =
-        arbitraryAudioItem {
-            artist = ImmutableArtist.of(artistName, CountryCode.US)
-            album = ImmutableAlbum(albumName, ImmutableArtist.of(albumArtistName, CountryCode.US))
-            trackNumber = 1
-            discNumber = 1
-        }.next()
-
     given("An artist catalog registry") {
         registry = ArtistCatalogVolatileRegistry()
 
         When("an audio item that has the same album artist and artist is added") {
-            val audioItem = testAudioItem("Moby", "Play")
-            registry.addAudioItems(listOf(audioItem))
+            val expectedAlbum = ImmutableAlbum("Play", ImmutableArtist.of("Moby", CountryCode.US))
+            val audioItem = arbitraryAudioItem {
+                artist = ImmutableArtist.of("Moby", CountryCode.US)
+                album = expectedAlbum
+                trackNumber = 1
+                discNumber = 1
+            }.next().also {
+                registry.addAudioItems(listOf(it))
+            }
 
             then("the artist catalog should contain the artist and album with the audio item") {
-                eventually(1.seconds) {
-                    val album = audioItem.album
-
-                    registry.size() shouldBe 1
-                    registry.contains { it.artist == audioItem.artist } shouldBe true
-                    registry.findByUniqueId(audioItem.artist.id()).isPresent shouldBe true
-                    registry.findFirst("Moby") shouldBePresent { artistCatalog ->
-                        artistCatalog.artist should { it.name shouldBe "Moby" }
-                        artistCatalog should {
-                            it.artist shouldBe ImmutableArtist.of("Moby", CountryCode.US)
-                            it.size shouldBe 1
-                            it.findAlbum(album) shouldBePresent { extendedAlbum ->
-                                extendedAlbum.name shouldBe "Play"
-                                extendedAlbum.albumArtist shouldBe ImmutableArtist.of("Moby", CountryCode.US)
-                                extendedAlbum.isCompilation shouldBe album.isCompilation
-                                extendedAlbum.year shouldBe album.year
-                                extendedAlbum.label shouldBe album.label
-                                extendedAlbum.audioItems.shouldContainOnly(audioItem)
-                            }
-                        }
+                registry.size() shouldBe 1
+                registry.contains { it.artist == audioItem.artist } shouldBe true
+                registry.findByUniqueId(audioItem.artist.id()).isPresent shouldBe true
+                registry.findFirst("Moby") shouldBePresent { artistCatalog ->
+                    artistCatalog.artist should { it.name shouldBe "Moby" }
+                    artistCatalog should {
+                        it.artist shouldBe ImmutableArtist.of("Moby", CountryCode.US)
+                        it.size shouldBe 1
+                        it.findAlbumAudioItems(expectedAlbum.name).shouldContainOnly(audioItem)
                     }
                 }
             }
 
-            When("the audio item updates its title, path, genre, comments and bpm") {
-                audioItem.title = "Natural Blues"
-                registry.addAudioItems(listOf(audioItem))
+            and("the audio item updates fields that do not affect the artist catalog") {
+                val audioItemBeforeChange = MutableAudioItem(audioItem)
+                audioItem.update {
+                    title = "Natural Blues"
+                    genre = Genre.ROCK
+                    comments = "Comments"
+                    bpm = 120f
+                }
+                registry.updateCatalog(audioItem, audioItemBeforeChange)
 
                 then("the artist catalog remains the same") {
-                    eventually(1.seconds) {
-                        val album = audioItem.album
-
-                        registry.findFirst(audioItem.artist.name) shouldBePresent { artistCatalog ->
-                            artistCatalog.artist should { it.name shouldBe audioItem.artist.name }
-                            artistCatalog should {
-                                it.artist shouldBe audioItem.artist
-                                it.size shouldBe 1
-                                it.findAlbum(album) shouldBePresent { extendedAlbum ->
-                                    extendedAlbum.audioItems.shouldContainOnly(audioItem)
-                                }
-                            }
+                    registry.findFirst(audioItem.artist.name) shouldBePresent { artistCatalog ->
+                        artistCatalog.artist should { it.name shouldBe audioItem.artist.name }
+                        artistCatalog should {
+                            it.artist shouldBe audioItem.artist
+                            it.size shouldBe 1
+                            it.findAlbumAudioItems(expectedAlbum.name).shouldContainOnly(audioItem)
                         }
                     }
                 }
             }
 
-            When("the audio item updates its artist and album artist") {
-                val audioItemBeforeChange = InternalMutableAudioItem(audioItem)
+            and("the audio item updates its artist and album artist without writing the metadata") {
+                val audioItemBeforeChange = MutableAudioItem(audioItem)
                 audioItem.artist = ImmutableArtist.of("Bjork", CountryCode.IS)
                 audioItem.album = ImmutableAlbum(audioItem.album.name, audioItem.artist)
 
                 registry.updateCatalog(audioItem, audioItemBeforeChange)
 
                 then("the artist catalog should be updated") {
-                    eventually(1.seconds) {
-                        val album = audioItem.album
+                    registry.findFirst("Bjork") shouldBePresent { artistCatalog ->
+                        artistCatalog.artist should { it.name shouldBe "Bjork" }
+                        artistCatalog should {
+                            it.artist shouldBe ImmutableArtist.of("Bjork", CountryCode.IS)
+                            it.size shouldBe 1
+                            it.findAlbumAudioItems(expectedAlbum.name).shouldContainOnly(audioItem)
+                        }
+                    }
+                    registry.findFirst("Moby").isEmpty shouldBe true
+                    registry.findAlbumAudioItems(ImmutableArtist.of("Moby", CountryCode.US), "Play").isEmpty() shouldBe true
+                }
 
-                        registry.findFirst("Bjork") shouldBePresent { artistCatalog ->
-                            artistCatalog.artist should { it.name shouldBe "Bjork" }
-                            artistCatalog should {
-                                it.artist shouldBe ImmutableArtist.of("Bjork", CountryCode.IS)
-                                it.size shouldBe 1
-                                it.findAlbum(album) shouldBePresent { extendedAlbum ->
-                                    extendedAlbum.name shouldBe audioItem.album.name
-                                    extendedAlbum.albumArtist shouldBe ImmutableArtist.of("Bjork", CountryCode.IS)
-                                    extendedAlbum.isCompilation shouldBe album.isCompilation
-                                    extendedAlbum.year shouldBe album.year
-                                    extendedAlbum.label shouldBe album.label
-                                    extendedAlbum.audioItems.shouldContainOnly(audioItem)
-                                }
-                            }
+                then("creating an audio item from the same path does not have the updated artist and album artist") {
+                    val audioItemFromSamePath = MutableAudioItem(audioItem.path)
+
+                    audioItemFromSamePath.artist shouldBe ImmutableArtist.of("Moby", CountryCode.US)
+                    audioItemFromSamePath.album.albumArtist shouldBe ImmutableArtist.of("Moby", CountryCode.UNDEFINED)
+                }
+
+                and("metadata is written to file") {
+                    audioItem.writeMetadata()
+
+                    then("creating an audio item from the same path reflects the change") {
+                        eventually(100.milliseconds) {
+                            val audioItemFromSamePath = MutableAudioItem(audioItem.path)
+
+                            audioItemFromSamePath.artist shouldBe ImmutableArtist.of("Bjork", CountryCode.IS)
+                            audioItemFromSamePath.album.albumArtist shouldBe ImmutableArtist.of("Bjork", CountryCode.UNDEFINED)
                         }
                     }
                 }
             }
 
-            When("the audio item updates its track number and disc number") {
-                val audioItemBeforeChange = InternalMutableAudioItem(audioItem)
+            and("the audio item updates its track number and disc number") {
+                val audioItemBeforeChange = MutableAudioItem(audioItem)
                 audioItem.trackNumber = audioItem.trackNumber!!.plus(1).toShort()
                 audioItem.discNumber = audioItem.discNumber!!.plus(1).toShort()
                 registry.updateCatalog(audioItem, audioItemBeforeChange)
 
-                xthen("the album in the artist catalog should be updated") {
-                    eventually(1.seconds) {
+                then("the album in the artist catalog should be updated") {
+                    eventually(100.milliseconds) {
                         registry.findFirst(audioItem.artist) shouldBePresent { artistCatalog ->
                             artistCatalog.artist shouldBe audioItem.artist
                             artistCatalog should {
                                 it.artist shouldBe audioItem.artist
                                 it.size shouldBe 1
-                                it.findAlbum(audioItem.album) shouldBePresent { extendedAlbum ->
-                                    extendedAlbum.audioItems.shouldContainExactly(audioItem)
-                                }
+                                it.findAlbumAudioItems(audioItem.album.name).shouldContainOnly(audioItem)
                             }
                         }
                     }
                 }
             }
 
-            When("the audio item is deleted") {
+            and("the audio item is deleted") {
                 registry.removeAudioItems(listOf(audioItem))
 
                 then("the artist catalog should not contain the artist and album with the audio item") {
-                    eventually(1.seconds) {
-                        registry.isEmpty shouldBe true
-                        registry.findFirst(audioItem.artist).isEmpty shouldBe true
-                        registry.findAlbum(audioItem.album.name, audioItem.artist).isEmpty shouldBe true
+                    registry.isEmpty shouldBe true
+                    registry.findFirst(audioItem.artist).isEmpty shouldBe true
+                    registry.findAlbumAudioItems(audioItem.artist, audioItem.album.name).isEmpty() shouldBe true
+                }
+            }
+        }
+
+        When("album audio items are added") {
+            val expectedArtist = ImmutableArtist.of("Pixies", CountryCode.UK)
+            val expectedAlbum = ImmutableAlbum("Doolittle", ImmutableArtist.of("Pixies"))
+            val pixiesAudioItems = arbitraryAlbumAudioItems(expectedArtist, expectedAlbum).next()
+
+            registry.addAudioItems(pixiesAudioItems)
+
+            then("the artist catalog should contain only the artist and album with the audio items") {
+                registry.size() shouldBe 1
+                registry.contains { it.artist == expectedArtist } shouldBe true
+                registry.findByUniqueId(expectedArtist.id()).isPresent shouldBe true
+                registry.findAlbumAudioItems(expectedArtist, expectedAlbum.name).shouldContainOnly(pixiesAudioItems)
+                registry.findFirst("Pixies") shouldBePresent { artistCatalog ->
+                    artistCatalog.artist should { it.name shouldBe "Pixies" }
+                    artistCatalog should {
+                        it.artist shouldBe expectedArtist
+                        it.size shouldBe pixiesAudioItems.size
+                        it.findAlbumAudioItems(expectedAlbum.name).shouldContainOnly(pixiesAudioItems)
                     }
                 }
             }

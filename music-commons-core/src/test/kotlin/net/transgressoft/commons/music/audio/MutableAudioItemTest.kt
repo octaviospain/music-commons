@@ -6,21 +6,27 @@ import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryFlacFile
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryM4aFile
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryMp3File
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryWavFile
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.asJsonValue
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.testCoverBytes
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.update
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.assertSoftly
+import io.kotest.assertions.json.shouldEqualJson
+import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.FunSpec
-import io.kotest.datatest.withData
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.date.shouldBeAfter
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.property.arbitrary.next
+import io.kotest.property.checkAll
+import io.kotest.property.exhaustive.exhaustive
 import org.jaudiotagger.audio.AudioFileIO
-import java.io.File
+import org.jaudiotagger.audio.AudioHeader
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.serialization.json.Json
 
 internal const val expectedTitle = "Yesterday"
@@ -41,29 +47,12 @@ internal val expectedArtist = ImmutableArtist(expectedArtistName, CountryCode.UK
 internal val expectedAlbumArtist = ImmutableArtist(expectedAlbumArtistName, CountryCode.UK)
 internal val expectedAlbum = ImmutableAlbum(expectedAlbumName, expectedAlbumArtist, expectedIsCompilation, expectedYear, expectedLabel)
 
-internal class ImmutableAudioItemTest : FunSpec({
+internal class MutableAudioItemTest : FunSpec({
 
     val json = Json {
         serializersModule = audioItemSerializerModule
         prettyPrint = true
     }
-
-    data class TestAudioFile(
-        val file: File,
-        val duration: Duration,
-        val bitRate: Int,
-        val encoding: String
-    )
-
-    fun File.createTestAudioFile(): TestAudioFile =
-        AudioFileIO.read(this).let {
-            TestAudioFile(
-                this,
-                Duration.ofSeconds(it.audioHeader.trackLength.toLong()),
-                getBitRate(it.audioHeader),
-                it.audioHeader.encodingType
-            )
-        }
 
     fun AudioItemTestAttributes.setExpectedAttributes() {
         title = expectedTitle
@@ -78,87 +67,108 @@ internal class ImmutableAudioItemTest : FunSpec({
         dateOfCreation = expectedDateOfCreation
     }
 
-    context("should create an audio item, that is serializable to json, and write changes from/to a") {
-        withData(
-            mapOf(
-                "mp3 file" to arbitraryMp3File(AudioItemTestAttributes::setExpectedAttributes).next().createTestAudioFile(),
-                "m4a file" to arbitraryM4aFile(AudioItemTestAttributes::setExpectedAttributes).next().createTestAudioFile(),
-                "wav file" to arbitraryWavFile(AudioItemTestAttributes::setExpectedAttributes).next().createTestAudioFile(),
-                "flac file" to arbitraryFlacFile(AudioItemTestAttributes::setExpectedAttributes).next().createTestAudioFile()
-            )
-        ) { testAudioFile ->
-            val audioItem = ImmutableAudioItem.createFromFile(testAudioFile.file.toPath()).also { audioItem ->
-                audioItem.path shouldBe testAudioFile.file.toPath()
-                audioItem.fileName shouldBe testAudioFile.file.toPath().fileName.toString()
-                audioItem.length shouldBe testAudioFile.file.length()
-                audioItem.extension shouldBe testAudioFile.file.extension
-                audioItem.duration shouldBe testAudioFile.duration
-                audioItem.bitRate shouldBe testAudioFile.bitRate
-                audioItem.encoding shouldBe testAudioFile.encoding
+    val list = listOf(
+        arbitraryMp3File(AudioItemTestAttributes::setExpectedAttributes).next(),
+        arbitraryM4aFile(AudioItemTestAttributes::setExpectedAttributes).next(),
+        arbitraryWavFile(AudioItemTestAttributes::setExpectedAttributes).next(),
+        arbitraryFlacFile(AudioItemTestAttributes::setExpectedAttributes).next()
+    ).exhaustive()
+
+    context("should create an audio item, that is serializable to json, and write changes to metadata") {
+        checkAll(list) { testAudioFile ->
+            lateinit var expectedDuration: Duration
+            lateinit var expectedEncoding: String
+            var expectedBitRate: Int
+            AudioFileIO.read(testAudioFile).let {
+                expectedDuration = Duration.ofSeconds(it.audioHeader.trackLength.toLong())
+                expectedEncoding = it.audioHeader.encodingType
+                expectedBitRate = getExpectedBitRate(it.audioHeader)
+            }
+
+            val audioItem = MutableAudioItem(testAudioFile.toPath()).also { audioItem ->
+                audioItem.path shouldBe testAudioFile.toPath()
+                audioItem.fileName shouldBe testAudioFile.toPath().fileName.toString()
+                audioItem.length shouldBe testAudioFile.length()
+                audioItem.extension shouldBe testAudioFile.extension
+                audioItem.duration shouldBe expectedDuration
+                audioItem.bitRate shouldBe expectedBitRate
+                audioItem.encoding shouldBe expectedEncoding
                 audioItem.should(::matchAudioItemProperties)
             }
 
-            json.encodeToString(ImmutableAudioItem.serializer(), audioItem as ImmutableAudioItem).let {
-                it shouldBe expectedJsonString(audioItem)
-                json.decodeFromString<ImmutableAudioItem>(it) shouldBe audioItem
+            json.encodeToString(MutableAudioItem.serializer(), audioItem).let {
+                it.shouldEqualJson(audioItem.asJsonValue())
+                json.decodeFromString<MutableAudioItem>(it) shouldBe audioItem
             }
 
             val audioItemChanges = arbitraryAudioItemChange.next()
-            val updatedAudioItem = audioItem.update(audioItemChanges)
+            audioItem.update(audioItemChanges)
 
-            updatedAudioItem.writeMetadata()
+            audioItem.writeMetadata()
 
-            val loadedAudioItem: AudioItem = ImmutableAudioItem.createFromFile(updatedAudioItem.path)
-            assertSoftly {
-                loadedAudioItem.id shouldBe updatedAudioItem.id
-                loadedAudioItem.dateOfCreation shouldBeAfter updatedAudioItem.dateOfCreation
-                loadedAudioItem.lastDateModified shouldBeAfter updatedAudioItem.lastDateModified
-                loadedAudioItem.path shouldBe updatedAudioItem.path
-                loadedAudioItem.fileName shouldBe updatedAudioItem.fileName
-                loadedAudioItem.extension shouldBe updatedAudioItem.extension
-                loadedAudioItem.title shouldBe updatedAudioItem.title
-                loadedAudioItem.duration shouldBe updatedAudioItem.duration
-                loadedAudioItem.bitRate shouldBe updatedAudioItem.bitRate
-                loadedAudioItem.album.albumArtist.name shouldBe updatedAudioItem.album.albumArtist.name
-                loadedAudioItem.album.albumArtist.countryCode shouldBe CountryCode.UNDEFINED    // album country code is not updated because there is no ID3 tag for it
-                loadedAudioItem.album.isCompilation shouldBe updatedAudioItem.album.isCompilation
-                loadedAudioItem.album.label.name shouldBe updatedAudioItem.album.label.name
-                loadedAudioItem.album.label.countryCode shouldBe CountryCode.UNDEFINED  // label country code is not updated because there is no ID3 tag for it
-                loadedAudioItem.artist.name shouldBe updatedAudioItem.artist.name
-                loadedAudioItem.artist.countryCode shouldBe updatedAudioItem.artist.countryCode // artist country code is saved into COUNTRY ID3 tag
-                if (testAudioFile.file.extension == "m4a") {
-                    loadedAudioItem.bpm shouldBe updatedAudioItem.bpm?.toInt()?.toFloat()
-                } else {
-                    loadedAudioItem.bpm shouldBe updatedAudioItem.bpm
+            eventually(100.milliseconds) {
+                val loadedAudioItem: AudioItem = MutableAudioItem(testAudioFile.toPath(), audioItem.id)
+                assertSoftly {
+                    loadedAudioItem.id shouldBe audioItem.id
+                    loadedAudioItem.dateOfCreation shouldBeAfter audioItem.dateOfCreation
+                    loadedAudioItem.lastDateModified shouldBeAfter audioItem.lastDateModified
+                    loadedAudioItem.path shouldBe audioItem.path
+                    loadedAudioItem.fileName shouldBe audioItem.fileName
+                    loadedAudioItem.extension shouldBe audioItem.extension
+                    loadedAudioItem.title shouldBe audioItem.title
+                    loadedAudioItem.duration shouldBe audioItem.duration
+                    loadedAudioItem.bitRate shouldBe audioItem.bitRate
+                    loadedAudioItem.album.albumArtist.name shouldBe audioItem.album.albumArtist.name
+                    loadedAudioItem.album.albumArtist.countryCode shouldBe CountryCode.UNDEFINED    // album country code is not updated because there is no ID3 tag for it
+                    loadedAudioItem.album.isCompilation shouldBe audioItem.album.isCompilation
+                    loadedAudioItem.album.label.name shouldBe audioItem.album.label.name
+                    loadedAudioItem.album.label.countryCode shouldBe CountryCode.UNDEFINED  // label country code is not updated because there is no ID3 tag for it
+                    loadedAudioItem.artist.name shouldBe audioItem.artist.name
+                    loadedAudioItem.artist.countryCode shouldBe audioItem.artist.countryCode // artist country code is saved into COUNTRY ID3 tag
+                    if (testAudioFile.extension == "m4a") {
+                        loadedAudioItem.bpm shouldBe audioItem.bpm?.toInt()?.toFloat()
+                    } else {
+                        loadedAudioItem.bpm shouldBe audioItem.bpm
+                    }
+                    loadedAudioItem.trackNumber shouldBe audioItem.trackNumber
+                    loadedAudioItem.discNumber shouldBe audioItem.discNumber
+                    loadedAudioItem.comments shouldBe audioItem.comments
+                    loadedAudioItem.genre shouldBe audioItem.genre
+                    loadedAudioItem.encoding shouldBe audioItem.encoding
+                    loadedAudioItem.encoder shouldBe audioItem.encoder
+                    loadedAudioItem.coverImageBytes shouldBe audioItem.coverImageBytes
+                    loadedAudioItem.uniqueId shouldBe audioItem.uniqueId
+                    loadedAudioItem.toString() shouldBe audioItem.toString()
                 }
-                loadedAudioItem.trackNumber shouldBe updatedAudioItem.trackNumber
-                loadedAudioItem.discNumber shouldBe updatedAudioItem.discNumber
-                loadedAudioItem.comments shouldBe updatedAudioItem.comments
-                loadedAudioItem.genre shouldBe updatedAudioItem.genre
-                loadedAudioItem.encoding shouldBe updatedAudioItem.encoding
-                loadedAudioItem.encoder shouldBe updatedAudioItem.encoder
-                loadedAudioItem.coverImageBytes shouldBe updatedAudioItem.coverImageBytes
-                loadedAudioItem.uniqueId shouldBe updatedAudioItem.uniqueId
-                loadedAudioItem.toString() shouldBe updatedAudioItem.toString()
             }
         }
     }
 
     context("return coverImage after being deserialized") {
-        val audioItem = ImmutableAudioItem.createFromFile(arbitraryMp3File { coverImageBytes = null }.next().toPath())
+        val audioItem = MutableAudioItem(arbitraryMp3File { coverImageBytes = null }.next().toPath())
         audioItem.coverImageBytes shouldBe null
 
-        val updatedAudioItem = audioItem.update { coverImageBytes = testCoverBytes }
-        updatedAudioItem.coverImageBytes shouldBe testCoverBytes
+        audioItem.coverImageBytes = testCoverBytes
 
-        updatedAudioItem.writeMetadata()
+        audioItem.writeMetadata()
 
-        val encodedAudioItem = json.encodeToString(ImmutableAudioItem.serializer(), updatedAudioItem as ImmutableAudioItem)
-        val decodedAudioItem = json.decodeFromString<ImmutableAudioItem>(encodedAudioItem)
+        eventually(100.milliseconds) {
+            val encodedAudioItem = json.encodeToString(MutableAudioItem.serializer(), audioItem)
+            val decodedAudioItem = json.decodeFromString<MutableAudioItem>(encodedAudioItem)
 
-        decodedAudioItem.coverImageBytes shouldBe testCoverBytes
+            decodedAudioItem.coverImageBytes shouldBe testCoverBytes
+        }
     }
 })
+
+private fun getExpectedBitRate(audioHeader: AudioHeader): Int {
+    val bitRate = audioHeader.bitRate
+    return if ("~" == bitRate.substring(0, 1)) {
+        bitRate.substring(1).toInt()
+    } else {
+        bitRate.toInt()
+    }
+}
 
 fun expectedJsonString(audioItem: AudioItem) =
     """
@@ -169,21 +179,17 @@ fun expectedJsonString(audioItem: AudioItem) =
             "duration": ${audioItem.duration.toSeconds()},
             "bitRate": ${audioItem.bitRate},
             "artist": {
-                "type": "ImmutableArtist",
                 "name": "${audioItem.artist.name}",
                 "countryCode": "${audioItem.artist.countryCode}"
             },
             "album": {
-                "type": "ImmutableAlbum",
                 "name": "${audioItem.album.name}",
                 "albumArtist": {
-                    "type": "ImmutableArtist",
                     "name": "${audioItem.album.albumArtist.name}"
                 },
                 "isCompilation": ${audioItem.album.isCompilation},
                 "year": ${audioItem.album.year},
                 "label": {
-                    "type": "ImmutableLabel",
                     "name": "${audioItem.album.label.name}"
                 }
             },

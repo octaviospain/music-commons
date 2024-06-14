@@ -5,34 +5,27 @@ import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
 
-/**
- * @author Octavio Calleya
- */
 interface AudioItem : IdentifiableEntity<Int> {
     val path: Path
     val fileName: String
     val extension: String
-    val title: String
+    var title: String
     val duration: Duration
     val bitRate: Int
-    val artist: Artist
+    var artist: Artist
     val artistsInvolved: Set<String>
-    val album: Album
-    val genre: Genre
-    val comments: String?
-    val trackNumber: Short?
-    val discNumber: Short?
-    val bpm: Float?
+    var album: Album
+    var genre: Genre
+    var comments: String?
+    var trackNumber: Short?
+    var discNumber: Short?
+    var bpm: Float?
     val encoder: String?
     val encoding: String?
     val length: Long
-    val coverImageBytes: ByteArray?
+    var coverImageBytes: ByteArray?
     val dateOfCreation: LocalDateTime
     val lastDateModified: LocalDateTime
 
-    fun update(change: AudioItemChange): AudioItem
-
-    fun update(changeAction: AudioItemChange.() -> Unit): AudioItem
-
-    suspend fun writeMetadata()
+    fun writeMetadata()
 }

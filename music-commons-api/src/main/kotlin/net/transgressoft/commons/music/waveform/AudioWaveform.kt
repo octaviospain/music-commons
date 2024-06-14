@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music.waveform
 
-import javafx.scene.paint.Color
 import net.transgressoft.commons.IdentifiableEntity
+import java.awt.Color
 import java.io.File
 
 /**
