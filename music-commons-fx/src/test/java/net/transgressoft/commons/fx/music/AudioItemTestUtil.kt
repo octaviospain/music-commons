@@ -1,6 +1,8 @@
-package net.transgressoft.commons.music.audio
+package net.transgressoft.commons.fx.music
 
+import net.transgressoft.commons.IdentifiableEntity
 import net.transgressoft.commons.music.AudioUtils.beautifyArtistName
+import net.transgressoft.commons.music.audio.*
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.core.TestConfiguration
 import io.kotest.engine.spec.tempfile
@@ -149,12 +151,10 @@ internal object AudioItemTestUtil : TestConfiguration() {
 
     private val atomicInteger = AtomicInteger(9999)
 
-    @OptIn(ExperimentalStdlibApi::class)
-    fun arbitraryArtist(givenName: String? = null, countryCode: CountryCode? = null): Arb<Artist> = arbitrary {
-        ImmutableArtist(givenName ?: beautifyArtistName(Arb.stringPattern("[a-z]{5} [a-z]{5}").bind()), countryCode ?: CountryCode.entries.toTypedArray().random())
+    fun arbitraryArtist(name: String? = null, countryCode: CountryCode? = null): Arb<Artist> = arbitrary {
+        ImmutableArtist.of(name ?: beautifyArtistName(Arb.stringPattern("[a-z]{5} [a-z]{5}").bind()), countryCode ?: CountryCode.entries.toTypedArray().random())
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
     fun arbitraryLabel(name: String? = null, countryCode: CountryCode? = null) = arbitrary {
         ImmutableLabel(name ?: Arb.stringPattern("[a-z]{5} [a-z]{5}").bind(), countryCode ?: CountryCode.entries.toTypedArray().random())
     }
@@ -215,10 +215,10 @@ internal object AudioItemTestUtil : TestConfiguration() {
         )
     }
 
-    fun arbitraryAudioItem(attributesAction: AudioItemTestAttributes.() -> Unit): Arb<MutableAudioItem> = arbitrary {
+    fun arbitraryAudioItem(attributesAction: AudioItemTestAttributes.() -> Unit): Arb<ObservableAudioItem> = arbitrary {
         val attributes = arbitraryAudioAttributes().bind()
         attributesAction(attributes)
-        MutableAudioItem(arbitraryMp3File(attributes).bind().toPath(), attributes.id)
+        FXAudioItem(arbitraryMp3File(attributes).bind().toPath(), attributes.id)
     }
 
     val arbitraryAudioItem
@@ -228,7 +228,7 @@ internal object AudioItemTestUtil : TestConfiguration() {
         artist: Artist? = null,
         album: Album? = null,
         size: IntRange = 3 .. 10
-    ): Arb<List<AudioItem>> = arbitrary {
+    ): Arb<List<ObservableAudioItem>> = arbitrary {
         val arbitraryArtist = artist ?: arbitraryArtist().bind()
         val arbitraryAlbum = album ?: arbitraryAlbum().bind()
         buildList {
@@ -243,7 +243,7 @@ internal object AudioItemTestUtil : TestConfiguration() {
         }
     }
 
-    fun AudioItem.update(change: AudioItemChange) {
+    fun ObservableAudioItem.update(change: AudioItemChange) {
         change.title?.let { title = it }
         change.artist?.let { artist = it }
         album = ImmutableAlbum(
@@ -261,18 +261,18 @@ internal object AudioItemTestUtil : TestConfiguration() {
         change.coverImageBytes ?: coverImageBytes
     }
 
-    fun AudioItem.update(changeAction: AudioItemChange.() -> Unit) {
+    fun ObservableAudioItem.update(changeAction: AudioItemChange.() -> Unit) {
         val change = AudioItemChange(id).also(changeAction)
         update(change)
     }
 
-    fun AudioItem.asJsonKeyValue() = """
+    fun ObservableAudioItem.asJsonKeyValue() = """
         {
             "$id": ${asJsonValue()}
         }
     """
 
-    fun AudioItem.asJsonValue() = """
+    fun ObservableAudioItem.asJsonValue() = """
        {
             "id": $id,
             "path": "$path",
@@ -305,6 +305,36 @@ internal object AudioItemTestUtil : TestConfiguration() {
             "lastDateModified": ${lastDateModified.toEpochSecond(ZoneOffset.UTC)}
         }
     """
+}
+
+data class AudioItemChange(
+    override val id: Int,
+    var title: String? = null,
+    var artist: Artist? = null,
+    var albumName: String? = null,
+    var albumArtist: Artist? = null,
+    var isCompilation: Boolean? = null,
+    var year: Short? = null,
+    var label: Label? = null,
+    var genre: Genre? = null,
+    var comments: String? = null,
+    var trackNumber: Short? = null,
+    var discNumber: Short? = null,
+    var bpm: Float? = null,
+    var coverImageBytes: ByteArray? = null
+) : IdentifiableEntity<Int> {
+
+    override val uniqueId: String = id.toString()
+
+    var album: Album? = null
+        set(value) {
+            field = value
+            albumName = value?.name
+            albumArtist = value?.albumArtist
+            isCompilation = value?.isCompilation
+            year = value?.year
+            label = value?.label
+        }
 }
 
 data class AudioItemTestAttributes(

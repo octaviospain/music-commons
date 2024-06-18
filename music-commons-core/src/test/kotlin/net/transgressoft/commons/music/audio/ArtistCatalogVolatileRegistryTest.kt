@@ -15,7 +15,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 internal class ArtistCatalogVolatileRegistryTest : BehaviorSpec({
 
-    lateinit var registry: ArtistCatalogVolatileRegistry
+    lateinit var registry: ArtistCatalogVolatileRegistry<AudioItem>
 
     given("An artist catalog registry") {
         registry = ArtistCatalogVolatileRegistry()

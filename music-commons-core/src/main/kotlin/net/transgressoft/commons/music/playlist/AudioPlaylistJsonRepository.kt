@@ -1,6 +1,6 @@
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.ReactiveEntity
+import net.transgressoft.commons.ReactiveEntityBase
 import net.transgressoft.commons.data.DataEvent
 import net.transgressoft.commons.data.RepositoryBase
 import net.transgressoft.commons.data.StandardDataEvent.Type.*
@@ -339,7 +339,7 @@ class AudioPlaylistJsonRepository(override val name: String, jsonFile: File) : R
         val name: String,
         val audioItemIds: List<Int>,
         val playlistIds: Set<Int>,
-    ) : ReactiveEntity<Int, InternalAudioPlaylist>() {
+    ) : ReactiveEntityBase<Int, InternalAudioPlaylist>() {
 
         override val uniqueId: String
             get() {

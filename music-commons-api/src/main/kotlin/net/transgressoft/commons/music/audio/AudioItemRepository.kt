@@ -6,7 +6,7 @@ import com.neovisionaries.i18n.CountryCode
 import java.nio.file.Path
 import java.util.concurrent.Flow
 
-interface AudioItemRepository<I : AudioItem> : Repository<Int, I>, Flow.Publisher<DataEvent<Int, I>> {
+interface AudioItemRepository<I : ReactiveAudioItem<I>> : Repository<Int, I>, Flow.Publisher<DataEvent<Int, I>> {
 
     fun createFromFile(audioItemPath: Path) : I
 

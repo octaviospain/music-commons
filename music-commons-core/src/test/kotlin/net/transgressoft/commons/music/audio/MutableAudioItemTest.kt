@@ -25,9 +25,11 @@ import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.AudioHeader
 import java.time.Duration
 import java.time.LocalDateTime
-import java.time.ZoneOffset
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
 
 internal const val expectedTitle = "Yesterday"
 internal const val expectedArtistName = "The Beatles"
@@ -50,7 +52,18 @@ internal val expectedAlbum = ImmutableAlbum(expectedAlbumName, expectedAlbumArti
 internal class MutableAudioItemTest : FunSpec({
 
     val json = Json {
-        serializersModule = audioItemSerializerModule
+        serializersModule = SerializersModule {
+            polymorphic(AudioItem::class, AudioItemSerializer)
+            polymorphic(Artist::class) {
+                subclass(ImmutableArtist.serializer())
+            }
+            polymorphic(Album::class) {
+                subclass(ImmutableAlbum.serializer())
+            }
+            polymorphic(Label::class) {
+                subclass(ImmutableLabel.serializer())
+            }
+        }
         prettyPrint = true
     }
 
@@ -96,7 +109,7 @@ internal class MutableAudioItemTest : FunSpec({
                 audioItem.should(::matchAudioItemProperties)
             }
 
-            json.encodeToString(MutableAudioItem.serializer(), audioItem).let {
+            json.encodeToString(AudioItemSerializer, audioItem).let {
                 it.shouldEqualJson(audioItem.asJsonValue())
                 json.decodeFromString<MutableAudioItem>(it) shouldBe audioItem
             }
@@ -153,7 +166,7 @@ internal class MutableAudioItemTest : FunSpec({
         audioItem.writeMetadata()
 
         eventually(100.milliseconds) {
-            val encodedAudioItem = json.encodeToString(MutableAudioItem.serializer(), audioItem)
+            val encodedAudioItem = json.encodeToString(AudioItemSerializer, audioItem)
             val decodedAudioItem = json.decodeFromString<MutableAudioItem>(encodedAudioItem)
 
             decodedAudioItem.coverImageBytes shouldBe testCoverBytes
@@ -169,40 +182,6 @@ private fun getExpectedBitRate(audioHeader: AudioHeader): Int {
         bitRate.toInt()
     }
 }
-
-fun expectedJsonString(audioItem: AudioItem) =
-    """
-        {
-            "id": ${audioItem.id},
-            "path": "${audioItem.path}",
-            "title": "${audioItem.title}",
-            "duration": ${audioItem.duration.toSeconds()},
-            "bitRate": ${audioItem.bitRate},
-            "artist": {
-                "name": "${audioItem.artist.name}",
-                "countryCode": "${audioItem.artist.countryCode}"
-            },
-            "album": {
-                "name": "${audioItem.album.name}",
-                "albumArtist": {
-                    "name": "${audioItem.album.albumArtist.name}"
-                },
-                "isCompilation": ${audioItem.album.isCompilation},
-                "year": ${audioItem.album.year},
-                "label": {
-                    "name": "${audioItem.album.label.name}"
-                }
-            },
-            "genre": "${audioItem.genre.name}",
-            "comments": "${audioItem.comments}",
-            "trackNumber": ${audioItem.trackNumber},
-            "discNumber": ${audioItem.discNumber},
-            "bpm": ${audioItem.bpm},
-            "encoder": "${audioItem.encoder}",
-            "encoding": "${audioItem.encoding}",
-            "dateOfCreation": ${audioItem.dateOfCreation.toEpochSecond(ZoneOffset.UTC)},
-            "lastDateModified": ${audioItem.lastDateModified.toEpochSecond(ZoneOffset.UTC)}
-        }""".trimIndent()
 
 fun matchAudioItemProperties(audioItem: AudioItem) {
     audioItem.id shouldBe UNASSIGNED_ID

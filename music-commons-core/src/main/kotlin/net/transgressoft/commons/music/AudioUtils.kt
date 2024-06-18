@@ -2,13 +2,14 @@ package net.transgressoft.commons.music
 
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import org.jetbrains.kotlin.com.google.common.base.CharMatcher
 import org.jetbrains.kotlin.com.google.common.base.Splitter
 import java.util.regex.Pattern
 
 object AudioUtils {
 
-    val audioItemTrackDiscNumberComparator = Comparator<AudioItem> { audioItem1, audioItem2 ->
+    fun <I : ReactiveAudioItem<I>> audioItemTrackDiscNumberComparator() = Comparator<I> { audioItem1, audioItem2 ->
         when {
             audioItem1.discNumber == null && audioItem2.discNumber == null -> {
                 // Both discNumbers are null, compare by trackNumber
