@@ -32,11 +32,11 @@ import java.time.LocalDateTime
 import java.util.*
 import java.util.stream.Stream
 import kotlin.io.path.extension
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
 
 @Serializable(with = ObservableAudioItemSerializer::class)
 class FXAudioItem internal constructor(
@@ -46,6 +46,12 @@ class FXAudioItem internal constructor(
 
     @Transient
     private val logger = KotlinLogging.logger {}
+
+    private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + CoroutineExceptionHandler {
+            _, exception ->
+        val errorText = "Error writing metadata of $this"
+        logger.error(errorText, exception)
+    })
 
     internal constructor(
         path: Path,
@@ -78,7 +84,7 @@ class FXAudioItem internal constructor(
         this._encoder = encoder
         this._encoding = encoding
         this._dateOfCreation = dateOfCreation
-        this._lastDateModified = lastDateModified
+        this.lastDateModified = lastDateModified
     }
 
     @Transient
@@ -122,7 +128,7 @@ class FXAudioItem internal constructor(
         get() = _dateOfCreation
 
     @Transient
-    val dateOfCreationProperty: ReadOnlyObjectProperty<LocalDateTime> = SimpleObjectProperty(this, "date of creation", _dateOfCreation)
+    override val dateOfCreationProperty: ReadOnlyObjectProperty<LocalDateTime> = SimpleObjectProperty(this, "date of creation", _dateOfCreation)
 
     override val fileName by lazy {
         path.fileName.toString()
@@ -148,112 +154,156 @@ class FXAudioItem internal constructor(
     /** Mutable properties */
 
     @Transient
-    val titleProperty: StringProperty = SimpleStringProperty(this, "title", getFieldIfExisting(tag, FieldKey.TITLE) ?: "").apply {
-        addListener { _, _, newValue ->
-            artistsInvolvedProperty.clear()
-            artistsInvolvedProperty.addAll(
-                AudioUtils.getArtistsNamesInvolved(
-                    newValue,
-                    artistProperty.value.name,
-                    albumProperty.value.albumArtist.name
+    override val titleProperty: StringProperty = SimpleStringProperty(this, "title", getFieldIfExisting(tag, FieldKey.TITLE) ?: "")
+        .apply {
+            addListener { _, oldValue, newValue ->
+                artistsInvolvedProperty.clear()
+                artistsInvolvedProperty.addAll(
+                    AudioUtils.getArtistsNamesInvolved(
+                        newValue,
+                        artistProperty.value.name,
+                        albumProperty.value.albumArtist.name
+                    )
                 )
-            )
+                setAndNotify(newValue, oldValue) {}
+            }
         }
-    }
 
     override var title: String
         get() = titleProperty.get()
         set(value) { titleProperty.set(value) }
 
     @Transient
-    val artistProperty: ObjectProperty<Artist> = SimpleObjectProperty(this, "artist", readArtist(tag)).apply {
-        addListener { _, _, newValue ->
-            artistsInvolvedProperty.addAll(
-                AudioUtils.getArtistsNamesInvolved(
-                    titleProperty.value,
-                    newValue.name,
-                    albumProperty.value.albumArtist.name
+    override val artistProperty: ObjectProperty<Artist> = SimpleObjectProperty(this, "artist", readArtist(tag))
+        .apply {
+            addListener { os, oldValue, newValue ->
+                artistsInvolvedProperty.addAll(
+                    AudioUtils.getArtistsNamesInvolved(
+                        titleProperty.value,
+                        newValue.name,
+                        albumProperty.value.albumArtist.name
+                    )
                 )
-            )
+                setAndNotify(newValue, oldValue) {}
+            }
         }
-    }
 
     override var artist: Artist
         get() = artistProperty.get()
         set(value) { artistProperty.set(value) }
 
     @Transient
-    val albumProperty = SimpleObjectProperty(this, "album", readAlbum(tag, extension)).apply {
-        addListener { _, _, newValue ->
-            artistsInvolvedProperty.clear()
-            artistsInvolvedProperty.addAll(
-                AudioUtils.getArtistsNamesInvolved(
-                    titleProperty.value,
-                    artistProperty.value.name,
-                    newValue.albumArtist.name
+    override val albumProperty: ObjectProperty<Album> = SimpleObjectProperty(this, "album", readAlbum(tag, extension))
+        .apply {
+            addListener { _, oldValue, newValue ->
+                artistsInvolvedProperty.clear()
+                artistsInvolvedProperty.addAll(
+                    AudioUtils.getArtistsNamesInvolved(
+                        titleProperty.value,
+                        artistProperty.value.name,
+                        newValue.albumArtist.name
+                    )
                 )
-            )
+                setAndNotify(newValue, oldValue) {}
+            }
         }
-    }
 
     override var album: Album
         get() = albumProperty.get()
         set(value) { albumProperty.set(value) }
 
     @Transient
-    val genreNameProperty = SimpleStringProperty(this, "genre", getFieldIfExisting(tag, FieldKey.GENRE)?.let { Genre.parseGenre(it).name } ?: Genre.UNDEFINED.name)
+    override val genreNameProperty  = SimpleStringProperty(this, "genre", getFieldIfExisting(tag, FieldKey.GENRE)?.let { Genre.parseGenre(it).name } ?: Genre.UNDEFINED.name)
+        .apply {
+            addListener { _, oldValue, newValue ->
+                setAndNotify(newValue, oldValue) {}
+            }
+        }
 
     override var genre: Genre
         get() = Genre.parseGenre(genreNameProperty.get())
         set(value) { genreNameProperty.set(value.name) }
 
     @Transient
-    val commentsProperty = SimpleStringProperty(this, "comments", getFieldIfExisting(tag, FieldKey.COMMENT) ?: "")
+    override val commentsProperty = SimpleStringProperty(this, "comments", getFieldIfExisting(tag, FieldKey.COMMENT) ?: "")
+        .apply {
+            addListener { _, oldValue, newValue ->
+                setAndNotify(newValue, oldValue) {}
+            }
+        }
 
     override var comments: String?
         get() = commentsProperty.get()
         set(value) { commentsProperty.set(value) }
 
     @Transient
-    val trackNumberProperty = SimpleIntegerProperty(this, "track number",  getFieldIfExisting(tag, FieldKey.TRACK)?.takeIf { it.isNotEmpty().and(it != "0") }?.toIntOrNull() ?: -1)
+    override val trackNumberProperty = SimpleIntegerProperty(this, "track number",  getFieldIfExisting(tag, FieldKey.TRACK)?.takeIf { it.isNotEmpty().and(it != "0") }?.toIntOrNull() ?: -1)
+        .apply {
+            addListener { _, oldValue, newValue ->
+                setAndNotify(newValue, oldValue) {}
+            }
+        }
 
     override var trackNumber: Short?
         get() = trackNumberProperty.value.toShort()
         set(value) { trackNumberProperty.set(value?.toInt() ?: -1) }
 
     @Transient
-    val discNumberProperty = SimpleIntegerProperty(this, "disc number", getFieldIfExisting(tag, FieldKey.DISC_NO)?.takeIf { it.isNotEmpty().and(it != "0") }?.toIntOrNull() ?: -1)
+    override val discNumberProperty = SimpleIntegerProperty(this, "disc number", getFieldIfExisting(tag, FieldKey.DISC_NO)?.takeIf { it.isNotEmpty().and(it != "0") }?.toIntOrNull() ?: -1)
+        .apply {
+            addListener { _, oldValue, newValue ->
+                setAndNotify(newValue, oldValue) {}
+            }
+        }
 
     override var discNumber: Short?
         get() = discNumberProperty.value.toShort()
         set(value) { discNumberProperty.set(value?.toInt() ?: -1) }
 
     @Transient
-    val bpmProperty = SimpleFloatProperty(this, "bpm", getFieldIfExisting(tag, FieldKey.BPM)?.takeIf { it.isNotEmpty().and(it != "0") }?.toFloatOrNull() ?: -1f)
+    override val bpmProperty = SimpleFloatProperty(this, "bpm", getFieldIfExisting(tag, FieldKey.BPM)?.takeIf { it.isNotEmpty().and(it != "0") }?.toFloatOrNull() ?: -1f)
+        .apply {
+            addListener { _, oldValue, newValue ->
+                setAndNotify(newValue, oldValue) {}
+            }
+        }
 
     override var bpm: Float?
         get() = bpmProperty.value
         set(value) { bpmProperty.set(value ?: -1f) }
 
-    private var _lastDateModified = dateOfCreation
+    @Serializable
+    override var lastDateModified: LocalDateTime = dateOfCreation
+        set(value) {
+            field = value
+            _lastDateModifiedProperty.set(value)
+        }
 
-    override val lastDateModified: LocalDateTime
-        get() = _lastDateModified
+    private val _lastDateModifiedProperty = SimpleObjectProperty(this, "date of last modification", lastDateModified)
 
     @Transient
-    val lastDateModifiedProperty: ReadOnlyObjectProperty<LocalDateTime> = SimpleObjectProperty(this, "date of creation", _lastDateModified)
+    override val lastDateModifiedProperty: ReadOnlyObjectProperty<LocalDateTime> = _lastDateModifiedProperty
 
     override var coverImageBytes: ByteArray? = getCoverBytes(tag)
         set(value) {
-            field = value
-            coverImageProperty.set(Optional.ofNullable(value).map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) })
+            setAndNotify(value, field) {
+                field = value
+                _coverImageProperty.set(Optional.ofNullable(value).map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) })
+            }
+        }
+
+    private val _coverImageProperty = SimpleObjectProperty(this, "cover image", Optional.ofNullable(coverImageBytes).map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) })
+
+    @Transient
+    override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>> = _coverImageProperty
+        .apply {
+            addListener { _, oldValue, newValue ->
+                setAndNotify(newValue.orElse(null)?.url, oldValue.orElse(null)?.url) {}
+            }
         }
 
     @Transient
-    val coverImageProperty = SimpleObjectProperty(this, "cover image", Optional.ofNullable(coverImageBytes).map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) })
-
-    @Transient
-    val artistsInvolvedProperty: ReadOnlySetProperty<String> =
+    override val artistsInvolvedProperty: ReadOnlySetProperty<String> =
         SimpleSetProperty(this, "artists involved", FXCollections.observableSet(AudioUtils.getArtistsNamesInvolved(
             titleProperty.value,
             artistProperty.value.name,
@@ -301,28 +351,22 @@ class FXAudioItem internal constructor(
 
     private fun getCoverBytes(tag: Tag): ByteArray? = tag.artworkList.isNotEmpty().takeIf { it }?.let { tag.firstArtwork.binaryData }
 
-    override fun writeMetadata() {
-        GlobalScope.launch(Dispatchers.IO) {
+    override fun writeMetadata(): Job {
+        return ioScope.launch(Dispatchers.IO) {
             logger.debug { "Writing metadata of $this to file '${path.toAbsolutePath()}'" }
 
             val audioFile = path.toFile()
-            try {
-                val audio = AudioFileIO.read(audioFile)
-                createTagTag(audio.audioHeader.format).let {
-                    audio.tag = it
-                }
-
-                audio.commit()
-                logger.debug { "Metadata of $this successfully written to file" }
-            } catch (exception: Exception) {
-                val errorText = "Error writing metadata of $this"
-                logger.error(errorText, exception)
-                throw AudioItemManipulationException(errorText, exception)
+            val audio = AudioFileIO.read(audioFile)
+            createTag(audio.audioHeader.format).let {
+                audio.tag = it
             }
+
+            audio.commit()
+            logger.debug { "Metadata of $this successfully written to file" }
         }
     }
 
-    private fun createTagTag(format: String): Tag {
+    private fun createTag(format: String): Tag {
         return when {
             format.startsWith("Wav", ignoreCase = true) -> {
                 val wavTag = WavTag(WavOptions.READ_ID3_ONLY)
@@ -421,4 +465,8 @@ class FXAudioItem internal constructor(
     override fun hashCode() = Objects.hashCode(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration)
 
     override fun toString() = "ObservableAudioItem(id=$id, path=$path, title=$title, artist=${artist.name})"
+}
+
+val observableAudioItemSerializerModule = SerializersModule {
+    polymorphic(ObservableAudioItem::class, ObservableAudioItemSerializer)
 }

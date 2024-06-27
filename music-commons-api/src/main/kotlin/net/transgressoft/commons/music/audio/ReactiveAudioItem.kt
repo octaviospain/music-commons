@@ -4,6 +4,7 @@ import net.transgressoft.commons.ReactiveEntity
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
+import kotlinx.coroutines.Job
 
 interface ReactiveAudioItem<I : ReactiveAudioItem<I>> : ReactiveEntity<Int, I> {
     val path: Path
@@ -25,7 +26,6 @@ interface ReactiveAudioItem<I : ReactiveAudioItem<I>> : ReactiveEntity<Int, I> {
     val length: Long
     var coverImageBytes: ByteArray?
     val dateOfCreation: LocalDateTime
-    val lastDateModified: LocalDateTime
 
-    fun writeMetadata()
+    fun writeMetadata(): Job
 }

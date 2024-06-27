@@ -8,21 +8,11 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
-import kotlinx.serialization.modules.subclass
 
 abstract class AudioItemRepositoryBase<I>(file: File, audioItemSerializerBase: AudioItemSerializerBase<I>, serializersModule : SerializersModule = SerializersModule {}) :
     JsonFileRepository<Int, I>(file, MapSerializer(Int.serializer(), audioItemSerializerBase), SerializersModule {
         include(serializersModule)
-        polymorphic(Artist::class) {
-            subclass(ImmutableArtist.serializer())
-        }
-        polymorphic(Album::class) {
-            subclass(ImmutableAlbum.serializer())
-        }
-        polymorphic(Label::class) {
-            subclass(ImmutableLabel.serializer())
-        }
+        include(audioItemSerializerModule)
     }),
     AudioItemRepository<I> where I : ReactiveAudioItem<I> {
 

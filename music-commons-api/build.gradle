@@ -2,6 +2,10 @@ group 'net.transgressoft'
 version gitVersion()
 description 'Transgressoft Music Commons - API'
 
+dependencies {
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1'
+}
+
 publishing {
     publications {
         maven(MavenPublication) {

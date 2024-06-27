@@ -41,6 +41,12 @@ internal class MutableAudioItem(
     @Transient
     private val logger = KotlinLogging.logger {}
 
+    private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + CoroutineExceptionHandler {
+        _, exception ->
+            val errorText = "Error writing metadata of $this"
+            logger.error(errorText, exception)
+    })
+
     internal constructor(audioItem: AudioItem) : this(audioItem.path, audioItem.id)
 
     internal constructor(
@@ -74,7 +80,7 @@ internal class MutableAudioItem(
         this._encoder = encoder
         this._encoding = encoding
         this._dateOfCreation = dateOfCreation
-        this._lastDateModified = lastDateModified
+        this.lastDateModified = lastDateModified
     }
 
     @Transient
@@ -117,10 +123,8 @@ internal class MutableAudioItem(
     @Serializable
     override val dateOfCreation: LocalDateTime = _dateOfCreation
 
-    private var _lastDateModified: LocalDateTime = _dateOfCreation
-
     @Serializable
-    override val lastDateModified: LocalDateTime = _lastDateModified
+    override var lastDateModified: LocalDateTime = _dateOfCreation
 
     override val fileName by lazy {
         path.fileName.toString()
@@ -151,66 +155,57 @@ internal class MutableAudioItem(
     @Serializable
     override var title: String = getFieldIfExisting(tag, FieldKey.TITLE) ?: ""
         set(value) {
-            updateAndPublishEvent(value, field) { newValue -> field = newValue }
+            setAndNotify(value, field) { field = it }
         }
 
     @Serializable
     override var artist: Artist = readArtist(tag)
         set(value) {
-            updateAndPublishEvent(value, field) { newValue -> field = newValue }
+            setAndNotify(value, field) { field = it }
         }
 
     @Serializable
     override var genre: Genre = getFieldIfExisting(tag, FieldKey.GENRE)?.let { Genre.parseGenre(it) } ?: Genre.UNDEFINED
         set(value) {
-            updateAndPublishEvent(value, field) { newValue -> field = newValue }
+            setAndNotify(value, field) { field = it }
         }
 
     @Serializable
     override var comments: String? = getFieldIfExisting(tag, FieldKey.COMMENT)
         set(value) {
-            updateAndPublishEvent(value, field) { newValue -> field = newValue }
+            setAndNotify(value, field) { field = it }
         }
 
     @Serializable
     override var trackNumber: Short? = getFieldIfExisting(tag, FieldKey.TRACK)?.takeIf { it.isNotEmpty().and(it != "0") }?.toShortOrNull()?.takeIf { it > 0 }
         set(value) {
-            updateAndPublishEvent(value, field) { newValue -> field = newValue }
+            setAndNotify(value, field) { field = it }
         }
 
     @Serializable
     override var discNumber: Short? = getFieldIfExisting(tag, FieldKey.DISC_NO)?.takeIf { it.isNotEmpty().and(it != "0") }?.toShortOrNull()?.takeIf { it > 0 }
         set(value) {
-            updateAndPublishEvent(value, field) { newValue -> field = newValue }
+            setAndNotify(value, field) { field = it }
         }
 
     @Serializable
     override var bpm: Float? = getFieldIfExisting(tag, FieldKey.BPM)?.takeIf { it.isNotEmpty().and(it != "0") }?.toFloatOrNull()?.takeIf { it > 0 }
         set(value) {
-            updateAndPublishEvent(value, field) { newValue -> field = newValue }
+            setAndNotify(value, field) { field = it }
         }
 
     @Serializable
     override var album: Album = readAlbum(tag, path.extension)
         set(value) {
-            updateAndPublishEvent(value, field) { newValue -> field = newValue }
+            setAndNotify(value, field) { field = it }
         }
 
     @Transient
     override var coverImageBytes: ByteArray? = getCoverBytes(tag)
         get() = field ?: getCoverBytes()
         set(value) {
-            updateAndPublishEvent(value, field) { newValue -> field = newValue }
+            setAndNotify(value, field) { field = it }
         }
-
-    private fun <T> updateAndPublishEvent(newValue: T, field: T, propertyUpdater: (T) -> Unit) {
-        if (newValue != field) {
-            val audioItemBeforeChange = MutableAudioItem(path, id)
-            propertyUpdater(newValue)
-            _lastDateModified = LocalDateTime.now()
-            notifySubscribers(this, audioItemBeforeChange)
-        }
-    }
 
     private fun getFieldIfExisting(tag: Tag, fieldKey: FieldKey): String? = tag.hasField(fieldKey).takeIf { it }.run { tag.getFirst(fieldKey) }
 
@@ -258,25 +253,17 @@ internal class MutableAudioItem(
 
     private fun getCoverBytes(tag: Tag): ByteArray? = tag.artworkList.isNotEmpty().takeIf { it }?.let { tag.firstArtwork.binaryData }
 
-    @OptIn(DelicateCoroutinesApi::class)
-    override fun writeMetadata() {
-        GlobalScope.launch(Dispatchers.IO) {
+    override fun writeMetadata(): Job {
+        return ioScope.launch(Dispatchers.IO) {
             logger.debug { "Writing metadata of $this to file '${path.toAbsolutePath()}'" }
-
             val audioFile = path.toFile()
-            try {
-                val audio = AudioFileIO.read(audioFile)
-                createTagTag(audio.audioHeader.format).let {
-                    audio.tag = it
-                }
-
-                audio.commit()
-                logger.debug { "Metadata of $this successfully written to file" }
-            } catch (exception: Exception) {
-                val errorText = "Error writing metadata of $this"
-                logger.error(errorText, exception)
-                throw AudioItemManipulationException(errorText, exception)
+            val audio = AudioFileIO.read(audioFile)
+            createTagTag(audio.audioHeader.format).let {
+                audio.tag = it
             }
+
+            audio.commit()
+            logger.debug { "Metadata of $this successfully written to file" }
         }
     }
 

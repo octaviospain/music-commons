@@ -3,6 +3,9 @@ package net.transgressoft.commons.music.audio
 import mu.KotlinLogging
 import java.io.File
 import java.nio.file.Path
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
 
 /**
  * @author Octavio Calleya
@@ -21,4 +24,16 @@ class AudioItemJsonRepository(override val name: String, file: File) : AudioItem
             }
 
     override fun toString() = "AudioItemJsonRepository(name=$name, audioItemsCount=${entitiesById.size})"
+}
+
+val audioItemSerializerModule = SerializersModule {
+    polymorphic(Artist::class) {
+        subclass(ImmutableArtist.serializer())
+    }
+    polymorphic(Album::class) {
+        subclass(ImmutableAlbum.serializer())
+    }
+    polymorphic(Label::class) {
+        subclass(ImmutableLabel.serializer())
+    }
 }

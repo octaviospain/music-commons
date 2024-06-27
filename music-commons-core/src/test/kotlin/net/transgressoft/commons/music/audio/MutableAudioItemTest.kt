@@ -27,9 +27,6 @@ import java.time.Duration
 import java.time.LocalDateTime
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
-import kotlinx.serialization.modules.subclass
 
 internal const val expectedTitle = "Yesterday"
 internal const val expectedArtistName = "The Beatles"
@@ -52,18 +49,7 @@ internal val expectedAlbum = ImmutableAlbum(expectedAlbumName, expectedAlbumArti
 internal class MutableAudioItemTest : FunSpec({
 
     val json = Json {
-        serializersModule = SerializersModule {
-            polymorphic(AudioItem::class, AudioItemSerializer)
-            polymorphic(Artist::class) {
-                subclass(ImmutableArtist.serializer())
-            }
-            polymorphic(Album::class) {
-                subclass(ImmutableAlbum.serializer())
-            }
-            polymorphic(Label::class) {
-                subclass(ImmutableLabel.serializer())
-            }
-        }
+        serializersModule = audioItemSerializerModule
         prettyPrint = true
     }
 
@@ -117,10 +103,10 @@ internal class MutableAudioItemTest : FunSpec({
             val audioItemChanges = arbitraryAudioItemChange.next()
             audioItem.update(audioItemChanges)
 
-            audioItem.writeMetadata()
+            audioItem.writeMetadata().join()
+            val loadedAudioItem: AudioItem = MutableAudioItem(testAudioFile.toPath(), audioItem.id)
 
             eventually(100.milliseconds) {
-                val loadedAudioItem: AudioItem = MutableAudioItem(testAudioFile.toPath(), audioItem.id)
                 assertSoftly {
                     loadedAudioItem.id shouldBe audioItem.id
                     loadedAudioItem.dateOfCreation shouldBeAfter audioItem.dateOfCreation
@@ -157,7 +143,7 @@ internal class MutableAudioItemTest : FunSpec({
         }
     }
 
-    context("return coverImage after being deserialized") {
+    context("should return coverImage after being deserialized") {
         val audioItem = MutableAudioItem(arbitraryMp3File { coverImageBytes = null }.next().toPath())
         audioItem.coverImageBytes shouldBe null
 

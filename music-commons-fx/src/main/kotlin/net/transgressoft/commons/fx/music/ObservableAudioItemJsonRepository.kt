@@ -5,11 +5,10 @@ import mu.KotlinLogging
 import java.io.File
 import java.nio.file.Path
 import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
 
 class ObservableAudioItemJsonRepository(override val name: String, file: File) :
     AudioItemRepositoryBase<ObservableAudioItem>(file, ObservableAudioItemSerializer, SerializersModule {
-        polymorphic(ObservableAudioItem::class, ObservableAudioItemSerializer)
+        include(observableAudioItemSerializerModule)
     }) {
 
     private val logger = KotlinLogging.logger {}

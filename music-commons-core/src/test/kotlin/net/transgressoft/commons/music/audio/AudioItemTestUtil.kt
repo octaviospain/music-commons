@@ -149,12 +149,10 @@ internal object AudioItemTestUtil : TestConfiguration() {
 
     private val atomicInteger = AtomicInteger(9999)
 
-    @OptIn(ExperimentalStdlibApi::class)
     fun arbitraryArtist(givenName: String? = null, countryCode: CountryCode? = null): Arb<Artist> = arbitrary {
         ImmutableArtist(givenName ?: beautifyArtistName(Arb.stringPattern("[a-z]{5} [a-z]{5}").bind()), countryCode ?: CountryCode.entries.toTypedArray().random())
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
     fun arbitraryLabel(name: String? = null, countryCode: CountryCode? = null) = arbitrary {
         ImmutableLabel(name ?: Arb.stringPattern("[a-z]{5} [a-z]{5}").bind(), countryCode ?: CountryCode.entries.toTypedArray().random())
     }
