@@ -165,7 +165,7 @@ class FXAudioItem internal constructor(
                         albumProperty.value.albumArtist.name
                     )
                 )
-                setAndNotify(newValue, oldValue) {}
+                setAndNotify(newValue, oldValue)
             }
         }
 
@@ -184,7 +184,7 @@ class FXAudioItem internal constructor(
                         albumProperty.value.albumArtist.name
                     )
                 )
-                setAndNotify(newValue, oldValue) {}
+                setAndNotify(newValue, oldValue)
             }
         }
 
@@ -204,7 +204,7 @@ class FXAudioItem internal constructor(
                         newValue.albumArtist.name
                     )
                 )
-                setAndNotify(newValue, oldValue) {}
+                setAndNotify(newValue, oldValue)
             }
         }
 
@@ -216,7 +216,7 @@ class FXAudioItem internal constructor(
     override val genreNameProperty  = SimpleStringProperty(this, "genre", getFieldIfExisting(tag, FieldKey.GENRE)?.let { Genre.parseGenre(it).name } ?: Genre.UNDEFINED.name)
         .apply {
             addListener { _, oldValue, newValue ->
-                setAndNotify(newValue, oldValue) {}
+                setAndNotify(newValue, oldValue)
             }
         }
 
@@ -228,7 +228,7 @@ class FXAudioItem internal constructor(
     override val commentsProperty = SimpleStringProperty(this, "comments", getFieldIfExisting(tag, FieldKey.COMMENT) ?: "")
         .apply {
             addListener { _, oldValue, newValue ->
-                setAndNotify(newValue, oldValue) {}
+                setAndNotify(newValue, oldValue)
             }
         }
 
@@ -240,7 +240,7 @@ class FXAudioItem internal constructor(
     override val trackNumberProperty = SimpleIntegerProperty(this, "track number",  getFieldIfExisting(tag, FieldKey.TRACK)?.takeIf { it.isNotEmpty().and(it != "0") }?.toIntOrNull() ?: -1)
         .apply {
             addListener { _, oldValue, newValue ->
-                setAndNotify(newValue, oldValue) {}
+                setAndNotify(newValue, oldValue)
             }
         }
 
@@ -252,7 +252,7 @@ class FXAudioItem internal constructor(
     override val discNumberProperty = SimpleIntegerProperty(this, "disc number", getFieldIfExisting(tag, FieldKey.DISC_NO)?.takeIf { it.isNotEmpty().and(it != "0") }?.toIntOrNull() ?: -1)
         .apply {
             addListener { _, oldValue, newValue ->
-                setAndNotify(newValue, oldValue) {}
+                setAndNotify(newValue, oldValue)
             }
         }
 
@@ -264,7 +264,7 @@ class FXAudioItem internal constructor(
     override val bpmProperty = SimpleFloatProperty(this, "bpm", getFieldIfExisting(tag, FieldKey.BPM)?.takeIf { it.isNotEmpty().and(it != "0") }?.toFloatOrNull() ?: -1f)
         .apply {
             addListener { _, oldValue, newValue ->
-                setAndNotify(newValue, oldValue) {}
+                setAndNotify(newValue, oldValue)
             }
         }
 
