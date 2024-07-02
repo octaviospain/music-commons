@@ -3,10 +3,10 @@ package net.transgressoft.commons.music.audio.event
 import net.transgressoft.commons.data.DataEvent
 import net.transgressoft.commons.event.TransEventSubscriberBase
 import net.transgressoft.commons.event.TransEventSubscription
-import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import mu.KotlinLogging
 
-open class AudioItemEventSubscriber<I : AudioItem>(override val name: String) : TransEventSubscriberBase<I, DataEvent<Int, out I>>() {
+open class AudioItemEventSubscriber<I : ReactiveAudioItem<I>>(override val name: String) : TransEventSubscriberBase<I, DataEvent<Int, out I>>() {
 
     private val logger = KotlinLogging.logger {}
 
