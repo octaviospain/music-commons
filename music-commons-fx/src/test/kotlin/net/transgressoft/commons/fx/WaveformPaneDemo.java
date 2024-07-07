@@ -1,11 +1,12 @@
 package net.transgressoft.commons.fx;
 
+import net.transgressoft.commons.music.waveform.ScalableAudioWaveform;
+
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-import net.transgressoft.commons.music.waveform.ScalableAudioWaveform;
 
 import java.io.File;
 import java.net.URI;
