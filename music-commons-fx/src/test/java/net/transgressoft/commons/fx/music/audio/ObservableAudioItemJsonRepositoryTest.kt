@@ -1,7 +1,7 @@
-package net.transgressoft.commons.fx.music
+package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.fx.music.FXAudioItemTestUtil.arbitraryMp3File
-import net.transgressoft.commons.fx.music.FXAudioItemTestUtil.asJsonKeyValue
+import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.arbitraryMp3File
+import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.asJsonKeyValue
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec

@@ -1,4 +1,4 @@
-package net.transgressoft.commons.fx.music
+package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.IdentifiableEntity
 import net.transgressoft.commons.music.AudioUtils.beautifyArtistName
@@ -35,12 +35,16 @@ internal object FXAudioItemTestUtil : TestConfiguration() {
         get() = arbitraryMp3File {}
 
     fun arbitraryMp3File(attributes: AudioItemTestAttributes): Arb<File> =
-        arbitrary { createTempFileWithTag(mp3File,
-            fillTagWithRandomValues(attributes, ID3v24Tag())) }
+        arbitrary { createTempFileWithTag(
+            mp3File,
+            fillTagWithRandomValues(attributes, ID3v24Tag())
+        ) }
 
     fun arbitraryMp3File(attributes: AudioItemTestAttributes.() -> Unit): Arb<File> =
-        arbitrary { createTempFileWithTag(mp3File,
-            fillTagWithRandomValues(arbitraryAudioAttributes().bind().also(attributes), ID3v24Tag())) }
+        arbitrary { createTempFileWithTag(
+            mp3File,
+            fillTagWithRandomValues(arbitraryAudioAttributes().bind().also(attributes), ID3v24Tag())
+        ) }
 
     private fun createTempFileWithTag(testFile: File, tag: Tag): File =
         tempfile(suffix = ".${testFile.extension}")

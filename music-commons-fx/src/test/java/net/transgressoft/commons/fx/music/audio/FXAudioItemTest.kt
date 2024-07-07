@@ -1,10 +1,10 @@
-package net.transgressoft.commons.fx.music
+package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.fx.music.FXAudioItemTestUtil.arbitraryAudioItemChange
-import net.transgressoft.commons.fx.music.FXAudioItemTestUtil.arbitraryMp3File
-import net.transgressoft.commons.fx.music.FXAudioItemTestUtil.asJsonValue
-import net.transgressoft.commons.fx.music.FXAudioItemTestUtil.testCoverBytes
-import net.transgressoft.commons.fx.music.FXAudioItemTestUtil.update
+import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.arbitraryAudioItemChange
+import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.arbitraryMp3File
+import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.asJsonValue
+import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.testCoverBytes
+import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.update
 import net.transgressoft.commons.music.audio.*
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.assertSoftly

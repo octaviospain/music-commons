@@ -1,21 +1,21 @@
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.UNASSIGNED_ID
 
-internal class ImmutablePlaylist(
+internal class ImmutablePlaylist<I : ReactiveAudioItem<I>, P : AudioPlaylist<I>>(
     override var id: Int = UNASSIGNED_ID,
     override val isDirectory: Boolean,
     override val name: String,
-    override val audioItems: List<AudioItem> = emptyList(),
-    override val playlists: Set<AudioPlaylist<AudioItem>> = emptySet()
-) : AudioPlaylist<AudioItem> {
+    override val audioItems: List<I> = emptyList(),
+    override val playlists: Set<P> = emptySet()
+) : AudioPlaylist<I> {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as ImmutablePlaylist
+        other as ImmutablePlaylist<*, *>
 
         if (isDirectory != other.isDirectory) return false
         if (name != other.name) return false

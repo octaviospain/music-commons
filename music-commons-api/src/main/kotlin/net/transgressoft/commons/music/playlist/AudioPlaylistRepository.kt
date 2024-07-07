@@ -3,14 +3,14 @@ package net.transgressoft.commons.music.playlist
 import net.transgressoft.commons.data.DataEvent
 import net.transgressoft.commons.data.Repository
 import net.transgressoft.commons.event.TransEventSubscriber
-import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import java.util.*
 import java.util.concurrent.Flow
 
 /**
  * @author Octavio Calleya
  */
-interface AudioPlaylistRepository<I : AudioItem, P : MutableAudioPlaylist<I>> : Repository<Int, P>, Flow.Publisher<DataEvent<Int, P>> {
+interface AudioPlaylistRepository<I : ReactiveAudioItem<I>, P : MutableAudioPlaylist<I>> : Repository<Int, P>, Flow.Publisher<DataEvent<Int, P>> {
 
     val audioItemEventSubscriber: TransEventSubscriber<I, DataEvent<Int, out I>>
 

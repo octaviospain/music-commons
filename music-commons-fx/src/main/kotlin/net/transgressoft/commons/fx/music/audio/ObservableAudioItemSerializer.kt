@@ -1,4 +1,4 @@
-package net.transgressoft.commons.fx.music
+package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.*
 import com.neovisionaries.i18n.CountryCode

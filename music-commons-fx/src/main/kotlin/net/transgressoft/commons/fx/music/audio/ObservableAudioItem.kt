@@ -1,4 +1,4 @@
-package net.transgressoft.commons.fx.music
+package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist

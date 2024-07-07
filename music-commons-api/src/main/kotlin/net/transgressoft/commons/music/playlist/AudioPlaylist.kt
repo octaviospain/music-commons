@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.IdentifiableEntity
-import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import java.io.IOException
 import java.io.PrintWriter
 import java.nio.charset.StandardCharsets
@@ -10,7 +10,7 @@ import java.nio.file.Path
 import java.util.function.Predicate
 import kotlin.io.path.exists
 
-interface AudioPlaylist<I : AudioItem> : IdentifiableEntity<Int>, Comparable<AudioPlaylist<I>> {
+interface AudioPlaylist<I : ReactiveAudioItem<I>> : IdentifiableEntity<Int>, Comparable<AudioPlaylist<I>> {
 
     override val uniqueId: String
         get() {
@@ -36,9 +36,9 @@ interface AudioPlaylist<I : AudioItem> : IdentifiableEntity<Int>, Comparable<Aud
 
     val playlists: Set<AudioPlaylist<I>>
 
-    fun audioItemsAllMatch(predicate: Predicate<AudioItem>) = audioItems.stream().allMatch { predicate.test(it) }
+    fun audioItemsAllMatch(predicate: Predicate<I>) = audioItems.stream().allMatch { predicate.test(it) }
 
-    fun audioItemsAnyMatch(predicate: Predicate<AudioItem>) = audioItems.stream().anyMatch { predicate.test(it) }
+    fun audioItemsAnyMatch(predicate: Predicate<I>) = audioItems.stream().anyMatch { predicate.test(it) }
 
     @Throws(IOException::class)
     fun exportToM3uFile(destinationPath: Path) {

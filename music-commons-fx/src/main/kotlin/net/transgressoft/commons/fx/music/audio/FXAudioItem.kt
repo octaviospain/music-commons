@@ -1,4 +1,4 @@
-package net.transgressoft.commons.fx.music
+package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.ReactiveEntityBase
 import net.transgressoft.commons.music.AudioUtils
@@ -176,7 +176,7 @@ class FXAudioItem internal constructor(
     @Transient
     override val artistProperty: ObjectProperty<Artist> = SimpleObjectProperty(this, "artist", readArtist(tag))
         .apply {
-            addListener { os, oldValue, newValue ->
+            addListener { _, oldValue, newValue ->
                 artistsInvolvedProperty.addAll(
                     AudioUtils.getArtistsNamesInvolved(
                         titleProperty.value,

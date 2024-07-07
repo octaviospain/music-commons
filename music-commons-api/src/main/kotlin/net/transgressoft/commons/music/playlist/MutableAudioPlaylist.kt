@@ -1,8 +1,9 @@
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.ReactiveEntity
+import net.transgressoft.commons.music.audio.ReactiveAudioItem
 
-interface MutableAudioPlaylist<I : AudioItem> : AudioPlaylist<I> {
+interface MutableAudioPlaylist<I : ReactiveAudioItem<I>> : AudioPlaylist<I>, ReactiveEntity<Int, MutableAudioPlaylist<I>> {
 
     override var name: String
 
@@ -41,6 +42,4 @@ interface MutableAudioPlaylist<I : AudioItem> : AudioPlaylist<I> {
     fun clearPlaylists()
 
     override val playlists: Set<MutableAudioPlaylist<I>>
-
-    fun toImmutableAudioPlaylist(): AudioPlaylist<I>
 }
