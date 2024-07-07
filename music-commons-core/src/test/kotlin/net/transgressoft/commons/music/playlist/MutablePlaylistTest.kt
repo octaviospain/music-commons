@@ -21,7 +21,7 @@ import java.time.Duration
 import java.util.*
 import kotlin.io.path.exists
 
-lateinit var audioPlaylistRepository: AudioPlaylistRepository<AudioItem, MutableAudioPlaylist<AudioItem>>
+lateinit var audioPlaylistRepository: AudioPlaylistRepository<AudioItem, ReactiveAudioPlaylist>
 
 internal class MutablePlaylistTest : StringSpec({
 

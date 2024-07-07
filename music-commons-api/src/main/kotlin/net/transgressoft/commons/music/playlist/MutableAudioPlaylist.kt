@@ -3,7 +3,7 @@ package net.transgressoft.commons.music.playlist
 import net.transgressoft.commons.ReactiveEntity
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 
-interface MutableAudioPlaylist<I : ReactiveAudioItem<I>> : AudioPlaylist<I>, ReactiveEntity<Int, MutableAudioPlaylist<I>> {
+interface MutableAudioPlaylist<I : ReactiveAudioItem<I>, P : MutableAudioPlaylist<I, P>> : AudioPlaylist<I>, ReactiveEntity<Int, P> {
 
     override var name: String
 
@@ -23,15 +23,15 @@ interface MutableAudioPlaylist<I : ReactiveAudioItem<I>> : AudioPlaylist<I>, Rea
     @JvmName("removeAudioItemIds")
     fun removeAudioItems(audioItemIds: Collection<Int>): Boolean
 
-    fun addPlaylist(playlist: MutableAudioPlaylist<I>): Boolean = addPlaylists(listOf(playlist))
+    fun addPlaylist(playlist: P): Boolean = addPlaylists(listOf(playlist))
 
-    fun addPlaylists(playlists: Collection<MutableAudioPlaylist<I>>): Boolean
+    fun addPlaylists(playlists: Collection<P>): Boolean
 
     fun removePlaylist(playlistId: Int): Boolean = removePlaylists(listOf(playlistId))
 
-    fun removePlaylist(playlist: MutableAudioPlaylist<I>): Boolean = removePlaylists(listOf(playlist))
+    fun removePlaylist(playlist: P): Boolean = removePlaylists(listOf(playlist))
 
-    fun removePlaylists(playlists: Collection<MutableAudioPlaylist<I>>): Boolean
+    fun removePlaylists(playlists: Collection<P>): Boolean
 
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removePlaylistIds")
@@ -41,5 +41,5 @@ interface MutableAudioPlaylist<I : ReactiveAudioItem<I>> : AudioPlaylist<I>, Rea
 
     fun clearPlaylists()
 
-    override val playlists: Set<MutableAudioPlaylist<I>>
+    override val playlists: Set<P>
 }

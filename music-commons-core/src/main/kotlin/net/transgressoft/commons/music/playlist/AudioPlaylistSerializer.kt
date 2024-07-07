@@ -17,20 +17,20 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.*
 
-object MutableAudioPlaylistSerializer : AudioPlaylistSerializerBase<AudioItem, MutableAudioPlaylist<AudioItem>>() {
+object MutableAudioPlaylistSerializer : AudioPlaylistSerializerBase<AudioItem, ReactiveAudioPlaylist>() {
     @Suppress("UNCHECKED_CAST")
-    override fun createInstance(propertiesList: List<Any?>): MutableAudioPlaylist<AudioItem> {
+    override fun createInstance(propertiesList: List<Any?>): ReactiveAudioPlaylist {
         return DummyPlaylist(
             propertiesList[0] as Int,
             propertiesList[1] as Boolean,
             propertiesList[2] as String,
             propertiesList[3] as List<AudioItem>,
-            propertiesList[4] as Set<MutableAudioPlaylist<AudioItem>>
+            propertiesList[4] as Set<ReactiveAudioPlaylist>
         )
     }
 }
 
-abstract class AudioPlaylistSerializerBase<I : ReactiveAudioItem<I>, P : MutableAudioPlaylist<I>> : TransEntityPolymorphicSerializer<P> {
+abstract class AudioPlaylistSerializerBase<I : ReactiveAudioItem<I>, P : MutableAudioPlaylist<I, P>> : TransEntityPolymorphicSerializer<P> {
     override val descriptor: SerialDescriptor = buildClassSerialDescriptor("AudioPlaylist") {
         element<String>("id")
         element<String>("name")
@@ -84,9 +84,9 @@ internal class DummyPlaylist(
     override var isDirectory: Boolean = false,
     override var name: String = "",
     override val audioItems: List<AudioItem> = emptyList(),
-    override val playlists: Set<MutableAudioPlaylist<AudioItem>> = emptySet(),
+    override val playlists: Set<ReactiveAudioPlaylist> = emptySet(),
     override val lastDateModified: LocalDateTime = LocalDateTime.MIN
-) : MutableAudioPlaylist<AudioItem> {
+) : ReactiveAudioPlaylist {
     override fun addAudioItems(audioItems: Collection<AudioItem>): Boolean = throw IllegalStateException()
     override fun removeAudioItems(audioItems: Collection<AudioItem>): Boolean = throw IllegalStateException()
     @Suppress("INAPPLICABLE_JVM_NAME")
@@ -97,9 +97,9 @@ internal class DummyPlaylist(
     override fun removePlaylists(playlistIds: Collection<Int>): Boolean = throw IllegalStateException()
     override fun clearAudioItems() = throw IllegalStateException()
     override fun clearPlaylists() = throw IllegalStateException()
-    override fun subscribe(p0: Flow.Subscriber<in UpdatedDataEvent<Int, MutableAudioPlaylist<AudioItem>>>?) = throw IllegalStateException()
-    override fun removePlaylists(playlists: Collection<MutableAudioPlaylist<AudioItem>>): Boolean = throw IllegalStateException()
-    override fun addPlaylists(playlists: Collection<MutableAudioPlaylist<AudioItem>>): Boolean = throw IllegalStateException()
+    override fun subscribe(p0: Flow.Subscriber<in UpdatedDataEvent<Int, ReactiveAudioPlaylist>>?) = throw IllegalStateException()
+    override fun removePlaylists(playlists: Collection<ReactiveAudioPlaylist>): Boolean = throw IllegalStateException()
+    override fun addPlaylists(playlists: Collection<ReactiveAudioPlaylist>): Boolean = throw IllegalStateException()
 }
 
 internal class DummyAudioItem(override val id: Int) : AudioItem {

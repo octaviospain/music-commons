@@ -7,7 +7,7 @@ import net.transgressoft.commons.music.audio.AudioItemTestUtil.mp3File
 import net.transgressoft.commons.music.playlist.AudioPlaylistJsonRepository
 import net.transgressoft.commons.music.playlist.AudioPlaylistRepository
 import net.transgressoft.commons.music.playlist.AudioPlaylistTestUtil.asJsonKeyValues
-import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
+import net.transgressoft.commons.music.playlist.ReactiveAudioPlaylist
 import net.transgressoft.commons.music.waveform.AudioWaveformJsonRepository
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
 import net.transgressoft.commons.music.waveform.ScalableAudioWaveform
@@ -22,15 +22,19 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import kotlin.time.Duration.Companion.milliseconds
 
+typealias AudioRepository = AudioItemRepository<AudioItem>
+typealias WaveformRepository = AudioWaveformRepository<ScalableAudioWaveform>
+typealias PlaylistRepository = AudioPlaylistRepository<AudioItem, ReactiveAudioPlaylist>
+
 internal class MusicLibraryIntegrationTest : StringSpec({
 
     val audioRepoFile = tempfile("audioItemRepository-test", ".json").apply { deleteOnExit() }
     val playlistRepoFile = tempfile("playlistRepository-test", ".json").apply { deleteOnExit() }
     val waveformsRepoFile = tempfile("waveformRepository-test", ".json").apply { deleteOnExit() }
 
-    val audioItemRepository: AudioItemRepository<AudioItem> = AudioItemJsonRepository("AudioItems", audioRepoFile)
-    val audioWaveformRepository: AudioWaveformRepository<ScalableAudioWaveform> = AudioWaveformJsonRepository("Waveforms", waveformsRepoFile)
-    val audioPlaylistRepository: AudioPlaylistRepository<AudioItem, MutableAudioPlaylist<AudioItem>> = AudioPlaylistJsonRepository("Playlists", playlistRepoFile)
+    val audioItemRepository: AudioRepository = AudioItemJsonRepository("AudioItems", audioRepoFile)
+    val audioWaveformRepository: WaveformRepository = AudioWaveformJsonRepository("Waveforms", waveformsRepoFile)
+    val audioPlaylistRepository: PlaylistRepository = AudioPlaylistJsonRepository("Playlists", playlistRepoFile)
 
     beforeEach {
         audioItemRepository.clear()

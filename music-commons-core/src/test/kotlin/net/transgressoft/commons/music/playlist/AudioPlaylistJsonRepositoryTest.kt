@@ -26,7 +26,7 @@ import kotlin.time.Duration.Companion.milliseconds
 internal class AudioPlaylistJsonRepositoryTest : StringSpec({
 
     lateinit var jsonFile: File
-    lateinit var audioPlaylistRepository: AudioPlaylistRepository<AudioItem, MutableAudioPlaylist<AudioItem>>
+    lateinit var audioPlaylistRepository: AudioPlaylistRepository<AudioItem, ReactiveAudioPlaylist>
 
     beforeEach {
         jsonFile = tempfile("playlistRepository-test", ".json").also { it.deleteOnExit() }
