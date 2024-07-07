@@ -1,13 +1,13 @@
 package net.transgressoft.commons.music.player
 
-import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.ReactiveAudioItem
 
 interface AudioItemPlayer {
     enum class Status {
         UNKNOWN, READY, PAUSED, PLAYING, STOPPED, STALLED, HALTED, DISPOSED
     }
 
-    fun play(audioItem: AudioItem)
+    fun play(audioItem: ReactiveAudioItem<*>)
     fun pause()
     fun resume()
     fun stop()

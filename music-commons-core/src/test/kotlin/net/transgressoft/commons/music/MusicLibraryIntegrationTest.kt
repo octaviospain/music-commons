@@ -1,16 +1,13 @@
 package net.transgressoft.commons.music
 
-import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemJsonRepository
-import net.transgressoft.commons.music.audio.AudioItemRepository
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.mp3File
+import net.transgressoft.commons.music.audio.AudioRepository
 import net.transgressoft.commons.music.playlist.AudioPlaylistJsonRepository
-import net.transgressoft.commons.music.playlist.AudioPlaylistRepository
 import net.transgressoft.commons.music.playlist.AudioPlaylistTestUtil.asJsonKeyValues
-import net.transgressoft.commons.music.playlist.ReactiveAudioPlaylist
+import net.transgressoft.commons.music.playlist.PlaylistRepository
 import net.transgressoft.commons.music.waveform.AudioWaveformJsonRepository
-import net.transgressoft.commons.music.waveform.AudioWaveformRepository
-import net.transgressoft.commons.music.waveform.ScalableAudioWaveform
+import net.transgressoft.commons.music.waveform.WaveformRepository
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec
@@ -21,10 +18,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import kotlin.time.Duration.Companion.milliseconds
-
-typealias AudioRepository = AudioItemRepository<AudioItem>
-typealias WaveformRepository = AudioWaveformRepository<ScalableAudioWaveform>
-typealias PlaylistRepository = AudioPlaylistRepository<AudioItem, ReactiveAudioPlaylist>
 
 internal class MusicLibraryIntegrationTest : StringSpec({
 

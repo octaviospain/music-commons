@@ -10,7 +10,7 @@ import java.util.concurrent.Flow
 /**
  * @author Octavio Calleya
  */
-interface AudioPlaylistRepository<I : ReactiveAudioItem<I>, P : MutableAudioPlaylist<I, P>> : Repository<Int, P>, Flow.Publisher<DataEvent<Int, P>> {
+interface AudioPlaylistRepository<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>> : Repository<Int, P>, Flow.Publisher<DataEvent<Int, P>> {
 
     val audioItemEventSubscriber: TransEventSubscriber<I, DataEvent<Int, out I>>
 
@@ -28,7 +28,7 @@ interface AudioPlaylistRepository<I : ReactiveAudioItem<I>, P : MutableAudioPlay
 
     fun findByName(name: String): Optional<out P>
 
-    fun findParentPlaylist(playlist: MutableAudioPlaylist<I, P>): Optional<out P>
+    fun findParentPlaylist(playlist: ReactiveAudioPlaylist<I, P>): Optional<out P>
 
     fun movePlaylist(playlistNameToMove: String, destinationPlaylistName: String)
 

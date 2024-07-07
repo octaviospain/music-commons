@@ -1,8 +1,9 @@
 package net.transgressoft.commons.fx.music.playlist
 
-import net.transgressoft.commons.ReactiveEntityBase
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
+import net.transgressoft.commons.music.playlist.AudioPlaylist
 import net.transgressoft.commons.music.playlist.AudioPlaylistRepositoryBase
+import com.google.common.base.Objects
 import javafx.beans.property.*
 import javafx.collections.FXCollections
 import javafx.scene.image.Image
@@ -37,13 +38,13 @@ class ObservablePlaylistJsonRepository(name: String, file: File) :
         }
     }
 
-    internal inner class FXPlaylist(
-        override val id: Int,
+    private inner class FXPlaylist(
+        id: Int,
         isDirectory: Boolean,
         name: String,
         audioItems: List<ObservableAudioItem> = listOf(),
         playlists: Set<ObservablePlaylist> = setOf()
-    ) : ReactiveEntityBase<Int, ObservablePlaylist>(), ObservablePlaylist {
+    ) : MutablePlaylistBase(id, isDirectory, name, audioItems, playlists), ObservablePlaylist {
 
         private val logger = KotlinLogging.logger {}
 
@@ -108,7 +109,7 @@ class ObservablePlaylistJsonRepository(name: String, file: File) :
 
         override val audioItemsProperty: ReadOnlyListProperty<ObservableAudioItem> = _audioItemsProperty
 
-        override val audioItems: List<ObservableAudioItem>
+        override val audioItems: MutableList<ObservableAudioItem>
             get() = audioItemsProperty.get()
 
         private val _playlistsProperty = SimpleSetProperty(this, "playlists", FXCollections.observableSet(playlists))
@@ -121,7 +122,7 @@ class ObservablePlaylistJsonRepository(name: String, file: File) :
 
         override val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist> = _playlistsProperty
 
-        override val playlists: Set<ObservablePlaylist>
+        override val playlists: MutableSet<ObservablePlaylist>
             get() = playlistsProperty.get()
 
         private val _audioItemsRecursiveProperty = SimpleListProperty(
@@ -191,6 +192,27 @@ class ObservablePlaylistJsonRepository(name: String, file: File) :
             _playlistsProperty.get().clear()
             logger.debug { "Cleared playlists from playlist $uniqueId" }
         }
+
+        override fun compareTo(other: AudioPlaylist<ObservableAudioItem>): Int {
+            return if (nameProperty.get() == other.name) {
+                val size = playlists.size + audioItemsRecursive.size
+                val objectSize = other.playlists.size + other.audioItemsRecursive.size
+                size - objectSize
+            } else {
+                nameProperty.get().compareTo(other.name)
+            }
+        }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other == null || javaClass != other.javaClass) return false
+            val that = other as FXPlaylist
+            return Objects.equal(name, that.name) && Objects.equal(id, that.id)
+        }
+
+        override fun hashCode() = Objects.hashCode(name, id)
+
+        override fun toString() = "FXPlaylist(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$audioItems, playlists=$playlists)"
     }
 }
 

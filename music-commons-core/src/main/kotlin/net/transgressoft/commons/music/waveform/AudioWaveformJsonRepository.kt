@@ -9,9 +9,11 @@ import java.util.concurrent.CompletableFuture
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 
+typealias WaveformRepository = AudioWaveformRepository<ScalableAudioWaveform, AudioItem>
+
 class AudioWaveformJsonRepository(name: String, file: File) :
     JsonFileRepository<Int, ScalableAudioWaveform>(name, file, MapSerializer(Int.serializer(), ScalableAudioWaveform.serializer())),
-    AudioWaveformRepository<ScalableAudioWaveform> {
+    WaveformRepository {
 
     override val audioItemEventSubscriber = AudioItemEventSubscriber<AudioItem>(this.toString()).apply {
         addOnNextEventAction(StandardDataEvent.Type.DELETE) { event ->

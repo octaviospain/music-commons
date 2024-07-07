@@ -18,7 +18,7 @@ import kotlin.time.Duration.Companion.seconds
 internal class AudioWaveformJsonRepositoryTest : StringSpec({
 
     lateinit var jsonFile: File
-    lateinit var audioWaveformRepository: AudioWaveformRepository<ScalableAudioWaveform>
+    lateinit var audioWaveformRepository: WaveformRepository
 
     beforeEach {
         jsonFile = tempfile("audioWaveformRepository-test", ".json").also { it.deleteOnExit() }

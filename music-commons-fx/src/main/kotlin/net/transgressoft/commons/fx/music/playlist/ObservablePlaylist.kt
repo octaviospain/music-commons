@@ -1,12 +1,12 @@
 package net.transgressoft.commons.fx.music.playlist
 
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
-import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
+import net.transgressoft.commons.music.playlist.ReactiveAudioPlaylist
 import javafx.beans.property.*
 import javafx.scene.image.Image
 import java.util.*
 
-interface ObservablePlaylist : MutableAudioPlaylist<ObservableAudioItem, ObservablePlaylist> {
+interface ObservablePlaylist : ReactiveAudioPlaylist<ObservableAudioItem, ObservablePlaylist> {
 
     val nameProperty: ReadOnlyStringProperty
 

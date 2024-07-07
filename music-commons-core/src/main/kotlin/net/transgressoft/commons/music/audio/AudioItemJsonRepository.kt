@@ -7,6 +7,8 @@ import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
 
+typealias AudioRepository = AudioItemRepository<AudioItem>
+
 /**
  * @author Octavio Calleya
  */

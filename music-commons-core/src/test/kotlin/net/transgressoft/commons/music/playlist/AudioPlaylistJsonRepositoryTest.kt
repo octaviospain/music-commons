@@ -1,8 +1,8 @@
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.AudioItemRepository
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
+import net.transgressoft.commons.music.audio.AudioRepository
 import net.transgressoft.commons.music.playlist.AudioPlaylistTestUtil.asJsonKeyValues
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
@@ -26,7 +26,7 @@ import kotlin.time.Duration.Companion.milliseconds
 internal class AudioPlaylistJsonRepositoryTest : StringSpec({
 
     lateinit var jsonFile: File
-    lateinit var audioPlaylistRepository: AudioPlaylistRepository<AudioItem, ReactiveAudioPlaylist>
+    lateinit var audioPlaylistRepository: PlaylistRepository
 
     beforeEach {
         jsonFile = tempfile("playlistRepository-test", ".json").also { it.deleteOnExit() }
@@ -64,7 +64,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
                 .asJsonKeyValues()
         )
 
-        val audioItemRepository = mock<AudioItemRepository<AudioItem>> {
+        val audioItemRepository = mock<AudioRepository> {
             whenever(it.findById(eq(453374921))).thenReturn(Optional.of(audioItem))
         }
 

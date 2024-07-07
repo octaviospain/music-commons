@@ -21,7 +21,7 @@ import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.modules.SerializersModule
 
-abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : MutableAudioPlaylist<I, P>>(
+abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>>(
     override val name: String,
     file: File,
     playlistSerializerBase: AudioPlaylistSerializerBase<I, P>,
@@ -138,7 +138,7 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Mutable
 
     override fun findByName(name: String): Optional<P> = findFirst { it.name == name }
 
-    override fun findParentPlaylist(playlist: MutableAudioPlaylist<I, P>): Optional<P> =
+    override fun findParentPlaylist(playlist: ReactiveAudioPlaylist<I, P>): Optional<P> =
         if (playlistsHierarchyMultiMap.containsValue(playlist)) {
             playlistsHierarchyMultiMap.entries().stream()
                 .filter { playlist == it.value }
@@ -267,7 +267,7 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Mutable
         name: String,
         audioItems: List<I> = listOf(),
         playlists: Set<P> = setOf()
-    ) : ReactiveEntityBase<Int, P>(), MutableAudioPlaylist<I, P> {
+    ) : ReactiveEntityBase<Int, P>(), ReactiveAudioPlaylist<I, P> {
 
         private val logger = KotlinLogging.logger {}
 
@@ -320,7 +320,7 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Mutable
 
         override fun addPlaylists(playlists: Collection<P>): Boolean {
             playlists.forEach {
-                findParentPlaylist(it).ifPresent { parentPlaylist: MutableAudioPlaylist<I, P> ->
+                findParentPlaylist(it).ifPresent { parentPlaylist: ReactiveAudioPlaylist<I, P> ->
                     parentPlaylist.removePlaylist(it)
                     logger.debug { "Playlist '${it.name}' removed from '$parentPlaylist'" }
                 }
