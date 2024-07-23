@@ -10,7 +10,6 @@ internal class ImmutablePlaylist<I : ReactiveAudioItem<I>, P : AudioPlaylist<I>>
     override val audioItems: List<I> = emptyList(),
     override val playlists: Set<P> = emptySet()
 ) : AudioPlaylist<I> {
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -32,6 +31,8 @@ internal class ImmutablePlaylist<I : ReactiveAudioItem<I>, P : AudioPlaylist<I>>
         result = 31 * result + playlists.hashCode()
         return result
     }
+
+    override fun clone(): ImmutablePlaylist<I, P> = ImmutablePlaylist(id, isDirectory, name, audioItems.toList(), playlists.toSet())
 
     override fun toString() = "ImmutablePlaylist(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$audioItems, playlists=$playlists)"
 }

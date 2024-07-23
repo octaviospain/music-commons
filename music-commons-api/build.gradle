@@ -8,27 +8,27 @@ dependencies {
 
 publishing {
     publications {
-        maven(MavenPublication) {
-            groupId group
-            artifactId 'music-commons-api'
-            version version
+        create('transgressoft', MavenPublication) {
+            groupId = project.group
+            artifactId = 'music-commons-api'
+            version = project.version
 
             from components.java
 
             pom {
-                name = 'music-commons-api'
-                description = 'Transgressoft Music Commons - API'
+                name.set('music-commons-api')
+                description.set('Transgressoft Music Commons - API')
                 licenses {
                     license {
-                        name = 'GNU General Public License v3'
-                        url = 'https://www.gnu.org/licenses/gpl-3.0.en.html'
+                        name.set('GNU General Public License v3')
+                        url.set('https://www.gnu.org/licenses/gpl-3.0.en.html')
                     }
                 }
                 developers {
                     developer {
-                        id = 'octaviospain'
-                        name = 'Octavio Calleya García'
-                        email = 'octaviospain@gmail.com'
+                        id.set('octaviospain')
+                        name.set('Octavio Calleya García')
+                        email.set('octaviospain@gmail.com')
                     }
                 }
             }

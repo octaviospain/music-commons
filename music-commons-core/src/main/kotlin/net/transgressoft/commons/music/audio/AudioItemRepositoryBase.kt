@@ -9,11 +9,14 @@ import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.modules.SerializersModule
 
-abstract class AudioItemRepositoryBase<I>(file: File, audioItemSerializerBase: AudioItemSerializerBase<I>, serializersModule : SerializersModule = SerializersModule {}) :
-    JsonFileRepository<Int, I>(file, MapSerializer(Int.serializer(), audioItemSerializerBase), SerializersModule {
+abstract class AudioItemRepositoryBase<I>(
+    name: String,
+    file: File,
+    audioItemSerializerBase: AudioItemSerializerBase<I>, serializersModule : SerializersModule = SerializersModule {})
+    : JsonFileRepository<Int, I>(file, MapSerializer(Int.serializer(), audioItemSerializerBase), SerializersModule {
         include(serializersModule)
         include(audioItemSerializerModule)
-    }),
+    }, name),
     AudioItemRepository<I> where I : ReactiveAudioItem<I> {
 
     private val artistCatalogRegistry = ArtistCatalogVolatileRegistry<I>()

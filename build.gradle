@@ -1,3 +1,6 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
+
 plugins {
     id 'com.palantir.git-version' version '3.1.0'
     id 'org.jetbrains.kotlin.jvm' version '1.9.0'
@@ -36,7 +39,7 @@ subprojects {
     dependencies {
         implementation 'com.neovisionaries:nv-i18n:1.29'
         implementation 'io.github.microutils:kotlin-logging-jvm:3.0.5'
-        implementation 'net.transgressoft:transgressoft-commons-api:1.32'
+        implementation 'net.transgressoft:transgressoft-commons-api:1.39'
         implementation platform('org.jetbrains.kotlin:kotlin-bom')
         implementation "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
@@ -55,14 +58,23 @@ subprojects {
         }
     }
 
-    configurations.all {
+    tasks.withType(KotlinJvmCompile).configureEach {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+            freeCompilerArgs.add('-Xjsr305=strict')
+        }
+    }
+
+    configurations.configureEach {
         resolutionStrategy {
             cacheChangingModulesFor 0, 'seconds'
         }
     }
 
-    plugins.withType(JacocoPlugin) {
-        tasks['test'].finalizedBy 'jacocoTestReport'
+    plugins.withType(JacocoPlugin).configureEach {
+        tasks.named('test').configure {
+            finalizedBy 'jacocoTestReport'
+        }
     }
 
     jacocoTestReport {

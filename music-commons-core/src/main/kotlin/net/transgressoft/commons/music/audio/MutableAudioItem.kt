@@ -47,6 +47,7 @@ internal class MutableAudioItem(
             logger.error(errorText, exception)
     })
 
+    // Constructor only for testing purposes
     internal constructor(audioItem: AudioItem) : this(audioItem.path, audioItem.id)
 
     internal constructor(
@@ -362,6 +363,26 @@ internal class MutableAudioItem(
     }
 
     override fun hashCode() = Objects.hashCode(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration)
+
+    override fun clone(): MutableAudioItem =
+        MutableAudioItem(
+            path,
+            id,
+            title,
+            duration,
+            bitRate,
+            artist,
+            album,
+            genre,
+            comments,
+            trackNumber,
+            discNumber,
+            bpm,
+            encoder,
+            encoding,
+            dateOfCreation,
+            lastDateModified
+        )
 
     override fun toString() = "AudioItem(id=$id, path=$path, title=$title, artist=${artist.name})"
 }

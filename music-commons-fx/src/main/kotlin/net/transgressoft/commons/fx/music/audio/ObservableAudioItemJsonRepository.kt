@@ -15,8 +15,8 @@ import java.nio.file.Path
 import java.util.Map.*
 import kotlinx.serialization.modules.SerializersModule
 
-class ObservableAudioItemJsonRepository(override val name: String, file: File) :
-    AudioItemRepositoryBase<ObservableAudioItem>(file, ObservableAudioItemSerializer, SerializersModule {
+class ObservableAudioItemJsonRepository(name: String, file: File) :
+    AudioItemRepositoryBase<ObservableAudioItem>(name, file, ObservableAudioItemSerializer, SerializersModule {
         include(observableAudioItemSerializerModule)
     }) {
 
@@ -54,8 +54,6 @@ class ObservableAudioItemJsonRepository(override val name: String, file: File) :
         super.clear()
         observableAudioItemMap.clear()
     }
-
-    override fun entityClone(entity: ObservableAudioItem): FXAudioItem = FXAudioItem(entity.path, entity.id)
 
     override fun createFromFile(audioItemPath: Path): FXAudioItem =
         FXAudioItem(audioItemPath, newId())

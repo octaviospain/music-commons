@@ -1,10 +1,10 @@
 package net.transgressoft.commons.fx
 
+import net.transgressoft.commons.music.waveform.AudioWaveform
 import javafx.scene.canvas.Canvas
 import javafx.scene.paint.Color
 import kotlinx.coroutines.*
 import kotlinx.coroutines.javafx.JavaFx
-import net.transgressoft.commons.music.waveform.AudioWaveform
 
 class WaveformPane : Canvas() {
 
@@ -14,18 +14,18 @@ class WaveformPane : Canvas() {
     private var amplitudesTask: Job? = null
 
     init {
-        widthProperty().addListener { _, newWidth, newHeight ->
+        widthProperty().addListener { _, _, newWidth ->
             run {
                 waveform?.let {
-                    if (newWidth.toDouble() > 0 && newHeight.toDouble() > 0)
+                    if (newWidth.toDouble() > 0)
                         drawWaveformAsync(it, waveformColor, backgroundColor)
                 }
             }
         }
-        heightProperty().addListener { _, newWidth, newHeight ->
+        heightProperty().addListener { _, _, newHeight ->
             run {
                 waveform?.let {
-                    if (newWidth.toDouble() > 0 && newHeight.toDouble() > 0) {
+                    if (newHeight.toDouble() > 0) {
                         drawWaveformAsync(it, waveformColor, backgroundColor)
                     }
                 }

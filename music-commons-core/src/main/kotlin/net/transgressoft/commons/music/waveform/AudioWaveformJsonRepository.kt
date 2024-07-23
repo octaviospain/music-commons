@@ -12,7 +12,7 @@ import kotlinx.serialization.builtins.serializer
 typealias WaveformRepository = AudioWaveformRepository<ScalableAudioWaveform, AudioItem>
 
 class AudioWaveformJsonRepository(name: String, file: File) :
-    JsonFileRepository<Int, ScalableAudioWaveform>(name, file, MapSerializer(Int.serializer(), ScalableAudioWaveform.serializer())),
+    JsonFileRepository<Int, ScalableAudioWaveform>(file, MapSerializer(Int.serializer(), ScalableAudioWaveform.serializer()), name = name),
     WaveformRepository {
 
     override val audioItemEventSubscriber = AudioItemEventSubscriber<AudioItem>(this.toString()).apply {

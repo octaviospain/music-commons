@@ -279,6 +279,8 @@ data class AudioItemChange(
             year = value?.year
             label = value?.label
         }
+
+    override fun clone(): AudioItemChange = copy()
 }
 
 data class AudioItemTestAttributes(

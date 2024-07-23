@@ -22,7 +22,6 @@ internal data class MutableArtistCatalog<I>(val artist: Artist) : IdentifiableEn
     override val id: String = "${artist.name}-${artist.countryCode.name}"
 
     override val uniqueId: String = "${artist.name}-${artist.countryCode.name}"
-
     val size: Int
         get() = albums.values.stream().flatMap { it.stream() }.count().toInt()
 
@@ -58,6 +57,8 @@ internal data class MutableArtistCatalog<I>(val artist: Artist) : IdentifiableEn
         removeAudioItem(audioItem)
         addAudioItem(audioItem)
     }
+
+    override fun clone(): MutableArtistCatalog<I> = copy()
 
     override fun toString() = "MutableArtistCatalog(artist=$artist, size=$size)"
 }

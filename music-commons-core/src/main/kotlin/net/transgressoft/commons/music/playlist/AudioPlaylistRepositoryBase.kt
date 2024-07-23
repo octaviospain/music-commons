@@ -22,14 +22,14 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.modules.SerializersModule
 
 abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>>(
-    override val name: String,
+    name: String,
     file: File,
     playlistSerializerBase: AudioPlaylistSerializerBase<I, P>,
     serializersModule: SerializersModule = SerializersModule {}
 ) : JsonFileRepository<Int, P>(file, MapSerializer(Int.serializer(), playlistSerializerBase), SerializersModule {
         include(serializersModule)
         include(playlistSerializerModule)
-    }),
+    }, name),
     AudioPlaylistRepository<I, P> {
 
     private val logger = KotlinLogging.logger {}
@@ -261,6 +261,14 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
             .filter { it.isDirectory }
             .count().toInt()
 
+    protected fun putAllPlaylistInHierarchy(parentPlaylistUniqueId: String, playlist: Collection<P>) {
+        playlistsHierarchyMultiMap.putAll(parentPlaylistUniqueId, playlist)
+    }
+
+    protected fun removePlaylistFromHierarchy(parentPlaylistUniqueId: String, playlist: P) {
+        playlistsHierarchyMultiMap.remove(parentPlaylistUniqueId, playlist)
+    }
+
     protected abstract inner class MutablePlaylistBase(
         override val id: Int,
         isDirectory: Boolean,
@@ -325,11 +333,11 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
                     logger.debug { "Playlist '${it.name}' removed from '$parentPlaylist'" }
                 }
             }
-            val result = this.playlists.stream().anyMatch { !playlists.contains(it) }
+            val result = this.playlists.stream().anyMatch(playlists::contains).not()
             setAndNotify(this.playlists + playlists, this.playlists) {
                 this.playlists.addAll(playlists).also {
                     if (it) {
-                        playlistsHierarchyMultiMap.putAll(uniqueId, playlists)
+                        putAllPlaylistInHierarchy(uniqueId, playlists)
                         logger.debug { "Added $playlists to playlist $uniqueId" }
                     }
                 }
@@ -343,7 +351,7 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
                 this.playlists.removeAll(playlists.toSet()).also {
                     if (it) {
                         playlists.forEach { playlist ->
-                            playlistsHierarchyMultiMap.remove(uniqueId, playlist)
+                            removePlaylistFromHierarchy(uniqueId, playlist)
                         }
                         logger.debug { "Removed $playlists from playlist $uniqueId" }
                     }
@@ -360,7 +368,7 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
                 if (it) {
                     playlistIds.forEach { playlistId ->
                         findById(playlistId).ifPresent { playlist ->
-                            playlistsHierarchyMultiMap.remove(uniqueId, playlist)
+                            removePlaylistFromHierarchy(uniqueId, playlist)
                         }
                     }
                     logger.debug { "Removed playlists with ids $playlistIds from playlist $uniqueId" }
@@ -411,6 +419,17 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
             return result
         }
 
-        override fun toString() = "MutablePlaylist(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$audioItems, playlists=$playlists)"
+        private fun <T> formatCollectionWithIndentation(collection: Collection<T>): String {
+            if (collection.isEmpty()) return "[]"
+            return collection.joinToString(separator = ",\n\t", prefix = "[\n\t", postfix = "\n]") { item ->
+                item.toString().split("\n").joinToString("\n\t")
+            }
+        }
+
+        override fun toString(): String {
+            val formattedAudioItems = formatCollectionWithIndentation(audioItems)
+            val formattedPlaylists = formatCollectionWithIndentation(playlists)
+            return "MutablePlaylist(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$formattedAudioItems, playlists=$formattedPlaylists)"
+        }
     }
 }

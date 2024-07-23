@@ -49,4 +49,5 @@ internal class DummyPlaylist(
     override fun subscribe(p0: Flow.Subscriber<in UpdatedDataEvent<Int, ObservablePlaylist>>?) = throw IllegalStateException()
     override fun removePlaylists(playlists: Collection<ObservablePlaylist>): Boolean = throw IllegalStateException()
     override fun addPlaylists(playlists: Collection<ObservablePlaylist>): Boolean = throw IllegalStateException()
+    override fun clone(): DummyPlaylist = DummyPlaylist(id)
 }

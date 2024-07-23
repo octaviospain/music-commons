@@ -15,9 +15,8 @@ import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import io.kotest.property.arbitrary.next
-import org.mockito.ArgumentMatchers.*
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
+import io.mockk.every
+import io.mockk.mockk
 import java.io.File
 import java.time.Duration
 import java.util.*
@@ -64,8 +63,8 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
                 .asJsonKeyValues()
         )
 
-        val audioItemRepository = mock<AudioRepository> {
-            whenever(it.findById(eq(453374921))).thenReturn(Optional.of(audioItem))
+        val audioItemRepository = mockk<AudioRepository> {
+            every { findById(eq(453374921)) } returns Optional.of(audioItem)
         }
 
         audioPlaylistRepository = AudioPlaylistJsonRepository("Playlists", jsonFile, audioItemRepository)

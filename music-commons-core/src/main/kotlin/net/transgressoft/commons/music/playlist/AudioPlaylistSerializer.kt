@@ -49,10 +49,12 @@ abstract class AudioPlaylistSerializerBase<I : ReactiveAudioItem<I>, P : Reactiv
         return propertiesList
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun mapAudioItemIds(ids: JsonArray): List<I> {
         return ids.map { DummyAudioItem(it.jsonPrimitive.int) as I }
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun mapPlaylistIds(ids: JsonArray): Set<P> {
         return ids.map { DummyPlaylist(it.jsonPrimitive.int) as P }.toSet()
     }
@@ -98,8 +100,10 @@ internal class DummyPlaylist(
     override fun clearAudioItems() = throw IllegalStateException()
     override fun clearPlaylists() = throw IllegalStateException()
     override fun subscribe(p0: Flow.Subscriber<in UpdatedDataEvent<Int, MutableAudioPlaylist>>?) = throw IllegalStateException()
+
     override fun removePlaylists(playlists: Collection<MutableAudioPlaylist>): Boolean = throw IllegalStateException()
     override fun addPlaylists(playlists: Collection<MutableAudioPlaylist>): Boolean = throw IllegalStateException()
+    override fun clone(): DummyPlaylist = DummyPlaylist(id)
 }
 
 internal class DummyAudioItem(override val id: Int) : AudioItem {
@@ -126,4 +130,5 @@ internal class DummyAudioItem(override val id: Int) : AudioItem {
     override var coverImageBytes: ByteArray? = null
     override fun writeMetadata(): Job = throw IllegalStateException()
     override fun subscribe(p0: Flow.Subscriber<in UpdatedDataEvent<Int, AudioItem>>?) =  throw IllegalStateException()
+    override fun clone(): DummyAudioItem = DummyAudioItem(id)
 }

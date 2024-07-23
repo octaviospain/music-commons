@@ -175,5 +175,8 @@ class ScalableAudioWaveform(
         return rawAudioPcm.contentHashCode()
     }
 
+    override fun clone(): ScalableAudioWaveform =
+        ScalableAudioWaveform(id, audioFilePath)
+
     override fun toString() = "ScalableAudioWaveform(uniqueId=$uniqueId)"
 }

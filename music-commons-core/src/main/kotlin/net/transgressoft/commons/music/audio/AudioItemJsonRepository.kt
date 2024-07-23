@@ -12,11 +12,9 @@ typealias AudioRepository = AudioItemRepository<AudioItem>
 /**
  * @author Octavio Calleya
  */
-class AudioItemJsonRepository(override val name: String, file: File) : AudioItemRepositoryBase<AudioItem>(file, AudioItemSerializer) {
+class AudioItemJsonRepository(name: String, file: File) : AudioItemRepositoryBase<AudioItem>(name, file, AudioItemSerializer) {
 
     private val logger = KotlinLogging.logger {}
-
-    override fun entityClone(entity: AudioItem): AudioItem = MutableAudioItem(entity.path, entity.id)
 
     override fun createFromFile(audioItemPath: Path): AudioItem =
         MutableAudioItem(audioItemPath, newId())

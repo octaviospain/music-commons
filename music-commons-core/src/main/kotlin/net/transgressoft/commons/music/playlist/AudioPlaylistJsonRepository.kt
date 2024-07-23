@@ -65,9 +65,6 @@ class AudioPlaylistJsonRepository(name: String, jsonFile: File) : AudioPlaylistR
         }
     }
 
-    override fun entityClone(entity: MutableAudioPlaylist): MutableAudioPlaylist =
-        MutablePlaylist(entity.id, entity.isDirectory, entity.name, entity.audioItems, entity.playlists)
-
     override fun toString() = "PlaylistRepository(name=$name, playlistsCount=${entitiesById.size})"
 
     private inner class MutablePlaylist(
@@ -76,7 +73,10 @@ class AudioPlaylistJsonRepository(name: String, jsonFile: File) : AudioPlaylistR
         name: String,
         audioItems: List<AudioItem> = listOf(),
         playlists: Set<MutableAudioPlaylist> = setOf()
-    ) : MutablePlaylistBase(id, isDirectory, name, audioItems, playlists), MutableAudioPlaylist
+    ) : MutablePlaylistBase(id, isDirectory, name, audioItems, playlists), MutableAudioPlaylist {
+
+        override fun clone(): MutablePlaylist = MutablePlaylist(id, isDirectory, name, audioItems.toList(), playlists.toSet())
+    }
 }
 
 val playlistSerializerModule = SerializersModule {

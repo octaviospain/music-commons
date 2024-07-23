@@ -6,7 +6,7 @@ import mu.KotlinLogging
 import java.util.*
 import java.util.stream.Collectors.*
 
-internal class ArtistCatalogVolatileRegistry<I>(override val name: String = "ArtistCatalog") : RegistryBase<String, MutableArtistCatalog<I>>() where I : ReactiveAudioItem<I> {
+internal class ArtistCatalogVolatileRegistry<I> : RegistryBase<String, MutableArtistCatalog<I>>("ArtistCatalog") where I : ReactiveAudioItem<I> {
 
     private val log = KotlinLogging.logger {}
 
@@ -107,8 +107,6 @@ internal class ArtistCatalogVolatileRegistry<I>(override val name: String = "Art
     private fun Collection<MutableArtistCatalog<I>>.toArtistNames(): List<String> = map { it.artist.name }
 
     private fun ReactiveAudioItem<I>.artistUniqueId() = ImmutableArtist.id(artist.name, artist.countryCode)
-
-    override fun entityClone(entity: MutableArtistCatalog<I>) = entity.copy()
 
     fun findFirst(artist: Artist): Optional<MutableArtistCatalog<I>> =
         Optional.ofNullable(entitiesById[artist.id()])
