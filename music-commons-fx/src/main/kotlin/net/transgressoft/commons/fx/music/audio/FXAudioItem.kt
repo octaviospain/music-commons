@@ -153,11 +153,7 @@ class FXAudioItem internal constructor(
 
     /** Mutable properties */
 
-    @Transient
-    override val titleProperty: StringProperty = SimpleStringProperty(this, "title", getFieldIfExisting(tag, FieldKey.TITLE) ?: "")
-
-    override var title: String = titleProperty.get()
-        get() = titleProperty.get()
+    override var title: String = getFieldIfExisting(tag, FieldKey.TITLE) ?: ""
         set(value) {
             setAndNotify(value, field) {
                 field = value
@@ -173,13 +169,16 @@ class FXAudioItem internal constructor(
         }
 
     @Transient
-    override val artistProperty: ObjectProperty<Artist> = SimpleObjectProperty(this, "artist", readArtist(tag))
+    override val titleProperty: StringProperty = SimpleStringProperty(this, "title", title).apply {
+        addListener { _, _, newTitle ->
+            title = newTitle
+        }
+    }
 
-    override var artist: Artist = artistProperty.get()
-        get() = artistProperty.get()
+    override var artist: Artist = readArtist(tag)
         set(value) {
             setAndNotify(value, field) {
-                artistProperty.set(value)
+                field = value
                 artistsInvolvedProperty.addAll(
                     AudioUtils.getArtistsNamesInvolved(
                         titleProperty.value,
@@ -191,13 +190,16 @@ class FXAudioItem internal constructor(
         }
 
     @Transient
-    override val albumProperty: ObjectProperty<Album> = SimpleObjectProperty(this, "album", readAlbum(tag, extension))
+    override val artistProperty: ObjectProperty<Artist> = SimpleObjectProperty(this, "artist", artist).apply {
+        addListener { _, _, newArtist ->
+            artist = newArtist
+        }
+    }
 
-    override var album: Album = albumProperty.get()
-        get() = albumProperty.get()
+    override var album: Album = readAlbum(tag, extension)
         set(value) {
             setAndNotify(value, field) {
-                albumProperty.set(value)
+                field = value
                 artistsInvolvedProperty.clear()
                 artistsInvolvedProperty.addAll(
                     AudioUtils.getArtistsNamesInvolved(
@@ -210,59 +212,82 @@ class FXAudioItem internal constructor(
         }
 
     @Transient
-    override val genreNameProperty  = SimpleStringProperty(this, "genre", getFieldIfExisting(tag, FieldKey.GENRE)?.let { Genre.parseGenre(it).name } ?: Genre.UNDEFINED.name)
+    override val albumProperty: ObjectProperty<Album> = SimpleObjectProperty(this, "album", album).apply {
+        addListener { _, _, newAlbum ->
+            album = newAlbum
+        }
+    }
 
-    override var genre: Genre = Genre.parseGenre(genreNameProperty.get())
-        get() = Genre.parseGenre(genreNameProperty.get())
+    override var genre: Genre = getFieldIfExisting(tag, FieldKey.GENRE)?.let { Genre.parseGenre(it) } ?: Genre.UNDEFINED
         set(value) {
             setAndNotify(value, field) {
-                genreNameProperty.set(value.name)
+                field = value
             }
         }
 
     @Transient
-    override val commentsProperty = SimpleStringProperty(this, "comments", getFieldIfExisting(tag, FieldKey.COMMENT) ?: "")
+    override val genreNameProperty  = SimpleStringProperty(this, "genre", genre.name).apply {
+        addListener { _, _, newGenreName ->
+            genre = Genre.parseGenre(newGenreName)
+        }
+    }
 
-    override var comments: String? = commentsProperty.get()
-        get() = commentsProperty.get()
+    override var comments: String? =  getFieldIfExisting(tag, FieldKey.COMMENT)
         set(value) {
             setAndNotify(value, field) {
-                commentsProperty.set(value)
+                field = value
             }
         }
 
     @Transient
-    override val trackNumberProperty = SimpleIntegerProperty(this, "track number",  getFieldIfExisting(tag, FieldKey.TRACK)?.takeIf { it.isNotEmpty().and(it != "0") }?.toIntOrNull() ?: -1)
+    override val commentsProperty = SimpleStringProperty(this, "comments", comments ?: "").apply {
+        addListener { _, _, newComments ->
+            comments = newComments
+        }
+    }
 
-    override var trackNumber: Short? = trackNumberProperty.get().toShort()
-        get() = trackNumberProperty.value.toShort()
+    override var trackNumber: Short? = getFieldIfExisting(tag, FieldKey.TRACK)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()
         set(value) {
             setAndNotify(value, field) {
-                trackNumberProperty.set(value?.toInt() ?: -1)
+                field = value
             }
         }
 
     @Transient
-    override val discNumberProperty = SimpleIntegerProperty(this, "disc number", getFieldIfExisting(tag, FieldKey.DISC_NO)?.takeIf { it.isNotEmpty().and(it != "0") }?.toIntOrNull() ?: -1)
+    override val trackNumberProperty = SimpleIntegerProperty(this, "track number",  trackNumber?.toInt() ?: -1).apply {
+        addListener { _, _, newTrackNumber ->
+            trackNumber = newTrackNumber.toShort()
+        }
+    }
 
-    override var discNumber: Short? = discNumberProperty.get().toShort()
-        get() = discNumberProperty.value.toShort()
+    override var discNumber: Short? = getFieldIfExisting(tag, FieldKey.DISC_NO)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()
         set(value) {
             setAndNotify(value, field) {
-                discNumberProperty.set(value?.toInt() ?: -1)
+                field = value
             }
         }
 
     @Transient
-    override val bpmProperty = SimpleFloatProperty(this, "bpm", getFieldIfExisting(tag, FieldKey.BPM)?.takeIf { it.isNotEmpty().and(it != "0") }?.toFloatOrNull() ?: -1f)
+    override val discNumberProperty = SimpleIntegerProperty(this, "disc number", discNumber?.toInt() ?: -1).apply {
+        addListener {
+            _, _, newDiscNumber ->
+            discNumber = newDiscNumber.toShort()
+        }
+    }
 
-    override var bpm: Float? = bpmProperty.get()
-        get() = bpmProperty.value
+    override var bpm: Float? = getFieldIfExisting(tag, FieldKey.BPM)?.takeUnless { it.isEmpty().and(it == "0") }?.toFloatOrNull() ?: -1f
         set(value) {
             setAndNotify(value, field) {
-                bpmProperty.set(value ?: -1f)
+                field = value
             }
         }
+
+    @Transient
+    override val bpmProperty = SimpleFloatProperty(this, "bpm", bpm?: -1f).apply {
+        addListener { _, _, newBpm ->
+            bpm = newBpm.takeUnless { it == -1f }?.toFloat()
+        }
+    }
 
     @Serializable
     override var lastDateModified: LocalDateTime = dateOfCreation
