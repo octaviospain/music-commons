@@ -1,5 +1,6 @@
 package net.transgressoft.commons.music
 
+import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemJsonRepository
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.mp3File
 import net.transgressoft.commons.music.audio.AudioRepository
@@ -26,7 +27,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     val waveformsRepoFile = tempfile("waveformRepository-test", ".json").apply { deleteOnExit() }
 
     val audioItemRepository: AudioRepository = AudioItemJsonRepository("AudioItems", audioRepoFile)
-    val audioWaveformRepository: WaveformRepository = AudioWaveformJsonRepository("Waveforms", waveformsRepoFile)
+    val audioWaveformRepository: WaveformRepository<AudioItem> = AudioWaveformJsonRepository("Waveforms", waveformsRepoFile)
     val audioPlaylistRepository: PlaylistRepository = AudioPlaylistJsonRepository("Playlists", playlistRepoFile)
 
     beforeEach {

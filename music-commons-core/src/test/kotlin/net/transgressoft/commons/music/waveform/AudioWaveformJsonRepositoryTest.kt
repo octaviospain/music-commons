@@ -1,5 +1,6 @@
 package net.transgressoft.commons.music.waveform
 
+import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemTestUtil
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryWavFile
@@ -18,7 +19,7 @@ import kotlin.time.Duration.Companion.seconds
 internal class AudioWaveformJsonRepositoryTest : StringSpec({
 
     lateinit var jsonFile: File
-    lateinit var audioWaveformRepository: WaveformRepository
+    lateinit var audioWaveformRepository: WaveformRepository<AudioItem>
 
     beforeEach {
         jsonFile = tempfile("audioWaveformRepository-test", ".json").also { it.deleteOnExit() }
@@ -42,7 +43,7 @@ internal class AudioWaveformJsonRepositoryTest : StringSpec({
                 }
             """
 
-            val loadedRepository = AudioWaveformJsonRepository("Waveforms", jsonFile)
+            val loadedRepository = AudioWaveformJsonRepository<AudioItem>("Waveforms", jsonFile)
             loadedRepository.size() shouldBe 1
             loadedRepository.findById(audioWaveform.id) shouldBePresent { found -> found shouldBe audioWaveform }
             loadedRepository shouldBe audioWaveformRepository

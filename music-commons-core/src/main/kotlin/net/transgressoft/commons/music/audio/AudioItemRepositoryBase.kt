@@ -33,6 +33,8 @@ abstract class AudioItemRepositoryBase<I>(
 
     override fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I> = artistCatalogRegistry.findAlbumAudioItems(artist, albumName)
 
+    override fun getArtistCatalog(artist: Artist): Optional<ArtistView<I>> = artistCatalogRegistry.getArtistView(artist)
+
     override fun containsAudioItemWithArtist(artistName: String) =
         entitiesById.values.any { it.artistsInvolved.stream().map(String::lowercase).toList().contains(artistName.lowercase()) }
 

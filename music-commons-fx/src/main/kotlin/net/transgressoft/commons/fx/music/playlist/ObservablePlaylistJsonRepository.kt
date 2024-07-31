@@ -231,7 +231,7 @@ class ObservablePlaylistJsonRepository(name: String, file: File) :
             setAndNotify(_playlistsProperty + playlists, _playlistsProperty) {
                 _playlistsProperty.addAll(playlists)
                 replaceRecursiveAudioItems()
-                playlists.forEach { playlist ->
+                repeat(playlists.size) {
                     putAllPlaylistInHierarchy(uniqueId, playlists)
                 }
                 logger.debug { "Added $playlists to playlist $uniqueId" }

@@ -108,8 +108,9 @@ internal class ArtistCatalogVolatileRegistry<I> : RegistryBase<String, MutableAr
 
     private fun ReactiveAudioItem<I>.artistUniqueId() = ImmutableArtist.id(artist.name, artist.countryCode)
 
-    fun findFirst(artist: Artist): Optional<MutableArtistCatalog<I>> =
-        Optional.ofNullable(entitiesById[artist.id()])
+    fun getArtistView(artist: Artist): Optional<ArtistView<I>> = findFirst(artist).map(MutableArtistCatalog<I>::getArtistView)
+
+    fun findFirst(artist: Artist): Optional<MutableArtistCatalog<I>> = Optional.ofNullable(entitiesById[artist.id()])
 
     fun findFirst(artistName: String): Optional<MutableArtistCatalog<I>> =
         Optional.ofNullable(entitiesById.entries.firstOrNull { it.key.lowercase().contains(artistName.lowercase()) }?.value)
@@ -118,6 +119,5 @@ internal class ArtistCatalogVolatileRegistry<I> : RegistryBase<String, MutableAr
         entitiesById[artist.id()]?.findAlbumAudioItems(albumName) ?: emptySet()
 
     override val isEmpty = entitiesById.isEmpty()
-
     override fun toString() = "ArtistCatalogRegistry(numberOfArtists=${entitiesById.size})"
 }
