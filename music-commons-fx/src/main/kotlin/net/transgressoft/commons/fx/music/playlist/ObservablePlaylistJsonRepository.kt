@@ -6,10 +6,12 @@ import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonRepositor
 import net.transgressoft.commons.music.audio.AudioItemManipulationException
 import net.transgressoft.commons.music.playlist.AudioPlaylist
 import net.transgressoft.commons.music.playlist.AudioPlaylistRepositoryBase
+import net.transgressoft.commons.music.playlist.event.AudioPlaylistEventSubscriber
 import net.transgressoft.commons.toIds
 import com.google.common.base.Objects
 import javafx.beans.property.*
 import javafx.collections.FXCollections
+import javafx.collections.ObservableSet
 import javafx.scene.image.Image
 import mu.KotlinLogging
 import java.io.File
@@ -27,8 +29,25 @@ class ObservablePlaylistJsonRepository(name: String, file: File) :
 
     private val logger = KotlinLogging.logger {}
 
+    private val observablePlaylistsSet: ObservableSet<ObservablePlaylist> = FXCollections.observableSet()
+
+    val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist> = SimpleSetProperty(this, "playlists", FXCollections.observableSet(observablePlaylistsSet))
+
+    private val playlistChangesSubscriber = AudioPlaylistEventSubscriber<ObservablePlaylist, ObservableAudioItem>("InternalAudioPlaylistSubscriber").apply {
+        addOnNextEventAction(CREATE, UPDATE) { event ->
+            synchronized(playlistsProperty) {
+                observablePlaylistsSet.addAll(event.entitiesById.values)
+            }
+        }
+        addOnNextEventAction(DELETE) { event ->
+            synchronized(playlistsProperty) {
+                observablePlaylistsSet.removeAll(event.entitiesById.values.toSet())
+            }
+        }
+    }
+
     constructor(name: String, file: File, audioItemRepository: ObservableAudioItemJsonRepository) : this(name, file) {
-        disableEvents(CREATE, UPDATE, DELETE, READ)
+        disableEvents(CREATE, UPDATE, DELETE, READ) // disable events until initial load from file is completed
         runForAll {
             val playlistWithAudioItems = FXPlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItems.toIds(), audioItemRepository))
             entitiesById[it.id] = playlistWithAudioItems
@@ -38,8 +57,13 @@ class ObservablePlaylistJsonRepository(name: String, file: File) :
             val foundPlaylists = findDeserializedPlaylistsFromIds(it.playlists.toIds(), entitiesById)
             playlistMissingPlaylists.addPlaylists(foundPlaylists)
         }
+        observablePlaylistsSet.addAll(entitiesById.values)
 
         activateEvents(CREATE, UPDATE, DELETE)
+    }
+
+    init {
+        subscribe(playlistChangesSubscriber)
     }
 
     private fun mapAudioItemsFromIds(audioItemIds: List<Int>, audioItemRepository: ObservableAudioItemJsonRepository) =
@@ -212,7 +236,7 @@ class ObservablePlaylistJsonRepository(name: String, file: File) :
                 }
                 logger.debug { "Added $playlists to playlist $uniqueId" }
             }
-            return result;
+            return result
         }
 
         override fun removePlaylists(playlists: Collection<ObservablePlaylist>): Boolean {
@@ -251,7 +275,7 @@ class ObservablePlaylistJsonRepository(name: String, file: File) :
 
         override fun clearPlaylists() {
             if (_playlistsProperty.isNotEmpty()) {
-                val playlistsBeforeClear = this.playlists.toSet()
+                val playlistsBeforeClear = _playlistsProperty.toSet()
                 setAndNotify(emptySet(), playlistsBeforeClear) {
                     _playlistsProperty.clear()
                     playlistsBeforeClear.forEach { playlist ->
@@ -282,6 +306,19 @@ class ObservablePlaylistJsonRepository(name: String, file: File) :
         override fun hashCode() = Objects.hashCode(name, id)
 
         override fun clone(): FXPlaylist = FXPlaylist(id, isDirectory, name, audioItems.toList(), playlists.toSet())
+
+        private fun <T> formatCollectionWithIndentation(collection: Collection<T>): String {
+            if (collection.isEmpty()) return "[]"
+            return collection.joinToString(separator = ",\n\t", prefix = "[\n\t", postfix = "\n]") { item ->
+                item.toString().split("\n").joinToString("\n\t")
+            }
+        }
+
+        override fun toString(): String {
+            val formattedAudioItems = formatCollectionWithIndentation(audioItems)
+            val formattedPlaylists = formatCollectionWithIndentation(playlists)
+            return "FXPlaylist(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$formattedAudioItems, playlists=$formattedPlaylists)"
+        }
     }
 }
 

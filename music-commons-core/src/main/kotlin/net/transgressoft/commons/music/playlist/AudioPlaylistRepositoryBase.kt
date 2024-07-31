@@ -7,11 +7,9 @@ import net.transgressoft.commons.data.json.JsonFileRepository
 import net.transgressoft.commons.event.TransEventSubscriber
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
-import net.transgressoft.commons.toIds
 import mu.KotlinLogging
 import org.jetbrains.kotlin.com.google.common.collect.Multimap
 import org.jetbrains.kotlin.com.google.common.collect.MultimapBuilder
-import org.jetbrains.kotlin.com.google.common.collect.Sets
 import java.io.File
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -51,16 +49,6 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
             addOnNextEventAction(DELETE) { event ->
                 runForAll {
                     it.removeAudioItems(event.entitiesById.keys)
-                }
-            }
-            addOnNextEventAction(UPDATE) { event ->
-                runForAll {
-                    val updatedAudioItems = event.entitiesById
-                    val audioItemsToUpdate = Sets.intersection(updatedAudioItems.keys, it.audioItems.toIds().toSet()).toSet()
-                    if (audioItemsToUpdate.isNotEmpty()) {
-                        it.removeAudioItems(updatedAudioItems.keys)
-                        it.addAudioItems(updatedAudioItems.values)
-                    }
                 }
             }
         }
@@ -118,12 +106,9 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
 
     private fun removeFromPlaylistsHierarchy(playlist: P) {
         playlistsHierarchyMultiMap.removeAll(playlist.uniqueId)
-        if (playlistsHierarchyMultiMap.containsValue(playlist)) {
-            playlistsHierarchyMultiMap.entries().stream()
-                .filter { playlist == it.value }
-                .forEach { entry ->
-                    playlistsHierarchyMultiMap.remove(entry.key, entry.value)
-                }
+        findParentPlaylist(playlist).ifPresent { parentPlaylist ->
+            parentPlaylist.removePlaylist(playlist)
+            playlistsHierarchyMultiMap.remove(parentPlaylist, playlist)
         }
         removeAll(playlist.playlists)
     }

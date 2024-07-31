@@ -12,6 +12,7 @@ import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.collections.shouldNotContain
+import io.kotest.matchers.equals.shouldBeEqual
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import io.kotest.property.arbitrary.next
@@ -141,7 +142,12 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         playlistsThatContainsAudioItemsWithDurationBelow60 shouldContainExactly setOf(rock, fifties)
 
         audioPlaylistRepository.removeAudioItemFromPlaylist(fiftiesItems[0], fifties.name)
-        audioPlaylistRepository.removeAudioItemFromPlaylist(fiftiesItems[1].id, fifties.name)
+        fiftiesItems[1].title = "new title"
+
+        fifties.audioItemsAllMatch { it.title == "new title" } shouldBe true
+        fifties.audioItems.find { it.title == "title" }?.shouldBeEqual(fiftiesItems[1])
+
+        fifties.clearAudioItems()
 
         audioPlaylistRepository.findById(fifties.id) shouldBePresent { it.audioItems.isEmpty() shouldBe true }
         audioPlaylistRepository.runForAll { it.removeAudioItems(rockAudioItems) }
@@ -204,7 +210,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
 
         eventually(100.milliseconds) { jsonFile.readText().shouldEqualJson(listOf(rock, pop, fifties, bestHits, selection).asJsonKeyValues()) }
 
-        audioPlaylistRepository.removeAll(setOf(bestHits))
+        audioPlaylistRepository.removeAll(setOf(bestHits)) shouldBe true
 
         audioPlaylistRepository.size() shouldBe 0
         audioPlaylistRepository.isEmpty shouldBe true
@@ -235,19 +241,18 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         audioPlaylistRepository.findById(fifties.id) shouldBePresent { it.playlists.shouldNotContain(rock) }
         audioPlaylistRepository.findByName(bestHits.name) shouldBePresent { it.playlists.shouldContainOnly(fifties) }
 
-        audioPlaylistRepository.removePlaylistFromDirectory(fifties.name, bestHits.name)
+        audioPlaylistRepository.removePlaylistFromDirectory(fifties.name, bestHits.name) shouldBe true
 
         // ├──Best hits
         // └──Selection of playlists
         //    └──Rock
 
         audioPlaylistRepository.size() shouldBe 3
-        audioPlaylistRepository.findByName(pop.name).isEmpty shouldBe true
+        audioPlaylistRepository.findByName(fifties.name).isEmpty shouldBe true
         audioPlaylistRepository.findByUniqueId(fifties.uniqueId).isEmpty shouldBe true
         bestHits.playlists.isEmpty() shouldBe true
-        fifties.playlists.shouldContainOnly(pop)
 
-        audioPlaylistRepository.removePlaylistFromDirectory(rock, selection.name)
+        audioPlaylistRepository.removePlaylistFromDirectory(rock, selection.name) shouldBe true
 
         // ├──Best hits
         // └──Selection of playlists
@@ -257,15 +262,50 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
     }
 
     "Create playlists with existing name" {
-        val newPlaylistDirectory = audioPlaylistRepository.createPlaylistDirectory("New playlist")
+        audioPlaylistRepository.createPlaylistDirectory("New playlist")
+        audioPlaylistRepository.size() shouldBe 1
 
         shouldThrowMessage("Playlist with name 'New playlist' already exists") { audioPlaylistRepository.createPlaylistDirectory("New playlist") }
         audioPlaylistRepository.size() shouldBe 1
 
         shouldThrowMessage("Playlist with name 'New playlist' already exists") { audioPlaylistRepository.createPlaylist("New playlist") }
         audioPlaylistRepository.size() shouldBe 1
+    }
 
-        audioPlaylistRepository.remove(newPlaylistDirectory) shouldBe true
-        audioPlaylistRepository.isEmpty shouldBe true
+    "Removing child playlist directly from one, does not remove them from the repository" {
+        val rock = audioPlaylistRepository.createPlaylist("Rock")
+        val rockFavorites = audioPlaylistRepository.createPlaylist("Rock Favorites")
+        val fifties = audioPlaylistRepository.createPlaylistDirectory("50s")
+        audioPlaylistRepository.addPlaylistToDirectory(rockFavorites, rock.name)
+        audioPlaylistRepository.addPlaylistToDirectory(rock, fifties.name)
+
+        audioPlaylistRepository.size() shouldBe 3
+        fifties.playlists.size shouldBe 1
+        rock.playlists.size shouldBe 1
+
+        rock.clearPlaylists()
+
+        audioPlaylistRepository.size() shouldBe 3
+        rock.playlists.isEmpty() shouldBe true
+        fifties.playlists.size shouldBe 1
+
+        fifties.removePlaylist(rock.id)
+
+        audioPlaylistRepository.size() shouldBe 3
+        fifties.playlists.isEmpty() shouldBe true
+    }
+
+    "Deleting playlist from the repository removes it from any parent one" {
+        val rock = audioPlaylistRepository.createPlaylist("Rock")
+        val fifties = audioPlaylistRepository.createPlaylistDirectory("50s")
+        audioPlaylistRepository.addPlaylistToDirectory(rock, fifties.name)
+
+        audioPlaylistRepository.size() shouldBe 2
+        fifties.playlists.size shouldBe 1
+
+        audioPlaylistRepository.remove(rock)
+
+        audioPlaylistRepository.size() shouldBe 1
+        fifties.playlists.isEmpty() shouldBe true
     }
 })

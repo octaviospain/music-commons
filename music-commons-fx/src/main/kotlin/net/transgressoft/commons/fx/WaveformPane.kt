@@ -33,7 +33,7 @@ class WaveformPane : Canvas() {
         }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
+    @OptIn(DelicateCoroutinesApi::class)    //TODO refactor
     fun drawWaveformAsync(waveform: AudioWaveform, waveformColor: Color = this.waveformColor, backgroundColor: Color = this.backgroundColor) {
         this.waveform = waveform
         this.waveformColor = waveformColor
