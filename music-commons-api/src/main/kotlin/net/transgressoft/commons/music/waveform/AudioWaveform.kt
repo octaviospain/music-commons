@@ -1,13 +1,16 @@
 package net.transgressoft.commons.music.waveform
 
-import net.transgressoft.commons.IdentifiableEntity
+import net.transgressoft.commons.ReactiveEntity
 import java.awt.Color
 import java.io.File
+import java.nio.file.Path
 
 /**
  * @author Octavio Calleya
  */
-interface AudioWaveform : IdentifiableEntity<Int> {
+interface AudioWaveform : ReactiveEntity<Int, AudioWaveform> {
+
+    val audioFilePath: Path
 
     suspend fun amplitudes(width: Int, height: Int): FloatArray
 

@@ -1,7 +1,6 @@
 package net.transgressoft.commons.music.waveform
 
 import net.transgressoft.commons.ReactiveEntityBase
-import net.transgressoft.commons.data.json.PathSerializer
 import ws.schild.jave.Encoder
 import ws.schild.jave.MultimediaObject
 import ws.schild.jave.encode.AudioAttributes
@@ -26,8 +25,8 @@ import kotlinx.serialization.Transient
 @Serializable
 class ScalableAudioWaveform(
     override val id: Int,
-    @Serializable(with = PathSerializer::class) private val audioFilePath: Path,
-) : AudioWaveform, ReactiveEntityBase<Int, ScalableAudioWaveform>() {
+    override val audioFilePath: Path,
+) : ReactiveEntityBase<Int, AudioWaveform>(), AudioWaveform {
 
     /*
         This constant is used to scale the amplitude height of the waveform

@@ -9,10 +9,10 @@ import java.util.concurrent.CompletableFuture
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 
-typealias WaveformRepository<I> = AudioWaveformRepository<ScalableAudioWaveform, I>
+typealias WaveformRepository<I> = AudioWaveformRepository<AudioWaveform, I>
 
 class AudioWaveformJsonRepository<I : ReactiveAudioItem<I>>(name: String, file: File) :
-    JsonFileRepository<Int, ScalableAudioWaveform>(file, MapSerializer(Int.serializer(), ScalableAudioWaveform.serializer()), name = name),
+    JsonFileRepository<Int, AudioWaveform>(file, MapSerializer(Int.serializer(), AudioWaveformSerializer), name = name),
     WaveformRepository<I> {
 
     override val audioItemEventSubscriber = AudioItemEventSubscriber<I>(this.toString()).apply {
@@ -21,9 +21,9 @@ class AudioWaveformJsonRepository<I : ReactiveAudioItem<I>>(name: String, file: 
         }
     }
 
-    override fun getOrCreateWaveformAsync(audioItem: I, width: Short, height: Short): CompletableFuture<ScalableAudioWaveform> {
+    override fun getOrCreateWaveformAsync(audioItem: I, width: Short, height: Short): CompletableFuture<AudioWaveform> {
         return findById(audioItem.id)
-            .map<CompletableFuture<ScalableAudioWaveform>> { CompletableFuture.completedFuture(it) }
+            .map<CompletableFuture<AudioWaveform>> { CompletableFuture.completedFuture(it) }
             .orElseGet {
                 CompletableFuture.supplyAsync {
                     val audioWaveform = ScalableAudioWaveform(audioItem.id, audioItem.path)
