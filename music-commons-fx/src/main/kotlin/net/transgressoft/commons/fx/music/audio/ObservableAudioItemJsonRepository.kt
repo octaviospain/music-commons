@@ -3,6 +3,7 @@ package net.transgressoft.commons.fx.music.audio
 import net.transgressoft.commons.data.StandardDataEvent.Type.*
 import net.transgressoft.commons.music.audio.AudioItemRepositoryBase
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
+import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.*
 import javafx.beans.property.ReadOnlyBooleanProperty
 import javafx.beans.property.ReadOnlySetProperty
 import javafx.beans.property.SimpleSetProperty
@@ -25,6 +26,18 @@ class ObservableAudioItemJsonRepository(name: String, file: File) :
     private val observableAudioItemMap: ObservableMap<Int, ObservableAudioItem> = FXCollections.observableHashMap()
 
     val setProperty: ReadOnlySetProperty<Map.Entry<Int, ObservableAudioItem>> = SimpleSetProperty(this, "observable audio item entries", FXCollections.observableSet())
+
+    init {
+        playerSubscriber.addOnNextEventAction(PLAYED) { event ->
+            val audioItem = event.entitiesById.values.first()
+            if (audioItem is FXAudioItem) {
+                val audioItemClone = audioItem.clone()
+                audioItem.incrementPlayCount()
+                putUpdateEvent(audioItem, audioItemClone)
+                logger.debug { "Play count of audio item with id ${audioItem.id} increased to ${audioItem.playCount}" }
+            }
+        }
+    }
 
     private val internalAudioItemChangesSubscriber = AudioItemEventSubscriber<ObservableAudioItem>("InternalAudioItemSubscriber").apply {
         addOnNextEventAction(CREATE, UPDATE) { event ->

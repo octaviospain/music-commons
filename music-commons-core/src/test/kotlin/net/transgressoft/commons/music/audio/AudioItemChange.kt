@@ -16,7 +16,8 @@ data class AudioItemChange(
     var trackNumber: Short? = null,
     var discNumber: Short? = null,
     var bpm: Float? = null,
-    var coverImageBytes: ByteArray? = null
+    var coverImageBytes: ByteArray? = null,
+    var playCount: Short? = null
 ) : IdentifiableEntity<Int> {
 
     override val uniqueId: String = id.toString()

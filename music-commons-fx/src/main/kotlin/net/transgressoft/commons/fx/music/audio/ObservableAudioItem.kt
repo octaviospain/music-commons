@@ -33,4 +33,6 @@ interface ObservableAudioItem : ReactiveAudioItem<ObservableAudioItem> {
     val lastDateModifiedProperty: ReadOnlyObjectProperty<LocalDateTime>
 
     val dateOfCreationProperty: ReadOnlyProperty<LocalDateTime>
+
+    val playCountProperty: ReadOnlyIntegerProperty
 }

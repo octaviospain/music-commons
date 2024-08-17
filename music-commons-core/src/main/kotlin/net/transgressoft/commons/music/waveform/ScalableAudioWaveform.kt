@@ -19,6 +19,8 @@ import kotlin.io.path.extension
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -37,13 +39,16 @@ class ScalableAudioWaveform(
     */
     @Transient private val amplitudeCoefficient = 3.9
 
-    @Transient private val rawAudioPcm: IntArray = getRawAudioPcm(audioFilePath)
-
     init {
+        check(audioFilePath.extension in setOf("wav", "mp3", "m4a", "flac")) {
+            "File extension '${audioFilePath.extension}' not supported"
+        }
         check(audioFilePath.exists()) {
             "File '${audioFilePath}' does not exist"
         }
     }
+
+    @Transient private var rawAudioPcm: IntArray? = null
 
     private fun getRawAudioPcm(audioFilePath: Path) = try {
         when (audioFilePath.extension) {
@@ -72,7 +77,7 @@ class ScalableAudioWaveform(
                 setOutputFormat("wav")
                 setAudioAttributes(AudioAttributes().apply {
                     setCodec("pcm_s16le")
-                    setBitRate(16)
+                    setBitRate(16000)
                     setChannels(2)
                     setSamplingRate(44100)
                 })
@@ -108,6 +113,7 @@ class ScalableAudioWaveform(
         return audioPcm
     }
 
+    @Throws(AudioWaveformProcessingException::class)
     override suspend fun amplitudes(width: Int, height: Int): FloatArray {
         check(width > 0) { "Width must be greater than 0" }
         check(height > 0) { "Height must be greater than 0" }
@@ -129,11 +135,15 @@ class ScalableAudioWaveform(
         return waveformAmplitudes
     }
 
-    private fun getScaledPulseCodeModulation(height: Int) = IntArray(rawAudioPcm.size).also { scaledRawPcm ->
-        for (i in rawAudioPcm.indices) {
-            scaledRawPcm[i] = rawAudioPcm[i] * height
+    @Throws(AudioWaveformProcessingException::class)
+    private fun getScaledPulseCodeModulation(height: Int): IntArray =
+        rawAudioPcm ?: getRawAudioPcm(audioFilePath).let {
+            IntArray(it.size).also { scaledRawPcm ->
+                for (i in it.indices) {
+                    scaledRawPcm[i] = it[i] * height
+                }
+            }
         }
-    }
 
     override suspend fun createImage(outputFile: File, waveformColor: Color, backgroundColor: Color, width: Int, height: Int) {
         check(width > 0) { "Width must be greater than 0" }
@@ -157,7 +167,9 @@ class ScalableAudioWaveform(
             }
         }
 
-        ImageIO.write(bufferedImage, "png", outputFile)
+        withContext(Dispatchers.IO) {
+            ImageIO.write(bufferedImage, "png", outputFile)
+        }
     }
 
     override val uniqueId: String
@@ -170,12 +182,9 @@ class ScalableAudioWaveform(
         return rawAudioPcm.contentEquals(that.rawAudioPcm)
     }
 
-    override fun hashCode(): Int {
-        return rawAudioPcm.contentHashCode()
-    }
+    override fun hashCode() = rawAudioPcm.contentHashCode()
 
-    override fun clone(): ScalableAudioWaveform =
-        ScalableAudioWaveform(id, audioFilePath)
+    override fun clone(): ScalableAudioWaveform = ScalableAudioWaveform(id, audioFilePath)
 
     override fun toString() = "ScalableAudioWaveform(uniqueId=$uniqueId)"
 }

@@ -12,6 +12,7 @@ interface AudioWaveform : ReactiveEntity<Int, AudioWaveform> {
 
     val audioFilePath: Path
 
+    @Throws(AudioWaveformProcessingException::class)
     suspend fun amplitudes(width: Int, height: Int): FloatArray
 
     suspend fun createImage(outputFile: File, waveformColor: Color, backgroundColor: Color, width: Int, height: Int)

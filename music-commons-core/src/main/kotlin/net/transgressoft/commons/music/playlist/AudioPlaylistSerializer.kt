@@ -128,6 +128,7 @@ internal class DummyAudioItem(override val id: Int) : AudioItem {
     override val artistsInvolved: Set<String> = emptySet()
     override val length: Long = 0
     override var coverImageBytes: ByteArray? = null
+    override val playCount: Short = 0
     override fun writeMetadata(): Job = throw IllegalStateException()
     override fun subscribe(p0: Flow.Subscriber<in UpdatedDataEvent<Int, AudioItem>>?) =  throw IllegalStateException()
     override fun clone(): DummyAudioItem = DummyAudioItem(id)

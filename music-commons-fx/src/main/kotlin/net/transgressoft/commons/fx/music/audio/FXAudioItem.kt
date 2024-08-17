@@ -30,7 +30,6 @@ import java.nio.file.StandardOpenOption
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.*
-import java.util.stream.Stream
 import kotlin.io.path.extension
 import kotlinx.coroutines.*
 import kotlinx.serialization.Serializable
@@ -69,7 +68,8 @@ class FXAudioItem internal constructor(
         encoder: String?,
         encoding: String?,
         dateOfCreation: LocalDateTime,
-        lastDateModified: LocalDateTime
+        lastDateModified: LocalDateTime,
+        playCount: Short
     ) : this(path, id) {
         this.title = title
         this._duration = duration
@@ -85,6 +85,7 @@ class FXAudioItem internal constructor(
         this._encoding = encoding
         this._dateOfCreation = dateOfCreation
         this.lastDateModified = lastDateModified
+        _playCountProperty.set(playCount.toInt())
     }
 
     @Transient
@@ -329,6 +330,15 @@ class FXAudioItem internal constructor(
     override val artistsInvolved: Set<String>
         get() = artistsInvolvedProperty.value
 
+    @Serializable
+    override val playCount: Short
+        get() = _playCountProperty.get().toShort()
+
+    private val _playCountProperty = SimpleIntegerProperty(this, "play count", 0)
+
+    @Transient
+    override val playCountProperty: ReadOnlyIntegerProperty = _playCountProperty
+
     private fun getFieldIfExisting(tag: Tag, fieldKey: FieldKey): String? = tag.hasField(fieldKey).takeIf { it }.run { tag.getFirst(fieldKey) }
 
     private fun readArtist(tag: Tag): Artist =
@@ -369,7 +379,7 @@ class FXAudioItem internal constructor(
     private fun getCoverBytes(tag: Tag): ByteArray? = tag.artworkList.isNotEmpty().takeIf { it }?.let { tag.firstArtwork.binaryData }
 
     override fun writeMetadata(): Job {
-        return ioScope.launch(Dispatchers.IO) {
+        return ioScope.launch {
             logger.debug { "Writing metadata of $this to file '${path.toAbsolutePath()}'" }
 
             val audioFile = path.toFile()
@@ -459,7 +469,11 @@ class FXAudioItem internal constructor(
         }
     }
 
-    fun isPlayable() = Stream.of("mp3", "m4a", "wav").anyMatch { fileFormat: String? -> extension.equals(fileFormat, ignoreCase = true) }
+    internal fun incrementPlayCount() {
+        setAndNotify(_playCountProperty.get() + 1, _playCountProperty.get()) {
+            _playCountProperty.set(_playCountProperty.get() + 1)
+        }
+    }
 
     override operator fun compareTo(other: ObservableAudioItem) = AudioUtils.audioItemTrackDiscNumberComparator<ObservableAudioItem>().compare(this, other)
 
@@ -498,7 +512,8 @@ class FXAudioItem internal constructor(
             encoder,
             encoding,
             dateOfCreation,
-            lastDateModified
+            lastDateModified,
+            playCount
         )
 
     override fun toString() = "ObservableAudioItem(id=$id, path=$path, title=$title, artist=${artist.name})"

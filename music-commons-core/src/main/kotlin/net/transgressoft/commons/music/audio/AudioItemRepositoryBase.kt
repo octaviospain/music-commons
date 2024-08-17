@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.data.json.JsonFileRepository
-import com.neovisionaries.i18n.CountryCode
+import net.transgressoft.commons.music.event.PlayedEventSubscriber
 import java.io.File
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -31,6 +31,8 @@ abstract class AudioItemRepositoryBase<I>(
         return id
     }
 
+    override val playerSubscriber = PlayedEventSubscriber()
+
     override fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I> = artistCatalogRegistry.findAlbumAudioItems(artist, albumName)
 
     override fun getArtistCatalog(artist: Artist): Optional<ArtistView<I>> = artistCatalogRegistry.getArtistView(artist)
@@ -38,10 +40,10 @@ abstract class AudioItemRepositoryBase<I>(
     override fun containsAudioItemWithArtist(artistName: String) =
         entitiesById.values.any { it.artistsInvolved.stream().map(String::lowercase).toList().contains(artistName.lowercase()) }
 
-    override fun getRandomAudioItemsFromArtist(artistName: String, size: Short, countryCode: CountryCode): List<I> =
+    override fun getRandomAudioItemsFromArtist(artist: Artist, size: Short): List<I> =
         entitiesById.values
             .asSequence()
-            .filter { it.artist.id() == ImmutableArtist.id(artistName, countryCode) }
+            .filter { it.artist == artist }
             .shuffled()
             .take(size.toInt())
             .toList()

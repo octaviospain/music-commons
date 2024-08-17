@@ -214,7 +214,8 @@ internal object FXAudioItemTestUtil : TestConfiguration() {
             "encoder": "${encoder}",
             "encoding": "${encoding}",
             "dateOfCreation": ${dateOfCreation.toEpochSecond(ZoneOffset.UTC)},
-            "lastDateModified": ${lastDateModified.toEpochSecond(ZoneOffset.UTC)}
+            "lastDateModified": ${lastDateModified.toEpochSecond(ZoneOffset.UTC)},
+            "playCount": $playCount
         }
     """
 

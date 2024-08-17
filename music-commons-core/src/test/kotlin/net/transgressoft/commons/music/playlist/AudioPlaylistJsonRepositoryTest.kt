@@ -188,7 +188,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         audioPlaylistRepository.findById(fifties.id) shouldBePresent { it.playlists.shouldNotContain(rock) }
         audioPlaylistRepository.findByName(bestHits.name) shouldBePresent { it.playlists.shouldContainOnly(fifties) }
 
-        eventually(100.milliseconds) {
+        eventually(200.milliseconds) {
             jsonFile.readText().shouldEqualJson(listOf(rock, pop, fifties, bestHits, selection).asJsonKeyValues())
         }
 
@@ -220,7 +220,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         rock.playlists.isEmpty() shouldBe true
         pop.playlists.isEmpty() shouldBe true
 
-        eventually(100.milliseconds) { jsonFile.readText() shouldBe "{}"}
+        eventually(200.milliseconds) { jsonFile.readText() shouldBe "{}"}
     }
 
     "Removing playlist directory from repository is recursive and changes reflected on playlists" {

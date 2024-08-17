@@ -66,7 +66,8 @@ internal class MutableAudioItem(
         encoder: String?,
         encoding: String?,
         dateOfCreation: LocalDateTime,
-        lastDateModified: LocalDateTime
+        lastDateModified: LocalDateTime,
+        playCount: Short
     ) : this(path, id) {
         this.title = title
         this._duration = duration
@@ -82,6 +83,7 @@ internal class MutableAudioItem(
         this._encoding = encoding
         this._dateOfCreation = dateOfCreation
         this.lastDateModified = lastDateModified
+        this._playCount = playCount
     }
 
     @Transient
@@ -126,6 +128,12 @@ internal class MutableAudioItem(
 
     @Serializable
     override var lastDateModified: LocalDateTime = _dateOfCreation
+
+    private var _playCount: Short = 0
+
+    @Serializable
+    override val playCount: Short
+        get() = _playCount
 
     override val fileName by lazy {
         path.fileName.toString()
@@ -255,7 +263,7 @@ internal class MutableAudioItem(
     private fun getCoverBytes(tag: Tag): ByteArray? = tag.artworkList.isNotEmpty().takeIf { it }?.let { tag.firstArtwork.binaryData }
 
     override fun writeMetadata(): Job {
-        return ioScope.launch(Dispatchers.IO) {
+        return ioScope.launch {
             logger.debug { "Writing metadata of $this to file '${path.toAbsolutePath()}'" }
             val audioFile = path.toFile()
             val audio = AudioFileIO.read(audioFile)
@@ -344,6 +352,8 @@ internal class MutableAudioItem(
         }
     }
 
+    internal fun incrementPlayCount() = _playCount++
+
     override operator fun compareTo(other: AudioItem) = audioItemTrackDiscNumberComparator<AudioItem>().compare(this, other)
 
     override fun equals(other: Any?): Boolean {
@@ -381,7 +391,8 @@ internal class MutableAudioItem(
             encoder,
             encoding,
             dateOfCreation,
-            lastDateModified
+            lastDateModified,
+            playCount
         )
 
     override fun toString() = "AudioItem(id=$id, path=$path, title=$title, artist=${artist.name})"

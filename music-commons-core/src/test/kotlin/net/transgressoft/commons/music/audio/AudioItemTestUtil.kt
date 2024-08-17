@@ -143,7 +143,8 @@ internal object AudioItemTestUtil : TestConfiguration() {
             attributes.trackNumber,
             attributes.discNumber,
             attributes.bpm,
-            attributes.coverImageBytes
+            attributes.coverImageBytes,
+            attributes.playCount
         )
     }
 
@@ -191,6 +192,7 @@ internal object AudioItemTestUtil : TestConfiguration() {
         coverImageBytes: ByteArray? = testCoverBytes,
         dateOfCreation: LocalDateTime? = null,
         lastDateModified: LocalDateTime? = null,
+        playCount: Short? = null
     ): Arb<AudioItemTestAttributes> = arbitrary {
         AudioItemTestAttributes(
             path ?: Arb.file().bind().toPath(),
@@ -209,6 +211,7 @@ internal object AudioItemTestUtil : TestConfiguration() {
             coverImageBytes,
             dateOfCreation ?: Arb.localDateTime(LocalDateTime.of(2000, 1, 1, 0, 0)).next(),
             lastDateModified ?: Arb.localDateTime(LocalDateTime.of(2023, 1, 1, 0, 0)).next(),
+            playCount ?: Arb.positiveShort().bind(),
             id ?: atomicInteger.getAndDecrement()
         )
     }
@@ -293,14 +296,15 @@ internal object AudioItemTestUtil : TestConfiguration() {
                 }
             },
             "genre": "${genre.name}",
-            "comments": "${comments}",
+            "comments": "$comments",
             "trackNumber": ${trackNumber},
             "discNumber": ${discNumber},
             "bpm": ${bpm},
-            "encoder": "${encoder}",
-            "encoding": "${encoding}",
+            "encoder": "$encoder",
+            "encoding": "$encoding",
             "dateOfCreation": ${dateOfCreation.toEpochSecond(ZoneOffset.UTC)},
-            "lastDateModified": ${lastDateModified.toEpochSecond(ZoneOffset.UTC)}
+            "lastDateModified": ${lastDateModified.toEpochSecond(ZoneOffset.UTC)},
+            "playCount": $playCount
         }
     """
 }
@@ -322,5 +326,6 @@ data class AudioItemTestAttributes(
     var coverImageBytes: ByteArray? = null,
     var dateOfCreation: LocalDateTime,
     var lastDateModified: LocalDateTime,
+    var playCount: Short,
     var id: Int = UNASSIGNED_ID
 )

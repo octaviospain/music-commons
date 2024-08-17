@@ -26,6 +26,7 @@ interface ReactiveAudioItem<I : ReactiveAudioItem<I>> : ReactiveEntity<Int, I> {
     val length: Long
     var coverImageBytes: ByteArray?
     val dateOfCreation: LocalDateTime
+    val playCount: Short
 
     fun writeMetadata(): Job
 }

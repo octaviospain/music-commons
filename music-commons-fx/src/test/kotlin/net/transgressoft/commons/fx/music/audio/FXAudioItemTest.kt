@@ -35,7 +35,7 @@ internal class FXAudioItemTest : StringSpec({
     "should change its properties when observable properties are updated" {
         val testAudioFile = arbitraryMp3File.next()
 
-        val fxAudioItem: ObservableAudioItem = FXAudioItem(testAudioFile.toPath())
+        val fxAudioItem = FXAudioItem(testAudioFile.toPath())
         assertSoftly {
             fxAudioItem.titleProperty.value shouldBe fxAudioItem.title
             fxAudioItem.artistProperty.value shouldBe fxAudioItem.artist
@@ -128,6 +128,15 @@ internal class FXAudioItemTest : StringSpec({
             fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
             fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
         }
+
+        lastDateUpdated = fxAudioItem.lastDateModified
+        fxAudioItem.incrementPlayCount()
+        eventually(500.milliseconds) {
+            fxAudioItem.playCount shouldBe 1
+            fxAudioItem.playCountProperty.value shouldBe 1
+            fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
+            fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
+        }
     }
 
     "should create an audio item, that is serializable to json, and write changes to metadata" {
@@ -145,36 +154,35 @@ internal class FXAudioItemTest : StringSpec({
         fxAudioItem.writeMetadata().join()
 
         val loadedAudioItem = FXAudioItem(testAudioFile.toPath(), fxAudioItem.id)
-        eventually(100.milliseconds) {
-            assertSoftly {
-                loadedAudioItem.id shouldBe fxAudioItem.id
-                loadedAudioItem.dateOfCreation shouldBeAfter fxAudioItem.dateOfCreation
-                loadedAudioItem.lastDateModified shouldBeAfter fxAudioItem.lastDateModified
-                loadedAudioItem.path shouldBe fxAudioItem.path
-                loadedAudioItem.fileName shouldBe fxAudioItem.fileName
-                loadedAudioItem.extension shouldBe fxAudioItem.extension
-                loadedAudioItem.title shouldBe fxAudioItem.title
-                loadedAudioItem.duration shouldBe fxAudioItem.duration
-                loadedAudioItem.bitRate shouldBe fxAudioItem.bitRate
-                loadedAudioItem.encoder shouldBe fxAudioItem.encoder
-                loadedAudioItem.encoding shouldBe fxAudioItem.encoding
-                loadedAudioItem.artist shouldBe fxAudioItem.artist
-                loadedAudioItem.album.albumArtist.name shouldBe fxAudioItem.album.albumArtist.name
-                loadedAudioItem.album.albumArtist.countryCode shouldBe CountryCode.UNDEFINED    // album country code is not updated because there is no ID3 tag for it
-                loadedAudioItem.album.isCompilation shouldBe fxAudioItem.album.isCompilation
-                loadedAudioItem.album.label.name shouldBe fxAudioItem.album.label.name
-                loadedAudioItem.album.label.countryCode shouldBe CountryCode.UNDEFINED  // label country code is not updated because there is no ID3 tag for it
-                loadedAudioItem.artist.name shouldBe fxAudioItem.artist.name
-                loadedAudioItem.artist.countryCode shouldBe fxAudioItem.artist.countryCode // artist country code is saved into COUNTRY ID3 tag
-                loadedAudioItem.genre shouldBe fxAudioItem.genre
-                loadedAudioItem.comments shouldBe fxAudioItem.comments
-                loadedAudioItem.trackNumber shouldBe fxAudioItem.trackNumber
-                loadedAudioItem.discNumber shouldBe fxAudioItem.discNumber
-                loadedAudioItem.bpm shouldBe fxAudioItem.bpm
-                loadedAudioItem.coverImageBytes shouldBe fxAudioItem.coverImageBytes
-                loadedAudioItem.uniqueId shouldBe fxAudioItem.uniqueId
-                loadedAudioItem.toString() shouldBe fxAudioItem.toString()
-            }
+        assertSoftly {
+            loadedAudioItem.id shouldBe fxAudioItem.id
+            loadedAudioItem.dateOfCreation shouldBeAfter fxAudioItem.dateOfCreation
+            loadedAudioItem.lastDateModified shouldBeAfter fxAudioItem.lastDateModified
+            loadedAudioItem.path shouldBe fxAudioItem.path
+            loadedAudioItem.fileName shouldBe fxAudioItem.fileName
+            loadedAudioItem.extension shouldBe fxAudioItem.extension
+            loadedAudioItem.title shouldBe fxAudioItem.title
+            loadedAudioItem.duration shouldBe fxAudioItem.duration
+            loadedAudioItem.bitRate shouldBe fxAudioItem.bitRate
+            loadedAudioItem.encoder shouldBe fxAudioItem.encoder
+            loadedAudioItem.encoding shouldBe fxAudioItem.encoding
+            loadedAudioItem.artist shouldBe fxAudioItem.artist
+            loadedAudioItem.album.albumArtist.name shouldBe fxAudioItem.album.albumArtist.name
+            loadedAudioItem.album.albumArtist.countryCode shouldBe CountryCode.UNDEFINED    // album country code is not updated because there is no ID3 tag for it
+            loadedAudioItem.album.isCompilation shouldBe fxAudioItem.album.isCompilation
+            loadedAudioItem.album.label.name shouldBe fxAudioItem.album.label.name
+            loadedAudioItem.album.label.countryCode shouldBe CountryCode.UNDEFINED  // label country code is not updated because there is no ID3 tag for it
+            loadedAudioItem.artist.name shouldBe fxAudioItem.artist.name
+            loadedAudioItem.artist.countryCode shouldBe fxAudioItem.artist.countryCode // artist country code is saved into COUNTRY ID3 tag
+            loadedAudioItem.genre shouldBe fxAudioItem.genre
+            loadedAudioItem.comments shouldBe fxAudioItem.comments
+            loadedAudioItem.trackNumber shouldBe fxAudioItem.trackNumber
+            loadedAudioItem.discNumber shouldBe fxAudioItem.discNumber
+            loadedAudioItem.bpm shouldBe fxAudioItem.bpm
+            loadedAudioItem.coverImageBytes shouldBe fxAudioItem.coverImageBytes
+            loadedAudioItem.playCount shouldBe fxAudioItem.playCount
+            loadedAudioItem.uniqueId shouldBe fxAudioItem.uniqueId
+            loadedAudioItem.toString() shouldBe fxAudioItem.toString()
         }
     }
 

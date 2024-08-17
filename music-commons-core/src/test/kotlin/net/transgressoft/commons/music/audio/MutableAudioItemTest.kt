@@ -92,6 +92,7 @@ internal class MutableAudioItemTest : FunSpec({
                 audioItem.duration shouldBe expectedDuration
                 audioItem.bitRate shouldBe expectedBitRate
                 audioItem.encoding shouldBe expectedEncoding
+                audioItem.playCount shouldBe 0
                 audioItem.should(::matchAudioItemProperties)
             }
 
@@ -135,6 +136,7 @@ internal class MutableAudioItemTest : FunSpec({
                     loadedAudioItem.genre shouldBe audioItem.genre
                     loadedAudioItem.encoding shouldBe audioItem.encoding
                     loadedAudioItem.encoder shouldBe audioItem.encoder
+                    loadedAudioItem.playCount shouldBe audioItem.playCount
                     loadedAudioItem.coverImageBytes shouldBe audioItem.coverImageBytes
                     loadedAudioItem.uniqueId shouldBe audioItem.uniqueId
                     loadedAudioItem.toString() shouldBe audioItem.toString()

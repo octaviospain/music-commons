@@ -3,9 +3,9 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     id 'com.palantir.git-version' version '3.1.0'
-    id 'org.jetbrains.kotlin.jvm' version '1.9.0'
-    id 'org.jetbrains.kotlin.plugin.serialization' version '1.9.0'
-    id 'org.sonarqube' version '5.0.0.4638'
+    id 'org.jetbrains.kotlin.jvm' version '2.0.10'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '2.0.10'
+    id 'org.sonarqube' version '5.1.0.4882'
     id 'jacoco'
 }
 
@@ -30,7 +30,7 @@ subprojects {
     apply plugin: 'org.sonarqube'
 
     ext {
-        kotlinVersion = '1.9.0'
+        kotlinVersion = '2.0.10'
 
         // the password needs to be specified via command line
         repoPass = project.hasProperty('repoPass') ? project.getProperty('repoPass') : ''
@@ -39,7 +39,7 @@ subprojects {
     dependencies {
         implementation 'com.neovisionaries:nv-i18n:1.29'
         implementation 'io.github.microutils:kotlin-logging-jvm:3.0.5'
-        implementation 'net.transgressoft:transgressoft-commons-api:1.40'
+        implementation 'net.transgressoft:transgressoft-commons-api:1.42'
         implementation platform('org.jetbrains.kotlin:kotlin-bom')
         implementation "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
@@ -96,6 +96,7 @@ subprojects {
 
     test {
         useJUnitPlatform()
+        jvmArgs('--add-opens=javafx.graphics/com.sun.javafx.application=ALL-UNNAMED')
         testLogging {
             events 'passed', 'skipped', 'failed'
         }

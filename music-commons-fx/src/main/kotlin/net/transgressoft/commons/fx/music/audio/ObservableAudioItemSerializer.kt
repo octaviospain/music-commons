@@ -26,7 +26,8 @@ internal object ObservableAudioItemSerializer : AudioItemSerializerBase<Observab
             propertiesList[17] as String?,
             propertiesList[18] as String?,
             propertiesList[19] as LocalDateTime,
-            propertiesList[20] as LocalDateTime
+            propertiesList[20] as LocalDateTime,
+            propertiesList[21] as Short,
         )
     }
 }

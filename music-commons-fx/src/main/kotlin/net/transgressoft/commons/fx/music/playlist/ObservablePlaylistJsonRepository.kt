@@ -47,7 +47,7 @@ class ObservablePlaylistJsonRepository(name: String, file: File) :
     }
 
     constructor(name: String, file: File, audioItemRepository: ObservableAudioItemJsonRepository) : this(name, file) {
-        disableEvents(CREATE, UPDATE, DELETE, READ) // disable events until initial load from file is completed
+        disableEvents(CREATE, UPDATE, DELETE) // disable events until initial load from file is completed
         runForAll {
             val playlistWithAudioItems = FXPlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItems.toIds(), audioItemRepository))
             entitiesById[it.id] = playlistWithAudioItems

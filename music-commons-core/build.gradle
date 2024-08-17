@@ -1,5 +1,5 @@
 plugins {
-    id 'org.jetbrains.kotlin.plugin.serialization' version '1.9.0'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '2.0.10'
 }
 
 group 'net.transgressoft'
@@ -7,7 +7,7 @@ version gitVersion()
 description 'Transgressoft Music Commons - Core'
 
 ext {
-    kotestVersion = '5.9.0'
+    kotestVersion = '5.9.1'
 }
 
 dependencies {
@@ -15,13 +15,13 @@ dependencies {
 
     implementation 'com.google.guava:guava:33.2.1-jre'
     implementation 'net.jthink:jaudiotagger:3.0.1'
-    implementation 'net.transgressoft:transgressoft-commons-core:1.40'
+    implementation 'net.transgressoft:transgressoft-commons-core:1.42'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1'
-    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1'
     implementation 'ws.schild:jave-core:3.5.0'
     implementation 'ws.schild:jave-nativebin-linux64:3.5.0'
 
-    testImplementation(platform('org.junit:junit-bom:5.10.2'))
+    testImplementation(platform('org.junit:junit-bom:5.10.3'))
 
     testImplementation 'io.mockk:mockk:1.13.11'
     testImplementation "io.kotest:kotest-runner-junit5:$kotestVersion"

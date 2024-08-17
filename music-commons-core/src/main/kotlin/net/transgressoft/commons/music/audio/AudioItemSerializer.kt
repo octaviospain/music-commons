@@ -35,7 +35,8 @@ internal object AudioItemSerializer : AudioItemSerializerBase<AudioItem>() {
             propertiesList[17] as String?,
             propertiesList[18] as String?,
             propertiesList[19] as LocalDateTime,
-            propertiesList[20] as LocalDateTime)
+            propertiesList[20] as LocalDateTime,
+            propertiesList[21] as Short)
     }
 }
 
@@ -71,6 +72,7 @@ abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>> : TransEntityPo
         propertiesList.add(jsonObject["encoding"]?.jsonPrimitive?.content)
         propertiesList.add(LocalDateTime.ofEpochSecond(jsonObject["dateOfCreation"]!!.jsonPrimitive.long, 0, ZoneOffset.UTC))
         propertiesList.add(LocalDateTime.ofEpochSecond(jsonObject["lastDateModified"]!!.jsonPrimitive.long, 0, ZoneOffset.UTC))
+        propertiesList.add(jsonObject["playCount"]?.jsonPrimitive?.int?.toShort())
 
         return propertiesList
     }
@@ -107,6 +109,7 @@ abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>> : TransEntityPo
             value.encoding?.let { put("encoding", it) }
             put("dateOfCreation", value.dateOfCreation.toEpochSecond(ZoneOffset.UTC))
             put("lastDateModified", value.lastDateModified.toEpochSecond(ZoneOffset.UTC))
+            put("playCount", value.playCount)
         }
 
         jsonOutput.encodeJsonElement(jsonObject)

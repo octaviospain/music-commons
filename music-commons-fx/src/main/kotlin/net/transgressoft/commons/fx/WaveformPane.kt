@@ -11,6 +11,9 @@ class WaveformPane : Canvas() {
     private var waveform: AudioWaveform? = null
     private var waveformColor: Color = Color.WHITE
     private var backgroundColor: Color = Color.BLACK
+
+    private val job: Job = Job()
+    private val scope = CoroutineScope(Dispatchers.Main + job)
     private var amplitudesTask: Job? = null
 
     init {
@@ -33,7 +36,6 @@ class WaveformPane : Canvas() {
         }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)    //TODO refactor
     fun drawWaveformAsync(waveform: AudioWaveform, waveformColor: Color = this.waveformColor, backgroundColor: Color = this.backgroundColor) {
         this.waveform = waveform
         this.waveformColor = waveformColor
@@ -43,7 +45,7 @@ class WaveformPane : Canvas() {
             amplitudesTask?.cancel()
         }
 
-        amplitudesTask = GlobalScope.launch {
+        amplitudesTask = scope.launch {
             if (width > 0) {
                 val gc = graphicsContext2D
                 gc.fill = backgroundColor
@@ -66,5 +68,9 @@ class WaveformPane : Canvas() {
             gc.stroke = waveformColor
             gc.strokeLine(i.toDouble(), y1, i.toDouble(), y2)
         }
+    }
+
+    fun dispose() {
+        job.cancel()
     }
 }
