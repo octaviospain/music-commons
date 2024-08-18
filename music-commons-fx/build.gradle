@@ -11,7 +11,7 @@ ext {
     kotestVersion = '5.9.1'
 }
 
-task runWaveformPaneDemo(type: JavaExec) {
+tasks.register('runWaveformPaneDemo', JavaExec) {
     group = "Execution"
     description = "Run WaveformPaneDemo"
     classpath = sourceSets.test.runtimeClasspath

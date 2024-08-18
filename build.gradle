@@ -101,4 +101,8 @@ subprojects {
             events 'passed', 'skipped', 'failed'
         }
     }
+
+    java {
+        withSourcesJar()
+    }
 }

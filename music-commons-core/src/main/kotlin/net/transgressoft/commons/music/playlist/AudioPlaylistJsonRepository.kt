@@ -18,7 +18,7 @@ class AudioPlaylistJsonRepository(name: String, jsonFile: File) : AudioPlaylistR
     private val logger = KotlinLogging.logger {}
 
     constructor(name: String, file: File, audioItemRepository: AudioRepository) : this(name, file) {
-        disableEvents(CREATE, UPDATE, DELETE)
+        disableEvents(CREATE, UPDATE, DELETE) // disable events until initial load from file is completed
         runForAll {
             val playlistWithAudioItems = MutablePlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItems.toIds(), audioItemRepository))
             entitiesById[it.id] = playlistWithAudioItems

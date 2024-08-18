@@ -15,6 +15,7 @@ import io.kotest.matchers.equals.shouldBeEqual
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.property.arbitrary.next
 import io.mockk.every
 import io.mockk.mockk
@@ -105,6 +106,7 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
                 it.first().name shouldBe "Rock"
                 it.first().audioItems shouldContainExactly listOf(audioItem)
                 it.first().playlists.isEmpty() shouldBe true
+                it.first().shouldBeInstanceOf<ObservablePlaylist>()
             }
         }
     }
