@@ -1,6 +1,6 @@
 package net.transgressoft.commons.fx.music.player
 
-import net.transgressoft.commons.event.TransEventPublisher
+import net.transgressoft.commons.event.TransEventPublisherBase
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.player.AudioItemPlayer
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
@@ -16,7 +16,7 @@ import javafx.util.Duration
  *
  * @author Octavio Calleya
  */
-class JavaFxPlayer : TransEventPublisher<AudioItemPlayerEvent>("JavaFxPlayer"), AudioItemPlayer {
+class JavaFxPlayer : TransEventPublisherBase<AudioItemPlayerEvent>("JavaFxPlayer"), AudioItemPlayer {
 
     companion object {
         private const val PLAY_COUNT_THRESHOLD_POLICY = 0.6

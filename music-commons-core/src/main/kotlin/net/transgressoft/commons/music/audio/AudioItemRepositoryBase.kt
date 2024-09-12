@@ -1,6 +1,6 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.data.json.JsonFileRepository
+import net.transgressoft.commons.data.json.GenericJsonFileRepository
 import net.transgressoft.commons.music.event.PlayedEventSubscriber
 import java.io.File
 import java.util.*
@@ -13,7 +13,7 @@ abstract class AudioItemRepositoryBase<I>(
     name: String,
     file: File,
     audioItemSerializerBase: AudioItemSerializerBase<I>, serializersModule : SerializersModule = SerializersModule {})
-    : JsonFileRepository<Int, I>(file, MapSerializer(Int.serializer(), audioItemSerializerBase), SerializersModule {
+    : GenericJsonFileRepository<Int, I>(file, MapSerializer(Int.serializer(), audioItemSerializerBase), SerializersModule {
         include(serializersModule)
         include(audioItemSerializerModule)
     }, name),

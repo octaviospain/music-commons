@@ -2,7 +2,7 @@ package net.transgressoft.commons.music.waveform
 
 import net.transgressoft.commons.ReactiveEntity
 import net.transgressoft.commons.data.DataEvent
-import net.transgressoft.commons.data.JsonRepository
+import net.transgressoft.commons.data.json.JsonRepository
 import net.transgressoft.commons.event.TransEventSubscriber
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import java.util.concurrent.CompletableFuture

@@ -1,21 +1,11 @@
-plugins {
-    id 'org.jetbrains.kotlin.plugin.serialization' version '2.0.10'
-}
-
-group 'net.transgressoft'
-version gitVersion()
 description 'Transgressoft Music Commons - Core'
-
-ext {
-    kotestVersion = '5.9.1'
-}
 
 dependencies {
     api project(path: ':music-commons-api')
 
     implementation 'com.google.guava:guava:33.2.1-jre'
     implementation 'net.jthink:jaudiotagger:3.0.1'
-    implementation 'net.transgressoft:transgressoft-commons-core:1.42'
+    implementation 'net.transgressoft:transgressoft-commons-core:1.47'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1'
     implementation 'ws.schild:jave-core:3.5.0'
@@ -29,64 +19,4 @@ dependencies {
     testImplementation "io.kotest:kotest-property:$kotestVersion"
     testImplementation "io.kotest:kotest-framework-datatest:$kotestVersion"
     testImplementation "io.kotest:kotest-assertions-json:$kotestVersion"
-}
-
-publishing {
-    publications {
-        create('transgressoft', MavenPublication) {
-            groupId = project.group
-            artifactId = 'music-commons-core'
-            version = project.version
-
-            from components.java
-
-            pom {
-                name = 'music-commons-core'
-                description = 'Transgressoft Music Commons - Core'
-                licenses {
-                    license {
-                        name = 'GNU General Public License v3'
-                        url = 'https://www.gnu.org/licenses/gpl-3.0.en.html'
-                    }
-                }
-                developers {
-                    developer {
-                        id = 'octaviospain'
-                        name = 'Octavio Calleya García'
-                        email = 'octaviospain@gmail.com'
-                    }
-                }
-            }
-        }
-    }
-
-    repositories {
-        mavenLocal()
-        maven {
-            credentials {
-                username = 'admin'
-                password = project.repoPass
-            }
-            mavenContent {
-                releasesOnly()
-            }
-
-            name 'transgressoft-releases'
-            url 'http://nexus.transgressoft.net/repository/maven-releases/'
-            allowInsecureProtocol = true
-        }
-        maven {
-            credentials {
-                username = 'admin'
-                password = project.repoPass
-            }
-            mavenContent {
-                snapshotsOnly()
-            }
-
-            name 'transgressoft-snapshots'
-            url 'http://nexus.transgressoft.net/repository/maven-snapshots/'
-            allowInsecureProtocol = true
-        }
-    }
 }

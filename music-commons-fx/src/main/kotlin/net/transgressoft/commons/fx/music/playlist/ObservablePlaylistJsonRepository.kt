@@ -325,4 +325,3 @@ class ObservablePlaylistJsonRepository(name: String, file: File) :
 val observablePlaylistSerializersModule = SerializersModule {
     polymorphic(ObservablePlaylist::class, ObservablePlaylistSerializer)
 }
-

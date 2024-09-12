@@ -37,6 +37,7 @@ import kotlinx.serialization.Transient
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 
+@Suppress("SERIALIZER_TYPE_INCOMPATIBLE")
 @Serializable(with = ObservableAudioItemSerializer::class)
 class FXAudioItem internal constructor(
     override val path: Path,

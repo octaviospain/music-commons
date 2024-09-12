@@ -32,6 +32,7 @@ import kotlinx.serialization.Transient
 
 const val UNASSIGNED_ID = 0
 
+@Suppress("SERIALIZER_TYPE_INCOMPATIBLE")
 @Serializable(with = AudioItemSerializer::class)
 internal class MutableAudioItem(
     override val path: Path,
