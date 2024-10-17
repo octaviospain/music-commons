@@ -19,13 +19,23 @@ import java.util.*
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 
-class ObservablePlaylistJsonRepository(name: String, file: File) :
+class ObservablePlaylistJsonRepository private constructor(name: String, file: File) :
     AudioPlaylistRepositoryBase<ObservableAudioItem, ObservablePlaylist>(
         name,
         file,
         ObservablePlaylistSerializer,
         observablePlaylistSerializersModule
     ) {
+
+    companion object {
+        fun createNew(name: String, file: File): ObservablePlaylistJsonRepository {
+            val repository = ObservablePlaylistJsonRepository(name, file)
+            require(repository.findFirst { it is DummyPlaylist }.isEmpty ) { "An AudioItemRepository is required when loading from a non-empty json file" }
+            return repository
+        }
+
+        fun loadExisting(name: String, file: File, audioItemRepository: ObservableAudioItemJsonRepository) = ObservablePlaylistJsonRepository(name, file, audioItemRepository)
+    }
 
     private val logger = KotlinLogging.logger {}
 
@@ -46,8 +56,12 @@ class ObservablePlaylistJsonRepository(name: String, file: File) :
         }
     }
 
-    constructor(name: String, file: File, audioItemRepository: ObservableAudioItemJsonRepository) : this(name, file) {
-        disableEvents(CREATE, UPDATE, DELETE) // disable events until initial load from file is completed
+    init {
+        subscribe(playlistChangesSubscriber)
+    }
+
+    private constructor(name: String, file: File, audioItemRepository: ObservableAudioItemJsonRepository) : this(name, file) {
+        disableEvents(CREATE, UPDATE, DELETE)
         runForAll {
             val playlistWithAudioItems = FXPlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItems.toIds(), audioItemRepository))
             entitiesById[it.id] = playlistWithAudioItems
@@ -60,10 +74,6 @@ class ObservablePlaylistJsonRepository(name: String, file: File) :
         observablePlaylistsSet.addAll(entitiesById.values)
 
         activateEvents(CREATE, UPDATE, DELETE)
-    }
-
-    init {
-        subscribe(playlistChangesSubscriber)
     }
 
     private fun mapAudioItemsFromIds(audioItemIds: List<Int>, audioItemRepository: ObservableAudioItemJsonRepository) =

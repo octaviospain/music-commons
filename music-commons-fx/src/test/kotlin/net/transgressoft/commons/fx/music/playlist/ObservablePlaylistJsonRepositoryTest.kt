@@ -31,7 +31,7 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
 
     beforeEach {
         jsonFile = tempfile("observablePlaylistRepository-test", ".json").also { it.deleteOnExit() }
-        observableAudioPlaylistRepository = ObservablePlaylistJsonRepository("ObservablePlaylists", jsonFile)
+        observableAudioPlaylistRepository = ObservablePlaylistJsonRepository.createNew("ObservablePlaylists", jsonFile)
     }
 
     "Repository serializes itself to file when playlists are modified" {
@@ -79,6 +79,22 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
         }
     }
 
+    "Creating repository from existing json file without AudioRepository throws Exception" {
+        val audioItem = arbitraryAudioItem { id = 453374921 }.next()
+        val playlist = mockk<ObservablePlaylist> {
+            every { id } returns 1
+            every { isDirectory } returns true
+            every { name } returns "Rock"
+            every { audioItems } returns listOf(audioItem)
+            every { playlists } returns emptySet()
+        }
+        jsonFile.writeText(listOf(playlist).asJsonKeyValues())
+
+        shouldThrowMessage("An AudioItemRepository is required when loading from a non-empty json file") {
+            ObservablePlaylistJsonRepository.createNew("Playlists", jsonFile)
+        }
+    }
+
     "Existing repository loads from file" {
         val audioItem = arbitraryAudioItem { id = 453374921 }.next()
         val playlist = mockk<ObservablePlaylist> {
@@ -94,7 +110,7 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
             every { findById(eq(453374921)) } returns Optional.of(audioItem)
         }
 
-        observableAudioPlaylistRepository = ObservablePlaylistJsonRepository("Playlists", jsonFile, audioItemRepository)
+        observableAudioPlaylistRepository = ObservablePlaylistJsonRepository.loadExisting("Playlists", jsonFile, audioItemRepository)
 
         observableAudioPlaylistRepository.size() shouldBe 1
         observableAudioPlaylistRepository.contains { it.id == 1 && it.isDirectory && it.name == "Rock" && it.audioItems == listOf(audioItem) && it.playlists.isEmpty() } shouldBe true
