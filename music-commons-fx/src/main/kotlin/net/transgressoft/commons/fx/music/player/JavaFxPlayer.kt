@@ -1,6 +1,6 @@
 package net.transgressoft.commons.fx.music.player
 
-import net.transgressoft.commons.event.TransEventPublisherBase
+import net.transgressoft.commons.TransEventPublisherBase
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.player.AudioItemPlayer
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
@@ -16,28 +16,32 @@ import javafx.util.Duration
  *
  * @author Octavio Calleya
  */
-class JavaFxPlayer : TransEventPublisherBase<AudioItemPlayerEvent>("JavaFxPlayer"), AudioItemPlayer {
-
+class JavaFxPlayer: TransEventPublisherBase<AudioItemPlayerEvent>("JavaFxPlayer"), AudioItemPlayer {
     companion object {
         private const val PLAY_COUNT_THRESHOLD_POLICY = 0.6
 
         private val SUPPORTED_AUDIO_TYPES = arrayOf("mp3", "m4a", "wav")
 
-        private val playerStatusMap: Map<MediaPlayer.Status, AudioItemPlayer.Status> = buildMap {
-            put(MediaPlayer.Status.UNKNOWN, AudioItemPlayer.Status.UNKNOWN)
-            put(MediaPlayer.Status.READY, AudioItemPlayer.Status.READY)
-            put(MediaPlayer.Status.PAUSED, AudioItemPlayer.Status.PAUSED)
-            put(MediaPlayer.Status.PLAYING, AudioItemPlayer.Status.PLAYING)
-            put(MediaPlayer.Status.STOPPED, AudioItemPlayer.Status.STOPPED)
-            put(MediaPlayer.Status.STALLED, AudioItemPlayer.Status.STALLED)
-            put(MediaPlayer.Status.HALTED, AudioItemPlayer.Status.HALTED)
-            put(MediaPlayer.Status.DISPOSED, AudioItemPlayer.Status.DISPOSED)
-        }
+        private val playerStatusMap: Map<MediaPlayer.Status, AudioItemPlayer.Status> =
+            buildMap {
+                put(MediaPlayer.Status.UNKNOWN, AudioItemPlayer.Status.UNKNOWN)
+                put(MediaPlayer.Status.READY, AudioItemPlayer.Status.READY)
+                put(MediaPlayer.Status.PAUSED, AudioItemPlayer.Status.PAUSED)
+                put(MediaPlayer.Status.PLAYING, AudioItemPlayer.Status.PLAYING)
+                put(MediaPlayer.Status.STOPPED, AudioItemPlayer.Status.STOPPED)
+                put(MediaPlayer.Status.STALLED, AudioItemPlayer.Status.STALLED)
+                put(MediaPlayer.Status.HALTED, AudioItemPlayer.Status.HALTED)
+                put(MediaPlayer.Status.DISPOSED, AudioItemPlayer.Status.DISPOSED)
+            }
 
-        fun isPlayable(audioItem: ReactiveAudioItem<*>): Boolean {
-            return setOf(*SUPPORTED_AUDIO_TYPES).contains(audioItem.extension) &&
-                    !(audioItem.encoding!!.startsWith("Apple") || audioItem.encoder!!.startsWith("iTunes"))
-        }
+        fun isPlayable(audioItem: ReactiveAudioItem<*>): Boolean =
+            setOf(*SUPPORTED_AUDIO_TYPES).contains(audioItem.extension) &&
+                !(
+                    audioItem.encoding!!.startsWith("Apple") ||
+                audioItem.encoder!!.startsWith(
+                            "iTunes"
+                        )
+                )
     }
 
     init {
@@ -75,7 +79,7 @@ class JavaFxPlayer : TransEventPublisherBase<AudioItemPlayerEvent>("JavaFxPlayer
         mediaPlayer!!.statusProperty()
             .addListener { _, _, newValue ->
                 _statusProperty.set(
-                    playerStatusMap[newValue]
+                    playerStatusMap[newValue],
                 )
             }
         mediaPlayer!!.currentTimeProperty()
@@ -89,7 +93,11 @@ class JavaFxPlayer : TransEventPublisherBase<AudioItemPlayerEvent>("JavaFxPlayer
         mediaPlayer!!.play()
     }
 
-    private fun isTimeToIncreasePlayCount(audioItemDuration: Long, currentTime: Duration, playCountIncreased: Boolean): Boolean {
+    private fun isTimeToIncreasePlayCount(
+        audioItemDuration: Long,
+        currentTime: Duration,
+        playCountIncreased: Boolean,
+    ): Boolean {
         val threshold = audioItemDuration * PLAY_COUNT_THRESHOLD_POLICY
         return currentTime.toMillis() >= threshold && playCountIncreased.not()
     }
@@ -113,10 +121,11 @@ class JavaFxPlayer : TransEventPublisherBase<AudioItemPlayerEvent>("JavaFxPlayer
     override fun status(): AudioItemPlayer.Status = mediaPlayer?.let { playerStatusMap[it.status] } ?: AudioItemPlayer.Status.UNKNOWN
 
     override fun setVolume(value: Double) {
-        if (value < 0)
+        if (value < 0) {
             _volumeProperty.set(0.0)
-        else
+        } else {
             _volumeProperty.set(value)
+        }
     }
 
     override fun seek(milliSeconds: Double) {

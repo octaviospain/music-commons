@@ -1,25 +1,27 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.*
-import mu.KotlinLogging
-import java.io.File
-import java.nio.file.Path
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
+import mu.KotlinLogging
+import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.*
+import java.io.File
+import java.nio.file.Path
 
 typealias AudioRepository = AudioItemRepository<AudioItem>
 
 /**
  * @author Octavio Calleya
  */
-class AudioItemJsonRepository(name: String, file: File) : AudioItemRepositoryBase<AudioItem>(name, file, AudioItemSerializer) {
-
+class AudioItemJsonRepository(
+    name: String,
+    file: File
+): AudioItemRepositoryBase<AudioItem>(name, file, AudioItemSerializer) {
     private val logger = KotlinLogging.logger {}
 
     init {
         playerSubscriber.addOnNextEventAction(PLAYED) { event ->
-            val audioItem = event.entitiesById.values.first()
+            val audioItem = event.entities.values.first()
             logger.info { "Audio item with id ${audioItem.id} was played" }
             if (audioItem is MutableAudioItem) {
                 val audioItemClone = audioItem.clone()
@@ -40,14 +42,15 @@ class AudioItemJsonRepository(name: String, file: File) : AudioItemRepositoryBas
     override fun toString() = "AudioItemJsonRepository(name=$name, audioItemsCount=${entitiesById.size})"
 }
 
-val audioItemSerializerModule = SerializersModule {
-    polymorphic(Artist::class) {
-        subclass(ImmutableArtist.serializer())
-    }
-    polymorphic(Album::class) {
-        subclass(ImmutableAlbum.serializer())
-    }
-    polymorphic(Label::class) {
-        subclass(ImmutableLabel.serializer())
+val audioItemSerializerModule =
+    SerializersModule {
+        polymorphic(Artist::class) {
+            subclass(ImmutableArtist.serializer())
+        }
+        polymorphic(Album::class) {
+            subclass(ImmutableAlbum.serializer())
+        }
+        polymorphic(Label::class) {
+            subclass(ImmutableLabel.serializer())
     }
 }

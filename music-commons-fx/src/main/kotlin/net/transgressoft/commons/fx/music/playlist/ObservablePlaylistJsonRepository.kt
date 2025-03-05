@@ -1,6 +1,6 @@
 package net.transgressoft.commons.fx.music.playlist
 
-import net.transgressoft.commons.data.StandardDataEvent.Type.*
+import net.transgressoft.commons.data.StandardCrudEvent.Type.*
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonRepository
 import net.transgressoft.commons.music.audio.AudioItemManipulationException
@@ -19,22 +19,35 @@ import java.util.*
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 
-class ObservablePlaylistJsonRepository private constructor(name: String, file: File) :
-    AudioPlaylistRepositoryBase<ObservableAudioItem, ObservablePlaylist>(
+class ObservablePlaylistJsonRepository private constructor(
+    name: String,
+    file: File
+): AudioPlaylistRepositoryBase<ObservableAudioItem, ObservablePlaylist>(
         name,
         file,
         ObservablePlaylistSerializer,
         observablePlaylistSerializersModule
     ) {
-
     companion object {
-        fun createNew(name: String, file: File): ObservablePlaylistJsonRepository {
+
+        fun createNew(
+            name: String,
+            file: File
+        ): ObservablePlaylistJsonRepository {
             val repository = ObservablePlaylistJsonRepository(name, file)
-            require(repository.findFirst { it is DummyPlaylist }.isEmpty ) { "An AudioItemRepository is required when loading from a non-empty json file" }
+            require(
+                repository.findFirst {
+                    it is DummyPlaylist
+                }.isEmpty
+            ) { "An AudioItemRepository is required when loading from a non-empty json file" }
             return repository
         }
 
-        fun loadExisting(name: String, file: File, audioItemRepository: ObservableAudioItemJsonRepository) = ObservablePlaylistJsonRepository(name, file, audioItemRepository)
+        fun loadExisting(
+            name: String,
+            file: File,
+            audioItemRepository: ObservableAudioItemJsonRepository
+        ) = ObservablePlaylistJsonRepository(name, file, audioItemRepository)
     }
 
     private val logger = KotlinLogging.logger {}
@@ -43,16 +56,17 @@ class ObservablePlaylistJsonRepository private constructor(name: String, file: F
 
     val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist> = SimpleSetProperty(this, "playlists", FXCollections.observableSet(observablePlaylistsSet))
 
-    private val playlistChangesSubscriber = AudioPlaylistEventSubscriber<ObservablePlaylist, ObservableAudioItem>("InternalAudioPlaylistSubscriber").apply {
-        addOnNextEventAction(CREATE, UPDATE) { event ->
-            synchronized(playlistsProperty) {
-                observablePlaylistsSet.addAll(event.entitiesById.values)
+    private val playlistChangesSubscriber =
+        AudioPlaylistEventSubscriber<ObservablePlaylist, ObservableAudioItem>("InternalAudioPlaylistSubscriber").apply {
+            addOnNextEventAction(CREATE, UPDATE) { event ->
+                synchronized(playlistsProperty) {
+                    observablePlaylistsSet.addAll(event.entities.values)
+                }
             }
-        }
-        addOnNextEventAction(DELETE) { event ->
-            synchronized(playlistsProperty) {
-                observablePlaylistsSet.removeAll(event.entitiesById.values.toSet())
-            }
+            addOnNextEventAction(DELETE) { event ->
+                synchronized(playlistsProperty) {
+                    observablePlaylistsSet.removeAll(event.entities.values.toSet())
+                }
         }
     }
 
@@ -76,14 +90,18 @@ class ObservablePlaylistJsonRepository private constructor(name: String, file: F
         activateEvents(CREATE, UPDATE, DELETE)
     }
 
-    private fun mapAudioItemsFromIds(audioItemIds: List<Int>, audioItemRepository: ObservableAudioItemJsonRepository) =
-        audioItemIds.map {
-            audioItemRepository.findById(it).orElseThrow { AudioItemManipulationException("AudioItem with id $it not found during deserialization") }
+    private fun mapAudioItemsFromIds(
+        audioItemIds: List<Int>,
+        audioItemRepository: ObservableAudioItemJsonRepository
+    ) = audioItemIds.map {
+        audioItemRepository.findById(
+            it
+        ).orElseThrow { AudioItemManipulationException("AudioItem with id $it not found during deserialization")}
         }.toList()
 
     private fun findDeserializedPlaylistsFromIds(
         playlists: Set<Int>,
-        playlistsById: Map<Int, ObservablePlaylist>
+        playlistsById: Map<Int, ObservablePlaylist>,
     ): List<ObservablePlaylist> =
         playlists.stream().map {
             return@map playlistsById[it] ?: throw AudioItemManipulationException("AudioPlaylist with id $it not found during deserialization")
@@ -91,7 +109,10 @@ class ObservablePlaylistJsonRepository private constructor(name: String, file: F
 
     override fun createPlaylist(name: String): ObservablePlaylist = createPlaylist(name, emptyList())
 
-    override fun createPlaylist(name: String, audioItems: List<ObservableAudioItem>): ObservablePlaylist {
+    override fun createPlaylist(
+        name: String,
+        audioItems: List<ObservableAudioItem>
+    ): ObservablePlaylist {
         require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
         return FXPlaylist(newId(), false, name, audioItems).also {
             logger.debug { "Created playlist $it" }
@@ -101,7 +122,10 @@ class ObservablePlaylistJsonRepository private constructor(name: String, file: F
 
     override fun createPlaylistDirectory(name: String): ObservablePlaylist = createPlaylistDirectory(name, emptyList())
 
-    override fun createPlaylistDirectory(name: String, audioItems: List<ObservableAudioItem>): ObservablePlaylist {
+    override fun createPlaylistDirectory(
+        name: String,
+        audioItems: List<ObservableAudioItem>
+    ): ObservablePlaylist {
         require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
         return FXPlaylist(newId(), true, name, audioItems).also {
             logger.debug { "Created playlist directory $it" }
@@ -117,12 +141,11 @@ class ObservablePlaylistJsonRepository private constructor(name: String, file: F
         name: String,
         audioItems: List<ObservableAudioItem> = listOf(),
         playlists: Set<ObservablePlaylist> = setOf()
-    ) : MutablePlaylistBase(id, isDirectory, name, audioItems, playlists), ObservablePlaylist {
-
+    ): MutablePlaylistBase(id, isDirectory, name, audioItems, playlists), ObservablePlaylist {
         private val logger = KotlinLogging.logger {}
 
-        private val _nameProperty = SimpleStringProperty(this, "name", name)
-            .apply {
+        private val _nameProperty =
+            SimpleStringProperty(this, "name", name).apply {
                 addListener { _, oldValue, newValue ->
                     setAndNotify(newValue, oldValue)
                 }
@@ -136,8 +159,8 @@ class ObservablePlaylistJsonRepository private constructor(name: String, file: F
                 _nameProperty.set(value)
             }
 
-        private val _isDirectoryProperty = SimpleBooleanProperty(this, "isDirectory", isDirectory)
-            .apply {
+        private val _isDirectoryProperty =
+            SimpleBooleanProperty(this, "isDirectory", isDirectory).apply {
                 addListener { _, oldValue, newValue ->
                     setAndNotify(newValue, oldValue)
                 }
@@ -151,8 +174,8 @@ class ObservablePlaylistJsonRepository private constructor(name: String, file: F
                 _isDirectoryProperty.set(value)
             }
 
-        private val _audioItemsProperty = SimpleListProperty(this, "audioItems", FXCollections.observableArrayList(ArrayList(audioItems)))
-            .apply {
+        private val _audioItemsProperty =
+            SimpleListProperty(this, "audioItems", FXCollections.observableArrayList(ArrayList(audioItems))).apply {
                 addListener { _, oldValue, newValue ->
                     setAndNotify(newValue, oldValue) {
                         replaceRecursiveAudioItems()
@@ -167,7 +190,8 @@ class ObservablePlaylistJsonRepository private constructor(name: String, file: F
                 buildList<ObservableAudioItem> {
                     addAll(audioItems)
                     addAll(playlists.stream().flatMap { it.audioItemsRecursive.stream() }.toList())
-                })
+                },
+            )
         }
 
         private fun changePlaylistCover() {
@@ -176,7 +200,7 @@ class ObservablePlaylistJsonRepository private constructor(name: String, file: F
                 .filter { it.isPresent }
                 .findAny()
                 .ifPresentOrElse(
-                    { _coverImageProperty.set(it) }
+                    {_coverImageProperty.set(it)},
                 ) { _coverImageProperty.set(Optional.empty()) }
         }
 
@@ -192,12 +216,16 @@ class ObservablePlaylistJsonRepository private constructor(name: String, file: F
         override val playlists: MutableSet<ObservablePlaylist>
             get() = playlistsProperty
 
-        private val _audioItemsRecursiveProperty = SimpleListProperty(
-            this, "audioItemsRecursive", FXCollections.observableArrayList(
-                buildList {
-                    addAll(audioItems)
-                    addAll(playlists.stream().flatMap { it.audioItemsRecursive.stream() }.toList())
-                })
+        private val _audioItemsRecursiveProperty =
+            SimpleListProperty(
+                this,
+                "audioItemsRecursive",
+                FXCollections.observableArrayList(
+                    buildList {
+                        addAll(audioItems)
+                        addAll(playlists.stream().flatMap { it.audioItemsRecursive.stream() }.toList())
+                },
+            ),
         )
 
         override val audioItemsRecursiveProperty: ReadOnlyListProperty<ObservableAudioItem> = _audioItemsRecursiveProperty
@@ -205,8 +233,12 @@ class ObservablePlaylistJsonRepository private constructor(name: String, file: F
         override val audioItemsRecursive: List<ObservableAudioItem>
             get() = audioItemsRecursiveProperty.get()
 
-        private val _coverImageProperty = SimpleObjectProperty<Optional<Image>>(this, "coverImage",
-            this.audioItems.stream().filter { it.coverImageProperty.get().isPresent }.findFirst().map { it.coverImageProperty.get().get() })
+        private val _coverImageProperty =
+            SimpleObjectProperty<Optional<Image>>(
+                this,
+                "coverImage",
+                this.audioItems.stream().filter { it.coverImageProperty.get().isPresent}.findFirst().map {it.coverImageProperty.get().get()},
+        )
 
         override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>> = _coverImageProperty
 
@@ -296,15 +328,13 @@ class ObservablePlaylistJsonRepository private constructor(name: String, file: F
             }
         }
 
-        override fun compareTo(other: AudioPlaylist<ObservableAudioItem>): Int {
-            return if (nameProperty.get() == other.name) {
+        override fun compareTo(other: AudioPlaylist<ObservableAudioItem>): Int = if (nameProperty.get() == other.name) {
                 val size = playlists.size + audioItemsRecursive.size
                 val objectSize = other.playlists.size + other.audioItemsRecursive.size
                 size - objectSize
             } else {
                 nameProperty.get().compareTo(other.name)
             }
-        }
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true

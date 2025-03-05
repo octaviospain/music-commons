@@ -1,13 +1,12 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.data.RegistryBase
-import net.transgressoft.commons.data.StandardDataEvent.Type.*
 import mu.KotlinLogging
+import net.transgressoft.commons.data.RegistryBase
+import net.transgressoft.commons.data.StandardCrudEvent.Type.*
 import java.util.*
 import java.util.stream.Collectors.*
 
-internal class ArtistCatalogVolatileRegistry<I> : RegistryBase<String, MutableArtistCatalog<I>>("ArtistCatalog") where I : ReactiveAudioItem<I> {
-
+internal class ArtistCatalogVolatileRegistry<I>: RegistryBase<String, MutableArtistCatalog<I>>("ArtistCatalog") where I: ReactiveAudioItem<I> {
     private val log = KotlinLogging.logger {}
 
     init {
@@ -43,7 +42,10 @@ internal class ArtistCatalogVolatileRegistry<I> : RegistryBase<String, MutableAr
         return addedOrReplacedCatalogs.isNotEmpty()
     }
 
-    fun updateCatalog(updatedAudioItem: I, oldAudioItem: I) {
+    fun updateCatalog(
+        updatedAudioItem: I,
+        oldAudioItem: I
+    ) {
         if (artistOrAlbumChanged(updatedAudioItem, oldAudioItem)) {
             val removed = removeAudioItems(listOf(oldAudioItem))
             val added = addAudioItems(listOf(updatedAudioItem))
@@ -51,20 +53,28 @@ internal class ArtistCatalogVolatileRegistry<I> : RegistryBase<String, MutableAr
 
             log.debug { "Artist catalog of ${updatedAudioItem.artist.name} was updated as a result of updating $updatedAudioItem" }
         } else if (audioItemOrderingChanged(updatedAudioItem, oldAudioItem)) {
-            val artistCatalog = entitiesById[updatedAudioItem.artistUniqueId()] ?: error("Artist catalog for ${updatedAudioItem.artistUniqueId()} should exist already at this point")
+            val artistCatalog =
+                entitiesById[updatedAudioItem.artistUniqueId()] ?: error(
+                    "Artist catalog for ${updatedAudioItem.artistUniqueId()} should exist already at this point")
             val artistCatalogBeforeUpdate = artistCatalog.copy()
             artistCatalog.mergeAudioItem(updatedAudioItem)
             putUpdateEvent(listOf(artistCatalog), listOf(artistCatalogBeforeUpdate))
         }
     }
 
-    private fun artistOrAlbumChanged(updatedAudioItem: I, oldAudioItem: I): Boolean {
+    private fun artistOrAlbumChanged(
+        updatedAudioItem: I,
+        oldAudioItem: I
+    ): Boolean {
         val artistChanged = updatedAudioItem.artist != oldAudioItem.artist
         val albumChanged = updatedAudioItem.album != oldAudioItem.album
         return artistChanged || albumChanged
     }
 
-    private fun audioItemOrderingChanged(updatedAudioItem: I, oldAudioItem: I): Boolean {
+    private fun audioItemOrderingChanged(
+        updatedAudioItem: I,
+        oldAudioItem: I
+    ): Boolean {
         val trackNumberChanged = updatedAudioItem.trackNumber != oldAudioItem.trackNumber
         val discNumberChanged = updatedAudioItem.discNumber != oldAudioItem.discNumber
         return trackNumberChanged || discNumberChanged
@@ -115,9 +125,12 @@ internal class ArtistCatalogVolatileRegistry<I> : RegistryBase<String, MutableAr
     fun findFirst(artistName: String): Optional<MutableArtistCatalog<I>> =
         Optional.ofNullable(entitiesById.entries.firstOrNull { it.key.lowercase().contains(artistName.lowercase()) }?.value)
 
-    fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I> =
-        entitiesById[artist.id()]?.findAlbumAudioItems(albumName) ?: emptySet()
+    fun findAlbumAudioItems(
+        artist: Artist,
+        albumName: String
+    ): Set<I> = entitiesById[artist.id()]?.findAlbumAudioItems(albumName) ?: emptySet()
 
     override val isEmpty = entitiesById.isEmpty()
+
     override fun toString() = "ArtistCatalogRegistry(numberOfArtists=${entitiesById.size})"
 }
