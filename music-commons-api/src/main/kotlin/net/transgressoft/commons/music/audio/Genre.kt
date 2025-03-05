@@ -4,7 +4,9 @@ package net.transgressoft.commons.music.audio
  * @author Octavio Calleya
  */
 enum class Genre {
-    ROCK, UNDEFINED;
+
+    ROCK,
+    UNDEFINED;
 
     fun capitalize(): String {
         val replaced = name.replace('_', ' ')

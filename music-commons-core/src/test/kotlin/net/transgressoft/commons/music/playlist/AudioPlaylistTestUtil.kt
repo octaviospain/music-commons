@@ -5,26 +5,28 @@ import io.kotest.core.TestConfiguration
 internal object AudioPlaylistTestUtil : TestConfiguration() {
 
     fun AudioPlaylist<*>.asJsonKeyValue(): String {
-        val audioItemsString = buildString {
-            append("[")
-            audioItems.forEachIndexed { index, it ->
-                append(it.id)
-                if (index < audioItems.size - 1) {
-                    append(",")
+        val audioItemsString =
+            buildString {
+                append("[")
+                audioItems.forEachIndexed { index, it ->
+                    append(it.id)
+                    if (index < audioItems.size - 1) {
+                        append(",")
+                    }
                 }
+                append("],")
             }
-            append("],")
-        }
-        val playlistIds = buildString {
-            append("[")
-            playlists.forEachIndexed { index, it ->
-                append(it.id)
-                if (index < playlists.size - 1) {
-                    append(",")
+        val playlistIds =
+            buildString {
+                append("[")
+                playlists.forEachIndexed { index, it ->
+                    append(it.id)
+                    if (index < playlists.size - 1) {
+                        append(",")
+                    }
                 }
+                append("]")
             }
-            append("]")
-        }
         return """
             "$id": {
                 "id": $id,

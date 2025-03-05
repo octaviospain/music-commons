@@ -11,7 +11,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContainOnlyOnce
 import io.kotest.property.arbitrary.next
 import java.io.File
-import java.util.Map.*
+import java.util.Map.entry
 import kotlin.time.Duration.Companion.milliseconds
 
 internal class ObservableAudioItemJsonRepositoryTest : StringSpec({

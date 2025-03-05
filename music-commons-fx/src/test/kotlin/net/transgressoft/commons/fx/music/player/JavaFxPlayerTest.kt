@@ -4,7 +4,10 @@ import net.transgressoft.commons.fx.music.audio.FXAudioItem
 import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.arbitraryMp3File
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonRepository
 import net.transgressoft.commons.music.player.AudioItemPlayer
-import net.transgressoft.commons.music.player.AudioItemPlayer.Status.*
+import net.transgressoft.commons.music.player.AudioItemPlayer.Status.PAUSED
+import net.transgressoft.commons.music.player.AudioItemPlayer.Status.PLAYING
+import net.transgressoft.commons.music.player.AudioItemPlayer.Status.STOPPED
+import net.transgressoft.commons.music.player.AudioItemPlayer.Status.UNKNOWN
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
@@ -12,7 +15,8 @@ import io.kotest.matchers.string.shouldContain
 import io.kotest.property.arbitrary.next
 import javafx.stage.Stage
 import javafx.util.Duration
-import org.awaitility.Awaitility.*
+import org.awaitility.Awaitility.await
+import org.awaitility.kotlin.await
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -50,7 +54,7 @@ class JavaFxPlayerTest {
 
         player.play(audioItem)
 
-        await().atMost(timeToIncreasePlayCount.plus(500), TimeUnit.MILLISECONDS).untilAsserted {
+        await.atMost(timeToIncreasePlayCount.plus(500), TimeUnit.MILLISECONDS).untilAsserted {
             audioItem.playCount shouldBe 1
             observableAudioItemRepository.findFirst { it.playCount.toInt() == 1 } shouldBePresent { it shouldBe audioItem }
             jsonFile.readText() shouldContain "\"playCount\": 1"

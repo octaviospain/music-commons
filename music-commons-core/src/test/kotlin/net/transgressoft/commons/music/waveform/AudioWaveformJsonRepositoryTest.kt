@@ -34,7 +34,7 @@ internal class AudioWaveformJsonRepositoryTest : StringSpec({
         audioWaveformRepository.findById(audioWaveform.id) shouldBePresent { found -> found shouldBe audioWaveform }
 
         eventually(2.seconds) {
-            jsonFile.readText() shouldEqualJson  """
+            jsonFile.readText() shouldEqualJson """
                 {
                     "1": {
                         "id": 1,
@@ -56,7 +56,7 @@ internal class AudioWaveformJsonRepositoryTest : StringSpec({
 
         audioWaveform.id shouldBe audioItem.id
         audioWaveformRepository.findById(audioItem.id) shouldBePresent { it shouldBe audioWaveform }
-        audioWaveformRepository.contains {it == audioWaveform }
+        audioWaveformRepository.contains { it == audioWaveform }
         audioWaveformRepository.getOrCreateWaveformAsync(audioItem, Arb.short(1, 100).next(), Arb.short(1, 100).next()).join() shouldBe audioWaveform
 
         audioWaveformRepository.removeByAudioItemIds(setOf(audioItem.id))

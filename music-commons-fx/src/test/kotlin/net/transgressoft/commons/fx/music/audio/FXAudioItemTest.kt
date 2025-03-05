@@ -5,7 +5,10 @@ import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.arbitraryMp3
 import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.asJsonValue
 import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.testCoverBytes
 import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.update
-import net.transgressoft.commons.music.audio.*
+import net.transgressoft.commons.music.audio.Genre
+import net.transgressoft.commons.music.audio.ImmutableAlbum
+import net.transgressoft.commons.music.audio.ImmutableArtist
+import net.transgressoft.commons.music.audio.ImmutableLabel
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.json.shouldEqualJson
@@ -19,7 +22,7 @@ import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.property.arbitrary.next
 import javafx.scene.image.Image
 import java.io.ByteArrayInputStream
-import java.util.*
+import java.util.Optional
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -27,10 +30,11 @@ import kotlinx.serialization.json.Json
 
 internal class FXAudioItemTest : StringSpec({
 
-    val json = Json {
-        serializersModule = observableAudioItemSerializerModule
-        prettyPrint = true
-    }
+    val json =
+        Json {
+            serializersModule = observableAudioItemSerializerModule
+            prettyPrint = true
+        }
 
     "should change its properties when observable properties are updated" {
         val testAudioFile = arbitraryMp3File.next()
@@ -168,10 +172,10 @@ internal class FXAudioItemTest : StringSpec({
             loadedAudioItem.encoding shouldBe fxAudioItem.encoding
             loadedAudioItem.artist shouldBe fxAudioItem.artist
             loadedAudioItem.album.albumArtist.name shouldBe fxAudioItem.album.albumArtist.name
-            loadedAudioItem.album.albumArtist.countryCode shouldBe CountryCode.UNDEFINED    // album country code is not updated because there is no ID3 tag for it
+            loadedAudioItem.album.albumArtist.countryCode shouldBe CountryCode.UNDEFINED // album country code is not updated because there is no ID3 tag for it
             loadedAudioItem.album.isCompilation shouldBe fxAudioItem.album.isCompilation
             loadedAudioItem.album.label.name shouldBe fxAudioItem.album.label.name
-            loadedAudioItem.album.label.countryCode shouldBe CountryCode.UNDEFINED  // label country code is not updated because there is no ID3 tag for it
+            loadedAudioItem.album.label.countryCode shouldBe CountryCode.UNDEFINED // label country code is not updated because there is no ID3 tag for it
             loadedAudioItem.artist.name shouldBe fxAudioItem.artist.name
             loadedAudioItem.artist.countryCode shouldBe fxAudioItem.artist.countryCode // artist country code is saved into COUNTRY ID3 tag
             loadedAudioItem.genre shouldBe fxAudioItem.genre

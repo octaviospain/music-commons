@@ -4,9 +4,13 @@ import net.transgressoft.commons.TransEventPublisherBase
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.player.AudioItemPlayer
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
-import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.*
-import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.*
-import javafx.beans.property.*
+import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Played
+import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
+import javafx.beans.property.DoubleProperty
+import javafx.beans.property.ObjectProperty
+import javafx.beans.property.ReadOnlyObjectProperty
+import javafx.beans.property.SimpleDoubleProperty
+import javafx.beans.property.SimpleObjectProperty
 import javafx.scene.media.Media
 import javafx.scene.media.MediaPlayer
 import javafx.util.Duration
@@ -38,7 +42,7 @@ class JavaFxPlayer: TransEventPublisherBase<AudioItemPlayerEvent>("JavaFxPlayer"
             setOf(*SUPPORTED_AUDIO_TYPES).contains(audioItem.extension) &&
                 !(
                     audioItem.encoding!!.startsWith("Apple") ||
-                audioItem.encoder!!.startsWith(
+                        audioItem.encoder!!.startsWith(
                             "iTunes"
                         )
                 )
@@ -79,7 +83,7 @@ class JavaFxPlayer: TransEventPublisherBase<AudioItemPlayerEvent>("JavaFxPlayer"
         mediaPlayer!!.statusProperty()
             .addListener { _, _, newValue ->
                 _statusProperty.set(
-                    playerStatusMap[newValue],
+                    playerStatusMap[newValue]
                 )
             }
         mediaPlayer!!.currentTimeProperty()
@@ -96,7 +100,7 @@ class JavaFxPlayer: TransEventPublisherBase<AudioItemPlayerEvent>("JavaFxPlayer"
     private fun isTimeToIncreasePlayCount(
         audioItemDuration: Long,
         currentTime: Duration,
-        playCountIncreased: Boolean,
+        playCountIncreased: Boolean
     ): Boolean {
         val threshold = audioItemDuration * PLAY_COUNT_THRESHOLD_POLICY
         return currentTime.toMillis() >= threshold && playCountIncreased.not()

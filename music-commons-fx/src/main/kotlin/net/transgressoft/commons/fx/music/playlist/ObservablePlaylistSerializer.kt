@@ -1,12 +1,16 @@
 package net.transgressoft.commons.fx.music.playlist
 
-import javafx.beans.property.*
-import javafx.scene.image.Image
 import net.transgressoft.commons.EntityChangeEvent
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.music.playlist.AudioPlaylistSerializerBase
+import javafx.beans.property.SimpleBooleanProperty
+import javafx.beans.property.SimpleListProperty
+import javafx.beans.property.SimpleObjectProperty
+import javafx.beans.property.SimpleSetProperty
+import javafx.beans.property.SimpleStringProperty
+import javafx.scene.image.Image
 import java.time.LocalDateTime
-import java.util.*
+import java.util.Optional
 import java.util.concurrent.Flow
 
 object ObservablePlaylistSerializer : AudioPlaylistSerializerBase<ObservableAudioItem, ObservablePlaylist>() {
@@ -27,7 +31,7 @@ internal class DummyPlaylist(
     override var name: String = "",
     override val audioItems: List<ObservableAudioItem> = emptyList(),
     override val playlists: Set<ObservablePlaylist> = emptySet(),
-    override val lastDateModified: LocalDateTime = LocalDateTime.MIN,
+    override val lastDateModified: LocalDateTime = LocalDateTime.MIN
 ) : ObservablePlaylist {
     override val nameProperty = SimpleStringProperty()
     override val isDirectoryProperty = SimpleBooleanProperty()

@@ -64,14 +64,17 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
                 .asJsonKeyValues()
         )
 
-        val audioItemRepository = mockk<AudioRepository> {
-            every { findById(eq(453374921)) } returns Optional.of(audioItem)
-        }
+        val audioItemRepository =
+            mockk<AudioRepository> {
+                every { findById(eq(453374921)) } returns Optional.of(audioItem)
+            }
 
         audioPlaylistRepository = AudioPlaylistJsonRepository("Playlists", jsonFile, audioItemRepository)
 
         audioPlaylistRepository.size() shouldBe 1
-        audioPlaylistRepository.contains { it.id == 1 && it.isDirectory && it.name == "Rock" && it.audioItems == listOf(audioItem) && it.playlists.isEmpty() } shouldBe true
+        audioPlaylistRepository.contains {
+            it.id == 1 && it.isDirectory && it.name == "Rock" && it.audioItems == listOf(audioItem) && it.playlists.isEmpty()
+        } shouldBe true
     }
 
     // ├──Best hits
@@ -85,10 +88,17 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
     // │  └──60s
     // └──This weeks' favorites songs
     "Mixed playlists hierarchy structure and audio items search" {
-        val rockAudioItems = listOf(
-            arbitraryAudioItem { title = "50s Rock hit 1"; duration = Duration.ofSeconds(60) }.next(),
-            arbitraryAudioItem { title = "50s Rock hit 2 my fav"; duration = Duration.ofSeconds(230) }.next()
-        )
+        val rockAudioItems =
+            listOf(
+                arbitraryAudioItem {
+                    title = "50s Rock hit 1"
+                    duration = Duration.ofSeconds(60)
+                }.next(),
+                arbitraryAudioItem {
+                    title = "50s Rock hit 2 my fav"
+                    duration = Duration.ofSeconds(230)
+                }.next()
+            )
         val rock = audioPlaylistRepository.createPlaylist("Rock", rockAudioItems)
 
         audioPlaylistRepository.findByName(rock.name) shouldBePresent { it shouldBe rock }
@@ -125,19 +135,27 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
 
         audioPlaylistRepository.search { it.isDirectory } shouldContainExactly setOf(fifties, sixties, bestHits)
 
-        val fiftiesItems = listOf(
-            arbitraryAudioItem { title = "50s hit"; duration = Duration.ofSeconds(30) }.next(),
-            arbitraryAudioItem { title = "50s favorite song"; duration = Duration.ofSeconds(120) }.next()
-        )
+        val fiftiesItems =
+            listOf(
+                arbitraryAudioItem {
+                    title = "50s hit"
+                    duration = Duration.ofSeconds(30)
+                }.next(),
+                arbitraryAudioItem {
+                    title = "50s favorite song"
+                    duration = Duration.ofSeconds(120)
+                }.next()
+            )
 
         audioPlaylistRepository.addAudioItemToPlaylist(fiftiesItems[0], fifties.name)
         audioPlaylistRepository.addAudioItemsToPlaylist(fiftiesItems, fifties.name)
         val playlistsThatContainsAnyAudioItemsWithHitInTitle =
             audioPlaylistRepository.search { it.audioItemsAnyMatch { audioItem -> audioItem.title.contains("hit") } }
         playlistsThatContainsAnyAudioItemsWithHitInTitle shouldContainExactly setOf(rock, fifties)
-        val playlistsThatContainsAudioItemsWithDurationBelow60 = audioPlaylistRepository.search {
-            it.audioItemsAnyMatch { audioItem: AudioItem -> audioItem.duration <= Duration.ofSeconds(60) }
-        }
+        val playlistsThatContainsAudioItemsWithDurationBelow60 =
+            audioPlaylistRepository.search {
+                it.audioItemsAnyMatch { audioItem: AudioItem -> audioItem.duration <= Duration.ofSeconds(60) }
+            }
 
         playlistsThatContainsAudioItemsWithDurationBelow60 shouldContainExactly setOf(rock, fifties)
 
@@ -220,7 +238,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         rock.playlists.isEmpty() shouldBe true
         pop.playlists.isEmpty() shouldBe true
 
-        eventually(200.milliseconds) { jsonFile.readText() shouldBe "{}"}
+        eventually(200.milliseconds) { jsonFile.readText() shouldBe "{}" }
     }
 
     "Removing playlist directory from repository is recursive and changes reflected on playlists" {

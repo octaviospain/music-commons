@@ -1,5 +1,19 @@
 package net.transgressoft.commons.music.playlist
 
+import net.transgressoft.commons.EntityChangeEvent
+import net.transgressoft.commons.data.json.TransEntityPolymorphicSerializer
+import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.Artist
+import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.Genre
+import net.transgressoft.commons.music.audio.ImmutableAlbum
+import net.transgressoft.commons.music.audio.ImmutableArtist
+import net.transgressoft.commons.music.audio.ReactiveAudioItem
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.time.Duration
+import java.time.LocalDateTime
+import java.util.concurrent.Flow
 import kotlinx.coroutines.Job
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -7,15 +21,18 @@ import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.descriptors.element
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.*
-import net.transgressoft.commons.EntityChangeEvent
-import net.transgressoft.commons.data.json.TransEntityPolymorphicSerializer
-import net.transgressoft.commons.music.audio.*
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.time.Duration
-import java.time.LocalDateTime
-import java.util.concurrent.Flow
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonEncoder
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 
 object MutableAudioPlaylistSerializer : AudioPlaylistSerializerBase<AudioItem, MutableAudioPlaylist>() {
     @Suppress("UNCHECKED_CAST")
@@ -35,7 +52,7 @@ abstract class AudioPlaylistSerializerBase<I: ReactiveAudioItem<I>, P: ReactiveA
         buildClassSerialDescriptor("AudioPlaylist") {
             element<String>("id")
             element<String>("name")
-    }
+        }
 
     override fun getPropertiesList(decoder: Decoder): List<Any?> {
         val propertiesList = mutableListOf<Any?>()
@@ -51,14 +68,14 @@ abstract class AudioPlaylistSerializerBase<I: ReactiveAudioItem<I>, P: ReactiveA
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun mapAudioItemIds(ids: JsonArray): List<I> = ids.map { DummyAudioItem(it.jsonPrimitive.int) as I}
+    private fun mapAudioItemIds(ids: JsonArray): List<I> = ids.map { DummyAudioItem(it.jsonPrimitive.int) as I }
 
     @Suppress("UNCHECKED_CAST")
     private fun mapPlaylistIds(ids: JsonArray): Set<P> = ids.map { DummyPlaylist(it.jsonPrimitive.int) as P }.toSet()
 
     override fun serialize(
         encoder: Encoder,
-        value: P,
+        value: P
     ) {
         val jsonOutput = encoder as? JsonEncoder ?: throw SerializationException("This class can be saved only by Json")
         val jsonObject =
@@ -79,10 +96,10 @@ abstract class AudioPlaylistSerializerBase<I: ReactiveAudioItem<I>, P: ReactiveA
                     buildJsonArray {
                         value.playlists.forEach {
                             add(it.id)
+                        }
                     }
-                },
-            )
-        }
+                )
+            }
 
         jsonOutput.encodeJsonElement(jsonObject)
     }
@@ -94,7 +111,7 @@ internal class DummyPlaylist(
     override var name: String = "",
     override val audioItems: List<AudioItem> = emptyList(),
     override val playlists: Set<MutableAudioPlaylist> = emptySet(),
-    override val lastDateModified: LocalDateTime = LocalDateTime.MIN,
+    override val lastDateModified: LocalDateTime = LocalDateTime.MIN
 ) : MutableAudioPlaylist {
     override fun addAudioItems(audioItems: Collection<AudioItem>): Boolean = throw IllegalStateException()
 
@@ -122,7 +139,7 @@ internal class DummyPlaylist(
 }
 
 internal class DummyAudioItem(
-    override val id: Int,
+    override val id: Int
 ): AudioItem {
     override val path: Path = Paths.get("")
     override var title: String = ""

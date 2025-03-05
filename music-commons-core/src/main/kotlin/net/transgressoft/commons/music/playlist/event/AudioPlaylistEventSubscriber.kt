@@ -16,5 +16,5 @@ open class AudioPlaylistEventSubscriber<P: ReactiveAudioPlaylist<I, P>, I: React
                 append(", soruce=${it.source}")
             }
             append(")")
-    }
+        }
 }

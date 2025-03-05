@@ -3,8 +3,12 @@ package net.transgressoft.commons.fx
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import javafx.scene.canvas.Canvas
 import javafx.scene.paint.Color
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.javafx.JavaFx
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class WaveformPane : Canvas() {
 
@@ -45,18 +49,19 @@ class WaveformPane : Canvas() {
             amplitudesTask?.cancel()
         }
 
-        amplitudesTask = scope.launch {
-            if (width > 0) {
-                val gc = graphicsContext2D
-                gc.fill = backgroundColor
-                gc.fillRect(0.0, 0.0, width, height)
+        amplitudesTask =
+            scope.launch {
+                if (width > 0) {
+                    val gc = graphicsContext2D
+                    gc.fill = backgroundColor
+                    gc.fillRect(0.0, 0.0, width, height)
 
-                val amplitudes = waveform.amplitudes(width.toInt(), height.toInt())
-                withContext(Dispatchers.JavaFx) {
-                    drawWaveform(amplitudes, waveformColor)
+                    val amplitudes = waveform.amplitudes(width.toInt(), height.toInt())
+                    withContext(Dispatchers.JavaFx) {
+                        drawWaveform(amplitudes, waveformColor)
+                    }
                 }
             }
-        }
     }
 
     private fun drawWaveform(amplitudes: FloatArray, waveformColor: Color) {

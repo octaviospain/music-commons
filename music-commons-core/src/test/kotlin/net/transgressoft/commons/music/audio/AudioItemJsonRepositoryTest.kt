@@ -36,19 +36,20 @@ internal class AudioItemJsonRepositoryTest : StringSpec({
     beforeEach { beforeEach() }
 
     "should create an audio item and allow to query it on creation and after modification" {
-        val audioItem: AudioItem = audioRepository.createFromFile(arbitraryMp3File.next().toPath()).apply {
-            should {
-                it.id shouldNotBe UNASSIGNED_ID
-                audioRepository.add(it) shouldBe false
-                audioRepository.addOrReplace(it) shouldBe false
-                audioRepository.contains { audioItem -> audioItem == it } shouldBe true
-                audioRepository.search { audioItem -> audioItem == it }.shouldContainOnly(it)
-                audioRepository.findByUniqueId(it.uniqueId) shouldBePresent { found -> found shouldBe it }
-                audioRepository.containsAudioItemWithArtist(it.artist.name) shouldBe true
-                audioRepository.containsAudioItemWithArtist(it.album.albumArtist.name) shouldBe true
-                audioRepository.findAlbumAudioItems(it.artist, it.album.name).shouldContainOnly(it)
+        val audioItem: AudioItem =
+            audioRepository.createFromFile(arbitraryMp3File.next().toPath()).apply {
+                should {
+                    it.id shouldNotBe UNASSIGNED_ID
+                    audioRepository.add(it) shouldBe false
+                    audioRepository.addOrReplace(it) shouldBe false
+                    audioRepository.contains { audioItem -> audioItem == it } shouldBe true
+                    audioRepository.search { audioItem -> audioItem == it }.shouldContainOnly(it)
+                    audioRepository.findByUniqueId(it.uniqueId) shouldBePresent { found -> found shouldBe it }
+                    audioRepository.containsAudioItemWithArtist(it.artist.name) shouldBe true
+                    audioRepository.containsAudioItemWithArtist(it.album.albumArtist.name) shouldBe true
+                    audioRepository.findAlbumAudioItems(it.artist, it.album.name).shouldContainOnly(it)
+                }
             }
-        }
 
         eventually(100.milliseconds) { jsonFile.readText().shouldEqualJson(audioItem.asJsonKeyValue()) }
 
@@ -83,11 +84,12 @@ internal class AudioItemJsonRepositoryTest : StringSpec({
         }
     }
 
-    val beforeEachListener = object : PropTestListener {
-        override suspend fun beforeTest() {
-            beforeEach()
+    val beforeEachListener =
+        object: PropTestListener {
+            override suspend fun beforeTest() {
+                beforeEach()
+            }
         }
-    }
 
     "should create audio items from the same album and reflect changes in the repository" {
         checkAll(10, PropTestConfig(listeners = listOf(beforeEachListener)), arbitraryAlbumAudioItems()) { testAlbumAudioItems ->

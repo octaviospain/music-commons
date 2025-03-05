@@ -1,12 +1,12 @@
 package net.transgressoft.commons.music.audio
 
+import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
+import mu.KotlinLogging
+import java.io.File
+import java.nio.file.Path
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
-import mu.KotlinLogging
-import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.*
-import java.io.File
-import java.nio.file.Path
 
 typealias AudioRepository = AudioItemRepository<AudioItem>
 
@@ -52,5 +52,5 @@ val audioItemSerializerModule =
         }
         polymorphic(Label::class) {
             subclass(ImmutableLabel.serializer())
+        }
     }
-}

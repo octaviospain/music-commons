@@ -13,5 +13,5 @@ class PlayedEventSubscriber: TransEventSubscriberBase<ReactiveAudioItem<*>, Audi
                 append(", soruce=${it.source}")
             }
             append(")")
-    }
+        }
 }

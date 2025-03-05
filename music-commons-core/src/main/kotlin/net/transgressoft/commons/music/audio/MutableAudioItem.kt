@@ -26,7 +26,12 @@ import java.nio.file.StandardOpenOption
 import java.time.Duration
 import java.time.LocalDateTime
 import kotlin.io.path.extension
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -42,11 +47,14 @@ internal class MutableAudioItem(
     @Transient
     private val logger = KotlinLogging.logger {}
 
-    private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + CoroutineExceptionHandler {
-        _, exception ->
-            val errorText = "Error writing metadata of $this"
-            logger.error(errorText, exception)
-    })
+    private val ioScope =
+        CoroutineScope(
+            Dispatchers.IO + SupervisorJob() +
+                CoroutineExceptionHandler { _, exception ->
+                    val errorText = "Error writing metadata of $this"
+                    logger.error(errorText, exception)
+                }
+        )
 
     // Constructor only for testing purposes
     internal constructor(audioItem: AudioItem) : this(audioItem.path, audioItem.id)
@@ -221,11 +229,11 @@ internal class MutableAudioItem(
 
     private fun readArtist(tag: Tag): Artist =
         getFieldIfExisting(tag, FieldKey.ARTIST)?.let { artistName ->
-            val country = getFieldIfExisting(tag, FieldKey.COUNTRY)?.let { _country ->
-                if (_country.isNotEmpty())
-                    CountryCode.valueOf(_country)
-                else CountryCode.UNDEFINED
-            } ?: CountryCode.UNDEFINED
+            val country =
+                getFieldIfExisting(tag, FieldKey.COUNTRY)?.let { _country ->
+                    if (_country.isNotEmpty()) CountryCode.valueOf(_country)
+                    else CountryCode.UNDEFINED
+                } ?: CountryCode.UNDEFINED
             ImmutableArtist(AudioUtils.beautifyArtistName(artistName), country)
         } ?: ImmutableArtist.UNKNOWN
 
@@ -235,10 +243,11 @@ internal class MutableAudioItem(
                 ImmutableAlbum.UNKNOWN
             } else {
                 val albumArtistName = getFieldIfExisting(tag, FieldKey.ALBUM_ARTIST) ?: ""
-                val isCompilation = getFieldIfExisting(tag, FieldKey.IS_COMPILATION)?.let {
-                    if ("m4a" == extension) "1" == tag.getFirst(FieldKey.IS_COMPILATION)
-                    else "true" == tag.getFirst(FieldKey.IS_COMPILATION)
-                } ?: false
+                val isCompilation =
+                    getFieldIfExisting(tag, FieldKey.IS_COMPILATION)?.let {
+                        if ("m4a" == extension) "1" == tag.getFirst(FieldKey.IS_COMPILATION)
+                        else "true" == tag.getFirst(FieldKey.IS_COMPILATION)
+                    } ?: false
                 val year = getFieldIfExisting(tag, FieldKey.YEAR)?.toShortOrNull()?.takeIf { it > 0 }
                 val label = getFieldIfExisting(tag, FieldKey.GROUPING)?.let { ImmutableLabel(it) } as Label
                 ImmutableAlbum(albumName, ImmutableArtist(AudioUtils.beautifyArtistName(albumArtistName)), isCompilation, year, label)
@@ -263,8 +272,8 @@ internal class MutableAudioItem(
 
     private fun getCoverBytes(tag: Tag): ByteArray? = tag.artworkList.isNotEmpty().takeIf { it }?.let { tag.firstArtwork.binaryData }
 
-    override fun writeMetadata(): Job {
-        return ioScope.launch {
+    override fun writeMetadata(): Job =
+        ioScope.launch {
             logger.debug { "Writing metadata of $this to file '${path.toAbsolutePath()}'" }
             val audioFile = path.toFile()
             val audio = AudioFileIO.read(audioFile)
@@ -275,10 +284,9 @@ internal class MutableAudioItem(
             audio.commit()
             logger.debug { "Metadata of $this successfully written to file" }
         }
-    }
 
-    private fun createTagTag(format: String): Tag {
-        return when {
+    private fun createTagTag(format: String): Tag =
+        when {
             format.startsWith("Wav", ignoreCase = true) -> {
                 val wavTag = WavTag(WavOptions.READ_ID3_ONLY)
                 wavTag.iD3Tag = ID3v24Tag()
@@ -310,7 +318,6 @@ internal class MutableAudioItem(
         }.also {
             setTrackFieldsToTag(it)
         }
-    }
 
     private fun setTrackFieldsToTag(tag: Tag) {
         tag.setField(FieldKey.TITLE, title)
@@ -362,15 +369,15 @@ internal class MutableAudioItem(
         if (other == null || javaClass != other.javaClass) return false
         val that = other as MutableAudioItem
         return trackNumber == that.trackNumber &&
-                discNumber == that.discNumber &&
-                bpm == that.bpm &&
-                path == that.path &&
-                title == that.title &&
-                artist == that.artist &&
-                album == that.album &&
-                genre === that.genre &&
-                comments == that.comments &&
-                duration == that.duration
+            discNumber == that.discNumber &&
+            bpm == that.bpm &&
+            path == that.path &&
+            title == that.title &&
+            artist == that.artist &&
+            album == that.album &&
+            genre === that.genre &&
+            comments == that.comments &&
+            duration == that.duration
     }
 
     override fun hashCode() = Objects.hashCode(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration)

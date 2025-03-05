@@ -1,10 +1,12 @@
 package net.transgressoft.commons.music.audio
 
-import mu.KotlinLogging
 import net.transgressoft.commons.data.RegistryBase
-import net.transgressoft.commons.data.StandardCrudEvent.Type.*
-import java.util.*
-import java.util.stream.Collectors.*
+import net.transgressoft.commons.data.StandardCrudEvent.Type.CREATE
+import net.transgressoft.commons.data.StandardCrudEvent.Type.DELETE
+import net.transgressoft.commons.data.StandardCrudEvent.Type.UPDATE
+import mu.KotlinLogging
+import java.util.Optional
+import java.util.stream.Collectors.partitioningBy
 
 internal class ArtistCatalogVolatileRegistry<I>: RegistryBase<String, MutableArtistCatalog<I>>("ArtistCatalog") where I: ReactiveAudioItem<I> {
     private val log = KotlinLogging.logger {}
@@ -55,7 +57,8 @@ internal class ArtistCatalogVolatileRegistry<I>: RegistryBase<String, MutableArt
         } else if (audioItemOrderingChanged(updatedAudioItem, oldAudioItem)) {
             val artistCatalog =
                 entitiesById[updatedAudioItem.artistUniqueId()] ?: error(
-                    "Artist catalog for ${updatedAudioItem.artistUniqueId()} should exist already at this point")
+                    "Artist catalog for ${updatedAudioItem.artistUniqueId()} should exist already at this point"
+                )
             val artistCatalogBeforeUpdate = artistCatalog.copy()
             artistCatalog.mergeAudioItem(updatedAudioItem)
             putUpdateEvent(listOf(artistCatalog), listOf(artistCatalogBeforeUpdate))

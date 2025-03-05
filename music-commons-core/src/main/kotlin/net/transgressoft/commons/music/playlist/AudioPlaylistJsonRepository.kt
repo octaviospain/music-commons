@@ -1,6 +1,8 @@
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.data.StandardCrudEvent.Type.*
+import net.transgressoft.commons.data.StandardCrudEvent.Type.CREATE
+import net.transgressoft.commons.data.StandardCrudEvent.Type.DELETE
+import net.transgressoft.commons.data.StandardCrudEvent.Type.UPDATE
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemManipulationException
 import net.transgressoft.commons.music.audio.AudioRepository
@@ -46,9 +48,10 @@ class AudioPlaylistJsonRepository(
     private fun findDeserializedPlaylistsFromIds(
         playlists: Set<Int>,
         playlistsById: Map<Int, MutableAudioPlaylist>
-    ): List<MutableAudioPlaylist> = playlists.stream().map {
-        return@map playlistsById[it] ?: throw AudioItemManipulationException("AudioPlaylist with id $it not found during deserialization")
-    }.toList()
+    ): List<MutableAudioPlaylist> =
+        playlists.stream().map {
+            return@map playlistsById[it] ?: throw AudioItemManipulationException("AudioPlaylist with id $it not found during deserialization")
+        }.toList()
 
     override fun createPlaylist(name: String): MutableAudioPlaylist = createPlaylist(name, emptyList())
 
@@ -89,8 +92,9 @@ class AudioPlaylistJsonRepository(
     }
 }
 
-val playlistSerializerModule = SerializersModule {
-    polymorphic(ReactiveAudioPlaylist::class) {
-        subclass(MutableAudioPlaylistSerializer)
+val playlistSerializerModule =
+    SerializersModule {
+        polymorphic(ReactiveAudioPlaylist::class) {
+            subclass(MutableAudioPlaylistSerializer)
+        }
     }
-}

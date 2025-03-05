@@ -27,7 +27,7 @@ import kotlinx.serialization.Transient
 @Serializable
 class ScalableAudioWaveform(
     override val id: Int,
-    override val audioFilePath: Path,
+    override val audioFilePath: Path
 ) : ReactiveEntityBase<Int, AudioWaveform>(), AudioWaveform {
 
     /*
@@ -36,7 +36,7 @@ class ScalableAudioWaveform(
         Below 3.8, the waveform is too big and touches the limits of the canvas
         Above 4.2, the waveform can be too small and is not visible
         This anyway depends on each waveform, but this value is the one I found more balanced
-    */
+     */
     @Transient private val amplitudeCoefficient = 3.9
 
     init {
@@ -44,28 +44,29 @@ class ScalableAudioWaveform(
             "File extension '${audioFilePath.extension}' not supported"
         }
         check(audioFilePath.exists()) {
-            "File '${audioFilePath}' does not exist"
+            "File '$audioFilePath' does not exist"
         }
     }
 
     @Transient private var rawAudioPcm: IntArray? = null
 
-    private fun getRawAudioPcm(audioFilePath: Path) = try {
-        when (audioFilePath.extension) {
-            "wav" -> getRawPulseCodeModulation(audioFilePath.toFile())
-            "mp3", "m4a", "flac" -> {
-                transcodeToWav(audioFilePath).let { convertedFile ->
-                    getRawPulseCodeModulation(convertedFile).also {
-                        Files.delete(convertedFile.toPath())
+    private fun getRawAudioPcm(audioFilePath: Path) =
+        try {
+            when (audioFilePath.extension) {
+                "wav" -> getRawPulseCodeModulation(audioFilePath.toFile())
+                "mp3", "m4a", "flac" -> {
+                    transcodeToWav(audioFilePath).let { convertedFile ->
+                        getRawPulseCodeModulation(convertedFile).also {
+                            Files.delete(convertedFile.toPath())
+                        }
                     }
                 }
-            }
 
-            else -> throw AudioWaveformProcessingException("File extension '${audioFilePath.extension}' not supported")
+                else -> throw AudioWaveformProcessingException("File extension '${audioFilePath.extension}' not supported")
+            }
+        } catch (exception: Exception) {
+            throw AudioWaveformProcessingException("Error processing waveform", exception)
         }
-    } catch (exception: Exception) {
-        throw AudioWaveformProcessingException("Error processing waveform", exception)
-    }
 
     private fun transcodeToWav(path: Path): File {
         val fileName = path.fileName.toString()
@@ -73,15 +74,20 @@ class ScalableAudioWaveform(
         val copiedFile = File.createTempFile("original_$fileName", ".mp3")
         Files.copy(path, copiedFile.toPath(), StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING)
         try {
-            Encoder().encode(MultimediaObject(copiedFile), decodedFile, EncodingAttributes().apply {
-                setOutputFormat("wav")
-                setAudioAttributes(AudioAttributes().apply {
-                    setCodec("pcm_s16le")
-                    setBitRate(16000)
-                    setChannels(2)
-                    setSamplingRate(44100)
-                })
-            })
+            Encoder().encode(
+                MultimediaObject(copiedFile), decodedFile,
+                EncodingAttributes().apply {
+                    setOutputFormat("wav")
+                    setAudioAttributes(
+                        AudioAttributes().apply {
+                            setCodec("pcm_s16le")
+                            setBitRate(16000)
+                            setChannels(2)
+                            setSamplingRate(44100)
+                        }
+                    )
+                }
+            )
         } finally {
             Files.delete(copiedFile.toPath())
         }
@@ -151,21 +157,22 @@ class ScalableAudioWaveform(
 
         val amplitudes = amplitudes(width, height)
 
-        val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB).apply {
-            for (x in 0 until width) {
-                for (y in 0 until height) {
-                    val absoluteAmplitude = amplitudes[x].roundToInt()
-                    val y1: Int = (height - 2 * absoluteAmplitude) / 2
-                    val y2: Int = y1 + 2 * absoluteAmplitude
+        val bufferedImage =
+            BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB).apply {
+                for (x in 0 until width) {
+                    for (y in 0 until height) {
+                        val absoluteAmplitude = amplitudes[x].roundToInt()
+                        val y1: Int = (height - 2 * absoluteAmplitude) / 2
+                        val y2: Int = y1 + 2 * absoluteAmplitude
 
-                    if (y in y1..y2) {
-                        setRGB(x, y, waveformColor.rgb)
-                    } else {
-                        setRGB(x, y, backgroundColor.rgb)
+                        if (y in y1..y2) {
+                            setRGB(x, y, waveformColor.rgb)
+                        } else {
+                            setRGB(x, y, backgroundColor.rgb)
+                        }
                     }
                 }
             }
-        }
 
         withContext(Dispatchers.IO) {
             ImageIO.write(bufferedImage, "png", outputFile)
@@ -173,7 +180,7 @@ class ScalableAudioWaveform(
     }
 
     override val uniqueId: String
-        get() = "${id}-${rawAudioPcm.contentHashCode()}"
+        get() = "$id-${rawAudioPcm.contentHashCode()}"
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

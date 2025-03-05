@@ -22,14 +22,15 @@ internal class ArtistCatalogVolatileRegistryTest : BehaviorSpec({
 
         When("an audio item that has the same album artist and artist is added") {
             val expectedAlbum = ImmutableAlbum("Play", ImmutableArtist.of("Moby", CountryCode.US))
-            val audioItem = arbitraryAudioItem {
-                artist = ImmutableArtist.of("Moby", CountryCode.US)
-                album = expectedAlbum
-                trackNumber = 1
-                discNumber = 1
-            }.next().also {
-                registry.addAudioItems(listOf(it))
-            }
+            val audioItem =
+                arbitraryAudioItem {
+                    artist = ImmutableArtist.of("Moby", CountryCode.US)
+                    album = expectedAlbum
+                    trackNumber = 1
+                    discNumber = 1
+                }.next().also {
+                    registry.addAudioItems(listOf(it))
+                }
 
             then("the artist catalog should contain the artist and album with the audio item") {
                 registry.size() shouldBe 1

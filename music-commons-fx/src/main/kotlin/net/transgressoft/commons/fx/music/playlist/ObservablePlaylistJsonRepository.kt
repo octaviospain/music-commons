@@ -1,6 +1,8 @@
 package net.transgressoft.commons.fx.music.playlist
 
-import net.transgressoft.commons.data.StandardCrudEvent.Type.*
+import net.transgressoft.commons.data.StandardCrudEvent.Type.CREATE
+import net.transgressoft.commons.data.StandardCrudEvent.Type.DELETE
+import net.transgressoft.commons.data.StandardCrudEvent.Type.UPDATE
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonRepository
 import net.transgressoft.commons.music.audio.AudioItemManipulationException
@@ -9,7 +11,16 @@ import net.transgressoft.commons.music.playlist.AudioPlaylistRepositoryBase
 import net.transgressoft.commons.music.playlist.event.AudioPlaylistEventSubscriber
 import net.transgressoft.commons.toIds
 import com.google.common.base.Objects
-import javafx.beans.property.*
+import javafx.beans.property.ReadOnlyBooleanProperty
+import javafx.beans.property.ReadOnlyListProperty
+import javafx.beans.property.ReadOnlyObjectProperty
+import javafx.beans.property.ReadOnlySetProperty
+import javafx.beans.property.ReadOnlyStringProperty
+import javafx.beans.property.SimpleBooleanProperty
+import javafx.beans.property.SimpleListProperty
+import javafx.beans.property.SimpleObjectProperty
+import javafx.beans.property.SimpleSetProperty
+import javafx.beans.property.SimpleStringProperty
 import javafx.collections.FXCollections
 import javafx.collections.ObservableSet
 import javafx.scene.image.Image
@@ -67,8 +78,8 @@ class ObservablePlaylistJsonRepository private constructor(
                 synchronized(playlistsProperty) {
                     observablePlaylistsSet.removeAll(event.entities.values.toSet())
                 }
+            }
         }
-    }
 
     init {
         subscribe(playlistChangesSubscriber)
@@ -96,12 +107,12 @@ class ObservablePlaylistJsonRepository private constructor(
     ) = audioItemIds.map {
         audioItemRepository.findById(
             it
-        ).orElseThrow { AudioItemManipulationException("AudioItem with id $it not found during deserialization")}
-        }.toList()
+        ).orElseThrow { AudioItemManipulationException("AudioItem with id $it not found during deserialization") }
+    }.toList()
 
     private fun findDeserializedPlaylistsFromIds(
         playlists: Set<Int>,
-        playlistsById: Map<Int, ObservablePlaylist>,
+        playlistsById: Map<Int, ObservablePlaylist>
     ): List<ObservablePlaylist> =
         playlists.stream().map {
             return@map playlistsById[it] ?: throw AudioItemManipulationException("AudioPlaylist with id $it not found during deserialization")
@@ -190,7 +201,7 @@ class ObservablePlaylistJsonRepository private constructor(
                 buildList<ObservableAudioItem> {
                     addAll(audioItems)
                     addAll(playlists.stream().flatMap { it.audioItemsRecursive.stream() }.toList())
-                },
+                }
             )
         }
 
@@ -200,7 +211,7 @@ class ObservablePlaylistJsonRepository private constructor(
                 .filter { it.isPresent }
                 .findAny()
                 .ifPresentOrElse(
-                    {_coverImageProperty.set(it)},
+                    { _coverImageProperty.set(it) }
                 ) { _coverImageProperty.set(Optional.empty()) }
         }
 
@@ -224,9 +235,9 @@ class ObservablePlaylistJsonRepository private constructor(
                     buildList {
                         addAll(audioItems)
                         addAll(playlists.stream().flatMap { it.audioItemsRecursive.stream() }.toList())
-                },
-            ),
-        )
+                    }
+                )
+            )
 
         override val audioItemsRecursiveProperty: ReadOnlyListProperty<ObservableAudioItem> = _audioItemsRecursiveProperty
 
@@ -236,9 +247,8 @@ class ObservablePlaylistJsonRepository private constructor(
         private val _coverImageProperty =
             SimpleObjectProperty<Optional<Image>>(
                 this,
-                "coverImage",
-                this.audioItems.stream().filter { it.coverImageProperty.get().isPresent}.findFirst().map {it.coverImageProperty.get().get()},
-        )
+                "coverImage", this.audioItems.stream().filter { it.coverImageProperty.get().isPresent }.findFirst().map { it.coverImageProperty.get().get() }
+            )
 
         override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>> = _coverImageProperty
 
@@ -328,7 +338,8 @@ class ObservablePlaylistJsonRepository private constructor(
             }
         }
 
-        override fun compareTo(other: AudioPlaylist<ObservableAudioItem>): Int = if (nameProperty.get() == other.name) {
+        override fun compareTo(other: AudioPlaylist<ObservableAudioItem>): Int =
+            if (nameProperty.get() == other.name) {
                 val size = playlists.size + audioItemsRecursive.size
                 val objectSize = other.playlists.size + other.audioItemsRecursive.size
                 size - objectSize
@@ -362,6 +373,7 @@ class ObservablePlaylistJsonRepository private constructor(
     }
 }
 
-val observablePlaylistSerializersModule = SerializersModule {
-    polymorphic(ObservablePlaylist::class, ObservablePlaylistSerializer)
-}
+val observablePlaylistSerializersModule =
+    SerializersModule {
+        polymorphic(ObservablePlaylist::class, ObservablePlaylistSerializer)
+    }

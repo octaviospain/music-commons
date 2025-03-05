@@ -10,7 +10,7 @@ open class ImmutableAlbum(
     override val albumArtist: Artist,
     override val isCompilation: Boolean = false,
     override val year: Short? = null,
-    override val label: Label = ImmutableLabel.UNKNOWN,
+    override val label: Label = ImmutableLabel.UNKNOWN
 ) : Album {
 
     override fun compareTo(other: Album): Int {

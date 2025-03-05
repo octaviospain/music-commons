@@ -9,7 +9,14 @@ import java.util.concurrent.Flow
 
 interface AudioItemPlayer : Flow.Publisher<AudioItemPlayerEvent> {
     enum class Status {
-        UNKNOWN, READY, PAUSED, PLAYING, STOPPED, STALLED, HALTED, DISPOSED
+        UNKNOWN,
+        READY,
+        PAUSED,
+        PLAYING,
+        STOPPED,
+        STALLED,
+        HALTED,
+        DISPOSED
     }
 
     val totalDuration: Duration
@@ -18,11 +25,18 @@ interface AudioItemPlayer : Flow.Publisher<AudioItemPlayerEvent> {
     val currentTimeProperty: ReadOnlyObjectProperty<Duration>
 
     fun play(audioItem: ReactiveAudioItem<*>)
+
     fun pause()
+
     fun resume()
+
     fun stop()
+
     fun status(): Status
+
     fun setVolume(value: Double)
+
     fun seek(milliSeconds: Double)
+
     fun onFinish(value: Runnable)
 }

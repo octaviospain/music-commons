@@ -15,5 +15,5 @@ open class AudioItemEventSubscriber<I: ReactiveAudioItem<I>>(
                 append(", source=${it.source}")
             }
             append(")")
-    }
+        }
 }

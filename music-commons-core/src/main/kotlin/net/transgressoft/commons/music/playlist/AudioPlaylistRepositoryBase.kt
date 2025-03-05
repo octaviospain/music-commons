@@ -3,7 +3,7 @@ package net.transgressoft.commons.music.playlist
 import net.transgressoft.commons.ReactiveEntityBase
 import net.transgressoft.commons.TransEventSubscriber
 import net.transgressoft.commons.data.CrudEvent
-import net.transgressoft.commons.data.StandardCrudEvent.Type.*
+import net.transgressoft.commons.data.StandardCrudEvent.Type.DELETE
 import net.transgressoft.commons.data.json.GenericJsonFileRepository
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
@@ -13,7 +13,7 @@ import org.jetbrains.kotlin.com.google.common.collect.MultimapBuilder
 import java.io.File
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.stream.Collectors.*
+import java.util.stream.Collectors.partitioningBy
 import kotlin.properties.Delegates.observable
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
@@ -31,8 +31,8 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
             include(serializersModule)
             include(playlistSerializerModule)
         },
-    name
-),
+        name
+    ),
     AudioPlaylistRepository<I, P> {
     private val logger = KotlinLogging.logger {}
 
@@ -82,7 +82,7 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
                     }
                     entitiesById[entity.id] = entity
                     return@partitioningBy entityBefore == null
-                },
+                }
             )
 
         addedAndReplaced[true]?.let {
@@ -102,7 +102,7 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
     }
 
     override fun remove(entity: P): Boolean =
-        super.remove(entity).also {removed ->
+        super.remove(entity).also { removed ->
             if (removed) {
                 removeFromPlaylistsHierarchy(entity)
             }
@@ -118,7 +118,7 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
     }
 
     override fun removeAll(entities: Set<P>): Boolean =
-        super.removeAll(entities).also {removed ->
+        super.removeAll(entities).also { removed ->
             if (removed) {
                 entities.forEach(::removeFromPlaylistsHierarchy)
             }
@@ -138,7 +138,7 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
 
     override fun movePlaylist(
         playlistNameToMove: String,
-        destinationPlaylistName: String,
+        destinationPlaylistName: String
     ) {
         val playlistToMove = findByName(playlistNameToMove)
         val destinationPlaylist = findByName(destinationPlaylistName)
@@ -158,15 +158,17 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
     override fun addAudioItemsToPlaylist(
         audioItems: Collection<I>,
         playlistName: String
-    ): Boolean = findByName(playlistName).let {
+    ): Boolean =
+        findByName(playlistName).let {
             require(it.isPresent) { "Playlist '$playlistName' does not exist" }
             it.get().addAudioItems(audioItems)
-    }
+        }
 
     override fun removeAudioItemsFromPlaylist(
         audioItems: Collection<I>,
         playlistName: String
-    ): Boolean = findByName(playlistName).let {
+    ): Boolean =
+        findByName(playlistName).let {
             require(it.isPresent) { "Playlist '$playlistName' does not exist" }
             it.get().removeAudioItems(audioItems)
         }
@@ -176,10 +178,11 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
     override fun removeAudioItemsFromPlaylist(
         audioItemIds: Collection<Int>,
         playlistName: String
-    ): Boolean = findByName(playlistName).let {
+    ): Boolean =
+        findByName(playlistName).let {
             require(it.isPresent) { "Playlist '$playlistName' does not exist" }
             it.get().removeAudioItems(audioItemIds)
-    }
+        }
 
     override fun addPlaylistsToDirectory(
         playlistsToAdd: Set<P>,
@@ -190,8 +193,7 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
             it.get().addPlaylists(playlistsToAdd).also { added ->
                 if (added) {
                     playlistsHierarchyMultiMap.putAll(
-                        it.get().uniqueId,
-                        playlistsToAdd,
+                        it.get().uniqueId, playlistsToAdd
                     )
                 }
             }
@@ -202,21 +204,21 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
     override fun addPlaylistsToDirectory(
         playlistNamesToAdd: Set<String>,
         directoryName: String
-    ): Boolean = findByName(directoryName).let {
+    ): Boolean =
+        findByName(directoryName).let {
             require(it.isPresent) { "Directory '$directoryName' does not exist" }
-        playlistNamesToAdd.stream().map { playlistName ->
-            findByName(playlistName).orElseThrow { IllegalArgumentException("Playlist '$playlistName' does not exist") }
-        }.toList().let { playlistsToAdd ->
-            it.get().addPlaylists(playlistsToAdd).also { added ->
-                if (added) {
-                    playlistsHierarchyMultiMap.putAll(
-                        it.get().uniqueId,
-                        playlistsToAdd
-                    )
+            playlistNamesToAdd.stream().map { playlistName ->
+                findByName(playlistName).orElseThrow { IllegalArgumentException("Playlist '$playlistName' does not exist") }
+            }.toList().let { playlistsToAdd ->
+                it.get().addPlaylists(playlistsToAdd).also { added ->
+                    if (added) {
+                        playlistsHierarchyMultiMap.putAll(
+                            it.get().uniqueId, playlistsToAdd
+                        )
+                    }
                 }
             }
         }
-    }
 
     override fun removePlaylistsFromDirectory(
         playlistsToRemove: Set<P>,
@@ -262,14 +264,14 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
 
     protected fun putAllPlaylistInHierarchy(
         parentPlaylistUniqueId: String,
-        playlist: Collection<P>,
+        playlist: Collection<P>
     ) {
         playlistsHierarchyMultiMap.putAll(parentPlaylistUniqueId, playlist)
     }
 
     protected fun removePlaylistFromHierarchy(
         parentPlaylistUniqueId: String,
-        playlist: P,
+        playlist: P
     ) {
         playlistsHierarchyMultiMap.remove(parentPlaylistUniqueId, playlist)
     }

@@ -28,50 +28,52 @@ import java.time.LocalDateTime
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.serialization.json.Json
 
-internal const val expectedTitle = "Yesterday"
-internal const val expectedArtistName = "The Beatles"
+internal const val EXPECTED_TITLE = "Yesterday"
+internal const val EXPECTED_ARTIST_NAME = "The Beatles"
 internal val expectedLabel: Label = ImmutableLabel("EMI", CountryCode.US)
-internal const val expectedAlbumName = "Help!"
-internal const val expectedAlbumArtistName = "The Beatles Band"
-internal const val expectedIsCompilation = true
-internal const val expectedYear: Short = 1965
-internal const val expectedBpm = 120f
-internal const val expectedTrackNumber: Short = 13
-internal const val expectedDiscNumber: Short = 1
-internal const val expectedComments = "Best song ever!"
+internal const val EXPECTED_ALBUM_NAME = "Help!"
+internal const val EXPECTED_ALBUM_ARTIST_NAME = "The Beatles Band"
+internal const val EXPECTED_IS_COMPILATION = true
+internal const val EXPECTED_YEAR: Short = 1965
+internal const val EXPECTED_BPM = 120f
+internal const val EXPECTED_TRACK_NUMBER: Short = 13
+internal const val EXPECTED_DISC_NUMBER: Short = 1
+internal const val EXPECTED_COMMENTS = "Best song ever!"
 internal val expectedGenre = Genre.ROCK
-internal const val expectedEncoder = "transgressoft"
+internal const val EXPECTED_ENCODER = "transgressoft"
 internal val expectedDateOfCreation = LocalDateTime.now()
-internal val expectedArtist = ImmutableArtist(expectedArtistName, CountryCode.UK)
-internal val expectedAlbumArtist = ImmutableArtist(expectedAlbumArtistName, CountryCode.UK)
-internal val expectedAlbum = ImmutableAlbum(expectedAlbumName, expectedAlbumArtist, expectedIsCompilation, expectedYear, expectedLabel)
+internal val expectedArtist = ImmutableArtist(EXPECTED_ARTIST_NAME, CountryCode.UK)
+internal val expectedAlbumArtist = ImmutableArtist(EXPECTED_ALBUM_ARTIST_NAME, CountryCode.UK)
+internal val expectedAlbum = ImmutableAlbum(EXPECTED_ALBUM_NAME, expectedAlbumArtist, EXPECTED_IS_COMPILATION, EXPECTED_YEAR, expectedLabel)
 
 internal class MutableAudioItemTest : FunSpec({
 
-    val json = Json {
-        serializersModule = audioItemSerializerModule
-        prettyPrint = true
-    }
+    val json =
+        Json {
+            serializersModule = audioItemSerializerModule
+            prettyPrint = true
+        }
 
     fun AudioItemTestAttributes.setExpectedAttributes() {
-        title = expectedTitle
+        title = EXPECTED_TITLE
         artist = expectedArtist
         album = expectedAlbum
-        bpm = expectedBpm
-        trackNumber = expectedTrackNumber
-        discNumber = expectedDiscNumber
-        comments = expectedComments
+        bpm = EXPECTED_BPM
+        trackNumber = EXPECTED_TRACK_NUMBER
+        discNumber = EXPECTED_DISC_NUMBER
+        comments = EXPECTED_COMMENTS
         genre = expectedGenre
-        encoder = expectedEncoder
+        encoder = EXPECTED_ENCODER
         dateOfCreation = expectedDateOfCreation
     }
 
-    val list = listOf(
-        arbitraryMp3File(AudioItemTestAttributes::setExpectedAttributes).next(),
-        arbitraryM4aFile(AudioItemTestAttributes::setExpectedAttributes).next(),
-        arbitraryWavFile(AudioItemTestAttributes::setExpectedAttributes).next(),
-        arbitraryFlacFile(AudioItemTestAttributes::setExpectedAttributes).next()
-    ).exhaustive()
+    val list =
+        listOf(
+            arbitraryMp3File(AudioItemTestAttributes::setExpectedAttributes).next(),
+            arbitraryM4aFile(AudioItemTestAttributes::setExpectedAttributes).next(),
+            arbitraryWavFile(AudioItemTestAttributes::setExpectedAttributes).next(),
+            arbitraryFlacFile(AudioItemTestAttributes::setExpectedAttributes).next()
+        ).exhaustive()
 
     context("should create an audio item, that is serializable to json, and write changes to metadata") {
         checkAll(list) { testAudioFile ->
@@ -84,17 +86,18 @@ internal class MutableAudioItemTest : FunSpec({
                 expectedBitRate = getExpectedBitRate(it.audioHeader)
             }
 
-            val audioItem = MutableAudioItem(testAudioFile.toPath()).also { audioItem ->
-                audioItem.path shouldBe testAudioFile.toPath()
-                audioItem.fileName shouldBe testAudioFile.toPath().fileName.toString()
-                audioItem.length shouldBe testAudioFile.length()
-                audioItem.extension shouldBe testAudioFile.extension
-                audioItem.duration shouldBe expectedDuration
-                audioItem.bitRate shouldBe expectedBitRate
-                audioItem.encoding shouldBe expectedEncoding
-                audioItem.playCount shouldBe 0
-                audioItem.should(::matchAudioItemProperties)
-            }
+            val audioItem =
+                MutableAudioItem(testAudioFile.toPath()).also { audioItem ->
+                    audioItem.path shouldBe testAudioFile.toPath()
+                    audioItem.fileName shouldBe testAudioFile.toPath().fileName.toString()
+                    audioItem.length shouldBe testAudioFile.length()
+                    audioItem.extension shouldBe testAudioFile.extension
+                    audioItem.duration shouldBe expectedDuration
+                    audioItem.bitRate shouldBe expectedBitRate
+                    audioItem.encoding shouldBe expectedEncoding
+                    audioItem.playCount shouldBe 0
+                    audioItem.should(::matchAudioItemProperties)
+                }
 
             json.encodeToString(AudioItemSerializer, audioItem).let {
                 it.shouldEqualJson(audioItem.asJsonValue())
@@ -118,13 +121,16 @@ internal class MutableAudioItemTest : FunSpec({
                     loadedAudioItem.title shouldBe audioItem.title
                     loadedAudioItem.duration shouldBe audioItem.duration
                     loadedAudioItem.bitRate shouldBe audioItem.bitRate
+                    // album country code is not updated because there is no ID3 tag for it
                     loadedAudioItem.album.albumArtist.name shouldBe audioItem.album.albumArtist.name
-                    loadedAudioItem.album.albumArtist.countryCode shouldBe CountryCode.UNDEFINED    // album country code is not updated because there is no ID3 tag for it
+                    loadedAudioItem.album.albumArtist.countryCode shouldBe CountryCode.UNDEFINED
                     loadedAudioItem.album.isCompilation shouldBe audioItem.album.isCompilation
+                    // label country code is not updated because there is no ID3 tag for it
                     loadedAudioItem.album.label.name shouldBe audioItem.album.label.name
-                    loadedAudioItem.album.label.countryCode shouldBe CountryCode.UNDEFINED  // label country code is not updated because there is no ID3 tag for it
+                    loadedAudioItem.album.label.countryCode shouldBe CountryCode.UNDEFINED
+                    // artist country code is saved into COUNTRY ID3 tag
                     loadedAudioItem.artist.name shouldBe audioItem.artist.name
-                    loadedAudioItem.artist.countryCode shouldBe audioItem.artist.countryCode // artist country code is saved into COUNTRY ID3 tag
+                    loadedAudioItem.artist.countryCode shouldBe audioItem.artist.countryCode
                     if (testAudioFile.extension == "m4a") {
                         loadedAudioItem.bpm shouldBe audioItem.bpm?.toInt()?.toFloat()
                     } else {
@@ -175,31 +181,31 @@ fun matchAudioItemProperties(audioItem: AudioItem) {
     audioItem.id shouldBe UNASSIGNED_ID
     audioItem.dateOfCreation shouldBeAfter expectedDateOfCreation
     audioItem.lastDateModified shouldBe audioItem.dateOfCreation
-    audioItem.title shouldBe expectedTitle
-    audioItem.album.name shouldBe expectedAlbumName
-    audioItem.album.albumArtist.name shouldBe expectedAlbumArtistName
+    audioItem.title shouldBe EXPECTED_TITLE
+    audioItem.album.name shouldBe EXPECTED_ALBUM_NAME
+    audioItem.album.albumArtist.name shouldBe EXPECTED_ALBUM_ARTIST_NAME
     audioItem.album.albumArtist.countryCode shouldBe CountryCode.UNDEFINED
     audioItem.album.label.name shouldBe expectedLabel.name
     audioItem.album.label.countryCode shouldBe CountryCode.UNDEFINED
     audioItem.artist shouldBe expectedArtist
-    audioItem.bpm shouldBe expectedBpm
-    audioItem.trackNumber shouldBe expectedTrackNumber
-    audioItem.discNumber shouldBe expectedDiscNumber
-    audioItem.comments shouldBe expectedComments
+    audioItem.bpm shouldBe EXPECTED_BPM
+    audioItem.trackNumber shouldBe EXPECTED_TRACK_NUMBER
+    audioItem.discNumber shouldBe EXPECTED_DISC_NUMBER
+    audioItem.comments shouldBe EXPECTED_COMMENTS
     audioItem.genre shouldBe expectedGenre
-    audioItem.encoder shouldBe expectedEncoder
-    audioItem.uniqueId shouldBe buildString {
-        append(audioItem.path.fileName.toString().replace(' ', '_'))
-        append('-')
-        append(audioItem.title)
-        append('-')
-        append(audioItem.duration.toSeconds())
-        append('-')
-        append(audioItem.bitRate)
-    }
-    audioItem.artistsInvolved shouldContainExactly AudioUtils.getArtistsNamesInvolved(
-        audioItem.title,
-        audioItem.artist.name,
-        audioItem.album.albumArtist.name
-    )
+    audioItem.encoder shouldBe EXPECTED_ENCODER
+    audioItem.uniqueId shouldBe
+        buildString {
+            append(audioItem.path.fileName.toString().replace(' ', '_'))
+            append('-')
+            append(audioItem.title)
+            append('-')
+            append(audioItem.duration.toSeconds())
+            append('-')
+            append(audioItem.bitRate)
+        }
+    audioItem.artistsInvolved shouldContainExactly
+        AudioUtils.getArtistsNamesInvolved(
+            audioItem.title, audioItem.artist.name, audioItem.album.albumArtist.name
+        )
 }

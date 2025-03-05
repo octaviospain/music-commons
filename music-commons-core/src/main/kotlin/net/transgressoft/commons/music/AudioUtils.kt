@@ -9,36 +9,34 @@ import java.util.regex.Pattern
 
 object AudioUtils {
 
-    fun <I : ReactiveAudioItem<I>> audioItemTrackDiscNumberComparator() = Comparator<I> { audioItem1, audioItem2 ->
-        when {
-            audioItem1.discNumber == null && audioItem2.discNumber == null -> {
-                // Both discNumbers are null, compare by trackNumber
-                when {
-                    audioItem1.trackNumber == null && audioItem2.trackNumber == null -> 0
-                    audioItem1.trackNumber == null -> 1
-                    audioItem2.trackNumber == null -> -1
-                    else -> audioItem1.trackNumber!! - audioItem2.trackNumber!!
-                }
-            }
-            audioItem1.discNumber == null -> 1
-            audioItem2.discNumber == null -> -1
-            else -> {
-                // Compare non-null discNumbers
-                if (audioItem1.discNumber == audioItem2.discNumber) {
-                    // If discNumbers are equal, compare by trackNumber
+    fun <I: ReactiveAudioItem<I>> audioItemTrackDiscNumberComparator() =
+        Comparator<I> { audioItem1, audioItem2 ->
+            when {
+                audioItem1.discNumber == null && audioItem2.discNumber == null -> { // Both discNumbers are null, compare by trackNumber
                     when {
                         audioItem1.trackNumber == null && audioItem2.trackNumber == null -> 0
                         audioItem1.trackNumber == null -> 1
                         audioItem2.trackNumber == null -> -1
                         else -> audioItem1.trackNumber!! - audioItem2.trackNumber!!
                     }
-                } else {
-                    // Different discNumbers, compare by discNumber
-                    audioItem1.discNumber!! - audioItem2.discNumber!!
+                }
+
+                audioItem1.discNumber == null -> 1
+                audioItem2.discNumber == null -> -1
+                else -> { // Compare non-null discNumbers
+                    if (audioItem1.discNumber == audioItem2.discNumber) { // If discNumbers are equal, compare by trackNumber
+                        when {
+                            audioItem1.trackNumber == null && audioItem2.trackNumber == null -> 0
+                            audioItem1.trackNumber == null -> 1
+                            audioItem2.trackNumber == null -> -1
+                            else -> audioItem1.trackNumber!! - audioItem2.trackNumber!!
+                        }
+                    } else { // Different discNumbers, compare by discNumber
+                        audioItem1.discNumber!! - audioItem2.discNumber!!
+                    }
                 }
             }
         }
-    }
 
     /**********************************************************************************
      *  Function to get artist names in the title, artist field and album artist field
@@ -51,14 +49,15 @@ object AudioUtils {
     private val hasFeaturing = Pattern.compile("[(\\[|\\s](?i)(featuring) (.+)")
     private val startsWithWith = Pattern.compile("[(|\\[](?i)(with) (.+)[)|\\]]")
 
-    private val artistsRegexMap: Map<Pattern, Pattern> = buildMap {
-        set(Pattern.compile(" (?i)(remix)"), endsWithRemix)
-        set(Pattern.compile("(?i)(remix)(\\s+)(?i)(by) "), startsWithRemixBy)
-        set(Pattern.compile("(?i)(ft) "), hasFt)
-        set(Pattern.compile("(?i)(feat) "), hasFeat)
-        set(Pattern.compile("(?i)(featuring) "), hasFeaturing)
-        set(Pattern.compile("(?i)(with) "), startsWithWith)
-    }
+    private val artistsRegexMap: Map<Pattern, Pattern> =
+        buildMap {
+            set(Pattern.compile(" (?i)(remix)"), endsWithRemix)
+            set(Pattern.compile("(?i)(remix)(\\s+)(?i)(by) "), startsWithRemixBy)
+            set(Pattern.compile("(?i)(ft) "), hasFt)
+            set(Pattern.compile("(?i)(feat) "), hasFeat)
+            set(Pattern.compile("(?i)(featuring) "), hasFeaturing)
+            set(Pattern.compile("(?i)(with) "), startsWithWith)
+        }
 
     /**
      * Returns the names of the artists that are involved in the fields of an [AudioItem],
@@ -86,10 +85,7 @@ object AudioUtils {
      */
     fun getArtistsNamesInvolved(title: String, artistName: String, albumArtistName: String): Set<String> {
         val artistsInvolved: MutableSet<String> = mutableSetOf()
-        val albumArtistNames = Splitter.on(CharMatcher.anyOf(",&"))
-            .trimResults()
-            .omitEmptyStrings()
-            .splitToList(albumArtistName)
+        val albumArtistNames = Splitter.on(CharMatcher.anyOf(",&")).trimResults().omitEmptyStrings().splitToList(albumArtistName)
 
         artistsInvolved.addAll(albumArtistNames)
         artistsInvolved.addAll(getNamesInArtist(artistName))
@@ -118,7 +114,9 @@ object AudioUtils {
      * @return A Set with the artists found
      */
     private fun getNamesInArtist(artistName: String): Set<String> =
-        artistName.split("((\\s+(?i)(versus)\\s+)|(\\s+(?i)(vs)(\\.|\\s+))|(\\s+(?i)(feat)(\\.|\\s+))|(\\s+(?i)(ft)(\\.|\\s+))|(\\s*,\\s*)|(\\s+&\\s+))".toRegex())
+        artistName.split(
+            "((\\s+(?i)(versus)\\s+)|(\\s+(?i)(vs)(\\.|\\s+))|(\\s+(?i)(feat)(\\.|\\s+))|(\\s+(?i)(ft)(\\.|\\s+))|(\\s*,\\s*)|(\\s+&\\s+))".toRegex()
+        )
             .map { it.trim().replaceFirstChar(Char::titlecase) }
             .map { it.split(" ").joinToString(" ") { itt -> itt.replaceFirstChar(Char::titlecase) } }
             .map { beautifyArtistName(it) }
@@ -145,11 +143,9 @@ object AudioUtils {
         for ((keyPattern, value) in artistsRegexMap) {
             val matcher = value.matcher(title)
             if (matcher.find()) {
-                val insideParenthesisString = title.substring(matcher.start())
-                    .replace("[(\\[|)\\]]".toRegex(), "")
-                    .replace(keyPattern.pattern().toRegex(), "")
-                    .replace("\\s(?i)(vs)\\s".toRegex(), "&")
-                    .replace("\\s+".toRegex(), " ")
+                val insideParenthesisString =
+                    title.substring(matcher.start()).replace("[(\\[|)\\]]".toRegex(), "").replace(keyPattern.pattern().toRegex(), "")
+                        .replace("\\s(?i)(vs)\\s".toRegex(), "&").replace("\\s+".toRegex(), " ")
 
                 artistsInsideParenthesis.addAll(
                     Splitter.on(CharMatcher.anyOf("&,"))
@@ -165,10 +161,9 @@ object AudioUtils {
             .toSet()
     }
 
-    fun beautifyArtistName(name: String): String {
-        return name.replaceFirstChar(Char::titlecase)
+    fun beautifyArtistName(name: String): String =
+        name.replaceFirstChar(Char::titlecase)
             .replace("\\s+".toRegex(), " ")
             .replace(" (?i)(vs)(\\.|\\s)".toRegex(), " vs ")
             .replace(" (?i)(versus) ".toRegex(), " versus ")
-    }
 }

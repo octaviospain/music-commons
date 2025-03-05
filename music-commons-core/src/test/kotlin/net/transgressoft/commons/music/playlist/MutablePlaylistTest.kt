@@ -30,7 +30,7 @@ internal class MutablePlaylistTest : StringSpec({
     }
 
     "Mutable audio playlist attributes and operations" {
-        val playlist1 = audioPlaylistRepository.createPlaylist( "Playlist1")
+        val playlist1 = audioPlaylistRepository.createPlaylist("Playlist1")
 
         playlist1.id shouldBe 1
         playlist1.isDirectory shouldBe false
@@ -44,19 +44,21 @@ internal class MutablePlaylistTest : StringSpec({
         playlist1.name shouldBe "Modified playlist1"
         playlist1.uniqueId shouldBe "Modified playlist1"
 
-        val audioItems = Arb.list(arbitraryAudioItem, 4..4).next().also {
-            playlist1.addAudioItems(it)
-        }
+        val audioItems =
+            Arb.list(arbitraryAudioItem, 4..4).next().also {
+                playlist1.addAudioItems(it)
+            }
 
         playlist1.audioItems.size shouldBe 4
         playlist1.audioItemsAllMatch { it.title == "Song title" } shouldBe false
 
-        val customAudioItem = arbitraryAudioItem { title = "Song title" }.next().also {
-            playlist1.addAudioItems(listOf(it))
-        }
+        val customAudioItem =
+            arbitraryAudioItem { title = "Song title" }.next().also {
+                playlist1.addAudioItems(listOf(it))
+            }
 
         playlist1.audioItems.size shouldBe 5
-        playlist1.audioItemsAnyMatch { it.title == "Song title"} shouldBe true
+        playlist1.audioItemsAnyMatch { it.title == "Song title" } shouldBe true
         playlist1.removeAudioItem(audioItems[0].id)
         playlist1.removeAudioItem(audioItems[1])
         playlist1.removeAudioItems(audioItems)
@@ -87,10 +89,10 @@ internal class MutablePlaylistTest : StringSpec({
         directory1.toString() shouldBe "MutablePlaylist(id=1, isDirectory=true, name='Directory1', audioItems=[], playlists=[])"
 
         val audioItems = Arb.list(arbitraryAudioItem, 5..5).next()
-        val p1 = audioPlaylistRepository.createPlaylistDirectory( "p1", audioItems = audioItems)
+        val p1 = audioPlaylistRepository.createPlaylistDirectory("p1", audioItems = audioItems)
         val p2 = audioPlaylistRepository.createPlaylistDirectory("p2")
         val d1AudioItem = arbitraryAudioItem { title = "One" }.next()
-        val d1 = audioPlaylistRepository.createPlaylistDirectory( "d1", audioItems = listOf(d1AudioItem))
+        val d1 = audioPlaylistRepository.createPlaylistDirectory("d1", audioItems = listOf(d1AudioItem))
 
         directory1.addPlaylists(listOf(p1, p2, d1))
         directory1.playlists.size shouldBe 3
@@ -135,8 +137,8 @@ internal class MutablePlaylistTest : StringSpec({
 
         tempDirectory.toFile().let {
             it.list()?.size shouldBe 2
-            it.listFiles {_, name -> name.equals("${playlist.name}.m3u") }?.size shouldBe 1
-            it.listFiles {_, name -> name.equals(playlist.name) }?.size shouldBe 1
+            it.listFiles { _, name -> name.equals("${playlist.name}.m3u") }?.size shouldBe 1
+            it.listFiles { _, name -> name.equals(playlist.name) }?.size shouldBe 1
         }
 
         val aNightAtTheOperaPlaylistPath = tempDirectory.resolve(playlist.name).resolve("${aNightAtTheOperaPlaylist.name}.m3u")
@@ -149,19 +151,24 @@ internal class MutablePlaylistTest : StringSpec({
 })
 
 internal fun randomQueenAudioItems(tempDirectory: Path, albumName: String = "", size: Int) =
-    audioPlaylistRepository.createPlaylist(albumName, buildList {
-        for (i in 0 until size) {
-            val song = "Song $i - $albumName"
-            val artistName = "Queen"
-            val songDuration = Duration.ofSeconds((60 + i).toLong())
-            add(arbitraryAudioItem {
-                title = song
-                artist = AudioItemTestUtil.arbitraryArtist(givenName = artistName).next()
-                path = tempDirectory.resolve("$title.mp3")
-                duration = songDuration
-                }.next())
+    audioPlaylistRepository.createPlaylist(
+        albumName,
+        buildList {
+            for (i in 0 until size) {
+                val song = "Song $i - $albumName"
+                val artistName = "Queen"
+                val songDuration = Duration.ofSeconds((60 + i).toLong())
+                add(
+                    arbitraryAudioItem {
+                        title = song
+                        artist = AudioItemTestUtil.arbitraryArtist(givenName = artistName).next()
+                        path = tempDirectory.resolve("$title.mp3")
+                        duration = songDuration
+                    }.next()
+                )
+            }
         }
-    })
+    )
 
 internal fun assertPlaylistM3uFile(m3uFilePath: Path, playlist: AudioPlaylist<AudioItem>) {
     Scanner(m3uFilePath).use { scanner ->

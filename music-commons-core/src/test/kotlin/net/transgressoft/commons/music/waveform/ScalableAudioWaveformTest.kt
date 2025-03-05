@@ -35,9 +35,10 @@ internal class ScalableAudioWaveformTest : FunSpec({
             pngTempFile.extension shouldBe "png"
             pngTempFile.length() shouldNotBe null
 
-            val bufferedImage = withContext(Dispatchers.IO) {
-                ImageIO.read(pngTempFile)
-            }
+            val bufferedImage =
+                withContext(Dispatchers.IO) {
+                    ImageIO.read(pngTempFile)
+                }
             bufferedImage.width shouldBe 780
             bufferedImage.height shouldBe 335
         }

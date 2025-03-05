@@ -81,13 +81,14 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
 
     "Creating repository from existing json file without AudioRepository throws Exception" {
         val audioItem = arbitraryAudioItem { id = 453374921 }.next()
-        val playlist = mockk<ObservablePlaylist> {
-            every { id } returns 1
-            every { isDirectory } returns true
-            every { name } returns "Rock"
-            every { audioItems } returns listOf(audioItem)
-            every { playlists } returns emptySet()
-        }
+        val playlist =
+            mockk<ObservablePlaylist> {
+                every { id } returns 1
+                every { isDirectory } returns true
+                every { name } returns "Rock"
+                every { audioItems } returns listOf(audioItem)
+                every { playlists } returns emptySet()
+            }
         jsonFile.writeText(listOf(playlist).asJsonKeyValues())
 
         shouldThrowMessage("An AudioItemRepository is required when loading from a non-empty json file") {
@@ -97,23 +98,27 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
 
     "Existing repository loads from file" {
         val audioItem = arbitraryAudioItem { id = 453374921 }.next()
-        val playlist = mockk<ObservablePlaylist> {
-            every { id } returns 1
-            every { isDirectory } returns true
-            every { name } returns "Rock"
-            every { audioItems } returns listOf(audioItem)
-            every { playlists } returns emptySet()
-        }
+        val playlist =
+            mockk<ObservablePlaylist> {
+                every { id } returns 1
+                every { isDirectory } returns true
+                every { name } returns "Rock"
+                every { audioItems } returns listOf(audioItem)
+                every { playlists } returns emptySet()
+            }
         jsonFile.writeText(listOf(playlist).asJsonKeyValues())
 
-        val audioItemRepository = mockk<ObservableAudioItemJsonRepository> {
-            every { findById(eq(453374921)) } returns Optional.of(audioItem)
-        }
+        val audioItemRepository =
+            mockk<ObservableAudioItemJsonRepository> {
+                every { findById(eq(453374921)) } returns Optional.of(audioItem)
+            }
 
         observableAudioPlaylistRepository = ObservablePlaylistJsonRepository.loadExisting("Playlists", jsonFile, audioItemRepository)
 
         observableAudioPlaylistRepository.size() shouldBe 1
-        observableAudioPlaylistRepository.contains { it.id == 1 && it.isDirectory && it.name == "Rock" && it.audioItems == listOf(audioItem) && it.playlists.isEmpty() } shouldBe true
+        observableAudioPlaylistRepository.contains {
+            it.id == 1 && it.isDirectory && it.name == "Rock" && it.audioItems == listOf(audioItem) && it.playlists.isEmpty()
+        } shouldBe true
         eventually(100.milliseconds) {
             observableAudioPlaylistRepository.playlistsProperty should {
                 it.size shouldBe 1
@@ -138,10 +143,17 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
     // │  └──60s
     // └──This weeks' favorites songs
     "Mixed playlists hierarchy structure and audio items search" {
-        val rockAudioItems = listOf(
-            arbitraryAudioItem { title = "50s Rock hit 1"; duration = Duration.ofSeconds(60) }.next(),
-            arbitraryAudioItem { title = "50s Rock hit 2 my fav"; duration = Duration.ofSeconds(230) }.next()
-        )
+        val rockAudioItems =
+            listOf(
+                arbitraryAudioItem {
+                    title = "50s Rock hit 1"
+                    duration = Duration.ofSeconds(60)
+                }.next(),
+                arbitraryAudioItem {
+                    title = "50s Rock hit 2 my fav"
+                    duration = Duration.ofSeconds(230)
+                }.next()
+            )
         val rock = observableAudioPlaylistRepository.createPlaylist("Rock", rockAudioItems)
 
         observableAudioPlaylistRepository.findByName(rock.name) shouldBePresent { it shouldBe rock }
@@ -196,19 +208,27 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
 
         observableAudioPlaylistRepository.search { it.isDirectory } shouldContainExactly setOf(fifties, sixties, bestHits)
 
-        val fiftiesItems = listOf(
-            arbitraryAudioItem { title = "50s hit"; duration = Duration.ofSeconds(30) }.next(),
-            arbitraryAudioItem { title = "50s favorite song"; duration = Duration.ofSeconds(120) }.next()
-        )
+        val fiftiesItems =
+            listOf(
+                arbitraryAudioItem {
+                    title = "50s hit"
+                    duration = Duration.ofSeconds(30)
+                }.next(),
+                arbitraryAudioItem {
+                    title = "50s favorite song"
+                    duration = Duration.ofSeconds(120)
+                }.next()
+            )
 
         observableAudioPlaylistRepository.addAudioItemToPlaylist(fiftiesItems[0], fifties.name)
         observableAudioPlaylistRepository.addAudioItemsToPlaylist(fiftiesItems, fifties.name)
         val playlistsThatContainsAnyAudioItemsWithHitInTitle =
             observableAudioPlaylistRepository.search { it.audioItemsAnyMatch { audioItem -> audioItem.title.contains("hit") } }
         playlistsThatContainsAnyAudioItemsWithHitInTitle shouldContainExactly setOf(rock, fifties)
-        val playlistsThatContainsAudioItemsWithDurationBelow60 = observableAudioPlaylistRepository.search {
-            it.audioItemsAnyMatch { audioItem: ObservableAudioItem -> audioItem.duration <= Duration.ofSeconds(60) }
-        }
+        val playlistsThatContainsAudioItemsWithDurationBelow60 =
+            observableAudioPlaylistRepository.search {
+                it.audioItemsAnyMatch { audioItem: ObservableAudioItem -> audioItem.duration <= Duration.ofSeconds(60) }
+            }
 
         playlistsThatContainsAudioItemsWithDurationBelow60 shouldContainExactly setOf(rock, fifties)
 
@@ -403,26 +423,28 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
 })
 
 fun ObservablePlaylist.asJsonKeyValue(): String {
-    val audioItemsString = buildString {
-        append("[")
-        audioItems.forEachIndexed { index, it ->
-            append(it.id)
-            if (index < audioItems.size - 1) {
-                append(",")
+    val audioItemsString =
+        buildString {
+            append("[")
+            audioItems.forEachIndexed { index, it ->
+                append(it.id)
+                if (index < audioItems.size - 1) {
+                    append(",")
+                }
             }
+            append("],")
         }
-        append("],")
-    }
-    val playlistIds = buildString {
-        append("[")
-        playlists.forEachIndexed { index, it ->
-            append(it.id)
-            if (index < playlists.size - 1) {
-                append(",")
+    val playlistIds =
+        buildString {
+            append("[")
+            playlists.forEachIndexed { index, it ->
+                append(it.id)
+                if (index < playlists.size - 1) {
+                    append(",")
+                }
             }
+            append("]")
         }
-        append("]")
-    }
     return """
             "$id": {
                 "id": $id,

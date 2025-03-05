@@ -29,10 +29,11 @@ interface AudioPlaylist<I : ReactiveAudioItem<I>> : IdentifiableEntity<Int>, Com
     val audioItems: List<I>
 
     val audioItemsRecursive: List<I>
-        get() = buildList {
-            addAll(audioItems)
-            addAll(playlists.stream().flatMap { it.audioItemsRecursive.stream() }.toList())
-        }
+        get() =
+            buildList {
+                addAll(audioItems)
+                addAll(playlists.stream().flatMap { it.audioItemsRecursive.stream() }.toList())
+            }
 
     val playlists: Set<AudioPlaylist<I>>
 
