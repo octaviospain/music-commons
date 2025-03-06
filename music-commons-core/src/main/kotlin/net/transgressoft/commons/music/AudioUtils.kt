@@ -11,31 +11,31 @@ object AudioUtils {
 
     fun <I: ReactiveAudioItem<I>> audioItemTrackDiscNumberComparator() =
         Comparator<I> { audioItem1, audioItem2 ->
-            when {
-                audioItem1.discNumber == null && audioItem2.discNumber == null -> { // Both discNumbers are null, compare by trackNumber
-                    when {
-                        audioItem1.trackNumber == null && audioItem2.trackNumber == null -> 0
-                        audioItem1.trackNumber == null -> 1
-                        audioItem2.trackNumber == null -> -1
-                        else -> audioItem1.trackNumber!! - audioItem2.trackNumber!!
-                    }
-                }
+            // Compare disc numbers first
+            val discNumberComparison = compareDiscNumbers(audioItem1.discNumber, audioItem2.discNumber)
 
-                audioItem1.discNumber == null -> 1
-                audioItem2.discNumber == null -> -1
-                else -> { // Compare non-null discNumbers
-                    if (audioItem1.discNumber == audioItem2.discNumber) { // If discNumbers are equal, compare by trackNumber
-                        when {
-                            audioItem1.trackNumber == null && audioItem2.trackNumber == null -> 0
-                            audioItem1.trackNumber == null -> 1
-                            audioItem2.trackNumber == null -> -1
-                            else -> audioItem1.trackNumber!! - audioItem2.trackNumber!!
-                        }
-                    } else { // Different discNumbers, compare by discNumber
-                        audioItem1.discNumber!! - audioItem2.discNumber!!
-                    }
-                }
+            // If disc numbers are equal, compare track numbers
+            if (discNumberComparison == 0) {
+                compareTrackNumbers(audioItem1.trackNumber, audioItem2.trackNumber)
+            } else {
+                discNumberComparison
             }
+        }
+
+    private fun compareDiscNumbers(disc1: Short?, disc2: Short?): Int =
+        when {
+            disc1 == null && disc2 == null -> 0
+            disc1 == null -> 1
+            disc2 == null -> -1
+            else -> disc1 - disc2
+        }
+
+    private fun compareTrackNumbers(track1: Short?, track2: Short?): Int =
+        when {
+            track1 == null && track2 == null -> 0
+            track1 == null -> 1
+            track2 == null -> -1
+            else -> track1 - track2
         }
 
     /**********************************************************************************
@@ -85,7 +85,7 @@ object AudioUtils {
      */
     fun getArtistsNamesInvolved(title: String, artistName: String, albumArtistName: String): Set<String> {
         val artistsInvolved: MutableSet<String> = mutableSetOf()
-        val albumArtistNames = Splitter.on(CharMatcher.anyOf(",&")).trimResults().omitEmptyStrings().splitToList(albumArtistName)
+        val albumArtistNames: Collection<String> = Splitter.on(CharMatcher.anyOf(",&")).trimResults().omitEmptyStrings().splitToList(albumArtistName)
 
         artistsInvolved.addAll(albumArtistNames)
         artistsInvolved.addAll(getNamesInArtist(artistName))
@@ -113,14 +113,29 @@ object AudioUtils {
      *
      * @return A Set with the artists found
      */
-    private fun getNamesInArtist(artistName: String): Set<String> =
-        artistName.split(
-            "((\\s+(?i)(versus)\\s+)|(\\s+(?i)(vs)(\\.|\\s+))|(\\s+(?i)(feat)(\\.|\\s+))|(\\s+(?i)(ft)(\\.|\\s+))|(\\s*,\\s*)|(\\s+&\\s+))".toRegex()
-        )
+    private fun getNamesInArtist(artistName: String): Set<String> {
+        // Define regex patterns for different separators
+        val versusPattern = "\\s+(?i)(versus)\\s+"
+        val vsPattern = "\\s+(?i)(vs)(\\.|\\s+)"
+        val featPattern = "\\s+(?i)(feat)(\\.|\\s+)"
+        val ftPattern = "\\s+(?i)(ft)(\\.|\\s+)"
+        val commaPattern = "\\s*,\\s*"
+        val ampersandPattern = "\\s+&\\s+"
+
+        // Combine patterns
+        val separatorPattern = "($versusPattern|$vsPattern|$featPattern|$ftPattern|$commaPattern|$ampersandPattern)"
+
+        return artistName.split(separatorPattern.toRegex())
             .map { it.trim().replaceFirstChar(Char::titlecase) }
-            .map { it.split(" ").joinToString(" ") { itt -> itt.replaceFirstChar(Char::titlecase) } }
+            .map {
+                it.split(" ")
+                    .joinToString(" ") { word ->
+                        word.replaceFirstChar(Char::titlecase)
+                    }
+            }
             .map { beautifyArtistName(it) }
             .toSet()
+    }
 
     /**
      * Returns the names of the artists that are in a given string which is the title of an [AudioItem].

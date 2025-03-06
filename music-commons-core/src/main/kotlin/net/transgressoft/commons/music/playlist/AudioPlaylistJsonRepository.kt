@@ -28,7 +28,7 @@ class AudioPlaylistJsonRepository(
             entitiesById[it.id] = playlistWithAudioItems
         }
         runForAll {
-            val playlistMissingPlaylists = entitiesById[it.id]!!
+            val playlistMissingPlaylists = entitiesById[it.id] ?: throw IllegalStateException("Playlist ID ${it.id} not found after initial processing")
             val foundPlaylists = findDeserializedPlaylistsFromIds(it.playlists.toIds(), entitiesById)
             playlistMissingPlaylists.addPlaylists(foundPlaylists)
         }

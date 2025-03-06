@@ -58,11 +58,26 @@ abstract class AudioPlaylistSerializerBase<I: ReactiveAudioItem<I>, P: ReactiveA
         val propertiesList = mutableListOf<Any?>()
         val jsonInput = decoder as? JsonDecoder ?: throw SerializationException("This class can be saved only by Json")
         val jsonObject = jsonInput.decodeJsonElement().jsonObject
-        propertiesList.add(jsonObject["id"]!!.jsonPrimitive.int)
-        propertiesList.add(jsonObject["isDirectory"]!!.jsonPrimitive.boolean)
-        propertiesList.add(jsonObject["name"]!!.jsonPrimitive.content)
-        propertiesList.add(mapAudioItemIds(jsonObject["audioItemIds"]!!.jsonArray))
-        propertiesList.add(mapPlaylistIds(jsonObject["playlistIds"]!!.jsonArray))
+
+        // id
+        val id = jsonObject["id"] ?: throw SerializationException("Serialized Playlist should contain id element")
+        propertiesList.add(id.jsonPrimitive.int)
+
+        // isDirectory
+        val isDirectory = jsonObject["isDirectory"] ?: throw SerializationException("Serialized Playlist should contain isDirectory element")
+        propertiesList.add(isDirectory.jsonPrimitive.boolean)
+
+        // name
+        val name = jsonObject["name"] ?: throw SerializationException("Serialized Playlist should contain name element")
+        propertiesList.add(name.jsonPrimitive.content)
+
+        // audioItemIds
+        val audioItemIds = jsonObject["audioItemIds"] ?: throw SerializationException("Serialized Playlist should contain audioItemIds element")
+        propertiesList.add(mapAudioItemIds(audioItemIds.jsonArray))
+
+        // playlistIds
+        val playlistIds = jsonObject["playlistIds"] ?: throw SerializationException("Serialized Playlist should contain playlistIds element")
+        propertiesList.add(mapPlaylistIds(playlistIds.jsonArray))
 
         return propertiesList
     }
