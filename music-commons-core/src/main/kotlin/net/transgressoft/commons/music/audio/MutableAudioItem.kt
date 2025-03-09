@@ -3,6 +3,9 @@ package net.transgressoft.commons.music.audio
 import net.transgressoft.commons.ReactiveEntityBase
 import net.transgressoft.commons.music.AudioUtils
 import net.transgressoft.commons.music.AudioUtils.audioItemTrackDiscNumberComparator
+import net.transgressoft.commons.music.audio.AudioFileType.FLAC
+import net.transgressoft.commons.music.audio.AudioFileType.MP3
+import net.transgressoft.commons.music.audio.AudioFileType.WAV
 import com.neovisionaries.i18n.CountryCode
 import mu.KotlinLogging
 import org.jaudiotagger.audio.AudioFileIO
@@ -287,21 +290,21 @@ internal class MutableAudioItem(
 
     private fun createTagTag(format: String): Tag =
         when {
-            format.startsWith("Wav", ignoreCase = true) -> {
+            format.startsWith(WAV.extension, ignoreCase = true) -> {
                 val wavTag = WavTag(WavOptions.READ_ID3_ONLY)
                 wavTag.iD3Tag = ID3v24Tag()
                 wavTag.infoTag = WavInfoTag()
                 wavTag
             }
 
-            format.startsWith("Mp3", ignoreCase = true) -> {
+            format.startsWith(MP3.extension, ignoreCase = true) -> {
                 TagOptionSingleton.getInstance().isWriteMp3GenresAsText = true
                 val tag: Tag = ID3v24Tag()
                 tag.artworkList.clear()
                 tag
             }
 
-            format.startsWith("Flac", ignoreCase = true) -> {
+            format.startsWith(FLAC.extension, ignoreCase = true) -> {
                 val tag: Tag = FlacTag()
                 tag.artworkList.clear()
                 tag

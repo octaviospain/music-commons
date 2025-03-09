@@ -1,6 +1,12 @@
 package net.transgressoft.commons.music.waveform
 
 import net.transgressoft.commons.ReactiveEntityBase
+import net.transgressoft.commons.music.audio.AudioFileType
+import net.transgressoft.commons.music.audio.AudioFileType.FLAC
+import net.transgressoft.commons.music.audio.AudioFileType.M4A
+import net.transgressoft.commons.music.audio.AudioFileType.MP3
+import net.transgressoft.commons.music.audio.AudioFileType.WAV
+import net.transgressoft.commons.music.audio.toAudioFileType
 import ws.schild.jave.Encoder
 import ws.schild.jave.MultimediaObject
 import ws.schild.jave.encode.AudioAttributes
@@ -39,8 +45,11 @@ class ScalableAudioWaveform(
      */
     @Transient private val amplitudeCoefficient = 3.9
 
+    private fun AudioFileType.Companion.supportedAudioTypes() =
+        setOf(MP3.extension, M4A.extension, FLAC.extension, WAV.extension)
+
     init {
-        check(audioFilePath.extension in setOf("wav", "mp3", "m4a", "flac")) {
+        check(audioFilePath.extension in AudioFileType.supportedAudioTypes()) {
             "File extension '${audioFilePath.extension}' not supported"
         }
         check(audioFilePath.exists()) {
@@ -52,17 +61,15 @@ class ScalableAudioWaveform(
 
     private fun getRawAudioPcm(audioFilePath: Path) =
         try {
-            when (audioFilePath.extension) {
-                "wav" -> getRawPulseCodeModulation(audioFilePath.toFile())
-                "mp3", "m4a", "flac" -> {
+            when (audioFilePath.extension.toAudioFileType()) {
+                WAV -> getRawPulseCodeModulation(audioFilePath.toFile())
+                else -> {
                     transcodeToWav(audioFilePath).let { convertedFile ->
                         getRawPulseCodeModulation(convertedFile).also {
                             Files.delete(convertedFile.toPath())
                         }
                     }
                 }
-
-                else -> throw AudioWaveformProcessingException("File extension '${audioFilePath.extension}' not supported")
             }
         } catch (exception: Exception) {
             throw AudioWaveformProcessingException("Error processing waveform", exception)
@@ -70,14 +77,14 @@ class ScalableAudioWaveform(
 
     private fun transcodeToWav(path: Path): File {
         val fileName = path.fileName.toString()
-        val decodedFile = File.createTempFile("decoded_$fileName", ".wav")
-        val copiedFile = File.createTempFile("original_$fileName", ".mp3")
+        val decodedFile = File.createTempFile("decoded_$fileName", "." + WAV.extension)
+        val copiedFile = File.createTempFile("original_$fileName", "." + path.extension)
         Files.copy(path, copiedFile.toPath(), StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING)
         try {
             Encoder().encode(
                 MultimediaObject(copiedFile), decodedFile,
                 EncodingAttributes().apply {
-                    setOutputFormat("wav")
+                    setOutputFormat(WAV.extension)
                     setAudioAttributes(
                         AudioAttributes().apply {
                             setCodec("pcm_s16le")

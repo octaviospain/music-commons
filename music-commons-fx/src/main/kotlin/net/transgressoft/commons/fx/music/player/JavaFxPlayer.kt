@@ -1,7 +1,11 @@
 package net.transgressoft.commons.fx.music.player
 
 import net.transgressoft.commons.TransEventPublisherBase
+import net.transgressoft.commons.music.audio.AudioFileType.M4A
+import net.transgressoft.commons.music.audio.AudioFileType.MP3
+import net.transgressoft.commons.music.audio.AudioFileType.WAV
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
+import net.transgressoft.commons.music.audio.toAudioFileType
 import net.transgressoft.commons.music.player.AudioItemPlayer
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Played
@@ -14,6 +18,7 @@ import javafx.beans.property.SimpleObjectProperty
 import javafx.scene.media.Media
 import javafx.scene.media.MediaPlayer
 import javafx.util.Duration
+import java.util.EnumSet
 
 /**
  * Basic player that uses the native JavaFX [MediaPlayer]
@@ -24,7 +29,7 @@ class JavaFxPlayer: TransEventPublisherBase<AudioItemPlayerEvent>("JavaFxPlayer"
     companion object {
         private const val PLAY_COUNT_THRESHOLD_POLICY = 0.6
 
-        private val SUPPORTED_AUDIO_TYPES = arrayOf("mp3", "m4a", "wav")
+        private val SUPPORTED_AUDIO_TYPES = EnumSet.of(MP3, WAV, M4A)
 
         private val playerStatusMap: Map<MediaPlayer.Status, AudioItemPlayer.Status> =
             buildMap {
@@ -39,13 +44,8 @@ class JavaFxPlayer: TransEventPublisherBase<AudioItemPlayerEvent>("JavaFxPlayer"
             }
 
         fun isPlayable(audioItem: ReactiveAudioItem<*>): Boolean =
-            setOf(*SUPPORTED_AUDIO_TYPES).contains(audioItem.extension) &&
-                !(
-                    audioItem.encoding!!.startsWith("Apple") ||
-                        audioItem.encoder!!.startsWith(
-                            "iTunes"
-                        )
-                )
+            SUPPORTED_AUDIO_TYPES.contains(audioItem.extension.toAudioFileType()) &&
+                !(audioItem.encoding!!.startsWith("Apple") || audioItem.encoder!!.startsWith("iTunes"))
     }
 
     init {
@@ -68,7 +68,7 @@ class JavaFxPlayer: TransEventPublisherBase<AudioItemPlayerEvent>("JavaFxPlayer"
     override val currentTimeProperty: ReadOnlyObjectProperty<Duration> = _currentTimeProperty
 
     override fun play(audioItem: ReactiveAudioItem<*>) {
-        require(isPlayable(audioItem)) { "Unsupported file format. Supported file types are " + SUPPORTED_AUDIO_TYPES.contentToString() }
+        require(isPlayable(audioItem)) { "Unsupported file format. Supported file types are $SUPPORTED_AUDIO_TYPES" }
 
         val file = audioItem.path.toFile()
         val audioItemDuration = audioItem.duration.toMillis()

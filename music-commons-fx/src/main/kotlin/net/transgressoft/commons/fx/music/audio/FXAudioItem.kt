@@ -4,6 +4,9 @@ import net.transgressoft.commons.ReactiveEntityBase
 import net.transgressoft.commons.music.AudioUtils
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
+import net.transgressoft.commons.music.audio.AudioFileType.FLAC
+import net.transgressoft.commons.music.audio.AudioFileType.MP3
+import net.transgressoft.commons.music.audio.AudioFileType.WAV
 import net.transgressoft.commons.music.audio.AudioItemManipulationException
 import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.ImmutableAlbum
@@ -428,21 +431,21 @@ class FXAudioItem internal constructor(
 
         private fun createTag(format: String): Tag =
             when {
-                format.startsWith("Wav", ignoreCase = true) -> {
+                format.startsWith(WAV.extension, ignoreCase = true) -> {
                     val wavTag = WavTag(WavOptions.READ_ID3_ONLY)
                     wavTag.iD3Tag = ID3v24Tag()
                     wavTag.infoTag = WavInfoTag()
                     wavTag
                 }
 
-                format.startsWith("Mp3", ignoreCase = true) -> {
+                format.startsWith(MP3.extension, ignoreCase = true) -> {
                     TagOptionSingleton.getInstance().isWriteMp3GenresAsText = true
                     val tag: Tag = ID3v24Tag()
                     tag.artworkList.clear()
                     tag
                 }
 
-                format.startsWith("Flac", ignoreCase = true) -> {
+                format.startsWith(FLAC.extension, ignoreCase = true) -> {
                     val tag: Tag = FlacTag()
                     tag.artworkList.clear()
                     tag
