@@ -17,6 +17,8 @@ import io.kotest.property.arbitrary.positiveInt
 import io.kotest.property.arbitrary.positiveShort
 import io.kotest.property.arbitrary.short
 import io.kotest.property.arbitrary.stringPattern
+import io.mockk.every
+import io.mockk.mockk
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.wav.WavOptions
 import org.jaudiotagger.tag.FieldKey
@@ -38,6 +40,7 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.io.path.extension
 import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.toJavaDuration
 
@@ -357,6 +360,112 @@ internal object AudioItemTestUtil : TestConfiguration() {
             "playCount": $playCount
         }
     """
+
+    fun createMockedAudioFilePaths(count: Int): List<Path> {
+        val formats = listOf("mp3", "flac", "wav", "m4a")
+        return (1..count).map { index ->
+            val format = formats[index % formats.size]
+            createMockedAudioFilePath(index, format)
+        }
+    }
+
+    fun createMockedAudioFilePath(index: Int, format: String): Path {
+        val fileName = "test-file-$index.$format"
+        val mockFile =
+            mockk<File> {
+                every { extension } returns format
+                every { path } returns "/mocked/path/$fileName"
+            }
+
+        val fileNameMock =
+            mockk<Path> {
+                every { this@mockk.toString() } returns fileName
+            }
+
+        val mockPath =
+            mockk<Path> {
+                every { toFile() } returns mockFile
+                every { this@mockk.fileName } returns fileNameMock
+            }
+        every { mockFile.toPath() } returns mockPath
+
+        // Mock the audio file reading process based on format
+        val audioFileIO =
+            mockk<org.jaudiotagger.audio.AudioFile> {
+                val tag =
+                    when (format) {
+                        "mp3" -> createMockedTag(mockk<ID3v24Tag>(), index)
+                        "flac" -> createMockedTag(mockk<FlacTag>(), index)
+                        "wav" ->
+                            createMockedTag(
+                                mockk<WavTag> {
+                                    every { iD3Tag } returns mockk<ID3v24Tag>()
+                                    every { infoTag } returns mockk<WavInfoTag>()
+                                },
+                                index
+                            )
+                        "m4a" -> createMockedTag(mockk<Mp4Tag>(), index)
+                        else -> createMockedTag(mockk<ID3v24Tag>(), index)
+                    }
+
+                every { getTag() } returns tag
+                every { audioHeader } returns
+                    mockk {
+                        every { trackLength } returns 180
+                        every { sampleRateAsNumber } returns 44100
+                        every { encodingType } returns format.uppercase()
+                        every { bitRate } returns "320"
+                    }
+            }
+
+        every { Files.exists(mockPath) } returns true
+        every { AudioFileIO.read(mockFile) } returns audioFileIO
+
+        return mockPath
+    }
+
+    fun createMockedTag(tag: Tag, index: Int): Tag {
+        val artist = "Artist $index"
+        val album = "Album ${index / 10}"
+        val albumArtist = "Various Artists"
+        val title = "Track $index"
+
+        every { tag.getFirst(FieldKey.TITLE) } returns title
+        every { tag.getFirst(FieldKey.ALBUM) } returns album
+        every { tag.getFirst(FieldKey.ARTIST) } returns artist
+        every { tag.getFirst(FieldKey.ALBUM_ARTIST) } returns albumArtist
+        every { tag.getFirst(FieldKey.GENRE) } returns "Pop"
+        every { tag.getFirst(FieldKey.YEAR) } returns "2023"
+        every { tag.getFirst(FieldKey.TRACK) } returns "${index % 10 + 1}"
+        every { tag.getFirst(FieldKey.DISC_NO) } returns "1"
+        every { tag.getFirst(FieldKey.BPM) } returns "120"
+        every { tag.getFirst(FieldKey.COMMENT) } returns "Test comment $index"
+        every { tag.getFirst(FieldKey.ENCODER) } returns "Test encoder"
+        every { tag.getFirst(FieldKey.GROUPING) } returns "Test Label"
+        every { tag.getFirst(FieldKey.IS_COMPILATION) } returns "false"
+        every { tag.getFirst(FieldKey.COUNTRY) } returns "US"
+
+        every { tag.hasField(FieldKey.TITLE) } returns true
+        every { tag.hasField(FieldKey.ALBUM) } returns true
+        every { tag.hasField(FieldKey.ARTIST) } returns true
+        every { tag.hasField(FieldKey.ALBUM_ARTIST) } returns true
+        every { tag.hasField(FieldKey.GENRE) } returns true
+        every { tag.hasField(FieldKey.YEAR) } returns true
+        every { tag.hasField(FieldKey.TRACK) } returns true
+        every { tag.hasField(FieldKey.DISC_NO) } returns true
+        every { tag.hasField(FieldKey.BPM) } returns true
+        every { tag.hasField(FieldKey.COMMENT) } returns true
+        every { tag.hasField(FieldKey.ENCODER) } returns true
+        every { tag.hasField(FieldKey.GROUPING) } returns true
+        every { tag.hasField(FieldKey.IS_COMPILATION) } returns true
+        every { tag.hasField(FieldKey.COUNTRY) } returns true
+
+        // Mock artwork list to return empty list to avoid complex bitmap mocking
+        every { tag.artworkList } returns emptyList()
+        every { tag.artworkList } returns emptyList()
+
+        return tag
+    }
 }
 
 data class AudioItemTestAttributes(

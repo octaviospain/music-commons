@@ -16,7 +16,7 @@ typealias AudioRepository = AudioItemRepository<AudioItem>
 class AudioItemJsonRepository(
     name: String,
     file: File
-): AudioItemRepositoryBase<AudioItem>(name, file, AudioItemSerializer) {
+): AudioItemJsonRepositoryBase<AudioItem>(name, file, AudioItemSerializer) {
     private val logger = KotlinLogging.logger {}
 
     init {

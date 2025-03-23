@@ -3,7 +3,7 @@ package net.transgressoft.commons.fx.music.audio
 import net.transgressoft.commons.data.StandardCrudEvent.Type.CREATE
 import net.transgressoft.commons.data.StandardCrudEvent.Type.DELETE
 import net.transgressoft.commons.data.StandardCrudEvent.Type.UPDATE
-import net.transgressoft.commons.music.audio.AudioItemRepositoryBase
+import net.transgressoft.commons.music.audio.AudioItemJsonRepositoryBase
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
 import javafx.beans.property.ReadOnlyBooleanProperty
@@ -18,10 +18,10 @@ import java.nio.file.Path
 import java.util.Map.entry
 import kotlinx.serialization.modules.SerializersModule
 
-class ObservableAudioItemJsonRepository(
+class ObservableAudioItemJsonJsonRepository(
     name: String,
     file: File
-): AudioItemRepositoryBase<ObservableAudioItem>(
+): AudioItemJsonRepositoryBase<ObservableAudioItem>(
         name,
         file,
         ObservableAudioItemSerializer,

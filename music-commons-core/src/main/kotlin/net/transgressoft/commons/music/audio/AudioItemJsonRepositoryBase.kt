@@ -1,6 +1,6 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.data.json.GenericJsonFileRepository
+import net.transgressoft.commons.data.json.JsonFileRepositoryBase
 import net.transgressoft.commons.music.event.PlayedEventSubscriber
 import java.io.File
 import java.util.*
@@ -9,13 +9,13 @@ import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.modules.SerializersModule
 
-abstract class AudioItemRepositoryBase<I>(
+abstract class AudioItemJsonRepositoryBase<I>(
     name: String,
     file: File,
     audioItemSerializerBase: AudioItemSerializerBase<I>,
     serializersModule: SerializersModule = SerializersModule {}
 ):
-    GenericJsonFileRepository<Int, I>(
+    JsonFileRepositoryBase<Int, I>(
             file, MapSerializer(Int.serializer(), audioItemSerializerBase),
             SerializersModule {
                 include(serializersModule)
@@ -90,7 +90,7 @@ abstract class AudioItemRepositoryBase<I>(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false
-        val that = other as AudioItemRepositoryBase<*>
+        val that = other as AudioItemJsonRepositoryBase<*>
         return entitiesById == that.entitiesById && artistCatalogRegistry == that.artistCatalogRegistry
     }
 

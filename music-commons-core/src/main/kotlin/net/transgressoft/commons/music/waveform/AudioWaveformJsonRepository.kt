@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music.waveform
 
 import net.transgressoft.commons.data.StandardCrudEvent
-import net.transgressoft.commons.data.json.GenericJsonFileRepository
+import net.transgressoft.commons.data.json.JsonFileRepositoryBase
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import java.io.File
@@ -14,7 +14,7 @@ typealias WaveformRepository<I> = AudioWaveformRepository<AudioWaveform, I>
 class AudioWaveformJsonRepository<I: ReactiveAudioItem<I>>(
     name: String,
     file: File
-): GenericJsonFileRepository<Int, AudioWaveform>(file, MapSerializer(Int.serializer(), AudioWaveformSerializer), name = name),
+): JsonFileRepositoryBase<Int, AudioWaveform>(file, MapSerializer(Int.serializer(), AudioWaveformSerializer), name = name),
     WaveformRepository<I> {
 
     override val audioItemEventSubscriber =

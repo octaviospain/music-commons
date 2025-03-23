@@ -4,7 +4,7 @@ import net.transgressoft.commons.data.StandardCrudEvent.Type.CREATE
 import net.transgressoft.commons.data.StandardCrudEvent.Type.DELETE
 import net.transgressoft.commons.data.StandardCrudEvent.Type.UPDATE
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
-import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonRepository
+import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonJsonRepository
 import net.transgressoft.commons.music.audio.AudioItemManipulationException
 import net.transgressoft.commons.music.playlist.AudioPlaylist
 import net.transgressoft.commons.music.playlist.AudioPlaylistRepositoryBase
@@ -57,7 +57,7 @@ class ObservablePlaylistJsonRepository private constructor(
         fun loadExisting(
             name: String,
             file: File,
-            audioItemRepository: ObservableAudioItemJsonRepository
+            audioItemRepository: ObservableAudioItemJsonJsonRepository
         ) = ObservablePlaylistJsonRepository(name, file, audioItemRepository)
     }
 
@@ -85,7 +85,7 @@ class ObservablePlaylistJsonRepository private constructor(
         subscribe(playlistChangesSubscriber)
     }
 
-    private constructor(name: String, file: File, audioItemRepository: ObservableAudioItemJsonRepository) : this(name, file) {
+    private constructor(name: String, file: File, audioItemRepository: ObservableAudioItemJsonJsonRepository) : this(name, file) {
         disableEvents(CREATE, UPDATE, DELETE)
         runForAll {
             val playlistWithAudioItems = FXPlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItems.toIds(), audioItemRepository))
@@ -103,7 +103,7 @@ class ObservablePlaylistJsonRepository private constructor(
 
     private fun mapAudioItemsFromIds(
         audioItemIds: List<Int>,
-        audioItemRepository: ObservableAudioItemJsonRepository
+        audioItemRepository: ObservableAudioItemJsonJsonRepository
     ) = audioItemIds.map {
         audioItemRepository.findById(
             it

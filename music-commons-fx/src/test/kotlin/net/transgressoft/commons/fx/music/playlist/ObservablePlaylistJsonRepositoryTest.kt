@@ -2,7 +2,7 @@ package net.transgressoft.commons.fx.music.playlist
 
 import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.arbitraryAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
-import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonRepository
+import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonJsonRepository
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrowMessage
@@ -109,7 +109,7 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
         jsonFile.writeText(listOf(playlist).asJsonKeyValues())
 
         val audioItemRepository =
-            mockk<ObservableAudioItemJsonRepository> {
+            mockk<ObservableAudioItemJsonJsonRepository> {
                 every { findById(eq(453374921)) } returns Optional.of(audioItem)
             }
 
@@ -455,8 +455,8 @@ fun ObservablePlaylist.asJsonKeyValue(): String {
             }"""
 }
 
-fun Collection<ObservablePlaylist>.asJsonKeyValues(): String {
-    return buildString {
+fun Collection<ObservablePlaylist>.asJsonKeyValues(): String =
+    buildString {
         append("{")
         this@asJsonKeyValues.forEachIndexed { index, it ->
             append(it.asJsonKeyValue())
@@ -466,4 +466,3 @@ fun Collection<ObservablePlaylist>.asJsonKeyValues(): String {
         }
         append("}")
     }
-}

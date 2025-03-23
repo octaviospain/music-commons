@@ -4,7 +4,7 @@ import net.transgressoft.commons.ReactiveEntityBase
 import net.transgressoft.commons.TransEventSubscriber
 import net.transgressoft.commons.data.CrudEvent
 import net.transgressoft.commons.data.StandardCrudEvent.Type.DELETE
-import net.transgressoft.commons.data.json.GenericJsonFileRepository
+import net.transgressoft.commons.data.json.JsonFileRepositoryBase
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import mu.KotlinLogging
@@ -24,7 +24,7 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
     file: File,
     playlistSerializerBase: AudioPlaylistSerializerBase<I, P>,
     serializersModule: SerializersModule = SerializersModule {}
-): GenericJsonFileRepository<Int, P>(
+): JsonFileRepositoryBase<Int, P>(
         file,
         MapSerializer(Int.serializer(), playlistSerializerBase),
         SerializersModule {

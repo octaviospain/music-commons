@@ -17,11 +17,11 @@ import kotlin.time.Duration.Companion.milliseconds
 internal class ObservableAudioItemJsonRepositoryTest : StringSpec({
 
     lateinit var jsonFile: File
-    lateinit var observableAudioItemRepository: ObservableAudioItemJsonRepository
+    lateinit var observableAudioItemRepository: ObservableAudioItemJsonJsonRepository
 
     beforeEach {
         jsonFile = tempfile("observableAudioItemRepository-test", ".json").also { it.deleteOnExit() }
-        observableAudioItemRepository = ObservableAudioItemJsonRepository("ObservableAudioItemRepo", jsonFile)
+        observableAudioItemRepository = ObservableAudioItemJsonJsonRepository("ObservableAudioItemRepo", jsonFile)
     }
 
     "should create an observable audio item and serialize itself" {
