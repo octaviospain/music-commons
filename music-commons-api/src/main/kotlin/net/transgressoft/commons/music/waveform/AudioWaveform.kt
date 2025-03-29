@@ -1,6 +1,6 @@
 package net.transgressoft.commons.music.waveform
 
-import net.transgressoft.commons.ReactiveEntity
+import net.transgressoft.commons.entity.ReactiveEntity
 import java.awt.Color
 import java.io.File
 import java.nio.file.Path

@@ -4,8 +4,8 @@ import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
 import net.transgressoft.commons.music.audio.AudioRepository
 import net.transgressoft.commons.music.playlist.AudioPlaylistTestUtil.asJsonKeyValues
+import net.transgressoft.commons.persistence.ReactiveScope
 import io.kotest.assertions.json.shouldEqualJson
-import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrowMessage
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
@@ -21,16 +21,37 @@ import io.mockk.mockk
 import java.io.File
 import java.time.Duration
 import java.util.*
-import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
+@ExperimentalCoroutinesApi
 internal class AudioPlaylistJsonRepositoryTest : StringSpec({
 
+    val testDispatcher = UnconfinedTestDispatcher()
+    val testScope = CoroutineScope(testDispatcher)
     lateinit var jsonFile: File
     lateinit var audioPlaylistRepository: PlaylistRepository
+
+    beforeSpec {
+        ReactiveScope.setDefaultFlowScope(testScope)
+        ReactiveScope.setDefaultIoScope(testScope)
+    }
 
     beforeEach {
         jsonFile = tempfile("playlistRepository-test", ".json").also { it.deleteOnExit() }
         audioPlaylistRepository = AudioPlaylistJsonRepository("Playlists", jsonFile)
+    }
+
+    afterEach {
+        audioPlaylistRepository.close()
+    }
+
+    afterSpec {
+        ReactiveScope.setDefaultFlowScope(CoroutineScope(Dispatchers.Default.limitedParallelism(4) + SupervisorJob()))
+        ReactiveScope.setDefaultIoScope(CoroutineScope(Dispatchers.IO.limitedParallelism(1) + SupervisorJob()))
     }
 
     "Repository serializes itself to file when playlists are added" {
@@ -51,10 +72,10 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
             updatedRock.audioItems.shouldContainExactly(rockAudioItems)
             updatedRock.playlists.shouldContainExactly(rockFavorites)
         }
+        testDispatcher.scheduler.advanceUntilIdle()
 
         val json = listOf(rock, rockFavorites).asJsonKeyValues()
-
-        eventually(100.milliseconds) { jsonFile.readText().shouldEqualJson(json) }
+        jsonFile.readText().shouldEqualJson(json)
     }
 
     "Existing repository loads from file" {
@@ -103,7 +124,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
 
         audioPlaylistRepository.findByName(rock.name) shouldBePresent { it shouldBe rock }
         val playlistsThatContainsAllAudioItemsWith50sInTitle =
-            audioPlaylistRepository.search { it.audioItemsAllMatch { audioItem -> audioItem.title.contains("50s") } }
+            audioPlaylistRepository.search { it.audioItemsAllMatch { audioItem -> "50s" in audioItem.title } }
         playlistsThatContainsAllAudioItemsWith50sInTitle.shouldContainOnly(rock)
 
         val pop = audioPlaylistRepository.createPlaylist("Pop")
@@ -127,7 +148,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         audioPlaylistRepository.findByName(bestHits.name) shouldBePresent { it.playlists shouldContainExactly setOf(fifties, sixties) }
 
         val thisWeeksFavorites = audioPlaylistRepository.createPlaylist("This weeks' favorites songs")
-        audioPlaylistRepository.search { it.name.contains("favorites") }.shouldContainExactly(thisWeeksFavorites)
+        audioPlaylistRepository.search { "favorites" in it.name }.shouldContainExactly(thisWeeksFavorites)
         audioPlaylistRepository.size() shouldBe 6
         audioPlaylistRepository.addOrReplaceAll(setOf(bestHits, thisWeeksFavorites))
         audioPlaylistRepository.size() shouldBe 6
@@ -206,9 +227,9 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         audioPlaylistRepository.findById(fifties.id) shouldBePresent { it.playlists.shouldNotContain(rock) }
         audioPlaylistRepository.findByName(bestHits.name) shouldBePresent { it.playlists.shouldContainOnly(fifties) }
 
-        eventually(200.milliseconds) {
-            jsonFile.readText().shouldEqualJson(listOf(rock, pop, fifties, bestHits, selection).asJsonKeyValues())
-        }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        jsonFile.readText().shouldEqualJson(listOf(rock, pop, fifties, bestHits, selection).asJsonKeyValues())
 
         // --
 
@@ -226,7 +247,9 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         audioPlaylistRepository.findByName(selection.name) shouldBePresent { it.playlists.shouldContainOnly(rock) }
         audioPlaylistRepository.findByName(fifties.name) shouldBePresent { it.playlists shouldContainExactly setOf(pop, selection) }
 
-        eventually(100.milliseconds) { jsonFile.readText().shouldEqualJson(listOf(rock, pop, fifties, bestHits, selection).asJsonKeyValues()) }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        jsonFile.readText().shouldEqualJson(listOf(rock, pop, fifties, bestHits, selection).asJsonKeyValues())
 
         audioPlaylistRepository.removeAll(setOf(bestHits)) shouldBe true
 
@@ -238,7 +261,9 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         rock.playlists.isEmpty() shouldBe true
         pop.playlists.isEmpty() shouldBe true
 
-        eventually(200.milliseconds) { jsonFile.readText() shouldBe "{}" }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        jsonFile.readText() shouldBe "{}"
     }
 
     "Removing playlist directory from repository is recursive and changes reflected on playlists" {

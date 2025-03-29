@@ -4,9 +4,9 @@ import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAlbumAud
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryMp3File
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.asJsonKeyValue
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.createMockedAudioFilePaths
-import io.kotest.assertions.json.shouldContainJsonKeyValue
+import net.transgressoft.commons.music.audio.AudioItemTestUtil.shouldContainAudioItem
+import net.transgressoft.commons.persistence.ReactiveScope
 import io.kotest.assertions.json.shouldEqualJson
-import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.common.ExperimentalKotest
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
@@ -25,31 +25,51 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import java.io.File
 import java.util.concurrent.CompletableFuture
-import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 
-@OptIn(ExperimentalKotest::class, ExperimentalCoroutinesApi::class)
+@ExperimentalKotest
+@ExperimentalCoroutinesApi
 internal class AudioItemJsonRepositoryTest : StringSpec({
 
+    val testDispatcher = UnconfinedTestDispatcher()
+    val testScope = CoroutineScope(testDispatcher)
     lateinit var jsonFile: File
     lateinit var audioRepository: AudioRepository
 
-    val testDispatcher = UnconfinedTestDispatcher()
+    beforeSpec {
+        ReactiveScope.setDefaultFlowScope(testScope)
+        ReactiveScope.setDefaultIoScope(testScope)
+    }
 
-    fun beforeEach() {
+    fun setup() {
         jsonFile = tempfile("audioItemRepository-test", ".json").also { it.deleteOnExit() }
         audioRepository = AudioItemJsonRepository("AudioRepo", jsonFile)
     }
 
-    val beforeEachListener =
+    beforeEach { setup() }
+
+    val setupListener =
         object: PropTestListener {
             override suspend fun beforeTest() {
-                beforeEach()
+                setup()
             }
         }
 
-    beforeEach { beforeEach() }
+    afterEach {
+        audioRepository.close()
+    }
+
+    afterSpec {
+        ReactiveScope.setDefaultFlowScope(CoroutineScope(Dispatchers.Default.limitedParallelism(4) + SupervisorJob()))
+        ReactiveScope.setDefaultIoScope(CoroutineScope(Dispatchers.IO.limitedParallelism(1) + SupervisorJob()))
+    }
 
     "should create an audio item and allow to query it on creation and after modification" {
         val audioItem: AudioItem =
@@ -66,8 +86,9 @@ internal class AudioItemJsonRepositoryTest : StringSpec({
                     audioRepository.findAlbumAudioItems(it.artist, it.album.name).shouldContainOnly(it)
                 }
             }
+        testDispatcher.scheduler.advanceUntilIdle()
 
-        eventually(100.milliseconds) { jsonFile.readText().shouldEqualJson(audioItem.asJsonKeyValue()) }
+        jsonFile.readText().shouldEqualJson(audioItem.asJsonKeyValue())
 
         audioItem.title = "New title"
         should {
@@ -82,36 +103,36 @@ internal class AudioItemJsonRepositoryTest : StringSpec({
                 audioItem shouldBeSameInstanceAs audioItem
             }
         }
+        testDispatcher.scheduler.advanceUntilIdle()
 
-        eventually(100.milliseconds) { jsonFile.readText().shouldEqualJson(audioItem.asJsonKeyValue()) }
+        jsonFile.readText().shouldEqualJson(audioItem.asJsonKeyValue())
     }
 
     "should serialize itself when entity is modified during an action on the repository" {
         val audioItem: AudioItem = audioRepository.createFromFile(arbitraryMp3File.next().toPath())
+        testDispatcher.scheduler.advanceUntilIdle()
 
-        eventually(100.milliseconds) { jsonFile.readText().shouldEqualJson(audioItem.asJsonKeyValue()) }
+        jsonFile.readText().shouldEqualJson(audioItem.asJsonKeyValue())
 
         audioRepository.runForSingle(audioItem.id) { it.bpm = 135f }
+        testDispatcher.scheduler.advanceUntilIdle()
 
-        eventually(100.milliseconds) {
-            audioItem.bpm shouldBe 135f
-            audioRepository.search { it.bpm == 135f }.shouldContainOnly(audioItem)
-            jsonFile.readText().shouldEqualJson(audioItem.asJsonKeyValue())
-        }
+        audioItem.bpm shouldBe 135f
+        audioRepository.search { it.bpm == 135f }.shouldContainOnly(audioItem)
+        jsonFile.readText().shouldEqualJson(audioItem.asJsonKeyValue())
     }
 
     "should create audio items from the same album and reflect changes in the repository" {
-        checkAll(10, PropTestConfig(listeners = listOf(beforeEachListener)), arbitraryAlbumAudioItems()) { testAlbumAudioItems ->
+        checkAll(10, PropTestConfig(listeners = listOf(setupListener)), arbitraryAlbumAudioItems()) { testAlbumAudioItems ->
             val expectedArtist = testAlbumAudioItems[0].artist
             val expectedAlbum = testAlbumAudioItems[0].album
 
             testAlbumAudioItems.forEach { audioRepository.createFromFile(it.path) }
+            testDispatcher.scheduler.advanceUntilIdle()
 
-            eventually(100.milliseconds) {
-                val currentAlbumItems = audioRepository.search { it.album.name == expectedAlbum.name }
-                currentAlbumItems.size shouldBe testAlbumAudioItems.size
-                audioRepository.findAlbumAudioItems(expectedArtist, expectedAlbum.name) shouldContainExactlyInAnyOrder currentAlbumItems
-            }
+            val currentAlbumItems = audioRepository.search { it.album.name == expectedAlbum.name }
+            currentAlbumItems.size shouldBe testAlbumAudioItems.size
+            audioRepository.findAlbumAudioItems(expectedArtist, expectedAlbum.name) shouldContainExactlyInAnyOrder currentAlbumItems
         }
     }
 
@@ -120,10 +141,10 @@ internal class AudioItemJsonRepositoryTest : StringSpec({
         mockkStatic("kotlin.io.FilesKt__UtilsKt")
         mockkStatic("org.jaudiotagger.audio.AudioFileIO")
 
-        val totalFiles = 1
+        val totalFiles = 10
         val filePaths = createMockedAudioFilePaths(totalFiles)
 
-        val result: CompletableFuture<List<AudioItem>> = audioRepository.createFromFileBatchAsync(filePaths, testDispatcher)
+        val result: CompletableFuture<List<AudioItem>> = audioRepository.createFromFileBatchAsync(filePaths, testDispatcher.asExecutor())
 
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -136,17 +157,14 @@ internal class AudioItemJsonRepositoryTest : StringSpec({
         val wavItems = result.get().filter { it.path.toString().endsWith("wav") }
         val m4aItems = result.get().filter { it.path.toString().endsWith("m4a") }
 
-        mp3Items.forEach { it.encoding shouldBe "MP3" }
+        mp3Items.forEach { it.encoding shouldBe "MPEG-1 Layer 3" }
         flacItems.forEach { it.encoding shouldBe "FLAC" }
         wavItems.forEach { it.encoding shouldBe "WAV" }
         m4aItems.forEach { it.encoding shouldBe "AAC" }
 
-        // Verify JSON serialization happened for all items
-        eventually(1000.milliseconds) {
-            result.get().forEach { audioItem ->
-                jsonFile.readText().shouldContainJsonKeyValue("[*]", audioItem.asJsonKeyValue())
-            }
-        }
+        val jsonObject = Json.parseToJsonElement(jsonFile.readText()).jsonObject
+
+        result.get().forEach { audioItem -> jsonObject shouldContainAudioItem audioItem }
 
         unmockkAll()
     }

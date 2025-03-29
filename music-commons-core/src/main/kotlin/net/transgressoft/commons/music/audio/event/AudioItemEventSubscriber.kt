@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music.audio.event
 
-import net.transgressoft.commons.TransEventSubscriberBase
-import net.transgressoft.commons.data.CrudEvent
+import net.transgressoft.commons.event.CrudEvent
+import net.transgressoft.commons.event.TransEventSubscriberBase
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 
 open class AudioItemEventSubscriber<I: ReactiveAudioItem<I>>(

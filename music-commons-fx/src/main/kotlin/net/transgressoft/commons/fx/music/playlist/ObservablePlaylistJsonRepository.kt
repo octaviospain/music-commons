@@ -1,15 +1,15 @@
 package net.transgressoft.commons.fx.music.playlist
 
-import net.transgressoft.commons.data.StandardCrudEvent.Type.CREATE
-import net.transgressoft.commons.data.StandardCrudEvent.Type.DELETE
-import net.transgressoft.commons.data.StandardCrudEvent.Type.UPDATE
+import net.transgressoft.commons.entity.toIds
+import net.transgressoft.commons.event.StandardCrudEvent.Type.CREATE
+import net.transgressoft.commons.event.StandardCrudEvent.Type.DELETE
+import net.transgressoft.commons.event.StandardCrudEvent.Type.UPDATE
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
-import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonJsonRepository
+import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonRepository
 import net.transgressoft.commons.music.audio.AudioItemManipulationException
 import net.transgressoft.commons.music.playlist.AudioPlaylist
 import net.transgressoft.commons.music.playlist.AudioPlaylistRepositoryBase
 import net.transgressoft.commons.music.playlist.event.AudioPlaylistEventSubscriber
-import net.transgressoft.commons.toIds
 import com.google.common.base.Objects
 import javafx.beans.property.ReadOnlyBooleanProperty
 import javafx.beans.property.ReadOnlyListProperty
@@ -57,7 +57,7 @@ class ObservablePlaylistJsonRepository private constructor(
         fun loadExisting(
             name: String,
             file: File,
-            audioItemRepository: ObservableAudioItemJsonJsonRepository
+            audioItemRepository: ObservableAudioItemJsonRepository
         ) = ObservablePlaylistJsonRepository(name, file, audioItemRepository)
     }
 
@@ -85,7 +85,7 @@ class ObservablePlaylistJsonRepository private constructor(
         subscribe(playlistChangesSubscriber)
     }
 
-    private constructor(name: String, file: File, audioItemRepository: ObservableAudioItemJsonJsonRepository) : this(name, file) {
+    private constructor(name: String, file: File, audioItemRepository: ObservableAudioItemJsonRepository) : this(name, file) {
         disableEvents(CREATE, UPDATE, DELETE)
         runForAll {
             val playlistWithAudioItems = FXPlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItems.toIds(), audioItemRepository))
@@ -103,7 +103,7 @@ class ObservablePlaylistJsonRepository private constructor(
 
     private fun mapAudioItemsFromIds(
         audioItemIds: List<Int>,
-        audioItemRepository: ObservableAudioItemJsonJsonRepository
+        audioItemRepository: ObservableAudioItemJsonRepository
     ) = audioItemIds.map {
         audioItemRepository.findById(
             it
@@ -144,7 +144,7 @@ class ObservablePlaylistJsonRepository private constructor(
         }
     }
 
-    override fun toString() = "ObservablePlaylistRepository(name=$name, playlistsCount=${entitiesById.size})"
+    override fun toString() = "ObservablePlaylistRepository(playlistsCount=${entitiesById.size})"
 
     private inner class FXPlaylist(
         id: Int,
@@ -267,8 +267,8 @@ class ObservablePlaylistJsonRepository private constructor(
         @Suppress("INAPPLICABLE_JVM_NAME")
         @JvmName("removeAudioItemIds")
         override fun removeAudioItems(audioItemIds: Collection<Int>) =
-            this.audioItems.stream().anyMatch { audioItemIds.contains(it.id) }.also {
-                _audioItemsProperty.removeAll { audioItemIds.contains(it.id) }
+            this.audioItems.stream().anyMatch { it.id in audioItemIds }.also {
+                _audioItemsProperty.removeAll { it.id in audioItemIds }
                 logger.debug { "Removed audio items with ids $audioItemIds from playlist $uniqueId" }
             }
 

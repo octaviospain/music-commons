@@ -1,6 +1,6 @@
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.ReactiveEntity
+import net.transgressoft.commons.entity.ReactiveEntity
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 
 interface ReactiveAudioPlaylist<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>> : AudioPlaylist<I>, ReactiveEntity<Int, P> {

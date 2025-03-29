@@ -1,12 +1,12 @@
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.ReactiveEntityBase
-import net.transgressoft.commons.TransEventSubscriber
-import net.transgressoft.commons.data.CrudEvent
-import net.transgressoft.commons.data.StandardCrudEvent.Type.DELETE
-import net.transgressoft.commons.data.json.JsonFileRepositoryBase
+import net.transgressoft.commons.entity.ReactiveEntityBase
+import net.transgressoft.commons.event.CrudEvent
+import net.transgressoft.commons.event.StandardCrudEvent.Type.DELETE
+import net.transgressoft.commons.event.TransEventSubscriber
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
+import net.transgressoft.commons.persistence.json.JsonFileRepositoryBase
 import mu.KotlinLogging
 import org.jetbrains.kotlin.com.google.common.collect.Multimap
 import org.jetbrains.kotlin.com.google.common.collect.MultimapBuilder
@@ -19,21 +19,22 @@ import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.modules.SerializersModule
 
-abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>>(
+abstract class AudioPlaylistRepositoryBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPlaylist<I, P>>(
     name: String,
     file: File,
     playlistSerializerBase: AudioPlaylistSerializerBase<I, P>,
     serializersModule: SerializersModule = SerializersModule {}
 ): JsonFileRepositoryBase<Int, P>(
+        name,
         file,
         MapSerializer(Int.serializer(), playlistSerializerBase),
         SerializersModule {
             include(serializersModule)
             include(playlistSerializerModule)
-        },
-        name
+        }
     ),
     AudioPlaylistRepository<I, P> {
+
     private val logger = KotlinLogging.logger {}
 
     private val playlistsHierarchyMultiMap: Multimap<String, P> = MultimapBuilder.treeKeys().treeSetValues().build()
@@ -128,18 +129,12 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
 
     override fun findParentPlaylist(playlist: ReactiveAudioPlaylist<I, P>): Optional<P> =
         if (playlistsHierarchyMultiMap.containsValue(playlist)) {
-            playlistsHierarchyMultiMap.entries().stream()
-                .filter { playlist == it.value }
-                .map { findByUniqueId(it.key).get() }
-                .findFirst()
+            playlistsHierarchyMultiMap.entries().stream().filter { playlist == it.value }.map { findByUniqueId(it.key).get() }.findFirst()
         } else {
             Optional.empty()
         }
 
-    override fun movePlaylist(
-        playlistNameToMove: String,
-        destinationPlaylistName: String
-    ) {
+    override fun movePlaylist(playlistNameToMove: String, destinationPlaylistName: String) {
         val playlistToMove = findByName(playlistNameToMove)
         val destinationPlaylist = findByName(destinationPlaylistName)
 
@@ -155,19 +150,13 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
         logger.debug { "Playlist '$playlistNameToMove' moved to '$destinationPlaylistName'" }
     }
 
-    override fun addAudioItemsToPlaylist(
-        audioItems: Collection<I>,
-        playlistName: String
-    ): Boolean =
+    override fun addAudioItemsToPlaylist(audioItems: Collection<I>, playlistName: String): Boolean =
         findByName(playlistName).let {
             require(it.isPresent) { "Playlist '$playlistName' does not exist" }
             it.get().addAudioItems(audioItems)
         }
 
-    override fun removeAudioItemsFromPlaylist(
-        audioItems: Collection<I>,
-        playlistName: String
-    ): Boolean =
+    override fun removeAudioItemsFromPlaylist(audioItems: Collection<I>, playlistName: String): Boolean =
         findByName(playlistName).let {
             require(it.isPresent) { "Playlist '$playlistName' does not exist" }
             it.get().removeAudioItems(audioItems)
@@ -175,19 +164,13 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
 
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removeAudioItemIdsFromPlaylist")
-    override fun removeAudioItemsFromPlaylist(
-        audioItemIds: Collection<Int>,
-        playlistName: String
-    ): Boolean =
+    override fun removeAudioItemsFromPlaylist(audioItemIds: Collection<Int>, playlistName: String): Boolean =
         findByName(playlistName).let {
             require(it.isPresent) { "Playlist '$playlistName' does not exist" }
             it.get().removeAudioItems(audioItemIds)
         }
 
-    override fun addPlaylistsToDirectory(
-        playlistsToAdd: Set<P>,
-        directoryName: String
-    ): Boolean =
+    override fun addPlaylistsToDirectory(playlistsToAdd: Set<P>, directoryName: String): Boolean =
         findByName(directoryName).let {
             require(it.isPresent) { "Directory '$directoryName' does not exist" }
             it.get().addPlaylists(playlistsToAdd).also { added ->
@@ -201,10 +184,7 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
 
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("addPlaylistNamesToDirectory")
-    override fun addPlaylistsToDirectory(
-        playlistNamesToAdd: Set<String>,
-        directoryName: String
-    ): Boolean =
+    override fun addPlaylistsToDirectory(playlistNamesToAdd: Set<String>, directoryName: String): Boolean =
         findByName(directoryName).let {
             require(it.isPresent) { "Directory '$directoryName' does not exist" }
             playlistNamesToAdd.stream().map { playlistName ->
@@ -220,10 +200,7 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
             }
         }
 
-    override fun removePlaylistsFromDirectory(
-        playlistsToRemove: Set<P>,
-        directoryName: String
-    ): Boolean =
+    override fun removePlaylistsFromDirectory(playlistsToRemove: Set<P>, directoryName: String): Boolean =
         findByName(directoryName).let {
             require(it.isPresent) { "Directory '$directoryName' does not exist" }
             it.get().removePlaylists(playlistsToRemove).also { removed ->
@@ -236,10 +213,7 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
 
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removePlaylistNamesFromDirectory")
-    override fun removePlaylistsFromDirectory(
-        playlistsNamesToRemove: Set<String>,
-        directoryName: String
-    ): Boolean =
+    override fun removePlaylistsFromDirectory(playlistsNamesToRemove: Set<String>, directoryName: String): Boolean =
         findByName(directoryName).let {
             require(it.isPresent) { "Directory '$directoryName' does not exist" }
             playlistsNamesToRemove.stream().map { playlistName ->
@@ -254,25 +228,15 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
             }
         }
 
-    override fun numberOfPlaylists() =
-        entitiesById.values.stream()
-            .filter { it.isDirectory.not() }.count().toInt()
+    override fun numberOfPlaylists() = entitiesById.values.stream().filter { it.isDirectory.not() }.count().toInt()
 
-    override fun numberOfPlaylistDirectories() =
-        entitiesById.values.stream()
-            .filter { it.isDirectory }.count().toInt()
+    override fun numberOfPlaylistDirectories() = entitiesById.values.stream().filter { it.isDirectory }.count().toInt()
 
-    protected fun putAllPlaylistInHierarchy(
-        parentPlaylistUniqueId: String,
-        playlist: Collection<P>
-    ) {
+    protected fun putAllPlaylistInHierarchy(parentPlaylistUniqueId: String, playlist: Collection<P>) {
         playlistsHierarchyMultiMap.putAll(parentPlaylistUniqueId, playlist)
     }
 
-    protected fun removePlaylistFromHierarchy(
-        parentPlaylistUniqueId: String,
-        playlist: P
-    ) {
+    protected fun removePlaylistFromHierarchy(parentPlaylistUniqueId: String, playlist: P) {
         playlistsHierarchyMultiMap.remove(parentPlaylistUniqueId, playlist)
     }
 
@@ -283,6 +247,7 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
         audioItems: List<I> = listOf(),
         playlists: Set<P> = setOf()
     ): ReactiveEntityBase<Int, P>(), ReactiveAudioPlaylist<I, P> {
+
         private val logger = KotlinLogging.logger {}
 
         override val audioItems: MutableList<I> = ArrayList(audioItems)
@@ -304,7 +269,7 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
         }
 
         override fun addAudioItems(audioItems: Collection<I>): Boolean {
-            val result = this.audioItems.stream().anyMatch { !audioItems.contains(it) }
+            val result = this.audioItems.stream().anyMatch { it !in audioItems }
             setAndNotify(this.audioItems + audioItems, this.audioItems) {
                 this.audioItems.addAll(audioItems)
                 logger.debug { "Added $audioItems to playlist $uniqueId" }
@@ -324,9 +289,9 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
         @Suppress("INAPPLICABLE_JVM_NAME")
         @JvmName("removeAudioItemIds")
         override fun removeAudioItems(audioItemIds: Collection<Int>): Boolean {
-            val result = this.audioItems.stream().anyMatch { audioItemIds.contains(it.id) }
+            val result = this.audioItems.stream().anyMatch { it.id in audioItemIds }
             setAndNotify(this.audioItems - audioItems.toSet(), this.audioItems) {
-                this.audioItems.removeAll { audioItemIds.contains(it.id) }
+                this.audioItems.removeAll { it.id in audioItemIds }
                 logger.debug { "Removed audio items with ids $audioItemIds from playlist $uniqueId" }
             }
             return result
@@ -369,8 +334,8 @@ abstract class AudioPlaylistRepositoryBase<I : ReactiveAudioItem<I>, P : Reactiv
         @Suppress("INAPPLICABLE_JVM_NAME")
         @JvmName("removePlaylistIds")
         override fun removePlaylists(playlistIds: Collection<Int>): Boolean {
-            val result = this.playlists.stream().anyMatch { playlistIds.contains(it.id) }
-            this.playlists.removeAll { playlist -> playlistIds.contains(playlist.id) }.also {
+            val result = this.playlists.stream().anyMatch { it.id in playlistIds }
+            this.playlists.removeAll { playlist -> playlist.id in playlistIds }.also {
                 if (it) {
                     playlistIds.forEach { playlistId ->
                         findById(playlistId).ifPresent { playlist ->

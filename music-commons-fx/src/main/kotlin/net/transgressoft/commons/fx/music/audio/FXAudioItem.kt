@@ -1,6 +1,6 @@
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.ReactiveEntityBase
+import net.transgressoft.commons.entity.ReactiveEntityBase
 import net.transgressoft.commons.music.AudioUtils
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist

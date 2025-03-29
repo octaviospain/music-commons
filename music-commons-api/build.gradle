@@ -1,5 +1,5 @@
-description 'Transgressoft Music Commons - API'
+description = 'Transgressoft Music Commons - API'
 
 dependencies {
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1'
+    api 'org.jetbrains.kotlinx:kotlinx-coroutines-core'
 }

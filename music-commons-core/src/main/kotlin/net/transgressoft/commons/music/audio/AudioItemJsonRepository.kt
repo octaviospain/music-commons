@@ -39,7 +39,7 @@ class AudioItemJsonRepository(
                 logger.debug { "New AudioItem was created from file $audioItemPath with id ${audioItem.id}" }
             }
 
-    override fun toString() = "AudioItemJsonRepository(name=$name, audioItemsCount=${entitiesById.size})"
+    override fun toString() = "AudioItemJsonRepository(audioItemsCount=${entitiesById.size})"
 }
 
 val audioItemSerializerModule =

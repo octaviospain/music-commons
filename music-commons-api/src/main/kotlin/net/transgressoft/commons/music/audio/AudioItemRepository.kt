@@ -1,8 +1,9 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.data.CrudEvent
-import net.transgressoft.commons.data.Repository
+import net.transgressoft.commons.event.CrudEvent
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
+import net.transgressoft.commons.persistence.Repository
+import java.io.Closeable
 import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.CompletableFuture
@@ -16,7 +17,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.future.future
 
-interface AudioItemRepository<I: ReactiveAudioItem<I>>: Repository<Int, I>, Flow.Publisher<CrudEvent<Int, I>> {
+interface AudioItemRepository<I: ReactiveAudioItem<I>>: Repository<Int, I>, Flow.Publisher<CrudEvent<Int, I>>, Closeable {
 
     val playerSubscriber: Flow.Subscriber<AudioItemPlayerEvent>
 

@@ -1,6 +1,7 @@
 package net.transgressoft.commons.fx.music.player
 
-import net.transgressoft.commons.TransEventPublisherBase
+import net.transgressoft.commons.event.FlowEventPublisher
+import net.transgressoft.commons.event.TransEventPublisher
 import net.transgressoft.commons.music.audio.AudioFileType.M4A
 import net.transgressoft.commons.music.audio.AudioFileType.MP3
 import net.transgressoft.commons.music.audio.AudioFileType.WAV
@@ -25,7 +26,7 @@ import java.util.EnumSet
  *
  * @author Octavio Calleya
  */
-class JavaFxPlayer: TransEventPublisherBase<AudioItemPlayerEvent>("JavaFxPlayer"), AudioItemPlayer {
+class JavaFxPlayer: TransEventPublisher<AudioItemPlayerEvent> by FlowEventPublisher<AudioItemPlayerEvent>("JavaFxPlayer"), AudioItemPlayer {
     companion object {
         private const val PLAY_COUNT_THRESHOLD_POLICY = 0.6
 
@@ -44,7 +45,7 @@ class JavaFxPlayer: TransEventPublisherBase<AudioItemPlayerEvent>("JavaFxPlayer"
             }
 
         fun isPlayable(audioItem: ReactiveAudioItem<*>): Boolean =
-            SUPPORTED_AUDIO_TYPES.contains(audioItem.extension.toAudioFileType()) &&
+            audioItem.extension.toAudioFileType() in SUPPORTED_AUDIO_TYPES &&
                 !(audioItem.encoding!!.startsWith("Apple") || audioItem.encoder!!.startsWith("iTunes"))
     }
 
@@ -90,7 +91,7 @@ class JavaFxPlayer: TransEventPublisherBase<AudioItemPlayerEvent>("JavaFxPlayer"
             .addListener { _, _, newValue ->
                 _currentTimeProperty.set(newValue)
                 if (isTimeToIncreasePlayCount(audioItemDuration, newValue, playCountIncreased)) {
-                    putEventAction(Played(audioItem))
+                    emitAsync(Played(audioItem))
                     playCountIncreased = true
                 }
             }

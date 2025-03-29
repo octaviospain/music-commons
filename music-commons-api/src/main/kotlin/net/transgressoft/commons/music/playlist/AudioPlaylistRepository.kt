@@ -1,16 +1,17 @@
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.TransEventSubscriber
-import net.transgressoft.commons.data.CrudEvent
-import net.transgressoft.commons.data.Repository
+import net.transgressoft.commons.event.CrudEvent
+import net.transgressoft.commons.event.TransEventSubscriber
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
+import net.transgressoft.commons.persistence.Repository
+import java.io.Closeable
 import java.util.*
 import java.util.concurrent.Flow
 
 /**
  * @author Octavio Calleya
  */
-interface AudioPlaylistRepository<I: ReactiveAudioItem<I>, P: ReactiveAudioPlaylist<I, P>>: Repository<Int, P>, Flow.Publisher<CrudEvent<Int, P>> {
+interface AudioPlaylistRepository<I: ReactiveAudioItem<I>, P: ReactiveAudioPlaylist<I, P>>: Repository<Int, P>, Flow.Publisher<CrudEvent<Int, P>>, Closeable {
 
     val audioItemEventSubscriber: TransEventSubscriber<I, CrudEvent<Int, out I>>
 

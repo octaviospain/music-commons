@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.EntityChangeEvent
-import net.transgressoft.commons.data.json.TransEntityPolymorphicSerializer
+import net.transgressoft.commons.event.EntityChangeEvent
+import net.transgressoft.commons.event.TransEventSubscription
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItem
@@ -9,12 +9,15 @@ import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
+import net.transgressoft.commons.persistence.json.TransEntityPolymorphicSerializer
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.concurrent.Flow
+import java.util.function.Consumer
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
@@ -151,6 +154,17 @@ internal class DummyPlaylist(
     override fun addPlaylists(playlists: Collection<MutableAudioPlaylist>): Boolean = throw IllegalStateException()
 
     override fun clone(): DummyPlaylist = DummyPlaylist(id)
+
+    override val changes: SharedFlow<EntityChangeEvent<Int, MutableAudioPlaylist>>
+        get() = throw IllegalStateException()
+
+    override fun emitAsync(event: EntityChangeEvent<Int, MutableAudioPlaylist>): Unit = throw IllegalStateException()
+
+    override fun subscribe(action: suspend (EntityChangeEvent<Int, MutableAudioPlaylist>) -> Unit): TransEventSubscription<in MutableAudioPlaylist> =
+        throw IllegalStateException()
+
+    override fun subscribe(action: Consumer<in EntityChangeEvent<Int, MutableAudioPlaylist>>): TransEventSubscription<in MutableAudioPlaylist> =
+        throw IllegalStateException()
 }
 
 internal class DummyAudioItem(
@@ -171,6 +185,15 @@ internal class DummyAudioItem(
     override val encoding: String? = null
     override val dateOfCreation: LocalDateTime = LocalDateTime.MIN
     override val lastDateModified: LocalDateTime = LocalDateTime.MIN
+    override val changes: SharedFlow<EntityChangeEvent<Int, AudioItem>>
+        get() = throw IllegalStateException()
+
+    override fun emitAsync(event: EntityChangeEvent<Int, AudioItem>): Unit = throw IllegalStateException()
+
+    override fun subscribe(action: suspend (EntityChangeEvent<Int, AudioItem>) -> Unit): TransEventSubscription<in AudioItem> = throw IllegalStateException()
+
+    override fun subscribe(action: Consumer<in EntityChangeEvent<Int, AudioItem>>): TransEventSubscription<in AudioItem> = throw IllegalStateException()
+
     override val uniqueId: String = ""
     override val fileName: String = ""
     override val extension: String = ""

@@ -1,8 +1,8 @@
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.data.StandardCrudEvent.Type.CREATE
-import net.transgressoft.commons.data.StandardCrudEvent.Type.DELETE
-import net.transgressoft.commons.data.StandardCrudEvent.Type.UPDATE
+import net.transgressoft.commons.event.StandardCrudEvent.Type.CREATE
+import net.transgressoft.commons.event.StandardCrudEvent.Type.DELETE
+import net.transgressoft.commons.event.StandardCrudEvent.Type.UPDATE
 import net.transgressoft.commons.music.audio.AudioItemJsonRepositoryBase
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
@@ -18,7 +18,7 @@ import java.nio.file.Path
 import java.util.Map.entry
 import kotlinx.serialization.modules.SerializersModule
 
-class ObservableAudioItemJsonJsonRepository(
+class ObservableAudioItemJsonRepository(
     name: String,
     file: File
 ): AudioItemJsonRepositoryBase<ObservableAudioItem>(
@@ -90,5 +90,5 @@ class ObservableAudioItemJsonJsonRepository(
 
     fun emptyLibraryProperty(): ReadOnlyBooleanProperty = setProperty.emptyProperty()
 
-    override fun toString() = "ObservableAudioItemJsonRepository(name=$name, audioItemsCount=${entitiesById.size})"
+    override fun toString() = "ObservableAudioItemJsonRepository(audioItemsCount=${entitiesById.size})"
 }

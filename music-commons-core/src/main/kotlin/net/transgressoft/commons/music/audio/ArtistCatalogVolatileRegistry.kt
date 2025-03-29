@@ -1,9 +1,9 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.data.RegistryBase
-import net.transgressoft.commons.data.StandardCrudEvent.Type.CREATE
-import net.transgressoft.commons.data.StandardCrudEvent.Type.DELETE
-import net.transgressoft.commons.data.StandardCrudEvent.Type.UPDATE
+import net.transgressoft.commons.event.StandardCrudEvent.Type.CREATE
+import net.transgressoft.commons.event.StandardCrudEvent.Type.DELETE
+import net.transgressoft.commons.event.StandardCrudEvent.Type.UPDATE
+import net.transgressoft.commons.persistence.RegistryBase
 import mu.KotlinLogging
 import java.util.Optional
 import java.util.stream.Collectors.partitioningBy

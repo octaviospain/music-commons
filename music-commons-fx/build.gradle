@@ -2,7 +2,7 @@ plugins {
     id 'org.openjfx.javafxplugin' version '0.1.0'
 }
 
-description 'Transgressoft Music Commons - JavaFX'
+description = 'Transgressoft Music Commons - JavaFX'
 
 javafx {
     version = JavaVersion.VERSION_17
@@ -18,11 +18,12 @@ tasks.register('runWaveformPaneDemo', JavaExec) {
 
 dependencies {
     api project(path: ':music-commons-core')
+    api 'org.jetbrains.kotlinx:kotlinx-coroutines-core'
+    api 'org.jetbrains.kotlinx:kotlinx-coroutines-javafx'
+
     implementation 'com.google.guava:guava:33.4.0-jre'
     implementation 'net.jthink:jaudiotagger:3.0.1'
-    implementation 'net.transgressoft:transgressoft-commons-core:1.1.0-SNAPSHOT'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-javafx:1.8.1'
+    implementation 'net.transgressoft:transgressoft-commons-core:1.2.0-SNAPSHOT'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0'
     implementation 'org.openjfx:javafx-controls:[22.0.1,)'
 

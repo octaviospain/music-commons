@@ -1,6 +1,6 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.IdentifiableEntity
+import net.transgressoft.commons.entity.IdentifiableEntity
 import net.transgressoft.commons.music.AudioUtils
 import mu.KotlinLogging
 import java.util.*
@@ -29,16 +29,15 @@ internal data class MutableArtistCatalog<I>(val artist: Artist) : IdentifiableEn
     val isEmpty: Boolean
         get() = albums.isEmpty()
 
-    fun addAudioItem(audioItem: I): Boolean {
-        return albums.merge(audioItem.album.name, setOf(audioItem).toSortedSet(AudioUtils.audioItemTrackDiscNumberComparator())) { set, _ ->
+    fun addAudioItem(audioItem: I): Boolean =
+        albums.merge(audioItem.album.name, setOf(audioItem).toSortedSet(AudioUtils.audioItemTrackDiscNumberComparator())) { set, _ ->
             set.add(audioItem)
             logger.debug { "AudioItem $audioItem was added to album ${audioItem.album}" }
             set
         }.let { it?.size!! > 1 }
-    }
 
-    fun removeAudioItem(audioItem: I): Boolean {
-        return albums[audioItem.album.name]?.removeIf { it.id == audioItem.id }?.also {
+    fun removeAudioItem(audioItem: I): Boolean =
+        albums[audioItem.album.name]?.removeIf { it.id == audioItem.id }?.also {
             if (it) {
                 if (albums[audioItem.album.name]?.isEmpty() == true) {
                     albums.remove(audioItem.album.name)
@@ -48,11 +47,10 @@ internal data class MutableArtistCatalog<I>(val artist: Artist) : IdentifiableEn
                 }
             }
         } ?: false
-    }
 
     fun findAlbumAudioItems(albumName: String): Set<I> = albums[albumName] ?: emptySet()
 
-    fun containsAudioItem(audioItem: I) = albums[audioItem.album.name]?.contains(audioItem) ?: false
+    fun containsAudioItem(audioItem: I) = albums[audioItem.album.name]?.contains(audioItem) == true
 
     fun mergeAudioItem(audioItem: I) {
         removeAudioItem(audioItem)

@@ -1,6 +1,6 @@
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.IdentifiableEntity
+import net.transgressoft.commons.entity.IdentifiableEntity
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import java.io.IOException
 import java.io.PrintWriter

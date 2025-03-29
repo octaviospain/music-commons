@@ -1,6 +1,6 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.IdentifiableEntity
+import net.transgressoft.commons.entity.IdentifiableEntity
 
 data class AudioItemChange(
     override val id: Int,

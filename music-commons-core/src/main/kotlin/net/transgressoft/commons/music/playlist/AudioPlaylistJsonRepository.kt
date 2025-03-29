@@ -1,12 +1,12 @@
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.data.StandardCrudEvent.Type.CREATE
-import net.transgressoft.commons.data.StandardCrudEvent.Type.DELETE
-import net.transgressoft.commons.data.StandardCrudEvent.Type.UPDATE
+import net.transgressoft.commons.entity.toIds
+import net.transgressoft.commons.event.StandardCrudEvent.Type.CREATE
+import net.transgressoft.commons.event.StandardCrudEvent.Type.DELETE
+import net.transgressoft.commons.event.StandardCrudEvent.Type.UPDATE
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemManipulationException
 import net.transgressoft.commons.music.audio.AudioRepository
-import net.transgressoft.commons.toIds
 import mu.KotlinLogging
 import java.io.File
 import kotlinx.serialization.modules.SerializersModule
@@ -79,7 +79,7 @@ class AudioPlaylistJsonRepository(
         }
     }
 
-    override fun toString() = "PlaylistRepository(name=$name, playlistsCount=${entitiesById.size})"
+    override fun toString() = "PlaylistRepository(playlistsCount=${entitiesById.size})"
 
     private inner class MutablePlaylist(
         id: Int,

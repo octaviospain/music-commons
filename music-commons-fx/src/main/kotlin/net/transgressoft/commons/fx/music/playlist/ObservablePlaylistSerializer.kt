@@ -1,6 +1,7 @@
 package net.transgressoft.commons.fx.music.playlist
 
-import net.transgressoft.commons.EntityChangeEvent
+import net.transgressoft.commons.event.EntityChangeEvent
+import net.transgressoft.commons.event.TransEventSubscription
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.music.playlist.AudioPlaylistSerializerBase
 import javafx.beans.property.SimpleBooleanProperty
@@ -12,6 +13,8 @@ import javafx.scene.image.Image
 import java.time.LocalDateTime
 import java.util.Optional
 import java.util.concurrent.Flow
+import java.util.function.Consumer
+import kotlinx.coroutines.flow.SharedFlow
 
 object ObservablePlaylistSerializer : AudioPlaylistSerializerBase<ObservableAudioItem, ObservablePlaylist>() {
     @Suppress("UNCHECKED_CAST")
@@ -63,4 +66,15 @@ internal class DummyPlaylist(
     override fun addPlaylists(playlists: Collection<ObservablePlaylist>): Boolean = throw IllegalStateException()
 
     override fun clone(): DummyPlaylist = DummyPlaylist(id)
+
+    override val changes: SharedFlow<EntityChangeEvent<Int, ObservablePlaylist>>
+        get() = throw UnsupportedOperationException()
+
+    override fun emitAsync(event: EntityChangeEvent<Int, ObservablePlaylist>): Unit = throw UnsupportedOperationException()
+
+    override fun subscribe(action: suspend (EntityChangeEvent<Int, ObservablePlaylist>) -> Unit): TransEventSubscription<in ObservablePlaylist> =
+        throw UnsupportedOperationException()
+
+    override fun subscribe(action: Consumer<in EntityChangeEvent<Int, ObservablePlaylist>>): TransEventSubscription<in ObservablePlaylist> =
+        throw UnsupportedOperationException()
 }

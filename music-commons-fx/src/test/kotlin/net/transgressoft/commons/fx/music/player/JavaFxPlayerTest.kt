@@ -2,7 +2,7 @@ package net.transgressoft.commons.fx.music.player
 
 import net.transgressoft.commons.fx.music.audio.FXAudioItem
 import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.arbitraryMp3File
-import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonJsonRepository
+import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonRepository
 import net.transgressoft.commons.music.player.AudioItemPlayer
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status.PAUSED
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status.PLAYING
@@ -32,7 +32,7 @@ class JavaFxPlayerTest {
 
     lateinit var player: AudioItemPlayer
     lateinit var jsonFile: File
-    lateinit var observableAudioItemRepository: ObservableAudioItemJsonJsonRepository
+    lateinit var observableAudioItemRepository: ObservableAudioItemJsonRepository
     lateinit var audioItem: FXAudioItem
 
     @Start
@@ -42,7 +42,7 @@ class JavaFxPlayerTest {
     fun beforeEach() {
         player = JavaFxPlayer()
         jsonFile = Files.createTempFile("observableAudioItemRepository-test", ".json").toFile().apply { deleteOnExit() }
-        observableAudioItemRepository = ObservableAudioItemJsonJsonRepository("ObservableAudioItemRepo", jsonFile)
+        observableAudioItemRepository = ObservableAudioItemJsonRepository("ObservableAudioItemRepo", jsonFile)
         audioItem = observableAudioItemRepository.createFromFile(arbitraryMp3File.next().toPath())
     }
 

@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.data.json.JsonFileRepositoryBase
 import net.transgressoft.commons.music.event.PlayedEventSubscriber
+import net.transgressoft.commons.persistence.json.JsonFileRepositoryBase
 import java.io.File
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -14,16 +14,16 @@ abstract class AudioItemJsonRepositoryBase<I>(
     file: File,
     audioItemSerializerBase: AudioItemSerializerBase<I>,
     serializersModule: SerializersModule = SerializersModule {}
-):
-    JsonFileRepositoryBase<Int, I>(
-            file, MapSerializer(Int.serializer(), audioItemSerializerBase),
-            SerializersModule {
-                include(serializersModule)
-                include(audioItemSerializerModule)
-            },
-            name
-        ),
-        AudioItemRepository<I> where I : ReactiveAudioItem<I> {
+): JsonFileRepositoryBase<Int, I>(
+        name,
+        file,
+        MapSerializer(Int.serializer(), audioItemSerializerBase),
+        SerializersModule {
+            include(serializersModule)
+            include(audioItemSerializerModule)
+        }
+    ),
+    AudioItemRepository<I> where I: ReactiveAudioItem<I> {
 
     private val artistCatalogRegistry = ArtistCatalogVolatileRegistry<I>()
 
@@ -47,12 +47,7 @@ abstract class AudioItemJsonRepositoryBase<I>(
         entitiesById.values.any { it.artistsInvolved.stream().map(String::lowercase).toList().contains(artistName.lowercase()) }
 
     override fun getRandomAudioItemsFromArtist(artist: Artist, size: Short): List<I> =
-        entitiesById.values
-            .asSequence()
-            .filter { it.artist == artist }
-            .shuffled()
-            .take(size.toInt())
-            .toList()
+        entitiesById.values.asSequence().filter { it.artist == artist }.shuffled().take(size.toInt()).toList()
 
     override fun putCreateEvent(entity: I) =
         super.putCreateEvent(entity).also {

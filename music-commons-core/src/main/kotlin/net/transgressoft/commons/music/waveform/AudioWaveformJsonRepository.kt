@@ -1,11 +1,15 @@
 package net.transgressoft.commons.music.waveform
 
-import net.transgressoft.commons.data.StandardCrudEvent
-import net.transgressoft.commons.data.json.JsonFileRepositoryBase
+import net.transgressoft.commons.event.StandardCrudEvent
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
+import net.transgressoft.commons.persistence.json.JsonFileRepositoryBase
 import java.io.File
 import java.util.concurrent.CompletableFuture
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.future.future
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 
@@ -14,7 +18,7 @@ typealias WaveformRepository<I> = AudioWaveformRepository<AudioWaveform, I>
 class AudioWaveformJsonRepository<I: ReactiveAudioItem<I>>(
     name: String,
     file: File
-): JsonFileRepositoryBase<Int, AudioWaveform>(file, MapSerializer(Int.serializer(), AudioWaveformSerializer), name = name),
+): JsonFileRepositoryBase<Int, AudioWaveform>(name, file, MapSerializer(Int.serializer(), AudioWaveformSerializer)),
     WaveformRepository<I> {
 
     override val audioItemEventSubscriber =
@@ -27,18 +31,20 @@ class AudioWaveformJsonRepository<I: ReactiveAudioItem<I>>(
     override fun getOrCreateWaveformAsync(
         audioItem: I,
         width: Short,
-        height: Short
-    ): CompletableFuture<AudioWaveform> {
-        return findById(audioItem.id)
+        height: Short,
+        dispatcher: CoroutineDispatcher
+    ): CompletableFuture<AudioWaveform> =
+        findById(audioItem.id)
             .map<CompletableFuture<AudioWaveform>> { CompletableFuture.completedFuture(it) }
             .orElseGet {
-                CompletableFuture.supplyAsync {
-                    val audioWaveform = ScalableAudioWaveform(audioItem.id, audioItem.path)
-                    add(audioWaveform)
-                    return@supplyAsync audioWaveform
+                CoroutineScope(dispatcher).future {
+                    async {
+                        val audioWaveform = ScalableAudioWaveform(audioItem.id, audioItem.path)
+                        add(audioWaveform)
+                        audioWaveform
+                    }.await()
                 }
             }
-    }
 
-    override fun toString() = "WaveformRepository(name=$name, waveformsCount=${size()})"
+    override fun toString() = "WaveformRepository(waveformsCount=${size()})"
 }

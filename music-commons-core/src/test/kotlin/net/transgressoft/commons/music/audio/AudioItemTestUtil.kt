@@ -2,8 +2,10 @@ package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.music.AudioUtils.beautifyArtistName
 import com.neovisionaries.i18n.CountryCode
+import io.kotest.assertions.fail
 import io.kotest.core.TestConfiguration
 import io.kotest.engine.spec.tempfile
+import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.arbitrary
 import io.kotest.property.arbitrary.boolean
@@ -19,6 +21,7 @@ import io.kotest.property.arbitrary.short
 import io.kotest.property.arbitrary.stringPattern
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.wav.WavOptions
 import org.jaudiotagger.tag.FieldKey
@@ -40,9 +43,15 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.io.path.extension
+import kotlin.io.path.absolutePathString
 import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.toJavaDuration
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.float
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 internal object AudioItemTestUtil : TestConfiguration() {
 
@@ -365,27 +374,34 @@ internal object AudioItemTestUtil : TestConfiguration() {
         val formats = listOf("mp3", "flac", "wav", "m4a")
         return (1..count).map { index ->
             val format = formats[index % formats.size]
+
             createMockedAudioFilePath(index, format)
         }
     }
 
     fun createMockedAudioFilePath(index: Int, format: String): Path {
         val fileName = "test-file-$index.$format"
+
         val mockFile =
             mockk<File> {
                 every { extension } returns format
-                every { path } returns "/mocked/path/$fileName"
             }
 
         val fileNameMock =
-            mockk<Path> {
-                every { this@mockk.toString() } returns fileName
+            spyk<Path> {
+                every { this@spyk.toString() } returns fileName
+            }
+
+        val absolutePathMock =
+            spyk<Path> {
+                every { this@spyk.toString() } returns fileName
             }
 
         val mockPath =
-            mockk<Path> {
+            spyk<Path> {
                 every { toFile() } returns mockFile
-                every { this@mockk.fileName } returns fileNameMock
+                every { this@spyk.fileName } returns fileNameMock
+                every { this@spyk.toAbsolutePath() } returns absolutePathMock
             }
         every { mockFile.toPath() } returns mockPath
 
@@ -465,6 +481,46 @@ internal object AudioItemTestUtil : TestConfiguration() {
         every { tag.artworkList } returns emptyList()
 
         return tag
+    }
+
+    infix fun JsonObject.shouldContainAudioItem(audioItem: AudioItem) {
+        val id = audioItem.id.toString()
+
+        (id in this) shouldBe true
+
+        val itemJson = this[id]?.jsonObject ?: fail("No JSON object found for ID: $id")
+
+        itemJson["path"]?.jsonPrimitive?.content shouldBe audioItem.path.absolutePathString()
+        itemJson["id"]?.jsonPrimitive?.int shouldBe audioItem.id
+        itemJson["title"]?.jsonPrimitive?.content shouldBe audioItem.title
+        itemJson["duration"]?.jsonPrimitive?.int shouldBe audioItem.duration.toSeconds().toInt()
+        itemJson["bitRate"]?.jsonPrimitive?.int shouldBe audioItem.bitRate
+        itemJson["trackNumber"]?.jsonPrimitive?.int shouldBe audioItem.trackNumber?.toInt()
+        itemJson["discNumber"]?.jsonPrimitive?.int shouldBe audioItem.discNumber?.toInt()
+        itemJson["bpm"]?.jsonPrimitive?.float shouldBe audioItem.bpm
+        itemJson["encoder"]?.jsonPrimitive?.content shouldBe audioItem.encoder
+        itemJson["encoding"]?.jsonPrimitive?.content shouldBe audioItem.encoding
+        itemJson["genre"]?.jsonPrimitive?.content shouldBe audioItem.genre.name
+        itemJson["comments"]?.jsonPrimitive?.content shouldBe audioItem.comments
+        itemJson["playCount"]?.jsonPrimitive?.int shouldBe audioItem.playCount.toInt()
+
+        val artistJson = itemJson["artist"]?.jsonObject
+        artistJson?.get("name")?.jsonPrimitive?.content shouldBe audioItem.artist.name
+        artistJson?.get("countryCode")?.jsonPrimitive?.content shouldBe audioItem.artist.countryCode.name
+
+        val albumJson = itemJson["album"]?.jsonObject
+        albumJson?.get("name")?.jsonPrimitive?.content shouldBe audioItem.album.name
+        albumJson?.get("isCompilation")?.jsonPrimitive?.boolean shouldBe audioItem.album.isCompilation
+        albumJson?.get("year")?.jsonPrimitive?.int shouldBe audioItem.album.year?.toInt()
+
+        val albumArtistJson = albumJson?.get("albumArtist")?.jsonObject
+        albumArtistJson?.get("name")?.jsonPrimitive?.content shouldBe audioItem.album.albumArtist.name
+
+        val labelJson = albumJson?.get("label")?.jsonObject
+        labelJson?.get("name")?.jsonPrimitive?.content shouldBe audioItem.album.label.name
+
+        itemJson["dateOfCreation"]?.jsonPrimitive?.int shouldBe audioItem.dateOfCreation.toEpochSecond(ZoneOffset.UTC).toInt()
+        itemJson["lastDateModified"]?.jsonPrimitive?.int shouldBe audioItem.lastDateModified.toEpochSecond(ZoneOffset.UTC).toInt()
     }
 }
 

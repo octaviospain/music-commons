@@ -1,6 +1,6 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.ReactiveEntityBase
+import net.transgressoft.commons.entity.ReactiveEntityBase
 import net.transgressoft.commons.music.AudioUtils
 import net.transgressoft.commons.music.AudioUtils.audioItemTrackDiscNumberComparator
 import net.transgressoft.commons.music.audio.AudioFileType.FLAC

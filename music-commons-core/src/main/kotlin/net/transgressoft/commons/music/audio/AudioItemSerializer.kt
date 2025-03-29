@@ -1,6 +1,6 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.data.json.TransEntityPolymorphicSerializer
+import net.transgressoft.commons.persistence.json.TransEntityPolymorphicSerializer
 import com.neovisionaries.i18n.CountryCode
 import java.nio.file.Path
 import java.time.Duration

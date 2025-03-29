@@ -1,6 +1,6 @@
 package net.transgressoft.commons.music.waveform
 
-import net.transgressoft.commons.ReactiveEntityBase
+import net.transgressoft.commons.entity.ReactiveEntityBase
 import net.transgressoft.commons.music.audio.AudioFileType
 import net.transgressoft.commons.music.audio.AudioFileType.FLAC
 import net.transgressoft.commons.music.audio.AudioFileType.M4A

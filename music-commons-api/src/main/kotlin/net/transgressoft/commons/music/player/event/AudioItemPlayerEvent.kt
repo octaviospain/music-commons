@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music.player.event
 
-import net.transgressoft.commons.EventType
-import net.transgressoft.commons.TransEvent
+import net.transgressoft.commons.event.EventType
+import net.transgressoft.commons.event.TransEvent
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
 

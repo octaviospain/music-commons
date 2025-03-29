@@ -1,6 +1,6 @@
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.IdentifiableEntity
+import net.transgressoft.commons.entity.IdentifiableEntity
 import net.transgressoft.commons.music.AudioUtils.beautifyArtistName
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist

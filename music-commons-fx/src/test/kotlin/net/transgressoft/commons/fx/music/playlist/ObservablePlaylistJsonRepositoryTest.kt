@@ -2,7 +2,8 @@ package net.transgressoft.commons.fx.music.playlist
 
 import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.arbitraryAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
-import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonJsonRepository
+import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonRepository
+import net.transgressoft.commons.persistence.ReactiveScope
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrowMessage
@@ -23,25 +24,46 @@ import java.io.File
 import java.time.Duration
 import java.util.*
 import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
+@ExperimentalCoroutinesApi
 class ObservablePlaylistJsonRepositoryTest : StringSpec({
 
+    val testDispatcher = UnconfinedTestDispatcher()
+    val testScope = CoroutineScope(testDispatcher)
     lateinit var jsonFile: File
     lateinit var observableAudioPlaylistRepository: ObservablePlaylistJsonRepository
+
+    beforeSpec {
+        ReactiveScope.setDefaultFlowScope(testScope)
+        ReactiveScope.setDefaultIoScope(testScope)
+    }
 
     beforeEach {
         jsonFile = tempfile("observablePlaylistRepository-test", ".json").also { it.deleteOnExit() }
         observableAudioPlaylistRepository = ObservablePlaylistJsonRepository.createNew("ObservablePlaylists", jsonFile)
     }
 
+    afterEach {
+        observableAudioPlaylistRepository.close()
+    }
+
+    afterSpec {
+        ReactiveScope.setDefaultFlowScope(CoroutineScope(Dispatchers.Default.limitedParallelism(4) + SupervisorJob()))
+        ReactiveScope.setDefaultIoScope(CoroutineScope(Dispatchers.IO.limitedParallelism(1) + SupervisorJob()))
+    }
+
     "Repository serializes itself to file when playlists are modified" {
         val rockAudioItem = arbitraryAudioItem { title = "50s Rock hit 1" }.next()
         val rockAudioItems = listOf(rockAudioItem)
         val rock = observableAudioPlaylistRepository.createPlaylist("Rock", rockAudioItems)
+        testDispatcher.scheduler.advanceUntilIdle()
 
-        eventually(100.milliseconds) {
-            observableAudioPlaylistRepository.playlistsProperty.shouldContainOnly(rock)
-        }
+        observableAudioPlaylistRepository.playlistsProperty.shouldContainOnly(rock)
 
         val rockFavAudioItem = arbitraryAudioItem { title = "Rock fav" }.next()
         val rockFavoritesAudioItems = listOf(rockFavAudioItem)
@@ -49,9 +71,7 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
 
         observableAudioPlaylistRepository.movePlaylist(rockFavorites.name, rock.name)
 
-        eventually(100.milliseconds) {
-            observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, rockFavorites)
-        }
+        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, rockFavorites)
 
         observableAudioPlaylistRepository.findById(rock.id) shouldBePresent { updatedRock ->
             updatedRock.playlists.shouldContainOnly(rockFavorites)
@@ -62,9 +82,9 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
             updatedRock.playlists.shouldContainExactly(rockFavorites)
         }
 
-        eventually(100.milliseconds) {
-            jsonFile.readText().shouldEqualJson(listOf(rock, rockFavorites).asJsonKeyValues())
-        }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        jsonFile.readText().shouldEqualJson(listOf(rock, rockFavorites).asJsonKeyValues())
 
         rock.isDirectory = true
         rock.name = "Rock directory"
@@ -74,9 +94,9 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
             it.name shouldBe "Rock directory"
         }
 
-        eventually(100.milliseconds) {
-            jsonFile.readText().shouldEqualJson(listOf(rock, rockFavorites).asJsonKeyValues())
-        }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        jsonFile.readText().shouldEqualJson(listOf(rock, rockFavorites).asJsonKeyValues())
     }
 
     "Creating repository from existing json file without AudioRepository throws Exception" {
@@ -109,7 +129,7 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
         jsonFile.writeText(listOf(playlist).asJsonKeyValues())
 
         val audioItemRepository =
-            mockk<ObservableAudioItemJsonJsonRepository> {
+            mockk<ObservableAudioItemJsonRepository> {
                 every { findById(eq(453374921)) } returns Optional.of(audioItem)
             }
 
@@ -119,16 +139,17 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
         observableAudioPlaylistRepository.contains {
             it.id == 1 && it.isDirectory && it.name == "Rock" && it.audioItems == listOf(audioItem) && it.playlists.isEmpty()
         } shouldBe true
-        eventually(100.milliseconds) {
-            observableAudioPlaylistRepository.playlistsProperty should {
-                it.size shouldBe 1
-                it.first().id shouldBe 1
-                it.first().isDirectory shouldBe true
-                it.first().name shouldBe "Rock"
-                it.first().audioItems shouldContainExactly listOf(audioItem)
-                it.first().playlists.isEmpty() shouldBe true
-                it.first().shouldBeInstanceOf<ObservablePlaylist>()
-            }
+
+//        testDispatcher.scheduler.advanceUntilIdle()
+
+        observableAudioPlaylistRepository.playlistsProperty should {
+            it.size shouldBe 1
+            it.first().id shouldBe 1
+            it.first().isDirectory shouldBe true
+            it.first().name shouldBe "Rock"
+            it.first().audioItems shouldContainExactly listOf(audioItem)
+            it.first().playlists.isEmpty() shouldBe true
+            it.first().shouldBeInstanceOf<ObservablePlaylist>()
         }
     }
 
@@ -197,7 +218,7 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
         }
 
         val thisWeeksFavorites = observableAudioPlaylistRepository.createPlaylist("This weeks' favorites songs")
-        observableAudioPlaylistRepository.search { it.name.contains("favorites") }.shouldContainExactly(thisWeeksFavorites)
+        observableAudioPlaylistRepository.search { "favorites" in it.name }.shouldContainExactly(thisWeeksFavorites)
         observableAudioPlaylistRepository.size() shouldBe 6
         observableAudioPlaylistRepository.addOrReplaceAll(setOf(bestHits, thisWeeksFavorites))
         observableAudioPlaylistRepository.size() shouldBe 6
@@ -223,7 +244,7 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
         observableAudioPlaylistRepository.addAudioItemToPlaylist(fiftiesItems[0], fifties.name)
         observableAudioPlaylistRepository.addAudioItemsToPlaylist(fiftiesItems, fifties.name)
         val playlistsThatContainsAnyAudioItemsWithHitInTitle =
-            observableAudioPlaylistRepository.search { it.audioItemsAnyMatch { audioItem -> audioItem.title.contains("hit") } }
+            observableAudioPlaylistRepository.search { it.audioItemsAnyMatch { audioItem -> "hit" in audioItem.title } }
         playlistsThatContainsAnyAudioItemsWithHitInTitle shouldContainExactly setOf(rock, fifties)
         val playlistsThatContainsAudioItemsWithDurationBelow60 =
             observableAudioPlaylistRepository.search {
@@ -285,9 +306,9 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
         observableAudioPlaylistRepository.findById(fifties.id) shouldBePresent { it.playlists.shouldNotContain(rock) }
         observableAudioPlaylistRepository.findByName(bestHits.name) shouldBePresent { it.playlists.shouldContainOnly(fifties) }
 
-        eventually(100.milliseconds) {
-            jsonFile.readText().shouldEqualJson(listOf(rock, pop, fifties, bestHits, selection).asJsonKeyValues())
-        }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        jsonFile.readText().shouldEqualJson(listOf(rock, pop, fifties, bestHits, selection).asJsonKeyValues())
 
         // --
 
@@ -305,10 +326,10 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
         observableAudioPlaylistRepository.findByName(selection.name) shouldBePresent { it.playlists.shouldContainOnly(rock) }
         observableAudioPlaylistRepository.findByName(fifties.name) shouldBePresent { it.playlists shouldContainExactly setOf(pop, selection) }
 
-        eventually(100.milliseconds) {
-            jsonFile.readText().shouldEqualJson(listOf(rock, pop, fifties, bestHits, selection).asJsonKeyValues())
-            observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, bestHits, selection)
-        }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        jsonFile.readText().shouldEqualJson(listOf(rock, pop, fifties, bestHits, selection).asJsonKeyValues())
+        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, bestHits, selection)
 
         observableAudioPlaylistRepository.removeAll(setOf(bestHits)) shouldBe true
 
@@ -320,10 +341,10 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
         rock.playlists.isEmpty() shouldBe true
         pop.playlists.isEmpty() shouldBe true
 
-        eventually(100.milliseconds) {
-            jsonFile.readText() shouldBe "{}"
-            observableAudioPlaylistRepository.playlistsProperty.isEmpty() shouldBe true
-        }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        jsonFile.readText() shouldBe "{}"
+        observableAudioPlaylistRepository.playlistsProperty.isEmpty() shouldBe true
     }
 
     "Removing playlist directory from repository is recursive and changes reflected on playlists" {

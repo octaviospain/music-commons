@@ -2,8 +2,8 @@ package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.arbitraryMp3File
 import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.asJsonKeyValue
+import net.transgressoft.commons.persistence.ReactiveScope
 import io.kotest.assertions.json.shouldEqualJson
-import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.should
@@ -12,31 +12,53 @@ import io.kotest.matchers.string.shouldContainOnlyOnce
 import io.kotest.property.arbitrary.next
 import java.io.File
 import java.util.Map.entry
-import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
+@ExperimentalCoroutinesApi
 internal class ObservableAudioItemJsonRepositoryTest : StringSpec({
 
+    val testDispatcher = UnconfinedTestDispatcher()
+    val testScope = CoroutineScope(testDispatcher)
     lateinit var jsonFile: File
-    lateinit var observableAudioItemRepository: ObservableAudioItemJsonJsonRepository
+    lateinit var observableAudioItemRepository: ObservableAudioItemJsonRepository
+
+    beforeSpec {
+        ReactiveScope.setDefaultFlowScope(testScope)
+        ReactiveScope.setDefaultIoScope(testScope)
+    }
 
     beforeEach {
         jsonFile = tempfile("observableAudioItemRepository-test", ".json").also { it.deleteOnExit() }
-        observableAudioItemRepository = ObservableAudioItemJsonJsonRepository("ObservableAudioItemRepo", jsonFile)
+        observableAudioItemRepository = ObservableAudioItemJsonRepository("ObservableAudioItemRepo", jsonFile)
+    }
+
+    afterEach {
+        observableAudioItemRepository.close()
+    }
+
+    afterSpec {
+        ReactiveScope.setDefaultFlowScope(CoroutineScope(Dispatchers.Default.limitedParallelism(4) + SupervisorJob()))
+        ReactiveScope.setDefaultIoScope(CoroutineScope(Dispatchers.IO.limitedParallelism(1) + SupervisorJob()))
     }
 
     "should create an observable audio item and serialize itself" {
         val fxAudioItem = observableAudioItemRepository.createFromFile(arbitraryMp3File.next().toPath())
 
-        eventually(100.milliseconds) { jsonFile.readText().shouldEqualJson(fxAudioItem.asJsonKeyValue()) }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        jsonFile.readText().shouldEqualJson(fxAudioItem.asJsonKeyValue())
 
         fxAudioItem.title = "New title"
 
-        eventually(100.milliseconds) {
-            jsonFile.readText() should {
-                it.shouldEqualJson(fxAudioItem.asJsonKeyValue())
+        testDispatcher.scheduler.advanceUntilIdle()
 
-                it.shouldContainOnlyOnce("title\": \"New title")
-            }
+        jsonFile.readText() should {
+            it.shouldEqualJson(fxAudioItem.asJsonKeyValue())
+            it.shouldContainOnlyOnce("title\": \"New title")
         }
     }
 
@@ -50,9 +72,9 @@ internal class ObservableAudioItemJsonRepositoryTest : StringSpec({
         observableAudioItemRepository.emptyLibraryProperty().get() shouldBe false
 
         fxAudioItem.title = "New title"
-        eventually(100.milliseconds) {
-            audioItemsSetProperty.get().find { it.key == fxAudioItem.id }?.value?.title shouldBe "New title"
-        }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        audioItemsSetProperty.get().find { it.key == fxAudioItem.id }?.value?.title shouldBe "New title"
 
         observableAudioItemRepository.remove(fxAudioItem)
         audioItemsSetProperty.isEmpty() shouldBe true
