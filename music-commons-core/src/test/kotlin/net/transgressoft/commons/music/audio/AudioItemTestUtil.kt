@@ -138,17 +138,19 @@ internal object AudioItemTestUtil : TestConfiguration() {
         tag.setField(FieldKey.ALBUM_ARTIST, attributes.album.albumArtist.name)
         tag.setField(FieldKey.ARTIST, attributes.artist.name)
         tag.setField(FieldKey.GENRE, attributes.genre.name)
-        tag.setField(FieldKey.COMMENT, attributes.comments)
-        tag.setField(FieldKey.TRACK, attributes.trackNumber.toString())
-        tag.setField(FieldKey.DISC_NO, attributes.discNumber.toString())
-        tag.setField(FieldKey.YEAR, attributes.album.year.toString())
-        tag.setField(FieldKey.ENCODER, attributes.encoder)
+        attributes.comments?.let { tag.setField(FieldKey.COMMENT, it) }
+        attributes.trackNumber?.let { tag.setField(FieldKey.TRACK, it.toString()) }
+        attributes.discNumber?.let { tag.setField(FieldKey.DISC_NO, it.toString()) }
+        attributes.album.year?.let { tag.setField(FieldKey.YEAR, it.toString()) }
+        attributes.encoder?.let { tag.setField(FieldKey.ENCODER, it) }
         tag.setField(FieldKey.IS_COMPILATION, attributes.album.isCompilation.toString())
         tag.setField(FieldKey.GROUPING, attributes.album.label.name)
-        if (tag is Mp4Tag) {
-            tag.setField(FieldKey.BPM, attributes.bpm?.toInt().toString())
-        } else {
-            tag.setField(FieldKey.BPM, attributes.bpm?.toString())
+        attributes.bpm?.let {
+            if (tag is Mp4Tag) {
+                tag.setField(FieldKey.BPM, it.toInt().toString())
+            } else {
+                tag.setField(FieldKey.BPM, it.toString())
+            }
         }
         attributes.coverImageBytes?.let { setArtworkTag(tag, it) }
         return tag

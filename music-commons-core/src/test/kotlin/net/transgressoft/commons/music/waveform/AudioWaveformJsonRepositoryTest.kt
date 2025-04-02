@@ -1,10 +1,10 @@
 package net.transgressoft.commons.music.waveform
 
+import net.transgressoft.commons.event.ReactiveScope
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemTestUtil
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryWavFile
-import net.transgressoft.commons.persistence.ReactiveScope
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile

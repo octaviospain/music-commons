@@ -4,18 +4,16 @@ import net.transgressoft.commons.event.StandardCrudEvent.Type.CREATE
 import net.transgressoft.commons.event.StandardCrudEvent.Type.DELETE
 import net.transgressoft.commons.event.StandardCrudEvent.Type.UPDATE
 import net.transgressoft.commons.music.audio.AudioItemJsonRepositoryBase
-import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
 import javafx.beans.property.ReadOnlyBooleanProperty
-import javafx.beans.property.ReadOnlySetProperty
-import javafx.beans.property.SimpleSetProperty
+import javafx.beans.property.ReadOnlyListProperty
+import javafx.beans.property.SimpleListProperty
 import javafx.collections.FXCollections
 import javafx.collections.MapChangeListener
 import javafx.collections.ObservableMap
 import mu.KotlinLogging
 import java.io.File
 import java.nio.file.Path
-import java.util.Map.entry
 import kotlinx.serialization.modules.SerializersModule
 
 class ObservableAudioItemJsonRepository(
@@ -33,8 +31,8 @@ class ObservableAudioItemJsonRepository(
 
     private val observableAudioItemMap: ObservableMap<Int, ObservableAudioItem> = FXCollections.observableHashMap()
 
-    val setProperty: ReadOnlySetProperty<Map.Entry<Int, ObservableAudioItem>> =
-        SimpleSetProperty(this, "observable audio item entries", FXCollections.observableSet())
+    val audioItemsProperty: ReadOnlyListProperty<ObservableAudioItem> =
+        SimpleListProperty(this, "observable audio item entries", FXCollections.observableArrayList())
 
     init {
         playerSubscriber.addOnNextEventAction(PLAYED) { event ->
@@ -48,32 +46,39 @@ class ObservableAudioItemJsonRepository(
         }
     }
 
-    private val internalAudioItemChangesSubscriber =
-        AudioItemEventSubscriber<ObservableAudioItem>("InternalAudioItemSubscriber").apply {
-            addOnNextEventAction(CREATE, UPDATE) { event ->
-                synchronized(observableAudioItemMap) {
-                    observableAudioItemMap.putAll(event.entities)
-                }
+    init {
+        // Subscribe to the events of itself in order to update the observable map
+        subscribe(CREATE) { event ->
+            synchronized(observableAudioItemMap) {
+                observableAudioItemMap.putAll(event.entities)
             }
-            addOnNextEventAction(DELETE) { event ->
-                synchronized(observableAudioItemMap) {
-                    event.entities.forEach { observableAudioItemMap.remove(it.key) }
+        }
+        subscribe(UPDATE) { event ->
+            synchronized(observableAudioItemMap) {
+                observableAudioItemMap.putAll(event.entities)
+            }
+        }
+        subscribe(DELETE) { event ->
+            synchronized(observableAudioItemMap) {
+                event.entities.forEach {
+                    observableAudioItemMap.remove(it.key)
                 }
             }
         }
 
-    init {
-        subscribe(internalAudioItemChangesSubscriber)
         observableAudioItemMap.addListener(
             MapChangeListener { change ->
                 change?.valueRemoved?.let { removed ->
-                    setProperty.removeIf { it.key == removed.id }
+                    audioItemsProperty.removeIf { it.id == removed.id }
                 }
                 change?.valueAdded?.let {
-                    setProperty.add(entry(it.id, it))
+                    audioItemsProperty.add(it)
                 }
             }
         )
+
+        // Add all existing audio items to the observable map on initialization
+        runForAll { observableAudioItemMap.put(it.id, it) }
     }
 
     override fun clear() {
@@ -88,7 +93,7 @@ class ObservableAudioItemJsonRepository(
                 logger.debug { "New ObservableAudioItem was created from file $audioItemPath with id ${fxAudioItem.id}" }
             }
 
-    fun emptyLibraryProperty(): ReadOnlyBooleanProperty = setProperty.emptyProperty()
+    fun emptyLibraryProperty(): ReadOnlyBooleanProperty = audioItemsProperty.emptyProperty()
 
     override fun toString() = "ObservableAudioItemJsonRepository(audioItemsCount=${entitiesById.size})"
 }

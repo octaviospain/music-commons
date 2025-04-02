@@ -10,7 +10,7 @@ class PlayedEventSubscriber: TransEventSubscriberBase<ReactiveAudioItem<*>, Audi
         buildString {
             append("PlayedEventSubscriber(name=$name")
             subscription?.let {
-                append(", soruce=${it.source}")
+                append(", source=${it.source}")
             }
             append(")")
         }

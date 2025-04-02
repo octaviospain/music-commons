@@ -28,6 +28,7 @@ import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.time.Duration
 import java.time.LocalDateTime
+import javax.annotation.Nullable
 import kotlin.io.path.extension
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -123,14 +124,17 @@ internal class MutableAudioItem(
     @Serializable
     override val duration: Duration = _duration
 
-    private var _encoder: String? = getFieldIfExisting(tag, FieldKey.ENCODER) ?: ""
+    private var _encoder: String? = getFieldIfExisting(tag, FieldKey.ENCODER)?.takeIf { it.isNotEmpty() }
 
     @Serializable
+    @Nullable
     override val encoder: String? = _encoder
 
-    private var _encoding: String? = audioHeader.encodingType
+    @Nullable
+    private var _encoding: String? = audioHeader.encodingType.takeIf { it.isNotEmpty() }
 
     @Serializable
+    @Nullable
     override val encoding: String? = _encoding
 
     private var _dateOfCreation: LocalDateTime = LocalDateTime.now()
@@ -192,25 +196,29 @@ internal class MutableAudioItem(
         }
 
     @Serializable
-    override var comments: String? = getFieldIfExisting(tag, FieldKey.COMMENT)
+    @Nullable
+    override var comments: String? = getFieldIfExisting(tag, FieldKey.COMMENT)?.takeIf { it.isNotEmpty() }
         set(value) {
             setAndNotify(value, field) { field = it }
         }
 
     @Serializable
-    override var trackNumber: Short? = getFieldIfExisting(tag, FieldKey.TRACK)?.takeIf { it.isNotEmpty().and(it != "0") }?.toShortOrNull()?.takeIf { it > 0 }
+    @Nullable
+    override var trackNumber: Short? = getFieldIfExisting(tag, FieldKey.TRACK)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()?.takeIf { it > 0 }
         set(value) {
             setAndNotify(value, field) { field = it }
         }
 
     @Serializable
-    override var discNumber: Short? = getFieldIfExisting(tag, FieldKey.DISC_NO)?.takeIf { it.isNotEmpty().and(it != "0") }?.toShortOrNull()?.takeIf { it > 0 }
+    @Nullable
+    override var discNumber: Short? = getFieldIfExisting(tag, FieldKey.DISC_NO)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()?.takeIf { it > 0 }
         set(value) {
             setAndNotify(value, field) { field = it }
         }
 
     @Serializable
-    override var bpm: Float? = getFieldIfExisting(tag, FieldKey.BPM)?.takeIf { it.isNotEmpty().and(it != "0") }?.toFloatOrNull()?.takeIf { it > 0 }
+    @Nullable
+    override var bpm: Float? = getFieldIfExisting(tag, FieldKey.BPM)?.takeUnless { it.isEmpty().and(it == "0") }?.toFloatOrNull()?.takeIf { it > 0 }
         set(value) {
             setAndNotify(value, field) { field = it }
         }
@@ -222,6 +230,7 @@ internal class MutableAudioItem(
         }
 
     @Transient
+    @Nullable
     override var coverImageBytes: ByteArray? = getCoverBytes(tag)
         get() = field ?: getCoverBytes()
         set(value) {

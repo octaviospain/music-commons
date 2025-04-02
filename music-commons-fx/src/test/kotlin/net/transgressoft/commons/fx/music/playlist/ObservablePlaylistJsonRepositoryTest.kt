@@ -1,11 +1,10 @@
 package net.transgressoft.commons.fx.music.playlist
 
+import net.transgressoft.commons.event.ReactiveScope
 import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.arbitraryAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonRepository
-import net.transgressoft.commons.persistence.ReactiveScope
 import io.kotest.assertions.json.shouldEqualJson
-import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrowMessage
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
@@ -23,7 +22,6 @@ import io.mockk.mockk
 import java.io.File
 import java.time.Duration
 import java.util.*
-import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -140,8 +138,6 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
             it.id == 1 && it.isDirectory && it.name == "Rock" && it.audioItems == listOf(audioItem) && it.playlists.isEmpty()
         } shouldBe true
 
-//        testDispatcher.scheduler.advanceUntilIdle()
-
         observableAudioPlaylistRepository.playlistsProperty should {
             it.size shouldBe 1
             it.first().id shouldBe 1
@@ -181,41 +177,46 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
         val playlistsThatContainsAllAudioItemsWith50sInTitle =
             observableAudioPlaylistRepository.search { it.audioItemsAllMatch { audioItem -> audioItem.title.contains("50s") } }
         playlistsThatContainsAllAudioItemsWith50sInTitle.shouldContainOnly(rock)
-        eventually(100.milliseconds) {
-            observableAudioPlaylistRepository.playlistsProperty.shouldContainOnly(rock)
-        }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        observableAudioPlaylistRepository.playlistsProperty.shouldContainOnly(rock)
 
         val pop = observableAudioPlaylistRepository.createPlaylist("Pop")
         observableAudioPlaylistRepository.size() shouldBe 2
         observableAudioPlaylistRepository.numberOfPlaylists() shouldBe 2
-        eventually(100.milliseconds) {
-            observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop)
-        }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop)
 
         val fifties = observableAudioPlaylistRepository.createPlaylistDirectory("50s")
         observableAudioPlaylistRepository.addPlaylistToDirectory(rock, fifties.name)
         observableAudioPlaylistRepository.addPlaylistToDirectory(pop.name, fifties.name)
         observableAudioPlaylistRepository.findByName(fifties.name) shouldBePresent { it.playlists shouldContainExactly setOf(pop, rock) }
         observableAudioPlaylistRepository.numberOfPlaylistDirectories() shouldBe 1
-        eventually(100.milliseconds) {
-            observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop, fifties)
-        }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop, fifties)
 
         val sixties = observableAudioPlaylistRepository.createPlaylistDirectory("60s")
         sixties.playlists.isEmpty() shouldBe true
         observableAudioPlaylistRepository.numberOfPlaylistDirectories() shouldBe 2
         observableAudioPlaylistRepository.findByUniqueId("D-" + sixties.name) shouldBePresent { it shouldBe sixties }
-        eventually(100.milliseconds) {
-            observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, sixties)
-        }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, sixties)
 
         val bestHits = observableAudioPlaylistRepository.createPlaylistDirectory("Best hits")
         observableAudioPlaylistRepository.addPlaylistsToDirectory(setOf(fifties, sixties), bestHits.name)
         bestHits.playlists.isEmpty() shouldBe false
         observableAudioPlaylistRepository.findByName(bestHits.name) shouldBePresent { it.playlists shouldContainExactly setOf(fifties, sixties) }
-        eventually(100.milliseconds) {
-            observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, sixties, bestHits)
-        }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, sixties, bestHits)
 
         val thisWeeksFavorites = observableAudioPlaylistRepository.createPlaylist("This weeks' favorites songs")
         observableAudioPlaylistRepository.search { "favorites" in it.name }.shouldContainExactly(thisWeeksFavorites)
@@ -223,9 +224,10 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
         observableAudioPlaylistRepository.addOrReplaceAll(setOf(bestHits, thisWeeksFavorites))
         observableAudioPlaylistRepository.size() shouldBe 6
         observableAudioPlaylistRepository.search { it.isDirectory.not() } shouldContainExactly setOf(rock, pop, thisWeeksFavorites)
-        eventually(100.milliseconds) {
-            observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, sixties, bestHits, thisWeeksFavorites)
-        }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, sixties, bestHits, thisWeeksFavorites)
 
         observableAudioPlaylistRepository.search { it.isDirectory } shouldContainExactly setOf(fifties, sixties, bestHits)
 
@@ -267,9 +269,10 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
 
         observableAudioPlaylistRepository.clear()
         observableAudioPlaylistRepository.isEmpty shouldBe true
-        eventually(100.milliseconds) {
-            observableAudioPlaylistRepository.playlistsProperty.isEmpty() shouldBe true
-        }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        observableAudioPlaylistRepository.playlistsProperty.isEmpty() shouldBe true
     }
 
     // ├──Best hits
@@ -287,9 +290,10 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
         observableAudioPlaylistRepository.addPlaylistsToDirectory(setOf(fifties.name), bestHits.name)
         val selection = observableAudioPlaylistRepository.createPlaylistDirectory("Selection of playlists")
         observableAudioPlaylistRepository.size() shouldBe 5
-        eventually(100.milliseconds) {
-            observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, bestHits, selection)
-        }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, bestHits, selection)
 
         selection.addPlaylist(rock)
         // same result as doing
@@ -353,9 +357,10 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
         val bestHits = observableAudioPlaylistRepository.createPlaylistDirectory("Best hits").also { it.addPlaylist(fifties) }
         val rock = observableAudioPlaylistRepository.createPlaylist("Rock")
         val selection = observableAudioPlaylistRepository.createPlaylistDirectory("Selection of playlists").also { it.addPlaylist(rock) }
-        eventually(100.milliseconds) {
-            observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(pop, fifties, bestHits, rock, selection)
-        }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(pop, fifties, bestHits, rock, selection)
 
         // ├──Best hits
         // │  └──50s
@@ -387,9 +392,10 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
 
         observableAudioPlaylistRepository.size() shouldBe 2
         selection.playlists.isEmpty() shouldBe true
-        eventually(100.milliseconds) {
-            observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(bestHits, selection)
-        }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(bestHits, selection)
     }
 
     "Create playlists with existing name" {

@@ -1,5 +1,6 @@
 package net.transgressoft.commons.music
 
+import net.transgressoft.commons.event.ReactiveScope
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemJsonRepository
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.mp3File
@@ -9,7 +10,6 @@ import net.transgressoft.commons.music.playlist.AudioPlaylistTestUtil.asJsonKeyV
 import net.transgressoft.commons.music.playlist.PlaylistRepository
 import net.transgressoft.commons.music.waveform.AudioWaveformJsonRepository
 import net.transgressoft.commons.music.waveform.WaveformRepository
-import net.transgressoft.commons.persistence.ReactiveScope
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile

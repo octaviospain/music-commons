@@ -50,6 +50,7 @@ import java.nio.file.StandardOpenOption
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.Optional
+import javax.annotation.Nullable
 import kotlin.io.path.extension
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -64,11 +65,8 @@ import kotlinx.serialization.modules.polymorphic
 
 @Suppress("SERIALIZER_TYPE_INCOMPATIBLE")
 @Serializable(with = ObservableAudioItemSerializer::class)
-class FXAudioItem internal constructor(
-    override val path: Path,
-    override val id: Int = UNASSIGNED_ID
-):
-    ObservableAudioItem, Comparable<ObservableAudioItem>, ReactiveEntityBase<Int, ObservableAudioItem>() {
+class FXAudioItem internal constructor(override val path: Path, override val id: Int = UNASSIGNED_ID): ObservableAudioItem, Comparable<ObservableAudioItem>,
+    ReactiveEntityBase<Int, ObservableAudioItem>() {
 
         @Transient
         private val logger = KotlinLogging.logger {}
@@ -145,11 +143,13 @@ class FXAudioItem internal constructor(
         private var _encoder: String? = getFieldIfExisting(tag, FieldKey.ENCODER) ?: ""
 
         @Serializable
+        @Nullable
         override val encoder: String? = _encoder
 
         private var _encoding: String? = audioHeader.encodingType
 
         @Serializable
+        @Nullable
         override val encoding: String? = _encoding
 
         private var _dateOfCreation: LocalDateTime = LocalDateTime.now()
@@ -254,14 +254,15 @@ class FXAudioItem internal constructor(
             }
 
         @Transient
-        override val genreNameProperty =
-            SimpleStringProperty(this, "genre", genre.name).apply {
-                addListener { _, _, newGenreName ->
-                    genre = Genre.parseGenre(newGenreName)
+        override val genreProperty =
+            SimpleObjectProperty(this, "genre", genre).apply {
+                addListener { _, _, newGenre ->
+                    genre = newGenre
                 }
             }
 
-        override var comments: String? = getFieldIfExisting(tag, FieldKey.COMMENT)
+        @Nullable
+        override var comments: String? = getFieldIfExisting(tag, FieldKey.COMMENT)?.takeIf { it.isNotEmpty() }
             set(value) {
                 setAndNotify(value, field) {
                     field = value
@@ -276,7 +277,9 @@ class FXAudioItem internal constructor(
                 }
             }
 
-        override var trackNumber: Short? = getFieldIfExisting(tag, FieldKey.TRACK)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()
+        @Nullable
+        override var trackNumber: Short? =
+            getFieldIfExisting(tag, FieldKey.TRACK)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()?.takeIf { it > 0 }
             set(value) {
                 setAndNotify(value, field) {
                     field = value
@@ -291,7 +294,9 @@ class FXAudioItem internal constructor(
                 }
             }
 
-        override var discNumber: Short? = getFieldIfExisting(tag, FieldKey.DISC_NO)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()
+        @Nullable
+        override var discNumber: Short? =
+            getFieldIfExisting(tag, FieldKey.DISC_NO)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()?.takeIf { it > 0 }
             set(value) {
                 setAndNotify(value, field) {
                     field = value
@@ -306,7 +311,8 @@ class FXAudioItem internal constructor(
                 }
             }
 
-        override var bpm: Float? = getFieldIfExisting(tag, FieldKey.BPM)?.takeUnless { it.isEmpty().and(it == "0") }?.toFloatOrNull() ?: -1f
+        @Nullable
+        override var bpm: Float? = getFieldIfExisting(tag, FieldKey.BPM)?.takeUnless { it.isEmpty().and(it == "0") }?.toFloatOrNull()?.takeIf { it > 0 }
             set(value) {
                 setAndNotify(value, field) {
                     field = value
@@ -333,6 +339,7 @@ class FXAudioItem internal constructor(
         @Transient
         override val lastDateModifiedProperty: ReadOnlyObjectProperty<LocalDateTime> = _lastDateModifiedProperty
 
+        @Nullable
         override var coverImageBytes: ByteArray? = getCoverBytes(tag)
             set(value) {
                 setAndNotify(value, field) {
@@ -397,7 +404,7 @@ class FXAudioItem internal constructor(
                         getFieldIfExisting(tag, FieldKey.IS_COMPILATION)?.let {
                             if ("m4a" == extension) "1" == tag.getFirst(FieldKey.IS_COMPILATION)
                             else "true" == tag.getFirst(FieldKey.IS_COMPILATION)
-                        } ?: false
+                        } == true
                     val year = getFieldIfExisting(tag, FieldKey.YEAR)?.toShortOrNull()?.takeIf { it > 0 }
                     val label = getFieldIfExisting(tag, FieldKey.GROUPING)?.let { ImmutableLabel(it) } as Label
                     ImmutableAlbum(albumName, ImmutableArtist.of(AudioUtils.beautifyArtistName(albumArtistName)), isCompilation, year, label)

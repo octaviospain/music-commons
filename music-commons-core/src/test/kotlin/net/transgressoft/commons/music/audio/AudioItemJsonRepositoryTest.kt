@@ -1,11 +1,11 @@
 package net.transgressoft.commons.music.audio
 
+import net.transgressoft.commons.event.ReactiveScope
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAlbumAudioItems
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryMp3File
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.asJsonKeyValue
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.createMockedAudioFilePaths
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.shouldContainAudioItem
-import net.transgressoft.commons.persistence.ReactiveScope
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.common.ExperimentalKotest
 import io.kotest.core.spec.style.StringSpec

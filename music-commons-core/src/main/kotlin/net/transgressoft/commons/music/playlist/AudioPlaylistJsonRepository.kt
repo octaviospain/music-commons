@@ -25,7 +25,9 @@ class AudioPlaylistJsonRepository(
         disableEvents(CREATE, UPDATE, DELETE) // disable events until initial load from file is completed
         runForAll {
             val playlistWithAudioItems = MutablePlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItems.toIds(), audioItemRepository))
-            entitiesById[it.id] = playlistWithAudioItems
+            // Remove the item from the repository to delete the subscription
+            remove(it)
+            add(playlistWithAudioItems)
         }
         runForAll {
             val playlistMissingPlaylists = entitiesById[it.id] ?: throw IllegalStateException("Playlist ID ${it.id} not found after initial processing")

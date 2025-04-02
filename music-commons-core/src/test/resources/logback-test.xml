@@ -4,7 +4,7 @@
             <pattern>%-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
-    <logger name="org.jaudiotagger.audio" level="WARN" />
+    <logger name="org.jaudiotagger.audio" level="OFF" />
     <logger name="ws.schild.jave" level="WARN" />
     <logger name="io.mockk" level="OFF"/>
 

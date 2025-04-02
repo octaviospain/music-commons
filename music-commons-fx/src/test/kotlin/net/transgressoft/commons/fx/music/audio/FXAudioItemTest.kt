@@ -85,7 +85,7 @@ internal class FXAudioItemTest : StringSpec({
 
         lastDateUpdated = fxAudioItem.lastDateModified
         val newGenre = fxAudioItem.genre.randomDifferent()
-        fxAudioItem.genreNameProperty.set(newGenre.name)
+        fxAudioItem.genreProperty.set(newGenre)
         eventually(100.milliseconds) {
             fxAudioItem.genre shouldBe newGenre
             fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated

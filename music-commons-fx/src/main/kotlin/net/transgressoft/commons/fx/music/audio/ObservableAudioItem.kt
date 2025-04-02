@@ -2,6 +2,7 @@ package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
+import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import javafx.beans.property.FloatProperty
 import javafx.beans.property.IntegerProperty
@@ -23,7 +24,7 @@ interface ObservableAudioItem : ReactiveAudioItem<ObservableAudioItem> {
 
     val albumProperty: ObjectProperty<Album>
 
-    val genreNameProperty: StringProperty
+    val genreProperty: ObjectProperty<Genre>
 
     val commentsProperty: StringProperty
 

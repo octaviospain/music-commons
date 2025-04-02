@@ -52,6 +52,8 @@ internal class MutableAudioItemTest : FunSpec({
         Json {
             serializersModule = audioItemSerializerModule
             prettyPrint = true
+            explicitNulls = true
+            allowStructuredMapKeys = true
         }
 
     fun AudioItemTestAttributes.setExpectedAttributes() {
@@ -75,7 +77,7 @@ internal class MutableAudioItemTest : FunSpec({
             arbitraryFlacFile(AudioItemTestAttributes::setExpectedAttributes).next()
         ).exhaustive()
 
-    context("should create an audio item, that is serializable to json, and write changes to metadata") {
+    context("MutableAudioItem creates and serializes and AudioItem to json and write changes to file metadata") {
         checkAll(list) { testAudioFile ->
             lateinit var expectedDuration: Duration
             lateinit var expectedEncoding: String
@@ -110,48 +112,46 @@ internal class MutableAudioItemTest : FunSpec({
             audioItem.writeMetadata().join()
             val loadedAudioItem: AudioItem = MutableAudioItem(testAudioFile.toPath(), audioItem.id)
 
-            eventually(100.milliseconds) {
-                assertSoftly {
-                    loadedAudioItem.id shouldBe audioItem.id
-                    loadedAudioItem.dateOfCreation shouldBeAfter audioItem.dateOfCreation
-                    loadedAudioItem.lastDateModified shouldBeAfter audioItem.lastDateModified
-                    loadedAudioItem.path shouldBe audioItem.path
-                    loadedAudioItem.fileName shouldBe audioItem.fileName
-                    loadedAudioItem.extension shouldBe audioItem.extension
-                    loadedAudioItem.title shouldBe audioItem.title
-                    loadedAudioItem.duration shouldBe audioItem.duration
-                    loadedAudioItem.bitRate shouldBe audioItem.bitRate
-                    // album country code is not updated because there is no ID3 tag for it
-                    loadedAudioItem.album.albumArtist.name shouldBe audioItem.album.albumArtist.name
-                    loadedAudioItem.album.albumArtist.countryCode shouldBe CountryCode.UNDEFINED
-                    loadedAudioItem.album.isCompilation shouldBe audioItem.album.isCompilation
-                    // label country code is not updated because there is no ID3 tag for it
-                    loadedAudioItem.album.label.name shouldBe audioItem.album.label.name
-                    loadedAudioItem.album.label.countryCode shouldBe CountryCode.UNDEFINED
-                    // artist country code is saved into COUNTRY ID3 tag
-                    loadedAudioItem.artist.name shouldBe audioItem.artist.name
-                    loadedAudioItem.artist.countryCode shouldBe audioItem.artist.countryCode
-                    if (testAudioFile.extension == "m4a") {
-                        loadedAudioItem.bpm shouldBe audioItem.bpm?.toInt()?.toFloat()
-                    } else {
-                        loadedAudioItem.bpm shouldBe audioItem.bpm
-                    }
-                    loadedAudioItem.trackNumber shouldBe audioItem.trackNumber
-                    loadedAudioItem.discNumber shouldBe audioItem.discNumber
-                    loadedAudioItem.comments shouldBe audioItem.comments
-                    loadedAudioItem.genre shouldBe audioItem.genre
-                    loadedAudioItem.encoding shouldBe audioItem.encoding
-                    loadedAudioItem.encoder shouldBe audioItem.encoder
-                    loadedAudioItem.playCount shouldBe audioItem.playCount
-                    loadedAudioItem.coverImageBytes shouldBe audioItem.coverImageBytes
-                    loadedAudioItem.uniqueId shouldBe audioItem.uniqueId
-                    loadedAudioItem.toString() shouldBe audioItem.toString()
+            assertSoftly {
+                loadedAudioItem.id shouldBe audioItem.id
+                loadedAudioItem.dateOfCreation shouldBeAfter audioItem.dateOfCreation
+                loadedAudioItem.lastDateModified shouldBeAfter audioItem.lastDateModified
+                loadedAudioItem.path shouldBe audioItem.path
+                loadedAudioItem.fileName shouldBe audioItem.fileName
+                loadedAudioItem.extension shouldBe audioItem.extension
+                loadedAudioItem.title shouldBe audioItem.title
+                loadedAudioItem.duration shouldBe audioItem.duration
+                loadedAudioItem.bitRate shouldBe audioItem.bitRate
+                // album country code is not updated because there is no ID3 tag for it
+                loadedAudioItem.album.albumArtist.name shouldBe audioItem.album.albumArtist.name
+                loadedAudioItem.album.albumArtist.countryCode shouldBe CountryCode.UNDEFINED
+                loadedAudioItem.album.isCompilation shouldBe audioItem.album.isCompilation
+                // label country code is not updated because there is no ID3 tag for it
+                loadedAudioItem.album.label.name shouldBe audioItem.album.label.name
+                loadedAudioItem.album.label.countryCode shouldBe CountryCode.UNDEFINED
+                // artist country code is saved into COUNTRY ID3 tag
+                loadedAudioItem.artist.name shouldBe audioItem.artist.name
+                loadedAudioItem.artist.countryCode shouldBe audioItem.artist.countryCode
+                if (testAudioFile.extension == "m4a") {
+                    loadedAudioItem.bpm shouldBe audioItem.bpm?.toInt()?.toFloat()
+                } else {
+                    loadedAudioItem.bpm shouldBe audioItem.bpm
                 }
+                loadedAudioItem.trackNumber shouldBe audioItem.trackNumber
+                loadedAudioItem.discNumber shouldBe audioItem.discNumber
+                loadedAudioItem.comments shouldBe audioItem.comments
+                loadedAudioItem.genre shouldBe audioItem.genre
+                loadedAudioItem.encoding shouldBe audioItem.encoding
+                loadedAudioItem.encoder shouldBe audioItem.encoder
+                loadedAudioItem.playCount shouldBe audioItem.playCount
+                loadedAudioItem.coverImageBytes shouldBe audioItem.coverImageBytes
+                loadedAudioItem.uniqueId shouldBe audioItem.uniqueId
+                loadedAudioItem.toString() shouldBe audioItem.toString()
             }
         }
     }
 
-    context("should return coverImage after being deserialized") {
+    context("MutableAudioItem returns coverImage after being deserialized") {
         val audioItem = MutableAudioItem(arbitraryMp3File { coverImageBytes = null }.next().toPath())
         audioItem.coverImageBytes shouldBe null
 

@@ -252,6 +252,19 @@ internal object FXAudioItemTestUtil : TestConfiguration() {
         }
     """
 
+    fun Collection<FXAudioItem>.asJsonKeyValues(): String =
+        buildString {
+            append("{")
+            this@asJsonKeyValues.forEachIndexed { index, it ->
+                append(it.id).append(":")
+                append(it.asJsonValue())
+                if (index < this@asJsonKeyValues.size - 1) {
+                    append(",")
+                }
+            }
+            append("}")
+        }
+
     fun arbitraryAudioItem(attributesAction: AudioItemTestAttributes.() -> Unit): Arb<FXAudioItem> =
         arbitrary {
             val attributes = arbitraryAudioAttributes().bind()

@@ -18,8 +18,10 @@ import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.float
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.int
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
@@ -49,7 +51,7 @@ internal object AudioItemSerializer: AudioItemSerializerBase<AudioItem>() {
                 // album isCompilation
                 propertiesList[9] as Boolean,
                 // album year
-                propertiesList[10] as Short,
+                propertiesList[10] as Short?,
                 // album label name
                 ImmutableLabel(propertiesList[11] as String)
             ),
@@ -58,11 +60,11 @@ internal object AudioItemSerializer: AudioItemSerializerBase<AudioItem>() {
             // comments
             propertiesList[13] as String?,
             // trackNumber
-            propertiesList[14] as Short,
+            propertiesList[14] as Short?,
             // discNumber
-            propertiesList[15] as Short,
+            propertiesList[15] as Short?,
             // bpm
-            propertiesList[16] as Float,
+            propertiesList[16] as Float?,
             // encoder
             propertiesList[17] as String?,
             // encoding
@@ -124,8 +126,8 @@ abstract class AudioItemSerializerBase<I: ReactiveAudioItem<I>>: TransEntityPoly
         val isCompilation = album["isCompilation"] ?: throw SerializationException("Serialized AudioItem should contain album.isCompilation element")
         propertiesList.add(isCompilation.jsonPrimitive.boolean)
 
-        val year = album["year"] ?: throw SerializationException("Serialized AudioItem should contain album.year element")
-        propertiesList.add(year.jsonPrimitive.int.toShort())
+        // year is nullable
+        propertiesList.add(album["year"]?.jsonPrimitive?.intOrNull?.toShort())
 
         val label = album["label"]?.jsonObject ?: throw SerializationException("Serialized AudioItem should contain album.label element")
         val labelName = label["name"] ?: throw SerializationException("Serialized AudioItem should contain album.label.name element")
@@ -134,16 +136,16 @@ abstract class AudioItemSerializerBase<I: ReactiveAudioItem<I>>: TransEntityPoly
         val genre = jsonObject["genre"] ?: throw SerializationException("Serialized AudioItem should contain genre element")
         propertiesList.add(genre.jsonPrimitive.content)
 
-        // nullable properties
+        // other nullable properties
 
-        propertiesList.add(jsonObject["comments"]?.jsonPrimitive?.content)
-        propertiesList.add(jsonObject["trackNumber"]?.jsonPrimitive?.int?.toShort())
-        propertiesList.add(jsonObject["discNumber"]?.jsonPrimitive?.int?.toShort())
-        propertiesList.add(jsonObject["bpm"]?.jsonPrimitive?.float)
-        propertiesList.add(jsonObject["encoder"]?.jsonPrimitive?.content)
-        propertiesList.add(jsonObject["encoding"]?.jsonPrimitive?.content)
+        propertiesList.add(jsonObject["comments"]?.jsonPrimitive?.contentOrNull)
+        propertiesList.add(jsonObject["trackNumber"]?.jsonPrimitive?.intOrNull?.toShort())
+        propertiesList.add(jsonObject["discNumber"]?.jsonPrimitive?.intOrNull?.toShort())
+        propertiesList.add(jsonObject["bpm"]?.jsonPrimitive?.floatOrNull)
+        propertiesList.add(jsonObject["encoder"]?.jsonPrimitive?.contentOrNull)
+        propertiesList.add(jsonObject["encoding"]?.jsonPrimitive?.contentOrNull)
 
-        // end of nullable properties
+        // end of other nullable properties
 
         // date properties are non-nullable
 
@@ -198,12 +200,12 @@ abstract class AudioItemSerializerBase<I: ReactiveAudioItem<I>>: TransEntityPoly
                     }
                 )
                 put("genre", value.genre.name)
-                value.comments?.let { put("comments", it) }
-                value.trackNumber?.let { put("trackNumber", it) }
-                value.discNumber?.let { put("discNumber", it) }
-                value.bpm?.let { put("bpm", it) }
-                value.encoder?.let { put("encoder", it) }
-                value.encoding?.let { put("encoding", it) }
+                put("comments", value.comments)
+                put("trackNumber", value.trackNumber)
+                put("discNumber", value.discNumber)
+                put("bpm", value.bpm)
+                put("encoder", value.encoder)
+                put("encoding", value.encoding)
                 put("dateOfCreation", value.dateOfCreation.toEpochSecond(ZoneOffset.UTC))
                 put("lastDateModified", value.lastDateModified.toEpochSecond(ZoneOffset.UTC))
                 put("playCount", value.playCount)

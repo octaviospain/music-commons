@@ -1,10 +1,10 @@
 package net.transgressoft.commons.music.playlist
 
+import net.transgressoft.commons.event.ReactiveScope
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
 import net.transgressoft.commons.music.audio.AudioRepository
 import net.transgressoft.commons.music.playlist.AudioPlaylistTestUtil.asJsonKeyValues
-import net.transgressoft.commons.persistence.ReactiveScope
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.throwables.shouldThrowMessage
 import io.kotest.core.spec.style.StringSpec

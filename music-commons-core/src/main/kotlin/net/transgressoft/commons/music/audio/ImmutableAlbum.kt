@@ -1,5 +1,6 @@
 package net.transgressoft.commons.music.audio
 
+import javax.annotation.Nullable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -9,7 +10,7 @@ open class ImmutableAlbum(
     override val name: String,
     override val albumArtist: Artist,
     override val isCompilation: Boolean = false,
-    override val year: Short? = null,
+    @Nullable override val year: Short? = null,
     override val label: Label = ImmutableLabel.UNKNOWN
 ) : Album {
 

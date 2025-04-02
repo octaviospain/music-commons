@@ -1,6 +1,8 @@
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.event.EntityChangeEvent
+import net.transgressoft.commons.event.TransEvent
+import net.transgressoft.commons.event.TransEventPublisher
 import net.transgressoft.commons.event.TransEventSubscription
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
@@ -161,10 +163,21 @@ internal class DummyPlaylist(
     override fun emitAsync(event: EntityChangeEvent<Int, MutableAudioPlaylist>): Unit = throw IllegalStateException()
 
     override fun subscribe(action: suspend (EntityChangeEvent<Int, MutableAudioPlaylist>) -> Unit): TransEventSubscription<in MutableAudioPlaylist> =
-        throw IllegalStateException()
+        FakeSubscription
 
     override fun subscribe(action: Consumer<in EntityChangeEvent<Int, MutableAudioPlaylist>>): TransEventSubscription<in MutableAudioPlaylist> =
-        throw IllegalStateException()
+        FakeSubscription
+}
+
+object FakeSubscription : TransEventSubscription<MutableAudioPlaylist> {
+    override val source: TransEventPublisher<out TransEvent>
+        get() = throw IllegalStateException()
+
+    override fun request(n: Long): Unit = throw IllegalStateException()
+
+    override fun cancel() {
+        // No-op
+    }
 }
 
 internal class DummyAudioItem(
