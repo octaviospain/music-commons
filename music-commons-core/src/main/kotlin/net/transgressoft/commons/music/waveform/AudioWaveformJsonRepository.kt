@@ -1,6 +1,6 @@
 package net.transgressoft.commons.music.waveform
 
-import net.transgressoft.commons.event.StandardCrudEvent
+import net.transgressoft.commons.event.CrudEvent.Type.DELETE
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import net.transgressoft.commons.persistence.json.JsonFileRepositoryBase
@@ -23,7 +23,7 @@ class AudioWaveformJsonRepository<I: ReactiveAudioItem<I>>(
 
     override val audioItemEventSubscriber =
         AudioItemEventSubscriber<I>(this.toString()).apply {
-            addOnNextEventAction(StandardCrudEvent.Type.DELETE) { event ->
+            addOnNextEventAction(DELETE) { event ->
                 removeByAudioItemIds(event.entities.keys)
             }
         }

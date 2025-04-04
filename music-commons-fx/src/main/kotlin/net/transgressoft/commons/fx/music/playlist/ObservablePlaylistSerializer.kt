@@ -1,7 +1,7 @@
 package net.transgressoft.commons.fx.music.playlist
 
+import net.transgressoft.commons.event.CrudEvent
 import net.transgressoft.commons.event.EntityChangeEvent
-import net.transgressoft.commons.event.TransEvent
 import net.transgressoft.commons.event.TransEventPublisher
 import net.transgressoft.commons.event.TransEventSubscription
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
@@ -74,15 +74,21 @@ internal class DummyPlaylist(
 
     override fun emitAsync(event: EntityChangeEvent<Int, ObservablePlaylist>): Unit = throw UnsupportedOperationException()
 
-    override fun subscribe(action: suspend (EntityChangeEvent<Int, ObservablePlaylist>) -> Unit): TransEventSubscription<in ObservablePlaylist> =
+    override fun subscribe(action: suspend (EntityChangeEvent<Int, ObservablePlaylist>) -> Unit):
+        TransEventSubscription<in ObservablePlaylist, CrudEvent.Type, EntityChangeEvent<Int, ObservablePlaylist>> =
         FakeSubscription
 
-    override fun subscribe(action: Consumer<in EntityChangeEvent<Int, ObservablePlaylist>>): TransEventSubscription<in ObservablePlaylist> =
+    override fun subscribe(action: Consumer<in EntityChangeEvent<Int, ObservablePlaylist>>):
+        TransEventSubscription<in ObservablePlaylist, CrudEvent.Type, EntityChangeEvent<Int, ObservablePlaylist>> =
+        FakeSubscription
+
+    override fun subscribe(vararg eventTypes: CrudEvent.Type, action: Consumer<in EntityChangeEvent<Int, ObservablePlaylist>>):
+        TransEventSubscription<in ObservablePlaylist, CrudEvent.Type, EntityChangeEvent<Int, ObservablePlaylist>> =
         FakeSubscription
 }
 
-object FakeSubscription : TransEventSubscription<ObservablePlaylist> {
-    override val source: TransEventPublisher<out TransEvent>
+object FakeSubscription : TransEventSubscription<ObservablePlaylist, CrudEvent.Type, EntityChangeEvent<Int, ObservablePlaylist>> {
+    override val source: TransEventPublisher<CrudEvent.Type, EntityChangeEvent<Int, ObservablePlaylist>>
         get() = throw IllegalStateException()
 
     override fun request(n: Long): Unit = throw IllegalStateException()

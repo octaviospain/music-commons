@@ -26,9 +26,7 @@ import io.mockk.unmockkAll
 import java.io.File
 import java.util.concurrent.CompletableFuture
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.serialization.json.Json
@@ -44,8 +42,8 @@ internal class AudioItemJsonRepositoryTest : StringSpec({
     lateinit var audioRepository: AudioRepository
 
     beforeSpec {
-        ReactiveScope.setDefaultFlowScope(testScope)
-        ReactiveScope.setDefaultIoScope(testScope)
+        ReactiveScope.flowScope = testScope
+        ReactiveScope.ioScope = testScope
     }
 
     fun setup() {
@@ -67,8 +65,8 @@ internal class AudioItemJsonRepositoryTest : StringSpec({
     }
 
     afterSpec {
-        ReactiveScope.setDefaultFlowScope(CoroutineScope(Dispatchers.Default.limitedParallelism(4) + SupervisorJob()))
-        ReactiveScope.setDefaultIoScope(CoroutineScope(Dispatchers.IO.limitedParallelism(1) + SupervisorJob()))
+        ReactiveScope.resetDefaultFlowScope()
+        ReactiveScope.resetDefaultIoScope()
     }
 
     "should create an audio item and allow to query it on creation and after modification" {

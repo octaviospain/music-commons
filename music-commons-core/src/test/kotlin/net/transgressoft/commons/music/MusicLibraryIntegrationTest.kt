@@ -19,9 +19,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
@@ -40,8 +38,8 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     lateinit var audioPlaylistRepository: PlaylistRepository
 
     beforeSpec {
-        ReactiveScope.setDefaultFlowScope(testScope)
-        ReactiveScope.setDefaultIoScope(testScope)
+        ReactiveScope.flowScope = testScope
+        ReactiveScope.ioScope = testScope
     }
 
     beforeEach {
@@ -57,8 +55,8 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     }
 
     afterSpec {
-        ReactiveScope.setDefaultFlowScope(CoroutineScope(Dispatchers.Default.limitedParallelism(4) + SupervisorJob()))
-        ReactiveScope.setDefaultIoScope(CoroutineScope(Dispatchers.IO.limitedParallelism(1) + SupervisorJob()))
+        ReactiveScope.resetDefaultFlowScope()
+        ReactiveScope.resetDefaultIoScope()
     }
 
     "Operations on audio items impact subscribed repositories" {

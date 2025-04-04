@@ -5,7 +5,7 @@ import net.transgressoft.commons.event.TransEvent
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
 
-sealed class AudioItemPlayerEvent : TransEvent {
+sealed class AudioItemPlayerEvent : TransEvent<AudioItemPlayerEvent.Type> {
 
     abstract override val entities: Map<*, ReactiveAudioItem<*>>
 
@@ -21,7 +21,7 @@ sealed class AudioItemPlayerEvent : TransEvent {
     data class Played(
         val audioItem: ReactiveAudioItem<*>
     ): AudioItemPlayerEvent() {
-        override val type: EventType = PLAYED
+        override val type: Type = PLAYED
         override val entities: Map<*, ReactiveAudioItem<*>> = mapOf(audioItem.id to audioItem)
     }
 }

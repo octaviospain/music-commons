@@ -16,6 +16,8 @@ import javafx.beans.property.ObjectProperty
 import javafx.beans.property.ReadOnlyObjectProperty
 import javafx.beans.property.SimpleDoubleProperty
 import javafx.beans.property.SimpleObjectProperty
+import javafx.beans.value.ChangeListener
+import javafx.beans.value.ObservableValue
 import javafx.scene.media.Media
 import javafx.scene.media.MediaPlayer
 import javafx.util.Duration
@@ -26,7 +28,7 @@ import java.util.EnumSet
  *
  * @author Octavio Calleya
  */
-class JavaFxPlayer: TransEventPublisher<AudioItemPlayerEvent> by FlowEventPublisher<AudioItemPlayerEvent>("JavaFxPlayer"), AudioItemPlayer {
+class JavaFxPlayer: TransEventPublisher<AudioItemPlayerEvent.Type, AudioItemPlayerEvent> by FlowEventPublisher("JavaFxPlayer"), AudioItemPlayer {
     companion object {
         private const val PLAY_COUNT_THRESHOLD_POLICY = 0.6
 
@@ -57,6 +59,13 @@ class JavaFxPlayer: TransEventPublisher<AudioItemPlayerEvent> by FlowEventPublis
     private val _volumeProperty: DoubleProperty = SimpleDoubleProperty(this, "volume", 0.0)
     private val _currentTimeProperty: ObjectProperty<Duration> = SimpleObjectProperty(this, "current time", Duration.ZERO)
 
+    private val statusPropertyListener: ChangeListener<MediaPlayer.Status> =
+        ChangeListener<MediaPlayer.Status> { _, _, newValue: MediaPlayer.Status ->
+            _statusProperty.set(playerStatusMap[newValue])
+        }
+
+    private lateinit var currentTimePropertyListener: ChangeListener<Duration>
+
     private var mediaPlayer: MediaPlayer? = null
 
     override val totalDuration: Duration
@@ -78,23 +87,22 @@ class JavaFxPlayer: TransEventPublisher<AudioItemPlayerEvent> by FlowEventPublis
 
         mediaPlayer?.dispose()
         mediaPlayer?.volumeProperty()?.unbind()
+        mediaPlayer?.statusProperty()?.removeListener(statusPropertyListener)
+        mediaPlayer?.currentTimeProperty()?.removeListener(currentTimePropertyListener)
 
         mediaPlayer = MediaPlayer(media)
         mediaPlayer!!.volumeProperty().bind(_volumeProperty)
-        mediaPlayer!!.statusProperty()
-            .addListener { _, _, newValue ->
-                _statusProperty.set(
-                    playerStatusMap[newValue]
-                )
-            }
-        mediaPlayer!!.currentTimeProperty()
-            .addListener { _, _, newValue ->
+        mediaPlayer!!.statusProperty().addListener(statusPropertyListener)
+
+        currentTimePropertyListener =
+            ChangeListener<Duration> { _: ObservableValue<*>, _: Duration, newValue: Duration ->
                 _currentTimeProperty.set(newValue)
                 if (isTimeToIncreasePlayCount(audioItemDuration, newValue, playCountIncreased)) {
                     emitAsync(Played(audioItem))
                     playCountIncreased = true
                 }
             }
+        mediaPlayer!!.currentTimeProperty().addListener(currentTimePropertyListener)
         mediaPlayer!!.play()
     }
 
@@ -121,6 +129,10 @@ class JavaFxPlayer: TransEventPublisher<AudioItemPlayerEvent> by FlowEventPublis
 
     override fun stop() {
         mediaPlayer?.stop()
+    }
+
+    override fun dispose() {
+        mediaPlayer?.dispose()
     }
 
     override fun status(): AudioItemPlayer.Status = mediaPlayer?.let { playerStatusMap[it.status] } ?: AudioItemPlayer.Status.UNKNOWN

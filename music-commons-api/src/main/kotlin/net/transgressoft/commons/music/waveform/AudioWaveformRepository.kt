@@ -13,7 +13,7 @@ import kotlinx.coroutines.asCoroutineDispatcher
 
 interface AudioWaveformRepository<W : ReactiveEntity<Int, W>, I : ReactiveAudioItem<I>> : JsonRepository<Int, W> {
 
-    val audioItemEventSubscriber: TransEventSubscriber<I, CrudEvent<Int, out I>>
+    val audioItemEventSubscriber: TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, out I>>
 
     fun getOrCreateWaveformAsync(
         audioItem: I,

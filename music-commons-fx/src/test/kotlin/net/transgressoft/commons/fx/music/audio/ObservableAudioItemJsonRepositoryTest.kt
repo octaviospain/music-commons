@@ -17,9 +17,7 @@ import io.kotest.matchers.string.shouldContainOnlyOnce
 import io.kotest.property.arbitrary.next
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @ExperimentalCoroutinesApi
@@ -31,8 +29,8 @@ internal class ObservableAudioItemJsonRepositoryTest : StringSpec({
     lateinit var repository: ObservableAudioItemJsonRepository
 
     beforeSpec {
-        ReactiveScope.setDefaultFlowScope(testScope)
-        ReactiveScope.setDefaultIoScope(testScope)
+        ReactiveScope.flowScope = testScope
+        ReactiveScope.ioScope = testScope
     }
 
     beforeEach {
@@ -45,8 +43,8 @@ internal class ObservableAudioItemJsonRepositoryTest : StringSpec({
     }
 
     afterSpec {
-        ReactiveScope.setDefaultFlowScope(CoroutineScope(Dispatchers.Default.limitedParallelism(4) + SupervisorJob()))
-        ReactiveScope.setDefaultIoScope(CoroutineScope(Dispatchers.IO.limitedParallelism(1) + SupervisorJob()))
+        ReactiveScope.resetDefaultFlowScope()
+        ReactiveScope.resetDefaultIoScope()
     }
 
     "Repository should create an observable audio item and serialize itself" {

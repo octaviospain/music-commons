@@ -2,7 +2,7 @@ package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.entity.ReactiveEntityBase
 import net.transgressoft.commons.event.CrudEvent
-import net.transgressoft.commons.event.StandardCrudEvent.Type.DELETE
+import net.transgressoft.commons.event.CrudEvent.Type.DELETE
 import net.transgressoft.commons.event.TransEventSubscriber
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
@@ -49,7 +49,7 @@ abstract class AudioPlaylistRepositoryBase<I: ReactiveAudioItem<I>, P: ReactiveA
         return id
     }
 
-    override val audioItemEventSubscriber: TransEventSubscriber<I, CrudEvent<Int, out I>> =
+    override val audioItemEventSubscriber: TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, out I>> =
         AudioItemEventSubscriber<I>(this.toString()).apply {
             addOnNextEventAction(DELETE) { event ->
                 runForAll {

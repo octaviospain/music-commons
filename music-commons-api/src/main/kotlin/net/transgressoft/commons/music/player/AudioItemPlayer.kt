@@ -32,6 +32,8 @@ interface AudioItemPlayer : Flow.Publisher<AudioItemPlayerEvent> {
 
     fun stop()
 
+    fun dispose()
+
     fun status(): Status
 
     fun setVolume(value: Double)

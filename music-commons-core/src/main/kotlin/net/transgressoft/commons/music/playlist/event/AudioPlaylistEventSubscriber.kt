@@ -7,7 +7,7 @@ import net.transgressoft.commons.music.playlist.ReactiveAudioPlaylist
 
 open class AudioPlaylistEventSubscriber<P: ReactiveAudioPlaylist<I, P>, I: ReactiveAudioItem<I>>(
     name: String
-): TransEventSubscriberBase<P, CrudEvent<Int, out P>>(name) {
+): TransEventSubscriberBase<P, CrudEvent.Type, CrudEvent<Int, out P>>(name) {
 
     override fun toString() =
         buildString {

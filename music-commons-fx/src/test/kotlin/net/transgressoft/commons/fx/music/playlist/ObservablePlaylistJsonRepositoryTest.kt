@@ -23,9 +23,7 @@ import java.io.File
 import java.time.Duration
 import java.util.*
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @ExperimentalCoroutinesApi
@@ -37,8 +35,8 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
     lateinit var observableAudioPlaylistRepository: ObservablePlaylistJsonRepository
 
     beforeSpec {
-        ReactiveScope.setDefaultFlowScope(testScope)
-        ReactiveScope.setDefaultIoScope(testScope)
+        ReactiveScope.flowScope = testScope
+        ReactiveScope.ioScope = testScope
     }
 
     beforeEach {
@@ -51,8 +49,8 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
     }
 
     afterSpec {
-        ReactiveScope.setDefaultFlowScope(CoroutineScope(Dispatchers.Default.limitedParallelism(4) + SupervisorJob()))
-        ReactiveScope.setDefaultIoScope(CoroutineScope(Dispatchers.IO.limitedParallelism(1) + SupervisorJob()))
+        ReactiveScope.resetDefaultFlowScope()
+        ReactiveScope.resetDefaultIoScope()
     }
 
     "Repository serializes itself to file when playlists are modified" {

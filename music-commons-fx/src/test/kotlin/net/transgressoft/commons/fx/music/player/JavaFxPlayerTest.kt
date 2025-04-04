@@ -1,5 +1,6 @@
 package net.transgressoft.commons.fx.music.player
 
+import net.transgressoft.commons.event.ReactiveScope
 import net.transgressoft.commons.fx.music.audio.FXAudioItem
 import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.arbitraryMp3File
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonRepository
@@ -8,61 +9,80 @@ import net.transgressoft.commons.music.player.AudioItemPlayer.Status.PAUSED
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status.PLAYING
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status.STOPPED
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status.UNKNOWN
+import io.kotest.assertions.json.shouldContainJsonKeyValue
+import io.kotest.assertions.nondeterministic.eventually
+import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.string.shouldContain
 import io.kotest.property.arbitrary.next
-import javafx.stage.Stage
 import javafx.util.Duration
-import org.awaitility.Awaitility.await
-import org.awaitility.kotlin.await
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.testfx.api.FxToolkit
 import org.testfx.framework.junit5.ApplicationExtension
-import org.testfx.framework.junit5.Start
 import java.io.File
 import java.nio.file.Files
-import java.util.concurrent.TimeUnit
 import kotlin.math.roundToLong
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @ExtendWith(ApplicationExtension::class)
-class JavaFxPlayerTest {
+@ExperimentalCoroutinesApi
+internal class JavaFxPlayerTest : StringSpec({
 
+    val testDispatcher = UnconfinedTestDispatcher()
+    val testScope = CoroutineScope(testDispatcher)
     lateinit var player: AudioItemPlayer
     lateinit var jsonFile: File
     lateinit var observableAudioItemRepository: ObservableAudioItemJsonRepository
     lateinit var audioItem: FXAudioItem
 
-    @Start
-    fun start(stage: Stage) {}
+    beforeSpec {
+        FxToolkit.registerPrimaryStage()
+        ReactiveScope.flowScope = testScope
+        ReactiveScope.ioScope = testScope
+    }
 
-    @BeforeEach
-    fun beforeEach() {
+    beforeEach {
         player = JavaFxPlayer()
         jsonFile = Files.createTempFile("observableAudioItemRepository-test", ".json").toFile().apply { deleteOnExit() }
         observableAudioItemRepository = ObservableAudioItemJsonRepository("ObservableAudioItemRepo", jsonFile)
         audioItem = observableAudioItemRepository.createFromFile(arbitraryMp3File.next().toPath())
     }
 
-    @Test
-    fun `Playing an audio item increases the play count and serializes the repository`() {
+    afterEach {
+        observableAudioItemRepository.close()
+        player.dispose()
+    }
+
+    afterSpec {
+        ReactiveScope.resetDefaultFlowScope()
+        ReactiveScope.resetDefaultIoScope()
+    }
+
+    "Playing an audio item increases the play count and serializes the repository" {
         player.subscribe(observableAudioItemRepository.playerSubscriber)
         val audioItemLength = audioItem.duration.toMillis()
         val timeToIncreasePlayCount = (audioItemLength * 0.6).roundToLong()
 
         player.play(audioItem)
 
-        await.atMost(timeToIncreasePlayCount.plus(500), TimeUnit.MILLISECONDS).untilAsserted {
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        eventually(timeToIncreasePlayCount.plus(500).milliseconds) {
             audioItem.playCount shouldBe 1
             observableAudioItemRepository.findFirst { it.playCount.toInt() == 1 } shouldBePresent { it shouldBe audioItem }
-            jsonFile.readText() shouldContain "\"playCount\": 1"
+
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            jsonFile.readText().shouldContainJsonKeyValue("${audioItem.id}.playCount", 1)
         }
     }
 
-    @Test
-    fun `Playing an audio item modifies its observable properties`() {
+    "Playing an audio item modifies its observable properties" {
         player.status() shouldBe UNKNOWN
         player.statusProperty.get() shouldBe UNKNOWN
         player.currentTimeProperty.get() shouldBe Duration.ZERO
@@ -73,7 +93,7 @@ class JavaFxPlayerTest {
         player.seek(500.0)
         player.setVolume(0.5)
 
-        await().atMost(1, TimeUnit.SECONDS).untilAsserted {
+        eventually(1.seconds) {
             player.status() shouldBe PLAYING
             player.statusProperty.get() shouldBe PLAYING
             player.currentTimeProperty.get() shouldBeGreaterThan Duration.millis(500.0)
@@ -83,17 +103,18 @@ class JavaFxPlayerTest {
 
         player.pause()
         val pausedTime = player.currentTimeProperty.get()
-        await().atMost(500, TimeUnit.MILLISECONDS).untilAsserted {
+
+        eventually(500.milliseconds) {
             player.status() shouldBe PAUSED
             player.statusProperty.get() shouldBe PAUSED
             player.currentTimeProperty.get() shouldBe pausedTime
         }
 
         player.stop()
-        await().atMost(1, TimeUnit.SECONDS).untilAsserted {
+        eventually(1.seconds) {
             player.status() shouldBe STOPPED
             player.statusProperty.get() shouldBe STOPPED
             player.currentTimeProperty.get() shouldBe Duration.ZERO
         }
     }
-}
+})

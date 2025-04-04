@@ -6,7 +6,7 @@ import net.transgressoft.commons.music.audio.ReactiveAudioItem
 
 open class AudioItemEventSubscriber<I: ReactiveAudioItem<I>>(
     name: String
-): TransEventSubscriberBase<I, CrudEvent<Int, out I>>(name) {
+): TransEventSubscriberBase<I, CrudEvent.Type, CrudEvent<Int, out I>>(name) {
 
     override fun toString() =
         buildString {

@@ -1,8 +1,8 @@
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.event.StandardCrudEvent.Type.CREATE
-import net.transgressoft.commons.event.StandardCrudEvent.Type.DELETE
-import net.transgressoft.commons.event.StandardCrudEvent.Type.UPDATE
+import net.transgressoft.commons.event.CrudEvent.Type.CREATE
+import net.transgressoft.commons.event.CrudEvent.Type.DELETE
+import net.transgressoft.commons.event.CrudEvent.Type.UPDATE
 import net.transgressoft.commons.music.audio.AudioItemJsonRepositoryBase
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
 import javafx.beans.property.ReadOnlyBooleanProperty
@@ -33,18 +33,6 @@ class ObservableAudioItemJsonRepository(
 
     val audioItemsProperty: ReadOnlyListProperty<ObservableAudioItem> =
         SimpleListProperty(this, "observable audio item entries", FXCollections.observableArrayList())
-
-    init {
-        playerSubscriber.addOnNextEventAction(PLAYED) { event ->
-            val audioItem = event.entities.values.first()
-            if (audioItem is FXAudioItem) {
-                val audioItemClone = audioItem.clone()
-                audioItem.incrementPlayCount()
-                putUpdateEvent(audioItem, audioItemClone)
-                logger.debug { "Play count of audio item with id ${audioItem.id} increased to ${audioItem.playCount}" }
-            }
-        }
-    }
 
     init {
         // Subscribe to the events of itself in order to update the observable map
@@ -79,6 +67,16 @@ class ObservableAudioItemJsonRepository(
 
         // Add all existing audio items to the observable map on initialization
         runForAll { observableAudioItemMap.put(it.id, it) }
+
+        playerSubscriber.addOnNextEventAction(PLAYED) { event ->
+            val audioItem = event.entities.values.first()
+            if (audioItem is FXAudioItem) {
+                val audioItemClone = audioItem.clone()
+                audioItem.incrementPlayCount()
+                putUpdateEvent(audioItem, audioItemClone)
+                logger.debug { "Play count of audio item with id ${audioItem.id} increased to ${audioItem.playCount}" }
+            }
+        }
     }
 
     override fun clear() {

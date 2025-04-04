@@ -1,8 +1,8 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.event.StandardCrudEvent.Type.CREATE
-import net.transgressoft.commons.event.StandardCrudEvent.Type.DELETE
-import net.transgressoft.commons.event.StandardCrudEvent.Type.UPDATE
+import net.transgressoft.commons.event.CrudEvent.Type.CREATE
+import net.transgressoft.commons.event.CrudEvent.Type.DELETE
+import net.transgressoft.commons.event.CrudEvent.Type.UPDATE
 import net.transgressoft.commons.persistence.RegistryBase
 import mu.KotlinLogging
 import java.util.Optional
@@ -28,7 +28,7 @@ internal class ArtistCatalogVolatileRegistry<I>: RegistryBase<String, MutableArt
                             artistCatalog.addAudioItem(audioItem)
                             artistCatalog.also { catalogsBeforeUpdate.add(it) }
                         }!!
-                    }.collect(partitioningBy { it?.size == 1 })
+                    }.collect(partitioningBy { it.size == 1 })
 
             addedOrReplacedCatalogs[true]?.let { createdCatalogs ->
                 if (createdCatalogs.isNotEmpty()) {

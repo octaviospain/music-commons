@@ -1,9 +1,9 @@
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.entity.toIds
-import net.transgressoft.commons.event.StandardCrudEvent.Type.CREATE
-import net.transgressoft.commons.event.StandardCrudEvent.Type.DELETE
-import net.transgressoft.commons.event.StandardCrudEvent.Type.UPDATE
+import net.transgressoft.commons.event.CrudEvent.Type.CREATE
+import net.transgressoft.commons.event.CrudEvent.Type.DELETE
+import net.transgressoft.commons.event.CrudEvent.Type.UPDATE
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemManipulationException
 import net.transgressoft.commons.music.audio.AudioRepository
