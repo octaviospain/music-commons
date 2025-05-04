@@ -36,7 +36,7 @@ interface ObservableAudioItem : ReactiveAudioItem<ObservableAudioItem> {
 
     val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>>
 
-    val artistsInvolvedProperty: ReadOnlySetProperty<String>
+    val artistsInvolvedProperty: ReadOnlySetProperty<Artist>
 
     val lastDateModifiedProperty: ReadOnlyObjectProperty<LocalDateTime>
 

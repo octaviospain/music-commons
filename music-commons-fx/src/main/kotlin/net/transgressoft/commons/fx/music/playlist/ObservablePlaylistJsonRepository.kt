@@ -11,6 +11,7 @@ import net.transgressoft.commons.music.playlist.AudioPlaylist
 import net.transgressoft.commons.music.playlist.AudioPlaylistRepositoryBase
 import net.transgressoft.commons.music.playlist.event.AudioPlaylistEventSubscriber
 import com.google.common.base.Objects
+import javafx.application.Platform
 import javafx.beans.property.ReadOnlyBooleanProperty
 import javafx.beans.property.ReadOnlyListProperty
 import javafx.beans.property.ReadOnlyObjectProperty
@@ -71,12 +72,12 @@ class ObservablePlaylistJsonRepository private constructor(
         AudioPlaylistEventSubscriber<ObservablePlaylist, ObservableAudioItem>("InternalAudioPlaylistSubscriber").apply {
             addOnNextEventAction(CREATE, UPDATE) { event ->
                 synchronized(playlistsProperty) {
-                    observablePlaylistsSet.addAll(event.entities.values)
+                    Platform.runLater { observablePlaylistsSet.addAll(event.entities.values) }
                 }
             }
             addOnNextEventAction(DELETE) { event ->
                 synchronized(playlistsProperty) {
-                    observablePlaylistsSet.removeAll(event.entities.values.toSet())
+                    Platform.runLater { observablePlaylistsSet.removeAll(event.entities.values.toSet()) }
                 }
             }
         }
@@ -96,7 +97,7 @@ class ObservablePlaylistJsonRepository private constructor(
             val foundPlaylists = findDeserializedPlaylistsFromIds(it.playlists.toIds(), entitiesById)
             playlistMissingPlaylists.addPlaylists(foundPlaylists)
         }
-        observablePlaylistsSet.addAll(entitiesById.values)
+        Platform.runLater { observablePlaylistsSet.addAll(entitiesById.values) }
 
         activateEvents(CREATE, UPDATE, DELETE)
     }
@@ -167,7 +168,7 @@ class ObservablePlaylistJsonRepository private constructor(
         override var name: String
             get() = nameProperty.get()
             set(value) {
-                _nameProperty.set(value)
+                Platform.runLater { _nameProperty.set(value) }
             }
 
         private val _isDirectoryProperty =
@@ -182,14 +183,14 @@ class ObservablePlaylistJsonRepository private constructor(
         override var isDirectory: Boolean
             get() = isDirectoryProperty.get()
             set(value) {
-                _isDirectoryProperty.set(value)
+                Platform.runLater { _isDirectoryProperty.set(value) }
             }
 
         private val _audioItemsProperty =
             SimpleListProperty(this, "audioItems", FXCollections.observableArrayList(ArrayList(audioItems))).apply {
                 addListener { _, oldValue, newValue ->
                     setAndNotify(newValue, oldValue) {
-                        replaceRecursiveAudioItems()
+                        Platform.runLater { replaceRecursiveAudioItems() }
                         changePlaylistCover()
                     }
                 }
@@ -211,8 +212,8 @@ class ObservablePlaylistJsonRepository private constructor(
                 .filter { it.isPresent }
                 .findAny()
                 .ifPresentOrElse(
-                    { _coverImageProperty.set(it) }
-                ) { _coverImageProperty.set(Optional.empty()) }
+                    { Platform.runLater { _coverImageProperty.set(it) } }
+                ) { Platform.runLater { _coverImageProperty.set(Optional.empty()) } }
         }
 
         override val audioItemsProperty: ReadOnlyListProperty<ObservableAudioItem> = _audioItemsProperty
@@ -245,7 +246,7 @@ class ObservablePlaylistJsonRepository private constructor(
             get() = audioItemsRecursiveProperty.get()
 
         private val _coverImageProperty =
-            SimpleObjectProperty<Optional<Image>>(
+            SimpleObjectProperty(
                 this,
                 "coverImage", this.audioItems.stream().filter { it.coverImageProperty.get().isPresent }.findFirst().map { it.coverImageProperty.get().get() }
             )
@@ -254,13 +255,13 @@ class ObservablePlaylistJsonRepository private constructor(
 
         override fun addAudioItems(audioItems: Collection<ObservableAudioItem>) =
             this.audioItems.stream().anyMatch(audioItems::contains).not().also {
-                _audioItemsProperty.addAll(audioItems)
+                Platform.runLater { _audioItemsProperty.addAll(audioItems) }
                 logger.debug { "Added $audioItems to playlist $uniqueId" }
             }
 
         override fun removeAudioItems(audioItems: Collection<ObservableAudioItem>) =
             this.audioItems.stream().anyMatch(audioItems::contains).also {
-                _audioItemsProperty.removeAll(audioItems.toSet())
+                Platform.runLater { _audioItemsProperty.removeAll(audioItems.toSet()) }
                 logger.debug { "Removed $audioItems from playlist $uniqueId" }
             }
 
@@ -268,7 +269,7 @@ class ObservablePlaylistJsonRepository private constructor(
         @JvmName("removeAudioItemIds")
         override fun removeAudioItems(audioItemIds: Collection<Int>) =
             this.audioItems.stream().anyMatch { it.id in audioItemIds }.also {
-                _audioItemsProperty.removeAll { it.id in audioItemIds }
+                Platform.runLater { _audioItemsProperty.removeAll { it.id in audioItemIds } }
                 logger.debug { "Removed audio items with ids $audioItemIds from playlist $uniqueId" }
             }
 
@@ -321,7 +322,7 @@ class ObservablePlaylistJsonRepository private constructor(
         }
 
         override fun clearAudioItems() {
-            _audioItemsProperty.clear()
+            Platform.runLater { _audioItemsProperty.clear() }
             logger.debug { "Cleared audio items from playlist $uniqueId" }
         }
 

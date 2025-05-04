@@ -1,10 +1,10 @@
 package net.transgressoft.commons.music.waveform
 
 import net.transgressoft.commons.event.ReactiveScope
+import net.transgressoft.commons.music.audio.AudioFileTagType.WAV
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.AudioItemTestUtil
-import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
-import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryWavFile
+import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.commons.music.audio.audioItem
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
@@ -13,10 +13,14 @@ import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import io.kotest.property.arbitrary.short
+import io.mockk.unmockkAll
 import java.io.File
+import kotlin.io.path.absolutePathString
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 @ExperimentalCoroutinesApi
 internal class AudioWaveformJsonRepositoryTest : StringSpec({
@@ -43,10 +47,11 @@ internal class AudioWaveformJsonRepositoryTest : StringSpec({
     afterSpec {
         ReactiveScope.resetDefaultFlowScope()
         ReactiveScope.resetDefaultIoScope()
+        unmockkAll()
     }
 
     "Repository serializes itself to file when audio waveform is added" {
-        val audioFilePath = AudioItemTestUtil.arbitraryMp3File.next().toPath()
+        val audioFilePath = Arb.virtualAudioFile().next()
         val audioWaveform = ScalableAudioWaveform(1, audioFilePath)
 
         audioWaveformRepository.add(audioWaveform) shouldBe true
@@ -54,14 +59,16 @@ internal class AudioWaveformJsonRepositoryTest : StringSpec({
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        jsonFile.readText() shouldEqualJson """
-                {
-                    "1": {
-                        "id": 1,
-                        "audioFilePath": "$audioFilePath"
+        jsonFile.readText() shouldEqualJson
+            buildJsonObject {
+                put(
+                    "${audioWaveform.id}",
+                    buildJsonObject {
+                        put("id", audioWaveform.id)
+                        put("audioFilePath", audioWaveform.audioFilePath.absolutePathString())
                     }
-                }
-            """
+                )
+            }.toString()
 
         val loadedRepository = AudioWaveformJsonRepository<AudioItem>("Waveforms", jsonFile)
         loadedRepository.size() shouldBe 1
@@ -70,7 +77,10 @@ internal class AudioWaveformJsonRepositoryTest : StringSpec({
     }
 
     "Repository creates a waveform asynchronously" {
-        val audioItem = arbitraryAudioItem { path = arbitraryWavFile.next().toPath() }.next()
+        val audioItem =
+            Arb.audioItem {
+                path = Arb.virtualAudioFile(WAV).next()
+            }.next()
         var audioWaveform = audioWaveformRepository.getOrCreateWaveformAsync(audioItem, Arb.short(1, 50).next(), Arb.short(1, 50).next(), testDispatcher).get()
 
         testDispatcher.scheduler.advanceUntilIdle()

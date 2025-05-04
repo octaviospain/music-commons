@@ -94,6 +94,8 @@ class AudioPlaylistJsonRepository(
     }
 }
 
+@JvmField
+@get:JvmName("playlistSerializerModule")
 val playlistSerializerModule =
     SerializersModule {
         polymorphic(ReactiveAudioPlaylist::class) {

@@ -2,9 +2,8 @@ package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.event.ReactiveScope
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
 import net.transgressoft.commons.music.audio.AudioRepository
-import net.transgressoft.commons.music.playlist.AudioPlaylistTestUtil.asJsonKeyValues
+import net.transgressoft.commons.music.audio.audioItem
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.throwables.shouldThrowMessage
 import io.kotest.core.spec.style.StringSpec
@@ -15,6 +14,7 @@ import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.equals.shouldBeEqual
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
+import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import io.mockk.every
 import io.mockk.mockk
@@ -53,11 +53,11 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
     }
 
     "Repository serializes itself to file when playlists are added" {
-        val rockAudioItem = arbitraryAudioItem { title = "50s Rock hit 1" }.next()
+        val rockAudioItem = Arb.audioItem { title = "50s Rock hit 1" }.next()
         val rockAudioItems = listOf(rockAudioItem)
         val rock = audioPlaylistRepository.createPlaylist("Rock", rockAudioItems)
 
-        val rockFavAudioItem = arbitraryAudioItem { title = "Rock fav" }.next()
+        val rockFavAudioItem = Arb.audioItem { title = "Rock fav" }.next()
         val rockFavoritesAudioItems = listOf(rockFavAudioItem)
         val rockFavorites = audioPlaylistRepository.createPlaylist("Rock favorites", rockFavoritesAudioItems)
 
@@ -73,11 +73,11 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         testDispatcher.scheduler.advanceUntilIdle()
 
         val json = listOf(rock, rockFavorites).asJsonKeyValues()
-        jsonFile.readText().shouldEqualJson(json)
+        jsonFile.readText() shouldEqualJson (json)
     }
 
     "Existing repository loads from file" {
-        val audioItem = arbitraryAudioItem { id = 453374921 }.next()
+        val audioItem = Arb.audioItem { id = 453374921 }.next()
         jsonFile.writeText(
             listOf(ImmutablePlaylist(1, true, "Rock", listOf(audioItem)))
                 .asJsonKeyValues()
@@ -109,11 +109,11 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
     "Mixed playlists hierarchy structure and audio items search" {
         val rockAudioItems =
             listOf(
-                arbitraryAudioItem {
+                Arb.audioItem {
                     title = "50s Rock hit 1"
                     duration = Duration.ofSeconds(60)
                 }.next(),
-                arbitraryAudioItem {
+                Arb.audioItem {
                     title = "50s Rock hit 2 my fav"
                     duration = Duration.ofSeconds(230)
                 }.next()
@@ -156,11 +156,11 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
 
         val fiftiesItems =
             listOf(
-                arbitraryAudioItem {
+                Arb.audioItem {
                     title = "50s hit"
                     duration = Duration.ofSeconds(30)
                 }.next(),
-                arbitraryAudioItem {
+                Arb.audioItem {
                     title = "50s favorite song"
                     duration = Duration.ofSeconds(120)
                 }.next()
@@ -179,7 +179,7 @@ internal class AudioPlaylistJsonRepositoryTest : StringSpec({
         playlistsThatContainsAudioItemsWithDurationBelow60 shouldContainExactly setOf(rock, fifties)
 
         audioPlaylistRepository.removeAudioItemFromPlaylist(fiftiesItems[0], fifties.name)
-        fiftiesItems[1].title = "new title"
+        every { fiftiesItems[1].title } returns "new title"
 
         fifties.audioItemsAllMatch { it.title == "new title" } shouldBe true
         fifties.audioItems.find { it.title == "title" }?.shouldBeEqual(fiftiesItems[1])

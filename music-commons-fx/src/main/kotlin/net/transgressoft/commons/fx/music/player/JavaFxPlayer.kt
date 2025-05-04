@@ -11,6 +11,7 @@ import net.transgressoft.commons.music.player.AudioItemPlayer
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Played
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
+import javafx.application.Platform
 import javafx.beans.property.DoubleProperty
 import javafx.beans.property.ObjectProperty
 import javafx.beans.property.ReadOnlyObjectProperty
@@ -139,9 +140,9 @@ class JavaFxPlayer: TransEventPublisher<AudioItemPlayerEvent.Type, AudioItemPlay
 
     override fun setVolume(value: Double) {
         if (value < 0) {
-            _volumeProperty.set(0.0)
+            Platform.runLater { _volumeProperty.set(0.0) }
         } else {
-            _volumeProperty.set(value)
+            Platform.runLater { _volumeProperty.set(value) }
         }
     }
 

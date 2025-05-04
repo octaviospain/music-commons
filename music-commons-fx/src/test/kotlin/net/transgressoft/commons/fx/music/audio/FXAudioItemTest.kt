@@ -1,14 +1,14 @@
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.arbitraryAudioItemChange
-import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.arbitraryMp3File
-import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.asJsonValue
-import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.testCoverBytes
-import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.update
+import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
+import net.transgressoft.commons.music.audio.AudioItemChange
 import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.ImmutableLabel
+import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.commons.music.audio.audioItemChange
+import net.transgressoft.commons.music.audio.testCoverBytes
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.json.shouldEqualJson
@@ -19,6 +19,7 @@ import io.kotest.matchers.date.shouldBeAfter
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
+import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import javafx.scene.image.Image
 import java.io.ByteArrayInputStream
@@ -37,9 +38,9 @@ internal class FXAudioItemTest : StringSpec({
         }
 
     "should change its properties when observable properties are updated" {
-        val testAudioFile = arbitraryMp3File.next()
+        val path = Arb.virtualAudioFile().next()
 
-        val fxAudioItem = FXAudioItem(testAudioFile.toPath())
+        val fxAudioItem = FXAudioItem(path)
         assertSoftly {
             fxAudioItem.titleProperty.value shouldBe fxAudioItem.title
             fxAudioItem.artistProperty.value shouldBe fxAudioItem.artist
@@ -69,7 +70,7 @@ internal class FXAudioItemTest : StringSpec({
         fxAudioItem.artistProperty.set(ImmutableArtist.of("Bon Jovi"))
         eventually(100.milliseconds) {
             fxAudioItem.artist.name shouldBe "Bon Jovi"
-            fxAudioItem.artistsInvolved shouldContain "Bon Jovi"
+            fxAudioItem.artistsInvolved shouldContain ImmutableArtist.of("Bon Jovi")
             fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
             fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
         }
@@ -144,20 +145,20 @@ internal class FXAudioItemTest : StringSpec({
     }
 
     "should create an audio item, that is serializable to json, and write changes to metadata" {
-        val testAudioFile = arbitraryMp3File.next()
-        val fxAudioItem = FXAudioItem(testAudioFile.toPath())
+        val testAudioFile = Arb.realAudioFile().next()
+        val fxAudioItem = FXAudioItem(testAudioFile)
 
         json.encodeToString(ObservableAudioItemSerializer, fxAudioItem).let {
             it.shouldEqualJson(fxAudioItem.asJsonValue())
             json.decodeFromString<FXAudioItem>(it) shouldBe fxAudioItem
         }
 
-        val audioItemChanges = arbitraryAudioItemChange.next()
+        val audioItemChanges = Arb.audioItemChange().next()
         fxAudioItem.update(audioItemChanges)
 
         fxAudioItem.writeMetadata().join()
 
-        val loadedAudioItem = FXAudioItem(testAudioFile.toPath(), fxAudioItem.id)
+        val loadedAudioItem = FXAudioItem(testAudioFile, fxAudioItem.id)
         assertSoftly {
             loadedAudioItem.id shouldBe fxAudioItem.id
             loadedAudioItem.dateOfCreation shouldBeAfter fxAudioItem.dateOfCreation
@@ -191,7 +192,7 @@ internal class FXAudioItemTest : StringSpec({
     }
 
     "should return coverImage after being deserialized" {
-        val fxAudioItem = FXAudioItem(arbitraryMp3File { coverImageBytes = null }.next().toPath())
+        val fxAudioItem = FXAudioItem(Arb.realAudioFile { coverImageBytes = null }.next())
 
         fxAudioItem.coverImageBytes = testCoverBytes
 
@@ -210,4 +211,23 @@ internal class FXAudioItemTest : StringSpec({
 fun Genre.randomDifferent(): Genre {
     val values = enumValues<Genre>().filter { it != this }
     return values[Random.nextInt(values.size)]
+}
+
+fun FXAudioItem.update(change: AudioItemChange) {
+    change.title?.let { title = it }
+    change.artist?.let { artist = it }
+    album =
+        ImmutableAlbum(
+            change.albumName ?: album.name,
+            change.albumArtist ?: album.albumArtist,
+            change.isCompilation ?: album.isCompilation,
+            change.year?.takeIf { year -> year > 0 } ?: album.year,
+            change.label ?: album.label
+        )
+    change.genre ?: genre
+    change.comments ?: comments
+    change.trackNumber?.takeIf { trackNum -> trackNum > 0 } ?: trackNumber
+    change.discNumber?.takeIf { discNum -> discNum > 0 } ?: discNumber
+    change.bpm?.takeIf { bpm -> bpm > 0 } ?: bpm
+    change.coverImageBytes ?: coverImageBytes
 }

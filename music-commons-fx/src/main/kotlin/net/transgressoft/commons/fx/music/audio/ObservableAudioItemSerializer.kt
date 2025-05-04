@@ -36,7 +36,7 @@ internal object ObservableAudioItemSerializer : AudioItemSerializerBase<Observab
                 // album year
                 propertiesList[10] as Short?,
                 // album label name
-                ImmutableLabel(propertiesList[11] as String)
+                ImmutableLabel.of(propertiesList[11] as String)
             ),
             // genre
             Genre.parseGenre(propertiesList[12] as String),

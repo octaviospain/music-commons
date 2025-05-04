@@ -1,10 +1,14 @@
 package net.transgressoft.commons.fx.music.playlist
 
 import net.transgressoft.commons.event.ReactiveScope
-import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.arbitraryAudioItem
+import net.transgressoft.commons.fx.music.audio.FXAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonRepository
+import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
+import net.transgressoft.commons.music.audio.AudioItemTestAttributes
+import net.transgressoft.commons.music.playlist.asJsonKeyValues
 import io.kotest.assertions.json.shouldEqualJson
+import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrowMessage
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
@@ -16,12 +20,15 @@ import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import io.mockk.every
 import io.mockk.mockk
+import org.testfx.api.FxToolkit
 import java.io.File
 import java.time.Duration
 import java.util.*
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -37,6 +44,7 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
     beforeSpec {
         ReactiveScope.flowScope = testScope
         ReactiveScope.ioScope = testScope
+        FxToolkit.registerPrimaryStage()
     }
 
     beforeEach {
@@ -54,14 +62,14 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
     }
 
     "Repository serializes itself to file when playlists are modified" {
-        val rockAudioItem = arbitraryAudioItem { title = "50s Rock hit 1" }.next()
+        val rockAudioItem = testFxAudioItem { title = "50s Rock hit 1" }
         val rockAudioItems = listOf(rockAudioItem)
         val rock = observableAudioPlaylistRepository.createPlaylist("Rock", rockAudioItems)
         testDispatcher.scheduler.advanceUntilIdle()
 
         observableAudioPlaylistRepository.playlistsProperty.shouldContainOnly(rock)
 
-        val rockFavAudioItem = arbitraryAudioItem { title = "Rock fav" }.next()
+        val rockFavAudioItem = testFxAudioItem { title = "Rock fav" }
         val rockFavoritesAudioItems = listOf(rockFavAudioItem)
         val rockFavorites = observableAudioPlaylistRepository.createPlaylist("Rock favorites", rockFavoritesAudioItems)
 
@@ -85,9 +93,11 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
         rock.isDirectory = true
         rock.name = "Rock directory"
 
-        observableAudioPlaylistRepository.findByUniqueId(rock.uniqueId) shouldBePresent {
-            it.isDirectory shouldBe true
-            it.name shouldBe "Rock directory"
+        eventually(100.milliseconds) {
+            observableAudioPlaylistRepository.findByUniqueId(rock.uniqueId) shouldBePresent {
+                it.isDirectory shouldBe true
+                it.name shouldBe "Rock directory"
+            }
         }
 
         testDispatcher.scheduler.advanceUntilIdle()
@@ -96,7 +106,7 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
     }
 
     "Creating repository from existing json file without AudioRepository throws Exception" {
-        val audioItem = arbitraryAudioItem { id = 453374921 }.next()
+        val audioItem = testFxAudioItem { id = 453374921 }
         val playlist =
             mockk<ObservablePlaylist> {
                 every { id } returns 1
@@ -104,6 +114,7 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
                 every { name } returns "Rock"
                 every { audioItems } returns listOf(audioItem)
                 every { playlists } returns emptySet()
+                every { asJsonKeyValue() } answers { callOriginal() }
             }
         jsonFile.writeText(listOf(playlist).asJsonKeyValues())
 
@@ -113,7 +124,7 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
     }
 
     "Existing repository loads from file" {
-        val audioItem = arbitraryAudioItem { id = 453374921 }.next()
+        val audioItem = testFxAudioItem { id = 453374921 }
         val playlist =
             mockk<ObservablePlaylist> {
                 every { id } returns 1
@@ -121,12 +132,13 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
                 every { name } returns "Rock"
                 every { audioItems } returns listOf(audioItem)
                 every { playlists } returns emptySet()
+                every { asJsonKeyValue() } answers { callOriginal() }
             }
         jsonFile.writeText(listOf(playlist).asJsonKeyValues())
 
         val audioItemRepository =
             mockk<ObservableAudioItemJsonRepository> {
-                every { findById(eq(453374921)) } returns Optional.of(audioItem)
+                every { findById(audioItem.id) } returns Optional.of(audioItem)
             }
 
         observableAudioPlaylistRepository = ObservablePlaylistJsonRepository.loadExisting("Playlists", jsonFile, audioItemRepository)
@@ -160,14 +172,14 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
     "Mixed playlists hierarchy structure and audio items search" {
         val rockAudioItems =
             listOf(
-                arbitraryAudioItem {
+                testFxAudioItem {
                     title = "50s Rock hit 1"
                     duration = Duration.ofSeconds(60)
-                }.next(),
-                arbitraryAudioItem {
+                },
+                testFxAudioItem {
                     title = "50s Rock hit 2 my fav"
                     duration = Duration.ofSeconds(230)
-                }.next()
+                }
             )
         val rock = observableAudioPlaylistRepository.createPlaylist("Rock", rockAudioItems)
 
@@ -231,14 +243,14 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
 
         val fiftiesItems =
             listOf(
-                arbitraryAudioItem {
+                testFxAudioItem {
                     title = "50s hit"
                     duration = Duration.ofSeconds(30)
-                }.next(),
-                arbitraryAudioItem {
+                },
+                testFxAudioItem {
                     title = "50s favorite song"
                     duration = Duration.ofSeconds(120)
-                }.next()
+                }
             )
 
         observableAudioPlaylistRepository.addAudioItemToPlaylist(fiftiesItems[0], fifties.name)
@@ -447,47 +459,7 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
     }
 })
 
-fun ObservablePlaylist.asJsonKeyValue(): String {
-    val audioItemsString =
-        buildString {
-            append("[")
-            audioItems.forEachIndexed { index, it ->
-                append(it.id)
-                if (index < audioItems.size - 1) {
-                    append(",")
-                }
-            }
-            append("],")
-        }
-    val playlistIds =
-        buildString {
-            append("[")
-            playlists.forEachIndexed { index, it ->
-                append(it.id)
-                if (index < playlists.size - 1) {
-                    append(",")
-                }
-            }
-            append("]")
-        }
-    return """
-            "$id": {
-                "id": $id,
-                "isDirectory": $isDirectory,
-                "name": "$name",
-                "audioItemIds": $audioItemsString
-                "playlistIds": $playlistIds
-            }"""
+fun testFxAudioItem(attributesAction: AudioItemTestAttributes.() -> Unit): ObservableAudioItem {
+    val path = Arb.realAudioFile(attributesAction = attributesAction).next()
+    return FXAudioItem(path)
 }
-
-fun Collection<ObservablePlaylist>.asJsonKeyValues(): String =
-    buildString {
-        append("{")
-        this@asJsonKeyValues.forEachIndexed { index, it ->
-            append(it.asJsonKeyValue())
-            if (index < this@asJsonKeyValues.size - 1) {
-                append(",")
-            }
-        }
-        append("}")
-    }

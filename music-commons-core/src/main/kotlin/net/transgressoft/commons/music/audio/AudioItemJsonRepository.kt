@@ -42,6 +42,7 @@ class AudioItemJsonRepository(
     override fun toString() = "AudioItemJsonRepository(audioItemsCount=${entitiesById.size})"
 }
 
+@get:JvmName("audioItemSerializerModule")
 val audioItemSerializerModule =
     SerializersModule {
         polymorphic(Artist::class) {

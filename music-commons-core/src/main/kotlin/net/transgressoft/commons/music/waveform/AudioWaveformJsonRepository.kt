@@ -35,7 +35,7 @@ class AudioWaveformJsonRepository<I: ReactiveAudioItem<I>>(
         dispatcher: CoroutineDispatcher
     ): CompletableFuture<AudioWaveform> =
         findById(audioItem.id)
-            .map<CompletableFuture<AudioWaveform>> { CompletableFuture.completedFuture(it) }
+            .map { CompletableFuture.completedFuture(it) }
             .orElseGet {
                 CoroutineScope(dispatcher).future {
                     async {

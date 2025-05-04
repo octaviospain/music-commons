@@ -44,7 +44,11 @@ abstract class AudioItemJsonRepositoryBase<I>(
     override fun getArtistCatalog(artist: Artist): Optional<ArtistView<I>> = artistCatalogRegistry.getArtistView(artist)
 
     override fun containsAudioItemWithArtist(artistName: String) =
-        entitiesById.values.any { it.artistsInvolved.stream().map(String::lowercase).toList().contains(artistName.lowercase()) }
+        entitiesById.values.any {
+            it.artistsInvolved.any { artist ->
+                artist.name.contentEquals(artistName, true)
+            }
+        }
 
     override fun getRandomAudioItemsFromArtist(artist: Artist, size: Short): List<I> =
         entitiesById.values.asSequence().filter { it.artist == artist }.shuffled().take(size.toInt()).toList()

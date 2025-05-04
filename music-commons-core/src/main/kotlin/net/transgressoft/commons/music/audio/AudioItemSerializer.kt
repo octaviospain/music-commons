@@ -7,7 +7,6 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import kotlin.io.path.Path
-import kotlin.io.path.absolutePathString
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
@@ -17,7 +16,6 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.boolean
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.int
@@ -25,7 +23,6 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
-import kotlinx.serialization.json.put
 
 internal object AudioItemSerializer: AudioItemSerializerBase<AudioItem>() {
 
@@ -47,13 +44,13 @@ internal object AudioItemSerializer: AudioItemSerializerBase<AudioItem>() {
                 // album name
                 propertiesList[7] as String,
                 // album artist name
-                ImmutableArtist(propertiesList[8] as String),
+                ImmutableArtist.of(propertiesList[8] as String),
                 // album isCompilation
                 propertiesList[9] as Boolean,
                 // album year
                 propertiesList[10] as Short?,
                 // album label name
-                ImmutableLabel(propertiesList[11] as String)
+                ImmutableLabel.of(propertiesList[11] as String)
             ),
             // genre
             Genre.parseGenre(propertiesList[12] as String),
@@ -155,8 +152,8 @@ abstract class AudioItemSerializerBase<I: ReactiveAudioItem<I>>: TransEntityPoly
         val lastDateModified = jsonObject["lastDateModified"] ?: throw SerializationException("Serialized AudioItem should contain lastDateModified element")
         propertiesList.add(LocalDateTime.ofEpochSecond(lastDateModified.jsonPrimitive.long, 0, ZoneOffset.UTC))
 
-        // but playCount is nullable.
-        // As you can figure out already, order of properties is important in this list
+        // But playCount is nullable.
+        // As you can figure out already, the order of properties is important in this list
 
         propertiesList.add(jsonObject["playCount"]?.jsonPrimitive?.int?.toShort())
 
@@ -165,52 +162,6 @@ abstract class AudioItemSerializerBase<I: ReactiveAudioItem<I>>: TransEntityPoly
 
     override fun serialize(encoder: Encoder, value: I) {
         val jsonOutput = encoder as? JsonEncoder ?: throw SerializationException("This class can be saved only by Json")
-        val jsonObject =
-            buildJsonObject {
-                put("id", value.id)
-                put("path", value.path.absolutePathString())
-                put("title", value.title)
-                put("duration", value.duration.toSeconds())
-                put("bitRate", value.bitRate)
-                put(
-                    "artist",
-                    buildJsonObject {
-                        put("name", value.artist.name)
-                        put("countryCode", value.artist.countryCode.name)
-                    }
-                )
-                put(
-                    "album",
-                    buildJsonObject {
-                        put("name", value.album.name)
-                        put(
-                            "albumArtist",
-                            buildJsonObject {
-                                put("name", value.album.albumArtist.name)
-                            }
-                        )
-                        put("isCompilation", value.album.isCompilation)
-                        put("year", value.album.year)
-                        put(
-                            "label",
-                            buildJsonObject {
-                                put("name", value.album.label.name)
-                            }
-                        )
-                    }
-                )
-                put("genre", value.genre.name)
-                put("comments", value.comments)
-                put("trackNumber", value.trackNumber)
-                put("discNumber", value.discNumber)
-                put("bpm", value.bpm)
-                put("encoder", value.encoder)
-                put("encoding", value.encoding)
-                put("dateOfCreation", value.dateOfCreation.toEpochSecond(ZoneOffset.UTC))
-                put("lastDateModified", value.lastDateModified.toEpochSecond(ZoneOffset.UTC))
-                put("playCount", value.playCount)
-            }
-
-        jsonOutput.encodeJsonElement(jsonObject)
+        jsonOutput.encodeJsonElement(value.toJsonObject())
     }
 }

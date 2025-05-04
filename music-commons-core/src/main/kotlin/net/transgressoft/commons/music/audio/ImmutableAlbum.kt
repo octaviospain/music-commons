@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 @SerialName("ImmutableAlbum")
-open class ImmutableAlbum(
+class ImmutableAlbum(
     override val name: String,
     override val albumArtist: Artist,
     override val isCompilation: Boolean = false,
@@ -52,6 +52,7 @@ open class ImmutableAlbum(
     override fun toString() = "ImmutableAlbum(name='$name', albumArtist=$albumArtist, isCompilation=$isCompilation, year=$year, label=$label)"
 
     companion object {
+        @get:JvmName("UNKNOWN")
         val UNKNOWN = ImmutableAlbum("", ImmutableArtist.UNKNOWN)
     }
 }

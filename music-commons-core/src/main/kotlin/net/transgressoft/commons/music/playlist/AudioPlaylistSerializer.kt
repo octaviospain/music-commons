@@ -223,7 +223,7 @@ internal class DummyAudioItem(
     override val uniqueId: String = ""
     override val fileName: String = ""
     override val extension: String = ""
-    override val artistsInvolved: Set<String> = emptySet()
+    override val artistsInvolved: Set<Artist> = emptySet()
     override val length: Long = 0
     override var coverImageBytes: ByteArray? = null
     override val playCount: Short = 0

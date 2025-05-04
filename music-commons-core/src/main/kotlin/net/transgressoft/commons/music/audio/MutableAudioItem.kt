@@ -160,7 +160,7 @@ internal class MutableAudioItem(
     }
 
     override val artistsInvolved
-        get() = AudioUtils.getArtistsNamesInvolved(title, artist.name, album.albumArtist.name)
+        get() = AudioUtils.getArtistsNamesInvolved(title, artist.name, album.albumArtist.name).map { ImmutableArtist.of(it) }.toSet()
 
     override val length by lazy {
         path.toFile().length()
@@ -246,7 +246,7 @@ internal class MutableAudioItem(
                     if (_country.isNotEmpty()) CountryCode.valueOf(_country)
                     else CountryCode.UNDEFINED
                 } ?: CountryCode.UNDEFINED
-            ImmutableArtist(AudioUtils.beautifyArtistName(artistName), country)
+            ImmutableArtist.of(AudioUtils.beautifyArtistName(artistName), country)
         } ?: ImmutableArtist.UNKNOWN
 
     private fun readAlbum(tag: Tag, extension: String): ImmutableAlbum =
@@ -261,8 +261,8 @@ internal class MutableAudioItem(
                         else "true" == tag.getFirst(FieldKey.IS_COMPILATION)
                     } ?: false
                 val year = getFieldIfExisting(tag, FieldKey.YEAR)?.toShortOrNull()?.takeIf { it > 0 }
-                val label = getFieldIfExisting(tag, FieldKey.GROUPING)?.let { ImmutableLabel(it) } as Label
-                ImmutableAlbum(albumName, ImmutableArtist(AudioUtils.beautifyArtistName(albumArtistName)), isCompilation, year, label)
+                val label = getFieldIfExisting(tag, FieldKey.GROUPING)?.let { ImmutableLabel.of(it) } as Label
+                ImmutableAlbum(albumName, ImmutableArtist.of(AudioUtils.beautifyArtistName(albumArtistName)), isCompilation, year, label)
             }
         }
 

@@ -192,7 +192,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                     artistsInvolvedProperty.addAll(
                         AudioUtils.getArtistsNamesInvolved(
                             value, artistProperty.value.name, albumProperty.value.albumArtist.name
-                        )
+                        ).map { ImmutableArtist.of(it) }.toSet()
                     )
                 }
             }
@@ -212,7 +212,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                     artistsInvolvedProperty.addAll(
                         AudioUtils.getArtistsNamesInvolved(
                             titleProperty.value, value.name, albumProperty.value.albumArtist.name
-                        )
+                        ).map { ImmutableArtist.of(it) }.toSet()
                     )
                 }
             }
@@ -233,7 +233,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                     artistsInvolvedProperty.addAll(
                         AudioUtils.getArtistsNamesInvolved(
                             titleProperty.value, artistProperty.value.name, value.albumArtist.name
-                        )
+                        ).map { ImmutableArtist.of(it) }.toSet()
                     )
                 }
             }
@@ -360,17 +360,17 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
             }
 
         @Transient
-        override val artistsInvolvedProperty: ReadOnlySetProperty<String> =
+        override val artistsInvolvedProperty: ReadOnlySetProperty<Artist> =
             SimpleSetProperty(
                 this, "artists involved",
                 FXCollections.observableSet(
                     AudioUtils.getArtistsNamesInvolved(
                         titleProperty.value, artistProperty.value.name, albumProperty.value.albumArtist.name
-                    )
+                    ).map { ImmutableArtist.of(it) }.toSet()
                 )
             )
 
-        override val artistsInvolved: Set<String>
+        override val artistsInvolved: Set<Artist>
             get() = artistsInvolvedProperty.value
 
         @Serializable
@@ -406,7 +406,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                             else "true" == tag.getFirst(FieldKey.IS_COMPILATION)
                         } == true
                     val year = getFieldIfExisting(tag, FieldKey.YEAR)?.toShortOrNull()?.takeIf { it > 0 }
-                    val label = getFieldIfExisting(tag, FieldKey.GROUPING)?.let { ImmutableLabel(it) } as Label
+                    val label = getFieldIfExisting(tag, FieldKey.GROUPING)?.let { ImmutableLabel.of(it) } as Label
                     ImmutableAlbum(albumName, ImmutableArtist.of(AudioUtils.beautifyArtistName(albumArtistName)), isCompilation, year, label)
                 }
             }

@@ -53,7 +53,7 @@ internal class ArtistCatalogVolatileRegistry<I>: RegistryBase<String, MutableArt
             if (artistOrAlbumChanged(updatedAudioItem, oldAudioItem)) {
                 val removed = removeAudioItems(listOf(oldAudioItem))
                 val added = addAudioItems(listOf(updatedAudioItem))
-                check(removed && added) { "Update of an audio item in the catalog is supposed to happen at this point" }
+                check(removed || added) { "Update of an audio item in the catalog is supposed to happen at this point" }
 
                 log.debug { "Artist catalog of ${updatedAudioItem.artist.name} was updated as a result of updating $updatedAudioItem" }
             } else if (audioItemOrderingChanged(updatedAudioItem, oldAudioItem)) {

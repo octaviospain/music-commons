@@ -2,8 +2,9 @@ package net.transgressoft.commons.fx.music.player
 
 import net.transgressoft.commons.event.ReactiveScope
 import net.transgressoft.commons.fx.music.audio.FXAudioItem
-import net.transgressoft.commons.fx.music.audio.FXAudioItemTestUtil.arbitraryMp3File
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonRepository
+import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
+import net.transgressoft.commons.music.audio.AudioFileTagType.ID3_V_24
 import net.transgressoft.commons.music.player.AudioItemPlayer
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status.PAUSED
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status.PLAYING
@@ -15,6 +16,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
+import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import javafx.util.Duration
 import org.junit.jupiter.api.extension.ExtendWith
@@ -50,7 +52,7 @@ internal class JavaFxPlayerTest : StringSpec({
         player = JavaFxPlayer()
         jsonFile = Files.createTempFile("observableAudioItemRepository-test", ".json").toFile().apply { deleteOnExit() }
         observableAudioItemRepository = ObservableAudioItemJsonRepository("ObservableAudioItemRepo", jsonFile)
-        audioItem = observableAudioItemRepository.createFromFile(arbitraryMp3File.next().toPath())
+        audioItem = observableAudioItemRepository.createFromFile(Arb.realAudioFile(ID3_V_24).next())
     }
 
     afterEach {

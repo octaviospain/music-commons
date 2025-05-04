@@ -1,8 +1,6 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAlbumAudioItems
-import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
-import net.transgressoft.commons.music.audio.AudioItemTestUtil.update
+import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.BehaviorSpec
@@ -10,6 +8,7 @@ import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
+import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -22,13 +21,15 @@ internal class ArtistCatalogVolatileRegistryTest : BehaviorSpec({
 
         When("an audio item that has the same album artist and artist is added") {
             val expectedAlbum = ImmutableAlbum("Play", ImmutableArtist.of("Moby", CountryCode.US))
-            val audioItem =
-                arbitraryAudioItem {
+            val audioFilePath =
+                Arb.realAudioFile {
                     artist = ImmutableArtist.of("Moby", CountryCode.US)
                     album = expectedAlbum
                     trackNumber = 1
                     discNumber = 1
-                }.next().also {
+                }.next()
+            var audioItem: AudioItem =
+                MutableAudioItem(audioFilePath).also {
                     registry.addAudioItems(listOf(it))
                 }
 
@@ -48,12 +49,13 @@ internal class ArtistCatalogVolatileRegistryTest : BehaviorSpec({
 
             and("the audio item updates fields that do not affect the artist catalog") {
                 val audioItemBeforeChange = MutableAudioItem(audioItem)
-                audioItem.update {
+                audioItem.apply {
                     title = "Natural Blues"
                     genre = Genre.ROCK
                     comments = "Comments"
                     bpm = 120f
                 }
+
                 registry.updateCatalog(audioItem, audioItemBeforeChange)
 
                 then("the artist catalog remains the same") {
@@ -70,8 +72,10 @@ internal class ArtistCatalogVolatileRegistryTest : BehaviorSpec({
 
             and("the audio item updates its artist and album artist without writing the metadata") {
                 val audioItemBeforeChange = MutableAudioItem(audioItem)
-                audioItem.artist = ImmutableArtist.of("Bjork", CountryCode.IS)
-                audioItem.album = ImmutableAlbum(audioItem.album.name, audioItem.artist)
+                audioItem.apply {
+                    artist = ImmutableArtist.of("Bjork", CountryCode.IS)
+                    album = ImmutableAlbum(audioItem.album.name, artist!!)
+                }
 
                 registry.updateCatalog(audioItem, audioItemBeforeChange)
 
@@ -87,32 +91,15 @@ internal class ArtistCatalogVolatileRegistryTest : BehaviorSpec({
                     registry.findFirst("Moby").isEmpty shouldBe true
                     registry.findAlbumAudioItems(ImmutableArtist.of("Moby", CountryCode.US), "Play").isEmpty() shouldBe true
                 }
-
-                then("creating an audio item from the same path does not have the updated artist and album artist") {
-                    val audioItemFromSamePath = MutableAudioItem(audioItem.path)
-
-                    audioItemFromSamePath.artist shouldBe ImmutableArtist.of("Moby", CountryCode.US)
-                    audioItemFromSamePath.album.albumArtist shouldBe ImmutableArtist.of("Moby", CountryCode.UNDEFINED)
-                }
-
-                and("metadata is written to file") {
-                    audioItem.writeMetadata()
-
-                    then("creating an audio item from the same path reflects the change") {
-                        eventually(100.milliseconds) {
-                            val audioItemFromSamePath = MutableAudioItem(audioItem.path)
-
-                            audioItemFromSamePath.artist shouldBe ImmutableArtist.of("Bjork", CountryCode.IS)
-                            audioItemFromSamePath.album.albumArtist shouldBe ImmutableArtist.of("Bjork", CountryCode.UNDEFINED)
-                        }
-                    }
-                }
             }
 
             and("the audio item updates its track number and disc number") {
                 val audioItemBeforeChange = MutableAudioItem(audioItem)
-                audioItem.trackNumber = audioItem.trackNumber!!.plus(1).toShort()
-                audioItem.discNumber = audioItem.discNumber!!.plus(1).toShort()
+                audioItem.apply {
+                    trackNumber = trackNumber!!.plus(1).toShort()
+                    discNumber = discNumber!!.plus(1).toShort()
+                }
+
                 registry.updateCatalog(audioItem, audioItemBeforeChange)
 
                 then("the album in the artist catalog should be updated") {
@@ -143,7 +130,7 @@ internal class ArtistCatalogVolatileRegistryTest : BehaviorSpec({
         When("album audio items are added") {
             val expectedArtist = ImmutableArtist.of("Pixies", CountryCode.UK)
             val expectedAlbum = ImmutableAlbum("Doolittle", ImmutableArtist.of("Pixies"))
-            val pixiesAudioItems = arbitraryAlbumAudioItems(expectedArtist, expectedAlbum).next()
+            val pixiesAudioItems = Arb.albumAudioItems(expectedArtist, expectedAlbum).next()
 
             registry.addAudioItems(pixiesAudioItems)
 

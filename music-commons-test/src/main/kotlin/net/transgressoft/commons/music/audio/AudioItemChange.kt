@@ -2,6 +2,9 @@ package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.entity.IdentifiableEntity
 
+/**
+ * Represents the exhaustive set of fields that are mutable in an audio item.
+ */
 data class AudioItemChange(
     override val id: Int,
     var title: String? = null,

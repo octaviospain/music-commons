@@ -1,13 +1,13 @@
 package net.transgressoft.commons.music
 
 import net.transgressoft.commons.event.ReactiveScope
+import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemJsonRepository
-import net.transgressoft.commons.music.audio.AudioItemTestUtil.mp3File
 import net.transgressoft.commons.music.audio.AudioRepository
 import net.transgressoft.commons.music.playlist.AudioPlaylistJsonRepository
-import net.transgressoft.commons.music.playlist.AudioPlaylistTestUtil.asJsonKeyValues
 import net.transgressoft.commons.music.playlist.PlaylistRepository
+import net.transgressoft.commons.music.playlist.asJsonKeyValues
 import net.transgressoft.commons.music.waveform.AudioWaveformJsonRepository
 import net.transgressoft.commons.music.waveform.WaveformRepository
 import io.kotest.assertions.json.shouldEqualJson
@@ -18,6 +18,8 @@ import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
+import io.kotest.property.Arb
+import io.kotest.property.arbitrary.next
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asExecutor
@@ -63,7 +65,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         audioItemRepository.subscribe(audioWaveformRepository.audioItemEventSubscriber)
         audioItemRepository.subscribe(audioPlaylistRepository.audioItemEventSubscriber)
 
-        val audioItem = audioItemRepository.createFromFile(mp3File.toPath())
+        val audioItem = audioItemRepository.createFromFile(Arb.realAudioFile().next())
 
         testDispatcher.scheduler.advanceUntilIdle()
 

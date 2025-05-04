@@ -27,6 +27,7 @@ dependencies {
     implementation project(':music-commons-api')
     implementation project(':music-commons-core')
     implementation project(':music-commons-fx')
+    implementation project(':music-commons-test')
     api "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
 }
 
@@ -58,6 +59,8 @@ sonar {
         property 'sonar.projectName', 'music-commons'
         property 'sonar.projectVersion', version
         property 'sonar.junit.reportPaths', 'build/test-results/test'
+        property 'sonar.inclusions', ['**/music-commons-api/src/main/**', '**/music-commons-core/src/main/**', '**/music-commons-fx/src/main/**']
+        property 'sonar.test.exclusions', '**/test/**'
         def buildDir = project.layout.buildDirectory.get().asFile.absolutePath
         property 'sonar.coverage.jacoco.xmlReportPaths', "${buildDir}/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml"
     }
@@ -89,6 +92,7 @@ subprojects {
         implementation 'io.github.microutils:kotlin-logging-jvm:3.0.5'
         implementation 'net.transgressoft:transgressoft-commons-api:1.3.0-SNAPSHOT'
         implementation "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
+        implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0'
 
         testImplementation 'ch.qos.logback:logback-core:1.5.16'
         testRuntimeOnly 'ch.qos.logback:logback-classic:1.5.16'
@@ -125,8 +129,6 @@ subprojects {
     sonar {
         properties {
             property 'sonar.moduleKey', "${project.name}"
-            property 'sonar.sources', 'src/main'
-            property 'sonar.exclusions', 'src/test/**'
         }
     }
 

@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 @SerialName("ImmutableArtist")
-class ImmutableArtist internal constructor(override val name: String, override val countryCode: CountryCode = CountryCode.UNDEFINED) : Artist {
+class ImmutableArtist private constructor(override val name: String, override val countryCode: CountryCode = CountryCode.UNDEFINED) : Artist {
 
     internal val id = id(name, countryCode)
 
@@ -45,13 +45,15 @@ class ImmutableArtist internal constructor(override val name: String, override v
     companion object {
 
         @JvmField
+        @get:JvmName("UNKNOWN")
         val UNKNOWN: Artist = ImmutableArtist("")
 
         private val artistMap: MutableMap<String, Artist> = ConcurrentHashMap(HashMap<String, Artist>().apply { put("", UNKNOWN) })
 
         @JvmStatic
+        @JvmOverloads
         fun of(name: String, countryCode: CountryCode = CountryCode.UNDEFINED) =
-            artistMap.getOrPut(id(name, countryCode)) { ImmutableArtist(name, countryCode) }
+            artistMap.getOrPut(id(name.trim(), countryCode)) { ImmutableArtist(name, countryCode) }
 
         internal fun id(name: String, countryCode: CountryCode = CountryCode.UNDEFINED) =
             if (countryCode == CountryCode.UNDEFINED) {

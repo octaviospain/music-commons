@@ -1,8 +1,8 @@
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.AudioItemTestUtil
-import net.transgressoft.commons.music.audio.AudioItemTestUtil.arbitraryAudioItem
+import net.transgressoft.commons.music.audio.artist
+import net.transgressoft.commons.music.audio.audioItem
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempdir
 import io.kotest.engine.spec.tempfile
@@ -45,7 +45,7 @@ internal class MutablePlaylistTest : StringSpec({
         playlist1.uniqueId shouldBe "Modified playlist1"
 
         val audioItems =
-            Arb.list(arbitraryAudioItem, 4..4).next().also {
+            Arb.list(Arb.audioItem(), 4..4).next().also {
                 playlist1.addAudioItems(it)
             }
 
@@ -53,7 +53,7 @@ internal class MutablePlaylistTest : StringSpec({
         playlist1.audioItemsAllMatch { it.title == "Song title" } shouldBe false
 
         val customAudioItem =
-            arbitraryAudioItem { title = "Song title" }.next().also {
+            Arb.audioItem { title = "Song title" }.next().also {
                 playlist1.addAudioItems(listOf(it))
             }
 
@@ -88,10 +88,10 @@ internal class MutablePlaylistTest : StringSpec({
         directory1.audioItems.isEmpty() shouldBe true
         directory1.toString() shouldBe "MutablePlaylist(id=1, isDirectory=true, name='Directory1', audioItems=[], playlists=[])"
 
-        val audioItems = Arb.list(arbitraryAudioItem, 5..5).next()
+        val audioItems = Arb.list(Arb.audioItem(), 5..5).next()
         val p1 = audioPlaylistRepository.createPlaylistDirectory("p1", audioItems = audioItems)
         val p2 = audioPlaylistRepository.createPlaylistDirectory("p2")
-        val d1AudioItem = arbitraryAudioItem { title = "One" }.next()
+        val d1AudioItem = Arb.audioItem { title = "One" }.next()
         val d1 = audioPlaylistRepository.createPlaylistDirectory("d1", audioItems = listOf(d1AudioItem))
 
         directory1.addPlaylists(listOf(p1, p2, d1))
@@ -159,9 +159,9 @@ internal fun randomQueenAudioItems(tempDirectory: Path, albumName: String = "", 
                 val artistName = "Queen"
                 val songDuration = Duration.ofSeconds((60 + i).toLong())
                 add(
-                    arbitraryAudioItem {
+                    Arb.audioItem {
                         title = song
-                        artist = AudioItemTestUtil.arbitraryArtist(givenName = artistName).next()
+                        artist = Arb.artist(givenName = artistName).next()
                         path = tempDirectory.resolve("$title.mp3")
                         duration = songDuration
                     }.next()

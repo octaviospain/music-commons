@@ -12,8 +12,10 @@ enum class Genre {
         val replaced = name.replace('_', ' ')
         val capitalized = CharArray(replaced.length)
         capitalized[0] = replaced[0].titlecaseChar()
-        for (c in 1 until replaced.toCharArray().size) if (replaced[c - 1] == ' ' || replaced[c - 1] == ',') capitalized[c] =
-            replaced[c].titlecaseChar() else capitalized[c] = replaced[c].lowercaseChar()
+        for (c in 1 until replaced.toCharArray().size) {
+            if (replaced[c - 1] == ' ' || replaced[c - 1] == ',') capitalized[c] =
+                replaced[c].titlecaseChar() else capitalized[c] = replaced[c].lowercaseChar()
+        }
         return String(capitalized)
     }
 

@@ -2,6 +2,7 @@ package net.transgressoft.commons.music.waveform
 
 import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.io.path.absolutePathString
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -38,7 +39,7 @@ object AudioWaveformSerializer : KSerializer<AudioWaveform> {
         val jsonObject =
             buildJsonObject {
                 put("id", value.id)
-                put("audioFilePath", value.audioFilePath.toAbsolutePath().toString())
+                put("audioFilePath", value.audioFilePath.absolutePathString())
             }
         jsonOutput.encodeJsonElement(jsonObject)
     }
