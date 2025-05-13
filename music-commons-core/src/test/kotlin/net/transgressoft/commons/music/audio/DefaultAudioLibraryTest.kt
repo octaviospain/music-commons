@@ -4,6 +4,8 @@ import net.transgressoft.commons.event.ReactiveScope
 import net.transgressoft.commons.music.AudioUtils
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAlbumAudioFiles
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.commons.persistence.json.JsonFileRepository
+import net.transgressoft.commons.persistence.json.JsonRepository
 import io.kotest.common.ExperimentalKotest
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
@@ -28,12 +30,13 @@ import kotlinx.serialization.json.jsonObject
 
 @ExperimentalKotest
 @ExperimentalCoroutinesApi
-internal class AudioItemJsonRepositoryTest : StringSpec({
+internal class DefaultAudioLibraryTest : StringSpec({
 
     val testDispatcher = UnconfinedTestDispatcher()
     val testScope = CoroutineScope(testDispatcher)
     lateinit var jsonFile: File
-    lateinit var audioRepository: AudioRepository
+    lateinit var jsonFileRepository: JsonRepository<Int, AudioItem>
+    lateinit var audioRepository: AudioLibrary<AudioItem>
 
     beforeSpec {
         ReactiveScope.flowScope = testScope
@@ -42,11 +45,12 @@ internal class AudioItemJsonRepositoryTest : StringSpec({
 
     beforeEach {
         jsonFile = tempfile("audioItemRepository-test", ".json").also { it.deleteOnExit() }
-        audioRepository = AudioItemJsonRepository("AudioRepo", jsonFile)
+        jsonFileRepository = JsonFileRepository(jsonFile, AudioItemMapSerializer)
+        audioRepository = DefaultAudioLibrary(jsonFileRepository)
     }
 
     afterEach {
-        audioRepository.close()
+        jsonFileRepository.close()
     }
 
     afterSpec {

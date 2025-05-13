@@ -5,6 +5,8 @@ import net.transgressoft.commons.music.audio.AudioFileTagType.WAV
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.commons.music.audio.audioItem
+import net.transgressoft.commons.persistence.json.JsonFileRepository
+import net.transgressoft.commons.persistence.json.JsonRepository
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
@@ -23,12 +25,13 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 @ExperimentalCoroutinesApi
-internal class AudioWaveformJsonRepositoryTest : StringSpec({
+internal class DefaultAudioWaveformRepositoryTest : StringSpec({
 
     val testDispatcher = UnconfinedTestDispatcher()
     val testScope = CoroutineScope(testDispatcher)
     lateinit var jsonFile: File
-    lateinit var audioWaveformRepository: WaveformRepository<AudioItem>
+    lateinit var jsonFileRepository: JsonRepository<Int, AudioWaveform>
+    lateinit var audioWaveformRepository: AudioWaveformRepository<AudioWaveform, AudioItem>
 
     beforeSpec {
         ReactiveScope.flowScope = testScope
@@ -37,11 +40,12 @@ internal class AudioWaveformJsonRepositoryTest : StringSpec({
 
     beforeEach {
         jsonFile = tempfile("audioWaveformRepository-test", ".json").also { it.deleteOnExit() }
-        audioWaveformRepository = AudioWaveformJsonRepository("Waveforms", jsonFile)
+        jsonFileRepository = JsonFileRepository(jsonFile, AudioWaveformMapSerializer)
+        audioWaveformRepository = DefaultAudioWaveformRepository(jsonFileRepository)
     }
 
     afterEach {
-        audioWaveformRepository.close()
+        jsonFileRepository.close()
     }
 
     afterSpec {
@@ -70,7 +74,7 @@ internal class AudioWaveformJsonRepositoryTest : StringSpec({
                 )
             }.toString()
 
-        val loadedRepository = AudioWaveformJsonRepository<AudioItem>("Waveforms", jsonFile)
+        val loadedRepository = DefaultAudioWaveformRepository<AudioItem>(jsonFileRepository)
         loadedRepository.size() shouldBe 1
         loadedRepository.findById(audioWaveform.id) shouldBePresent { found -> found shouldBe audioWaveform }
         loadedRepository shouldBe audioWaveformRepository

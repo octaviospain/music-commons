@@ -7,7 +7,10 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import kotlin.io.path.Path
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.descriptors.element
@@ -23,6 +26,9 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
+
+@get:JvmName("AudioItemMapSerializer")
+val AudioItemMapSerializer: KSerializer<Map<Int, AudioItem>> = MapSerializer(Int.serializer(), AudioItemSerializer)
 
 internal object AudioItemSerializer: AudioItemSerializerBase<AudioItem>() {
 

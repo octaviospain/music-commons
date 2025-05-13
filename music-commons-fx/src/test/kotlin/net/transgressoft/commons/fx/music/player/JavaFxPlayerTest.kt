@@ -2,7 +2,9 @@ package net.transgressoft.commons.fx.music.player
 
 import net.transgressoft.commons.event.ReactiveScope
 import net.transgressoft.commons.fx.music.audio.FXAudioItem
-import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonRepository
+import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
+import net.transgressoft.commons.fx.music.audio.ObservableAudioItemMapSerializer
+import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.AudioFileTagType.ID3_V_24
 import net.transgressoft.commons.music.player.AudioItemPlayer
@@ -10,6 +12,8 @@ import net.transgressoft.commons.music.player.AudioItemPlayer.Status.PAUSED
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status.PLAYING
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status.STOPPED
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status.UNKNOWN
+import net.transgressoft.commons.persistence.json.JsonFileRepository
+import net.transgressoft.commons.persistence.json.JsonRepository
 import io.kotest.assertions.json.shouldContainJsonKeyValue
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec
@@ -39,7 +43,8 @@ internal class JavaFxPlayerTest : StringSpec({
     val testScope = CoroutineScope(testDispatcher)
     lateinit var player: AudioItemPlayer
     lateinit var jsonFile: File
-    lateinit var observableAudioItemRepository: ObservableAudioItemJsonRepository
+    lateinit var jsonFileRepository: JsonRepository<Int, ObservableAudioItem>
+    lateinit var observableAudioItemRepository: ObservableAudioLibrary
     lateinit var audioItem: FXAudioItem
 
     beforeSpec {
@@ -51,12 +56,13 @@ internal class JavaFxPlayerTest : StringSpec({
     beforeEach {
         player = JavaFxPlayer()
         jsonFile = Files.createTempFile("observableAudioItemRepository-test", ".json").toFile().apply { deleteOnExit() }
-        observableAudioItemRepository = ObservableAudioItemJsonRepository("ObservableAudioItemRepo", jsonFile)
+        jsonFileRepository = JsonFileRepository(jsonFile, ObservableAudioItemMapSerializer)
+        observableAudioItemRepository = ObservableAudioLibrary(jsonFileRepository)
         audioItem = observableAudioItemRepository.createFromFile(Arb.realAudioFile(ID3_V_24).next())
     }
 
     afterEach {
-        observableAudioItemRepository.close()
+        jsonFileRepository.close()
         player.dispose()
     }
 

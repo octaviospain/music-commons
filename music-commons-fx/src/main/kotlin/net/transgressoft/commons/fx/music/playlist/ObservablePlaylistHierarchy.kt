@@ -5,11 +5,13 @@ import net.transgressoft.commons.event.CrudEvent.Type.CREATE
 import net.transgressoft.commons.event.CrudEvent.Type.DELETE
 import net.transgressoft.commons.event.CrudEvent.Type.UPDATE
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
-import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonRepository
+import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
 import net.transgressoft.commons.music.audio.AudioItemManipulationException
 import net.transgressoft.commons.music.playlist.AudioPlaylist
-import net.transgressoft.commons.music.playlist.AudioPlaylistRepositoryBase
+import net.transgressoft.commons.music.playlist.PlaylistHierarchyBase
 import net.transgressoft.commons.music.playlist.event.AudioPlaylistEventSubscriber
+import net.transgressoft.commons.persistence.Repository
+import net.transgressoft.commons.persistence.VolatileRepository
 import com.google.common.base.Objects
 import javafx.application.Platform
 import javafx.beans.property.ReadOnlyBooleanProperty
@@ -26,40 +28,28 @@ import javafx.collections.FXCollections
 import javafx.collections.ObservableSet
 import javafx.scene.image.Image
 import mu.KotlinLogging
-import java.io.File
 import java.util.*
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 
-class ObservablePlaylistJsonRepository private constructor(
-    name: String,
-    file: File
-): AudioPlaylistRepositoryBase<ObservableAudioItem, ObservablePlaylist>(
-        name,
-        file,
-        ObservablePlaylistSerializer,
-        observablePlaylistSerializersModule
-    ) {
+class ObservablePlaylistHierarchy private constructor(
+    repository: Repository<Int, ObservablePlaylist> = VolatileRepository()
+): PlaylistHierarchyBase<ObservableAudioItem, ObservablePlaylist>(repository) {
     companion object {
 
-        fun createNew(
-            name: String,
-            file: File
-        ): ObservablePlaylistJsonRepository {
-            val repository = ObservablePlaylistJsonRepository(name, file)
+        fun createNew(repository: Repository<Int, ObservablePlaylist>): ObservablePlaylistHierarchy {
             require(
                 repository.findFirst {
                     it is DummyPlaylist
                 }.isEmpty
-            ) { "An AudioItemRepository is required when loading from a non-empty json file" }
-            return repository
+            ) { "An AudioItemRepository is required when loading a non empty repository" }
+            return ObservablePlaylistHierarchy(repository)
         }
 
         fun loadExisting(
-            name: String,
-            file: File,
-            audioItemRepository: ObservableAudioItemJsonRepository
-        ) = ObservablePlaylistJsonRepository(name, file, audioItemRepository)
+            repository: Repository<Int, ObservablePlaylist> = VolatileRepository("PlaylistHierarchy"),
+            audioItemRepository: ObservableAudioLibrary
+        ) = ObservablePlaylistHierarchy(repository, audioItemRepository)
     }
 
     private val logger = KotlinLogging.logger {}
@@ -86,37 +76,41 @@ class ObservablePlaylistJsonRepository private constructor(
         subscribe(playlistChangesSubscriber)
     }
 
-    private constructor(name: String, file: File, audioItemRepository: ObservableAudioItemJsonRepository) : this(name, file) {
-        disableEvents(CREATE, UPDATE, DELETE) // disable events until initial load from file is completed
+    private constructor(repository: Repository<Int, ObservablePlaylist>, audioItemRepository: ObservableAudioLibrary) : this(repository) {
+        disableEvents(CREATE, UPDATE, DELETE) // disable events until the initial load from the file is completed
         runForAll {
             val playlistWithAudioItems = FXPlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItems.toIds(), audioItemRepository))
-            entitiesById[it.id] = playlistWithAudioItems
+            repository.addOrReplace(playlistWithAudioItems)
         }
         runForAll {
-            val playlistMissingPlaylists = entitiesById[it.id] ?: throw IllegalStateException("Playlist ID ${it.id} not found after initial processing")
-            val foundPlaylists = findDeserializedPlaylistsFromIds(it.playlists.toIds(), entitiesById)
+            val playlistMissingPlaylists =
+                repository.findById(it.id)
+                    .orElseThrow { IllegalStateException("Playlist ID ${it.id} not found after initial processing") }
+            val foundPlaylists = findDeserializedPlaylistsFromIds(it.playlists.toIds(), repository)
             playlistMissingPlaylists.addPlaylists(foundPlaylists)
         }
-        Platform.runLater { observablePlaylistsSet.addAll(entitiesById.values) }
+        repository.runForAll {
+            Platform.runLater { observablePlaylistsSet.add(it) }
+        }
 
         activateEvents(CREATE, UPDATE, DELETE)
     }
 
     private fun mapAudioItemsFromIds(
         audioItemIds: List<Int>,
-        audioItemRepository: ObservableAudioItemJsonRepository
+        audioItemRepository: ObservableAudioLibrary
     ) = audioItemIds.map {
-        audioItemRepository.findById(
-            it
-        ).orElseThrow { AudioItemManipulationException("AudioItem with id $it not found during deserialization") }
+        audioItemRepository.findById(it)
+            .orElseThrow { AudioItemManipulationException("AudioItem with id $it not found during deserialization") }
     }.toList()
 
     private fun findDeserializedPlaylistsFromIds(
         playlists: Set<Int>,
-        playlistsById: Map<Int, ObservablePlaylist>
+        repository: Repository<Int, ObservablePlaylist>
     ): List<ObservablePlaylist> =
         playlists.stream().map {
-            return@map playlistsById[it] ?: throw AudioItemManipulationException("AudioPlaylist with id $it not found during deserialization")
+            repository.findById(it)
+                .orElseThrow { AudioItemManipulationException("AudioPlaylist with id $it not found during deserialization") }
         }.toList()
 
     override fun createPlaylist(name: String): ObservablePlaylist = createPlaylist(name, emptyList())
@@ -145,7 +139,7 @@ class ObservablePlaylistJsonRepository private constructor(
         }
     }
 
-    override fun toString() = "ObservablePlaylistRepository(playlistsCount=${entitiesById.size})"
+    override fun toString() = "ObservablePlaylistRepository(playlistsCount=${size()})"
 
     private inner class FXPlaylist(
         id: Int,

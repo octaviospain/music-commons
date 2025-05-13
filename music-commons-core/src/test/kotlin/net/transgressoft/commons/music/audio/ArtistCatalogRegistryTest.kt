@@ -12,12 +12,12 @@ import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import kotlin.time.Duration.Companion.milliseconds
 
-internal class ArtistCatalogVolatileRegistryTest : BehaviorSpec({
+internal class ArtistCatalogRegistryTest : BehaviorSpec({
 
-    lateinit var registry: ArtistCatalogVolatileRegistry<AudioItem>
+    lateinit var registry: ArtistCatalogRegistry<AudioItem>
 
     given("An artist catalog registry") {
-        registry = ArtistCatalogVolatileRegistry()
+        registry = ArtistCatalogRegistry()
 
         When("an audio item that has the same album artist and artist is added") {
             val expectedAlbum = ImmutableAlbum("Play", ImmutableArtist.of("Moby", CountryCode.US))

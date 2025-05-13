@@ -9,6 +9,11 @@ import com.neovisionaries.i18n.CountryCode
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
+
+val ObservableAudioItemMapSerializer: KSerializer<Map<Int, ObservableAudioItem>> = MapSerializer(Int.serializer(), ObservableAudioItemSerializer)
 
 internal object ObservableAudioItemSerializer : AudioItemSerializerBase<ObservableAudioItem>() {
 

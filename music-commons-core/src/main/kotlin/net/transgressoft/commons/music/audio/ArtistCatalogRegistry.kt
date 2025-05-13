@@ -2,18 +2,24 @@ package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.event.CrudEvent.Type.CREATE
 import net.transgressoft.commons.event.CrudEvent.Type.DELETE
+import net.transgressoft.commons.event.CrudEvent.Type.READ
 import net.transgressoft.commons.event.CrudEvent.Type.UPDATE
+import net.transgressoft.commons.event.FlowEventPublisher
+import net.transgressoft.commons.event.StandardCrudEvent.Create
+import net.transgressoft.commons.event.StandardCrudEvent.Delete
+import net.transgressoft.commons.event.StandardCrudEvent.Update
 import net.transgressoft.commons.persistence.RegistryBase
 import mu.KotlinLogging
 import java.util.Optional
 import java.util.stream.Collectors.partitioningBy
 
-internal class ArtistCatalogVolatileRegistry<I>: RegistryBase<String, MutableArtistCatalog<I>>("ArtistCatalog") where I: ReactiveAudioItem<I> {
+internal class ArtistCatalogRegistry<I>
+: RegistryBase<String, MutableArtistCatalog<I>>(publisher = FlowEventPublisher("ArtistCatalogRegistry")) where I: ReactiveAudioItem<I> {
+
     private val log = KotlinLogging.logger {}
 
     init {
-        // READ event is disabled by default from upper class
-        disableEvents(CREATE, UPDATE, DELETE)
+        disableEvents(READ, CREATE, UPDATE, DELETE)
     }
 
     fun addAudioItems(audioItems: Collection<I>): Boolean {
@@ -32,14 +38,14 @@ internal class ArtistCatalogVolatileRegistry<I>: RegistryBase<String, MutableArt
 
             addedOrReplacedCatalogs[true]?.let { createdCatalogs ->
                 if (createdCatalogs.isNotEmpty()) {
-                    putCreateEvent(createdCatalogs)
+                    publisher.emitAsync(Create(createdCatalogs))
                     log.debug { "${createdCatalogs.size} artist catalogs were created" }
                 }
             }
 
             addedOrReplacedCatalogs[false]?.let { updatedCatalogs ->
                 if (updatedCatalogs.isNotEmpty()) {
-                    putUpdateEvent(updatedCatalogs, catalogsBeforeUpdate)
+                    publisher.emitAsync(Update(updatedCatalogs, catalogsBeforeUpdate))
                     log.debug { "${updatedCatalogs.size} artist catalogs were updated" }
                 }
             }
@@ -63,7 +69,7 @@ internal class ArtistCatalogVolatileRegistry<I>: RegistryBase<String, MutableArt
                     )
                 val artistCatalogBeforeUpdate = artistCatalog.copy()
                 artistCatalog.mergeAudioItem(updatedAudioItem)
-                putUpdateEvent(listOf(artistCatalog), listOf(artistCatalogBeforeUpdate))
+                publisher.emitAsync(Update(artistCatalog, artistCatalogBeforeUpdate))
             }
         }
     }
@@ -103,12 +109,12 @@ internal class ArtistCatalogVolatileRegistry<I>: RegistryBase<String, MutableArt
             }
 
             if (removedCatalogs.isNotEmpty()) {
-                putDeleteEvent(removedCatalogs)
+                publisher.emitAsync(Delete(removedCatalogs))
                 log.debug { "Artist catalogs of ${removedCatalogs.toArtistNames()} were deleted as a result of removing $audioItems from them" }
             }
 
             if (updatedCatalogs.isNotEmpty()) {
-                putUpdateEvent(updatedCatalogs, catalogsBeforeUpdate)
+                publisher.emitAsync(Update(updatedCatalogs, catalogsBeforeUpdate))
                 log.debug { "Audio items $audioItems were removed from artist catalogs of ${updatedCatalogs.toArtistNames()}" }
             }
 
@@ -128,8 +134,6 @@ internal class ArtistCatalogVolatileRegistry<I>: RegistryBase<String, MutableArt
         Optional.ofNullable(entitiesById.entries.firstOrNull { it.key.lowercase().contains(artistName.lowercase()) }?.value)
 
     fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I> = entitiesById[artist.id()]?.findAlbumAudioItems(albumName) ?: emptySet()
-
-    override val isEmpty = entitiesById.isEmpty()
 
     override fun toString() = "ArtistCatalogRegistry(numberOfArtists=${entitiesById.size})"
 }

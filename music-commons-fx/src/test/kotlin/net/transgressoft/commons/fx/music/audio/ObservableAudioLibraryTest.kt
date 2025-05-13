@@ -3,6 +3,8 @@ package net.transgressoft.commons.fx.music.audio
 import net.transgressoft.commons.event.ReactiveScope
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.commons.music.audio.shouldEqual
+import net.transgressoft.commons.persistence.json.JsonFileRepository
+import net.transgressoft.commons.persistence.json.JsonRepository
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
@@ -21,12 +23,13 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @ExperimentalCoroutinesApi
-internal class ObservableAudioItemJsonRepositoryTest : StringSpec({
+internal class ObservableAudioLibraryTest : StringSpec({
 
     val testDispatcher = UnconfinedTestDispatcher()
     val testScope = CoroutineScope(testDispatcher)
     lateinit var jsonFile: File
-    lateinit var repository: ObservableAudioItemJsonRepository
+    lateinit var jsonFileRepository: JsonRepository<Int, ObservableAudioItem>
+    lateinit var repository: ObservableAudioLibrary
 
     beforeSpec {
         ReactiveScope.flowScope = testScope
@@ -36,11 +39,12 @@ internal class ObservableAudioItemJsonRepositoryTest : StringSpec({
 
     beforeEach {
         jsonFile = tempfile("observableAudioItemRepository-test", ".json").also { it.deleteOnExit() }
-        repository = ObservableAudioItemJsonRepository("ObservableAudioItemRepo", jsonFile)
+        jsonFileRepository = JsonFileRepository(jsonFile, ObservableAudioItemMapSerializer)
+        repository = ObservableAudioLibrary(jsonFileRepository)
     }
 
     afterEach {
-        repository.close()
+        jsonFileRepository.close()
     }
 
     afterSpec {
@@ -93,7 +97,7 @@ internal class ObservableAudioItemJsonRepositoryTest : StringSpec({
 
         jsonFile shouldEqual fxAudioItem.asJsonKeyValue()
 
-        repository = ObservableAudioItemJsonRepository("ObservableAudioItemRepo", jsonFile)
+        repository = ObservableAudioLibrary(jsonFileRepository)
 
         testDispatcher.scheduler.advanceUntilIdle()
 

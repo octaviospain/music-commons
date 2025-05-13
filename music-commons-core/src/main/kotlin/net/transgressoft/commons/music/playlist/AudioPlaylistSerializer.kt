@@ -20,7 +20,10 @@ import java.util.concurrent.Flow
 import java.util.function.Consumer
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.descriptors.element
@@ -39,7 +42,10 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
-object MutableAudioPlaylistSerializer : AudioPlaylistSerializerBase<AudioItem, MutableAudioPlaylist>() {
+@get:JvmName("AudioPlaylistMapSerializer")
+val AudioPlaylistMapSerializer: KSerializer<Map<Int, MutableAudioPlaylist>> = MapSerializer(Int.serializer(), MutableAudioPlaylistSerializer)
+
+internal object MutableAudioPlaylistSerializer : AudioPlaylistSerializerBase<AudioItem, MutableAudioPlaylist>() {
     @Suppress("UNCHECKED_CAST")
     override fun createInstance(propertiesList: List<Any?>): MutableAudioPlaylist =
         DummyPlaylist(

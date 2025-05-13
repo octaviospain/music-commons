@@ -3,9 +3,11 @@ package net.transgressoft.commons.fx.music.audio
 import net.transgressoft.commons.event.CrudEvent.Type.CREATE
 import net.transgressoft.commons.event.CrudEvent.Type.DELETE
 import net.transgressoft.commons.event.CrudEvent.Type.UPDATE
+import net.transgressoft.commons.event.StandardCrudEvent.Update
 import net.transgressoft.commons.music.audio.Artist
-import net.transgressoft.commons.music.audio.AudioItemJsonRepositoryBase
+import net.transgressoft.commons.music.audio.AudioLibraryBase
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
+import net.transgressoft.commons.persistence.Repository
 import javafx.application.Platform
 import javafx.beans.property.ReadOnlyBooleanProperty
 import javafx.beans.property.ReadOnlyListProperty
@@ -13,21 +15,9 @@ import javafx.beans.property.SimpleListProperty
 import javafx.collections.FXCollections
 import javafx.collections.MapChangeListener
 import mu.KotlinLogging
-import java.io.File
 import java.nio.file.Path
-import kotlinx.serialization.modules.SerializersModule
 
-class ObservableAudioItemJsonRepository(
-    name: String,
-    file: File
-): AudioItemJsonRepositoryBase<ObservableAudioItem>(
-        name,
-        file,
-        ObservableAudioItemSerializer,
-        SerializersModule {
-            include(observableAudioItemSerializerModule)
-        }
-    ) {
+class ObservableAudioLibrary(repository: Repository<Int, ObservableAudioItem>): AudioLibraryBase<ObservableAudioItem>(repository) {
     private val logger = KotlinLogging.logger {}
 
     private val observableAudioItemMap =
@@ -44,11 +34,11 @@ class ObservableAudioItemJsonRepository(
             )
         }
 
-    // Subscribe to the events of itself in order to update the observable properties
+    // Subscribe to the events of itself to update the observable properties
     private val internalSubscription =
         subscribe(CREATE, UPDATE, DELETE) { event ->
             synchronized(observableAudioItemMap) {
-                if (event.type == DELETE) {
+                if (event.isDelete()) {
                     event.entities.forEach {
                         observableAudioItemMap.remove(it.key)
                         artistsProperty.remove(it.value.artist)
@@ -88,7 +78,7 @@ class ObservableAudioItemJsonRepository(
             if (audioItem is FXAudioItem) {
                 val audioItemClone = audioItem.clone()
                 audioItem.incrementPlayCount()
-                putUpdateEvent(audioItem, audioItemClone)
+                repository.emitAsync(Update(audioItem, audioItemClone))
                 logger.debug { "Play count of audio item with id ${audioItem.id} increased to ${audioItem.playCount}" }
             }
         }
@@ -107,5 +97,5 @@ class ObservableAudioItemJsonRepository(
                 logger.debug { "New ObservableAudioItem was created from file $audioItemPath with id ${fxAudioItem.id}" }
             }
 
-    override fun toString() = "ObservableAudioItemJsonRepository(audioItemsCount=${entitiesById.size})"
+    override fun toString() = "ObservableAudioItemJsonRepository(audioItemsCount=${size()})"
 }

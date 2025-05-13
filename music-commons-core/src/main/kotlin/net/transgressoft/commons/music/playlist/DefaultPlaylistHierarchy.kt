@@ -6,32 +6,33 @@ import net.transgressoft.commons.event.CrudEvent.Type.DELETE
 import net.transgressoft.commons.event.CrudEvent.Type.UPDATE
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemManipulationException
-import net.transgressoft.commons.music.audio.AudioRepository
+import net.transgressoft.commons.music.audio.AudioLibrary
+import net.transgressoft.commons.persistence.Repository
+import net.transgressoft.commons.persistence.VolatileRepository
 import mu.KotlinLogging
-import java.io.File
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
 
-typealias PlaylistRepository = AudioPlaylistRepository<AudioItem, MutableAudioPlaylist>
-
-class AudioPlaylistJsonRepository(
-    name: String,
-    jsonFile: File
-): AudioPlaylistRepositoryBase<AudioItem, MutableAudioPlaylist>(name, jsonFile, MutableAudioPlaylistSerializer) {
+class DefaultPlaylistHierarchy(
+    repository: Repository<Int, MutableAudioPlaylist> = VolatileRepository()
+): PlaylistHierarchyBase<AudioItem, MutableAudioPlaylist>(repository) {
     private val logger = KotlinLogging.logger {}
 
-    constructor(name: String, file: File, audioItemRepository: AudioRepository) : this(name, file) {
-        disableEvents(CREATE, UPDATE, DELETE) // disable events until initial load from file is completed
+    constructor(repository: Repository<Int, MutableAudioPlaylist>, audioLibrary: AudioLibrary<AudioItem>) : this(repository) {
+        disableEvents(CREATE, UPDATE, DELETE) // disable events until the initial load from the file is completed
         runForAll {
-            val playlistWithAudioItems = MutablePlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItems.toIds(), audioItemRepository))
+            val playlistWithAudioItems = MutablePlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItems.toIds(), audioLibrary))
             // Remove the item from the repository to delete the subscription
             remove(it)
             add(playlistWithAudioItems)
         }
         runForAll {
-            val playlistMissingPlaylists = entitiesById[it.id] ?: throw IllegalStateException("Playlist ID ${it.id} not found after initial processing")
-            val foundPlaylists = findDeserializedPlaylistsFromIds(it.playlists.toIds(), entitiesById)
+            val playlistMissingPlaylists =
+                repository.findById(it.id).orElseThrow {
+                    IllegalStateException("Playlist ID ${it.id} not found after initial processing")
+                }
+            val foundPlaylists = findDeserializedPlaylistsFromIds(it.playlists.toIds(), repository)
             playlistMissingPlaylists.addPlaylists(foundPlaylists)
         }
 
@@ -40,19 +41,19 @@ class AudioPlaylistJsonRepository(
 
     private fun mapAudioItemsFromIds(
         audioItemIds: List<Int>,
-        audioItemRepository: AudioRepository
+        audioLibrary: AudioLibrary<AudioItem>
     ) = audioItemIds.map {
-        audioItemRepository.findById(
-            it
-        ).orElseThrow { AudioItemManipulationException("AudioItem with id $it not found during deserialization") }
+        audioLibrary.findById(it)
+            .orElseThrow { AudioItemManipulationException("AudioItem with id $it not found during deserialization") }
     }.toList()
 
     private fun findDeserializedPlaylistsFromIds(
         playlists: Set<Int>,
-        playlistsById: Map<Int, MutableAudioPlaylist>
+        repository: Repository<Int, MutableAudioPlaylist>
     ): List<MutableAudioPlaylist> =
         playlists.stream().map {
-            return@map playlistsById[it] ?: throw AudioItemManipulationException("AudioPlaylist with id $it not found during deserialization")
+            repository.findById(it)
+                .orElseThrow { AudioItemManipulationException("AudioPlaylist with id $it not found during deserialization") }
         }.toList()
 
     override fun createPlaylist(name: String): MutableAudioPlaylist = createPlaylist(name, emptyList())
@@ -81,7 +82,7 @@ class AudioPlaylistJsonRepository(
         }
     }
 
-    override fun toString() = "PlaylistRepository(playlistsCount=${entitiesById.size})"
+    override fun toString() = "PlaylistRepository(playlistsCount=${size()})"
 
     private inner class MutablePlaylist(
         id: Int,
@@ -96,7 +97,7 @@ class AudioPlaylistJsonRepository(
 
 @JvmField
 @get:JvmName("playlistSerializerModule")
-val playlistSerializerModule =
+internal val playlistSerializerModule =
     SerializersModule {
         polymorphic(ReactiveAudioPlaylist::class) {
             subclass(MutableAudioPlaylistSerializer)

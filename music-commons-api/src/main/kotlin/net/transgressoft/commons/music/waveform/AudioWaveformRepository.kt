@@ -1,17 +1,16 @@
 package net.transgressoft.commons.music.waveform
 
-import net.transgressoft.commons.entity.ReactiveEntity
 import net.transgressoft.commons.event.CrudEvent
 import net.transgressoft.commons.event.TransEventSubscriber
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
-import net.transgressoft.commons.persistence.json.JsonRepository
+import net.transgressoft.commons.persistence.Repository
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 
-interface AudioWaveformRepository<W : ReactiveEntity<Int, W>, I : ReactiveAudioItem<I>> : JsonRepository<Int, W> {
+interface AudioWaveformRepository<W : AudioWaveform, I : ReactiveAudioItem<I>> : Repository<Int, W> {
 
     val audioItemEventSubscriber: TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, out I>>
 

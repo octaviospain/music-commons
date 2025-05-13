@@ -25,7 +25,6 @@ internal class MutableAudioItemTest : FunSpec({
 
     val json =
         Json {
-            serializersModule = audioItemSerializerModule
             prettyPrint = true
             explicitNulls = true
             allowStructuredMapKeys = true

@@ -29,7 +29,9 @@ import java.util.EnumSet
  *
  * @author Octavio Calleya
  */
-class JavaFxPlayer: TransEventPublisher<AudioItemPlayerEvent.Type, AudioItemPlayerEvent> by FlowEventPublisher("JavaFxPlayer"), AudioItemPlayer {
+class JavaFxPlayer(
+    private val publisher: TransEventPublisher<AudioItemPlayerEvent.Type, AudioItemPlayerEvent> = FlowEventPublisher("JavaFxPlayer")
+): TransEventPublisher<AudioItemPlayerEvent.Type, AudioItemPlayerEvent> by publisher, AudioItemPlayer {
     companion object {
         private const val PLAY_COUNT_THRESHOLD_POLICY = 0.6
 
@@ -99,7 +101,7 @@ class JavaFxPlayer: TransEventPublisher<AudioItemPlayerEvent.Type, AudioItemPlay
             ChangeListener<Duration> { _: ObservableValue<*>, _: Duration, newValue: Duration ->
                 _currentTimeProperty.set(newValue)
                 if (isTimeToIncreasePlayCount(audioItemDuration, newValue, playCountIncreased)) {
-                    emitAsync(Played(audioItem))
+                    publisher.emitAsync(Played(audioItem))
                     playCountIncreased = true
                 }
             }

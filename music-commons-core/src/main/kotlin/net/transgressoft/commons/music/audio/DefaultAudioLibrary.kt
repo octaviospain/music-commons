@@ -1,22 +1,18 @@
 package net.transgressoft.commons.music.audio
 
+import net.transgressoft.commons.event.StandardCrudEvent.Update
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
+import net.transgressoft.commons.persistence.Repository
 import mu.KotlinLogging
-import java.io.File
 import java.nio.file.Path
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
 
-typealias AudioRepository = AudioItemRepository<AudioItem>
-
 /**
  * @author Octavio Calleya
  */
-class AudioItemJsonRepository(
-    name: String,
-    file: File
-): AudioItemJsonRepositoryBase<AudioItem>(name, file, AudioItemSerializer) {
+class DefaultAudioLibrary(repository: Repository<Int, AudioItem>): AudioLibraryBase<AudioItem>(repository) {
     private val logger = KotlinLogging.logger {}
 
     init {
@@ -26,7 +22,7 @@ class AudioItemJsonRepository(
             if (audioItem is MutableAudioItem) {
                 val audioItemClone = audioItem.clone()
                 audioItem.incrementPlayCount()
-                putUpdateEvent(audioItem, audioItemClone)
+                repository.emitAsync(Update(audioItem, audioItemClone))
                 logger.debug { "Play count for audio item ${audioItem.id} increased to ${audioItem.playCount}" }
             }
         }
@@ -39,11 +35,11 @@ class AudioItemJsonRepository(
                 logger.debug { "New AudioItem was created from file $audioItemPath with id ${audioItem.id}" }
             }
 
-    override fun toString() = "AudioItemJsonRepository(audioItemsCount=${entitiesById.size})"
+    override fun toString() = "AudioItemJsonRepository(audioItemsCount=${size()})"
 }
 
 @get:JvmName("audioItemSerializerModule")
-val audioItemSerializerModule =
+internal val audioItemSerializerModule =
     SerializersModule {
         polymorphic(Artist::class) {
             subclass(ImmutableArtist.serializer())

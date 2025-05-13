@@ -3,6 +3,8 @@ package net.transgressoft.commons.music.playlist
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.artist
 import net.transgressoft.commons.music.audio.audioItem
+import net.transgressoft.commons.persistence.json.JsonFileRepository
+import net.transgressoft.commons.persistence.json.JsonRepository
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempdir
 import io.kotest.engine.spec.tempfile
@@ -21,16 +23,23 @@ import java.time.Duration
 import java.util.*
 import kotlin.io.path.exists
 
-lateinit var audioPlaylistRepository: PlaylistRepository
+lateinit var playlistHierarchy: PlaylistHierarchy<AudioItem, MutableAudioPlaylist>
 
 internal class MutablePlaylistTest : StringSpec({
 
+    lateinit var jsonFileRepository: JsonRepository<Int, MutableAudioPlaylist>
+
     beforeEach {
-        audioPlaylistRepository = AudioPlaylistJsonRepository("Playlists", tempfile("mutablePlaylist-test", ".json").also { it.deleteOnExit() })
+        val jsonFile = tempfile("mutablePlaylist-test", ".json").also { it.deleteOnExit() }
+        jsonFileRepository = JsonFileRepository(jsonFile, AudioPlaylistMapSerializer)
+        playlistHierarchy = DefaultPlaylistHierarchy(jsonFileRepository)
+    }
+
+    afterEach {
     }
 
     "Mutable audio playlist attributes and operations" {
-        val playlist1 = audioPlaylistRepository.createPlaylist("Playlist1")
+        val playlist1 = playlistHierarchy.createPlaylist("Playlist1")
 
         playlist1.id shouldBe 1
         playlist1.isDirectory shouldBe false
@@ -81,7 +90,7 @@ internal class MutablePlaylistTest : StringSpec({
     }
 
     "Mutable audio directory attributes and operations" {
-        val directory1 = audioPlaylistRepository.createPlaylistDirectory("Directory1")
+        val directory1 = playlistHierarchy.createPlaylistDirectory("Directory1")
 
         directory1.isDirectory shouldBe true
         directory1.playlists.isEmpty() shouldBe true
@@ -89,10 +98,10 @@ internal class MutablePlaylistTest : StringSpec({
         directory1.toString() shouldBe "MutablePlaylist(id=1, isDirectory=true, name='Directory1', audioItems=[], playlists=[])"
 
         val audioItems = Arb.list(Arb.audioItem(), 5..5).next()
-        val p1 = audioPlaylistRepository.createPlaylistDirectory("p1", audioItems = audioItems)
-        val p2 = audioPlaylistRepository.createPlaylistDirectory("p2")
+        val p1 = playlistHierarchy.createPlaylistDirectory("p1", audioItems = audioItems)
+        val p2 = playlistHierarchy.createPlaylistDirectory("p2")
         val d1AudioItem = Arb.audioItem { title = "One" }.next()
-        val d1 = audioPlaylistRepository.createPlaylistDirectory("d1", audioItems = listOf(d1AudioItem))
+        val d1 = playlistHierarchy.createPlaylistDirectory("d1", audioItems = listOf(d1AudioItem))
 
         directory1.addPlaylists(listOf(p1, p2, d1))
         directory1.playlists.size shouldBe 3
@@ -126,7 +135,7 @@ internal class MutablePlaylistTest : StringSpec({
         val aNightAtTheOperaPlaylist = randomQueenAudioItems(tempDirectory, "A night at the opera", numberOfAudioItems)
         val aKindOfMagicPlaylist = randomQueenAudioItems(tempDirectory, "A kind of magic", numberOfAudioItems)
         val playlists = setOf(aNightAtTheOperaPlaylist, aKindOfMagicPlaylist)
-        val playlist = audioPlaylistRepository.createPlaylistDirectory("Queen", randomQueenPlaylist.audioItems).also { it.addPlaylists(playlists) }
+        val playlist = playlistHierarchy.createPlaylistDirectory("Queen", randomQueenPlaylist.audioItems).also { it.addPlaylists(playlists) }
 
         playlist.audioItems.shouldContainExactly(randomQueenPlaylist.audioItems)
         playlist.playlists.shouldContainExactlyInAnyOrder(aKindOfMagicPlaylist, aNightAtTheOperaPlaylist)
@@ -151,7 +160,7 @@ internal class MutablePlaylistTest : StringSpec({
 })
 
 internal fun randomQueenAudioItems(tempDirectory: Path, albumName: String = "", size: Int) =
-    audioPlaylistRepository.createPlaylist(
+    playlistHierarchy.createPlaylist(
         albumName,
         buildList {
             for (i in 0 until size) {

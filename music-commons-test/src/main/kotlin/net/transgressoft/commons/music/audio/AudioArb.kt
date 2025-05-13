@@ -80,6 +80,7 @@ fun Arb.Companion.audioItem(audioItem: AudioItem, changeAction: AudioItemChange.
             every { bpm } returns (change.bpm ?: audioItem.bpm)
             every { coverImageBytes } returns (change.coverImageBytes ?: audioItem.coverImageBytes)
 
+            every { this@mockk.artistsInvolved } answers { callOriginal() }
             every { this@mockk.equals(any()) } answers { callOriginal() }
             every { this@mockk.hashCode() } answers { callOriginal() }
             every { this@mockk.toString() } answers { callOriginal() }
@@ -90,6 +91,11 @@ fun Arb.Companion.audioItem(attributesAction: AudioItemTestAttributes.() -> Unit
     arbitrary {
         val attributes = audioAttributes().bind()
         attributesAction(attributes)
+        audioItem(attributes).bind()
+    }
+
+fun Arb.Companion.audioItem(attributes: AudioItemTestAttributes): Arb<AudioItem> =
+    arbitrary {
         mockk<AudioItem> {
             // immutable properties
             every { id } returns attributes.id
@@ -114,6 +120,7 @@ fun Arb.Companion.audioItem(attributesAction: AudioItemTestAttributes.() -> Unit
             every { coverImageBytes } returns attributes.coverImageBytes
             every { playCount } returns attributes.playCount
 
+            every { this@mockk.artistsInvolved } answers { callOriginal() }
             every { this@mockk.asJsonKeyValue() } answers { callOriginal() }
             every { this@mockk.asJsonValue() } answers { callOriginal() }
             every { this@mockk.equals(any()) } answers { callOriginal() }

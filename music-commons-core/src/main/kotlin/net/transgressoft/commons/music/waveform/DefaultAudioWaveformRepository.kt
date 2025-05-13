@@ -3,23 +3,17 @@ package net.transgressoft.commons.music.waveform
 import net.transgressoft.commons.event.CrudEvent.Type.DELETE
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
-import net.transgressoft.commons.persistence.json.JsonFileRepositoryBase
-import java.io.File
+import net.transgressoft.commons.persistence.Repository
+import net.transgressoft.commons.persistence.VolatileRepository
 import java.util.concurrent.CompletableFuture
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.future.future
-import kotlinx.serialization.builtins.MapSerializer
-import kotlinx.serialization.builtins.serializer
 
-typealias WaveformRepository<I> = AudioWaveformRepository<AudioWaveform, I>
-
-class AudioWaveformJsonRepository<I: ReactiveAudioItem<I>>(
-    name: String,
-    file: File
-): JsonFileRepositoryBase<Int, AudioWaveform>(name, file, MapSerializer(Int.serializer(), AudioWaveformSerializer)),
-    WaveformRepository<I> {
+class DefaultAudioWaveformRepository<I: ReactiveAudioItem<I>>(
+    private val repository: Repository<Int, AudioWaveform> = VolatileRepository("AudioWaveformRepository")
+): AudioWaveformRepository<AudioWaveform, I>, Repository<Int, AudioWaveform> by repository {
 
     override val audioItemEventSubscriber =
         AudioItemEventSubscriber<I>(this.toString()).apply {
@@ -45,6 +39,15 @@ class AudioWaveformJsonRepository<I: ReactiveAudioItem<I>>(
                     }.await()
                 }
             }
+
+    override fun hashCode() = repository.hashCode()
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is DefaultAudioWaveformRepository<*>) return false
+        if (repository != other.repository) return false
+        return true
+    }
 
     override fun toString() = "WaveformRepository(waveformsCount=${size()})"
 }

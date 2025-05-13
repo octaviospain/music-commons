@@ -3,13 +3,20 @@ package net.transgressoft.commons.music
 import net.transgressoft.commons.event.ReactiveScope
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.AudioItemJsonRepository
-import net.transgressoft.commons.music.audio.AudioRepository
-import net.transgressoft.commons.music.playlist.AudioPlaylistJsonRepository
-import net.transgressoft.commons.music.playlist.PlaylistRepository
+import net.transgressoft.commons.music.audio.AudioItemMapSerializer
+import net.transgressoft.commons.music.audio.AudioLibrary
+import net.transgressoft.commons.music.audio.DefaultAudioLibrary
+import net.transgressoft.commons.music.playlist.AudioPlaylistMapSerializer
+import net.transgressoft.commons.music.playlist.DefaultPlaylistHierarchy
+import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
+import net.transgressoft.commons.music.playlist.PlaylistHierarchy
 import net.transgressoft.commons.music.playlist.asJsonKeyValues
-import net.transgressoft.commons.music.waveform.AudioWaveformJsonRepository
-import net.transgressoft.commons.music.waveform.WaveformRepository
+import net.transgressoft.commons.music.waveform.AudioWaveform
+import net.transgressoft.commons.music.waveform.AudioWaveformMapSerializer
+import net.transgressoft.commons.music.waveform.AudioWaveformRepository
+import net.transgressoft.commons.music.waveform.DefaultAudioWaveformRepository
+import net.transgressoft.commons.persistence.json.JsonFileRepository
+import net.transgressoft.commons.persistence.json.JsonRepository
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
@@ -35,9 +42,13 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     val playlistRepoFile = tempfile("playlistRepository-test", ".json").apply { deleteOnExit() }
     val waveformsRepoFile = tempfile("waveformRepository-test", ".json").apply { deleteOnExit() }
 
-    lateinit var audioItemRepository: AudioRepository
-    lateinit var audioWaveformRepository: WaveformRepository<AudioItem>
-    lateinit var audioPlaylistRepository: PlaylistRepository
+    lateinit var audioLibraryRepository: JsonRepository<Int, AudioItem>
+    lateinit var playlistHierarchyRepository: JsonRepository<Int, MutableAudioPlaylist>
+    lateinit var waveformsRepository: JsonRepository<Int, AudioWaveform>
+
+    lateinit var audioLibrary: AudioLibrary<AudioItem>
+    lateinit var waveforms: AudioWaveformRepository<AudioWaveform, AudioItem>
+    lateinit var playlistHierarchy: PlaylistHierarchy<AudioItem, MutableAudioPlaylist>
 
     beforeSpec {
         ReactiveScope.flowScope = testScope
@@ -45,15 +56,19 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     }
 
     beforeEach {
-        audioItemRepository = AudioItemJsonRepository("AudioItems", audioRepoFile)
-        audioWaveformRepository = AudioWaveformJsonRepository("Waveforms", waveformsRepoFile)
-        audioPlaylistRepository = AudioPlaylistJsonRepository("Playlists", playlistRepoFile)
+        audioLibraryRepository = JsonFileRepository(audioRepoFile, AudioItemMapSerializer)
+        waveformsRepository = JsonFileRepository(waveformsRepoFile, AudioWaveformMapSerializer)
+        playlistHierarchyRepository = JsonFileRepository(playlistRepoFile, AudioPlaylistMapSerializer)
+
+        audioLibrary = DefaultAudioLibrary(audioLibraryRepository)
+        waveforms = DefaultAudioWaveformRepository(waveformsRepository)
+        playlistHierarchy = DefaultPlaylistHierarchy(playlistHierarchyRepository)
     }
 
     afterEach {
-        audioItemRepository.close()
-        audioWaveformRepository.close()
-        audioPlaylistRepository.close()
+        audioLibraryRepository.close()
+        waveformsRepository.close()
+        playlistHierarchyRepository.close()
     }
 
     afterSpec {
@@ -62,17 +77,17 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     }
 
     "Operations on audio items impact subscribed repositories" {
-        audioItemRepository.subscribe(audioWaveformRepository.audioItemEventSubscriber)
-        audioItemRepository.subscribe(audioPlaylistRepository.audioItemEventSubscriber)
+        audioLibrary.subscribe(waveforms.audioItemEventSubscriber)
+        audioLibrary.subscribe(playlistHierarchy.audioItemEventSubscriber)
 
-        val audioItem = audioItemRepository.createFromFile(Arb.realAudioFile().next())
+        val audioItem = audioLibrary.createFromFile(Arb.realAudioFile().next())
 
         testDispatcher.scheduler.advanceUntilIdle()
 
         audioRepoFile.readText() shouldContain audioItem.path.toString()
-        audioItemRepository.findAlbumAudioItems(audioItem.artist, audioItem.album.name).shouldContainOnly(audioItem)
+        audioLibrary.findAlbumAudioItems(audioItem.artist, audioItem.album.name).shouldContainOnly(audioItem)
 
-        val waveform = audioWaveformRepository.getOrCreateWaveformAsync(audioItem, 780, 335, testDispatcher.asExecutor())
+        val waveform = waveforms.getOrCreateWaveformAsync(audioItem, 780, 335, testDispatcher.asExecutor())
 
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -81,7 +96,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         waveformsRepoFile.readText() shouldContain audioItem.path.toString()
         waveformsRepoFile.readText() shouldContain waveform.get().id.toString()
 
-        audioPlaylistRepository.createPlaylist("Test Playlist").also { it.addAudioItem(audioItem) }
+        playlistHierarchy.createPlaylist("Test Playlist").also { it.addAudioItem(audioItem) }
 
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -91,28 +106,28 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         audioItem.title = "New title"
         testDispatcher.scheduler.advanceUntilIdle()
 
-        audioItemRepository.contains { it.title == "New title" }
-        audioItemRepository.size() shouldBe 1
-        audioItemRepository.findAlbumAudioItems(audioItem.artist, audioItem.album.name).shouldContainOnly(audioItem)
+        audioLibrary.contains { it.title == "New title" }
+        audioLibrary.size() shouldBe 1
+        audioLibrary.findAlbumAudioItems(audioItem.artist, audioItem.album.name).shouldContainOnly(audioItem)
 
         audioRepoFile.readText() shouldContain "New title"
-        val updatedPlaylist = audioPlaylistRepository.findByName("Test Playlist").get()
+        val updatedPlaylist = playlistHierarchy.findByName("Test Playlist").get()
         updatedPlaylist.audioItems.contains(audioItem) shouldBe true
 
-        audioItemRepository.remove(audioItem) shouldBe true
-        audioItemRepository.isEmpty shouldBe true
+        audioLibrary.remove(audioItem) shouldBe true
+        audioLibrary.isEmpty shouldBe true
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        audioItemRepository.findAlbumAudioItems(audioItem.artist, audioItem.album.name).isEmpty() shouldBe true
+        audioLibrary.findAlbumAudioItems(audioItem.artist, audioItem.album.name).isEmpty() shouldBe true
         audioRepoFile.readText() shouldBe "{}"
 
-        audioPlaylistRepository.findByName("Test Playlist") shouldBePresent {
+        playlistHierarchy.findByName("Test Playlist") shouldBePresent {
             it.audioItems.isEmpty() shouldBe true
             playlistRepoFile.readText() shouldEqualJson listOf(it).asJsonKeyValues()
         }
 
-        audioWaveformRepository.isEmpty shouldBe true
+        waveforms.isEmpty shouldBe true
         waveformsRepoFile.readText() shouldBe "{}"
     }
 })

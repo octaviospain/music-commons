@@ -4,14 +4,13 @@ import net.transgressoft.commons.event.CrudEvent
 import net.transgressoft.commons.event.TransEventSubscriber
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.persistence.Repository
-import java.io.Closeable
 import java.util.*
 import java.util.concurrent.Flow
 
 /**
  * @author Octavio Calleya
  */
-interface AudioPlaylistRepository<I: ReactiveAudioItem<I>, P: ReactiveAudioPlaylist<I, P>>: Repository<Int, P>, Flow.Publisher<CrudEvent<Int, P>>, Closeable {
+interface PlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPlaylist<I, P>>: Repository<Int, P>, Flow.Publisher<CrudEvent<Int, P>> {
 
     val audioItemEventSubscriber: TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, out I>>
 

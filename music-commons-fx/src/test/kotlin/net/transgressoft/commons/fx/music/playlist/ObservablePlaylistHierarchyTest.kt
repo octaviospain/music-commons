@@ -3,10 +3,12 @@ package net.transgressoft.commons.fx.music.playlist
 import net.transgressoft.commons.event.ReactiveScope
 import net.transgressoft.commons.fx.music.audio.FXAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
-import net.transgressoft.commons.fx.music.audio.ObservableAudioItemJsonRepository
+import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.AudioItemTestAttributes
 import net.transgressoft.commons.music.playlist.asJsonKeyValues
+import net.transgressoft.commons.persistence.json.JsonFileRepository
+import net.transgressoft.commons.persistence.json.JsonRepository
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrowMessage
@@ -32,14 +34,19 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
 
 @ExperimentalCoroutinesApi
-class ObservablePlaylistJsonRepositoryTest : StringSpec({
+class ObservablePlaylistHierarchyTest : StringSpec({
 
     val testDispatcher = UnconfinedTestDispatcher()
     val testScope = CoroutineScope(testDispatcher)
     lateinit var jsonFile: File
-    lateinit var observableAudioPlaylistRepository: ObservablePlaylistJsonRepository
+    lateinit var jsonFileRepository: JsonRepository<Int, ObservablePlaylist>
+    lateinit var observableAudioPlaylistRepository: ObservablePlaylistHierarchy
 
     beforeSpec {
         ReactiveScope.flowScope = testScope
@@ -49,11 +56,18 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
 
     beforeEach {
         jsonFile = tempfile("observablePlaylistRepository-test", ".json").also { it.deleteOnExit() }
-        observableAudioPlaylistRepository = ObservablePlaylistJsonRepository.createNew("ObservablePlaylists", jsonFile)
+        jsonFileRepository =
+            JsonFileRepository(
+                jsonFile, MapSerializer(Int.serializer(), ObservablePlaylistSerializer),
+                SerializersModule {
+                    polymorphic(ObservablePlaylist::class, ObservablePlaylistSerializer)
+                }
+            )
+        observableAudioPlaylistRepository = ObservablePlaylistHierarchy.createNew(jsonFileRepository)
     }
 
     afterEach {
-        observableAudioPlaylistRepository.close()
+        jsonFileRepository.close()
     }
 
     afterSpec {
@@ -119,7 +133,7 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
         jsonFile.writeText(listOf(playlist).asJsonKeyValues())
 
         shouldThrowMessage("An AudioItemRepository is required when loading from a non-empty json file") {
-            ObservablePlaylistJsonRepository.createNew("Playlists", jsonFile)
+            ObservablePlaylistHierarchy.createNew(jsonFileRepository)
         }
     }
 
@@ -137,11 +151,11 @@ class ObservablePlaylistJsonRepositoryTest : StringSpec({
         jsonFile.writeText(listOf(playlist).asJsonKeyValues())
 
         val audioItemRepository =
-            mockk<ObservableAudioItemJsonRepository> {
+            mockk<ObservableAudioLibrary> {
                 every { findById(audioItem.id) } returns Optional.of(audioItem)
             }
 
-        observableAudioPlaylistRepository = ObservablePlaylistJsonRepository.loadExisting("Playlists", jsonFile, audioItemRepository)
+        observableAudioPlaylistRepository = ObservablePlaylistHierarchy.loadExisting(jsonFileRepository, audioItemRepository)
 
         observableAudioPlaylistRepository.size() shouldBe 1
         observableAudioPlaylistRepository.contains {
