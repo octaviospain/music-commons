@@ -1,7 +1,6 @@
 package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
-import net.transgressoft.commons.music.audio.AudioItemChange
 import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
@@ -9,6 +8,7 @@ import net.transgressoft.commons.music.audio.ImmutableLabel
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.commons.music.audio.audioItemChange
 import net.transgressoft.commons.music.audio.testCoverBytes
+import net.transgressoft.commons.music.audio.update
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.json.shouldEqualJson
@@ -37,7 +37,7 @@ internal class FXAudioItemTest : StringSpec({
             prettyPrint = true
         }
 
-    "should change its properties when observable properties are updated" {
+    "Changes its properties when observable properties are updated" {
         val path = Arb.virtualAudioFile().next()
 
         val fxAudioItem = FXAudioItem(path)
@@ -144,7 +144,7 @@ internal class FXAudioItemTest : StringSpec({
         }
     }
 
-    "should create an audio item, that is serializable to json, and write changes to metadata" {
+    "Creates an audio item, that is serializable to json, and write changes to metadata" {
         val testAudioFile = Arb.realAudioFile().next()
         val fxAudioItem = FXAudioItem(testAudioFile)
 
@@ -191,7 +191,7 @@ internal class FXAudioItemTest : StringSpec({
         }
     }
 
-    "should return coverImage after being deserialized" {
+    "Returns coverImage after deserialization" {
         val fxAudioItem = FXAudioItem(Arb.realAudioFile { coverImageBytes = null }.next())
 
         fxAudioItem.coverImageBytes = testCoverBytes
@@ -211,23 +211,4 @@ internal class FXAudioItemTest : StringSpec({
 fun Genre.randomDifferent(): Genre {
     val values = enumValues<Genre>().filter { it != this }
     return values[Random.nextInt(values.size)]
-}
-
-fun FXAudioItem.update(change: AudioItemChange) {
-    change.title?.let { title = it }
-    change.artist?.let { artist = it }
-    album =
-        ImmutableAlbum(
-            change.albumName ?: album.name,
-            change.albumArtist ?: album.albumArtist,
-            change.isCompilation ?: album.isCompilation,
-            change.year?.takeIf { year -> year > 0 } ?: album.year,
-            change.label ?: album.label
-        )
-    change.genre ?: genre
-    change.comments ?: comments
-    change.trackNumber?.takeIf { trackNum -> trackNum > 0 } ?: trackNumber
-    change.discNumber?.takeIf { discNum -> discNum > 0 } ?: discNumber
-    change.bpm?.takeIf { bpm -> bpm > 0 } ?: bpm
-    change.coverImageBytes ?: coverImageBytes
 }

@@ -44,7 +44,7 @@ internal class DefaultAudioLibraryTest : StringSpec({
     }
 
     beforeEach {
-        jsonFile = tempfile("audioItemRepository-test", ".json").also { it.deleteOnExit() }
+        jsonFile = tempfile("audioLibrary-test", ".json").also { it.deleteOnExit() }
         jsonFileRepository = JsonFileRepository(jsonFile, AudioItemMapSerializer)
         audioRepository = DefaultAudioLibrary(jsonFileRepository)
     }
@@ -59,7 +59,7 @@ internal class DefaultAudioLibraryTest : StringSpec({
         unmockkAll()
     }
 
-    "should create an audio item and allow to query it on creation and after modification" {
+    "Creates an audio item and allow to query it on creation and after modification" {
         val audioFile = Arb.virtualAudioFile().next()
         val audioItem: AudioItem =
             audioRepository.createFromFile(audioFile).apply {
@@ -103,7 +103,7 @@ internal class DefaultAudioLibraryTest : StringSpec({
         jsonFile shouldEqual audioItem.asJsonKeyValue()
     }
 
-    "should serialize itself when an audio item is modified as result of a change" {
+    "Reflects changes on a JsonFileRepository" {
         val audioFile = Arb.virtualAudioFile().next()
         val audioItem: AudioItem = audioRepository.createFromFile(audioFile)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -118,7 +118,7 @@ internal class DefaultAudioLibraryTest : StringSpec({
         jsonFile shouldEqual audioItem.asJsonKeyValue()
     }
 
-    "should create audio items from the same album" {
+    "Creates audio items from the same album" {
         val theBeatles = ImmutableArtist.of("The Beatles")
         val abbeyRoad = ImmutableAlbum("Abbey Road", theBeatles)
         val albumAudioFiles = Arb.virtualAlbumAudioFiles(theBeatles, abbeyRoad).next()
@@ -131,8 +131,8 @@ internal class DefaultAudioLibraryTest : StringSpec({
         audioRepository.findAlbumAudioItems(theBeatles, abbeyRoad.name) shouldContainExactlyInAnyOrder audioItems
     }
 
-    "should create audio items asynchronously" {
-        val filePaths = Arb.list(Arb.virtualAudioFile(), 10..20).next()
+    "Creates a batch of audio items asynchronously" {
+        val filePaths = Arb.list(Arb.virtualAudioFile(), 50..100).next()
 
         val result: List<AudioItem> = audioRepository.createFromFileBatchAsync(filePaths, testDispatcher.asExecutor()).get()
 

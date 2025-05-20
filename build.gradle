@@ -90,7 +90,7 @@ subprojects {
 
         implementation 'com.neovisionaries:nv-i18n:1.29'
         implementation 'io.github.microutils:kotlin-logging-jvm:3.0.5'
-        implementation 'net.transgressoft:transgressoft-commons-api:1.3.0-SNAPSHOT'
+        implementation 'net.transgressoft:transgressoft-commons-api:1.4.0-SNAPSHOT'
         implementation "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0'
 
@@ -140,7 +140,13 @@ subprojects {
 
     test {
         useJUnitPlatform()
-        jvmArgs('--add-opens=javafx.graphics/com.sun.javafx.application=ALL-UNNAMED')
+        jvmArgs = [
+                '--add-opens=javafx.base/javafx.beans=ALL-UNNAMED',
+                '--add-opens=javafx.base/javafx.beans.property=ALL-UNNAMED',
+                '--add-opens=javafx.base/javafx.collections=ALL-UNNAMED',
+                '--add-opens=javafx.graphics/javafx.scene.image=ALL-UNNAMED',
+                '--add-opens=javafx.graphics/com.sun.javafx.application=ALL-UNNAMED'
+        ]
         testLogging {
             events 'passed', 'skipped', 'failed'
         }

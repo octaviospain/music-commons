@@ -54,7 +54,7 @@ internal class DefaultAudioWaveformRepositoryTest : StringSpec({
         unmockkAll()
     }
 
-    "Repository serializes itself to file when audio waveform is added" {
+    "Reflects changes in the JsonFileRepository" {
         val audioFilePath = Arb.virtualAudioFile().next()
         val audioWaveform = ScalableAudioWaveform(1, audioFilePath)
 
@@ -80,7 +80,7 @@ internal class DefaultAudioWaveformRepositoryTest : StringSpec({
         loadedRepository shouldBe audioWaveformRepository
     }
 
-    "Repository creates a waveform asynchronously" {
+    "Creates a waveform asynchronously" {
         val audioItem =
             Arb.audioItem {
                 path = Arb.virtualAudioFile(WAV).next()

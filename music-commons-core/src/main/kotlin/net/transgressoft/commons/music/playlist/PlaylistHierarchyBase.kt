@@ -169,6 +169,7 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
     override fun addPlaylistsToDirectory(playlistsToAdd: Set<P>, directoryName: String): Boolean =
         findByName(directoryName).let {
             require(it.isPresent) { "Directory '$directoryName' does not exist" }
+            require(it.get().isDirectory) { "Playlist '$directoryName' is not a directory" }
             it.get().addPlaylists(playlistsToAdd).also { added ->
                 if (added) {
                     playlistsHierarchyMultiMap.putAll(
@@ -183,6 +184,7 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
     override fun addPlaylistsToDirectory(playlistNamesToAdd: Set<String>, directoryName: String): Boolean =
         findByName(directoryName).let {
             require(it.isPresent) { "Directory '$directoryName' does not exist" }
+            require(it.get().isDirectory) { "Playlist '$directoryName' is not a directory" }
             playlistNamesToAdd.stream().map { playlistName ->
                 findByName(playlistName)
                     .orElseThrow { IllegalArgumentException("Playlist '$playlistName' does not exist") }

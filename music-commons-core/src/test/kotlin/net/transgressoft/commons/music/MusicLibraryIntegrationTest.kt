@@ -38,9 +38,9 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     val testDispatcher = UnconfinedTestDispatcher()
     val testScope = CoroutineScope(testDispatcher)
 
-    val audioRepoFile = tempfile("audioItemRepository-test", ".json").apply { deleteOnExit() }
-    val playlistRepoFile = tempfile("playlistRepository-test", ".json").apply { deleteOnExit() }
-    val waveformsRepoFile = tempfile("waveformRepository-test", ".json").apply { deleteOnExit() }
+    val audioFile = tempfile("audioLibrary-test", ".json").apply { deleteOnExit() }
+    val playlistsFile = tempfile("playlistHierarchy-test", ".json").apply { deleteOnExit() }
+    val waveformsFile = tempfile("waveformRepository-test", ".json").apply { deleteOnExit() }
 
     lateinit var audioLibraryRepository: JsonRepository<Int, AudioItem>
     lateinit var playlistHierarchyRepository: JsonRepository<Int, MutableAudioPlaylist>
@@ -56,9 +56,9 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     }
 
     beforeEach {
-        audioLibraryRepository = JsonFileRepository(audioRepoFile, AudioItemMapSerializer)
-        waveformsRepository = JsonFileRepository(waveformsRepoFile, AudioWaveformMapSerializer)
-        playlistHierarchyRepository = JsonFileRepository(playlistRepoFile, AudioPlaylistMapSerializer)
+        audioLibraryRepository = JsonFileRepository(audioFile, AudioItemMapSerializer)
+        waveformsRepository = JsonFileRepository(waveformsFile, AudioWaveformMapSerializer)
+        playlistHierarchyRepository = JsonFileRepository(playlistsFile, AudioPlaylistMapSerializer)
 
         audioLibrary = DefaultAudioLibrary(audioLibraryRepository)
         waveforms = DefaultAudioWaveformRepository(waveformsRepository)
@@ -84,7 +84,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        audioRepoFile.readText() shouldContain audioItem.path.toString()
+        audioFile.readText() shouldContain audioItem.path.toString()
         audioLibrary.findAlbumAudioItems(audioItem.artist, audioItem.album.name).shouldContainOnly(audioItem)
 
         val waveform = waveforms.getOrCreateWaveformAsync(audioItem, 780, 335, testDispatcher.asExecutor())
@@ -93,15 +93,15 @@ internal class MusicLibraryIntegrationTest : StringSpec({
 
         waveform.get() shouldNotBe null
         waveform.get().id shouldBe audioItem.id
-        waveformsRepoFile.readText() shouldContain audioItem.path.toString()
-        waveformsRepoFile.readText() shouldContain waveform.get().id.toString()
+        waveformsFile.readText() shouldContain audioItem.path.toString()
+        waveformsFile.readText() shouldContain waveform.get().id.toString()
 
         playlistHierarchy.createPlaylist("Test Playlist").also { it.addAudioItem(audioItem) }
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        playlistRepoFile.readText() shouldContain "Test Playlist"
-        playlistRepoFile.readText() shouldContain audioItem.id.toString()
+        playlistsFile.readText() shouldContain "Test Playlist"
+        playlistsFile.readText() shouldContain audioItem.id.toString()
 
         audioItem.title = "New title"
         testDispatcher.scheduler.advanceUntilIdle()
@@ -110,7 +110,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         audioLibrary.size() shouldBe 1
         audioLibrary.findAlbumAudioItems(audioItem.artist, audioItem.album.name).shouldContainOnly(audioItem)
 
-        audioRepoFile.readText() shouldContain "New title"
+        audioFile.readText() shouldContain "New title"
         val updatedPlaylist = playlistHierarchy.findByName("Test Playlist").get()
         updatedPlaylist.audioItems.contains(audioItem) shouldBe true
 
@@ -120,14 +120,14 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         testDispatcher.scheduler.advanceUntilIdle()
 
         audioLibrary.findAlbumAudioItems(audioItem.artist, audioItem.album.name).isEmpty() shouldBe true
-        audioRepoFile.readText() shouldBe "{}"
+        audioFile.readText() shouldBe "{}"
 
         playlistHierarchy.findByName("Test Playlist") shouldBePresent {
             it.audioItems.isEmpty() shouldBe true
-            playlistRepoFile.readText() shouldEqualJson listOf(it).asJsonKeyValues()
+            playlistsFile.readText() shouldEqualJson listOf(it).asJsonKeyValues()
         }
 
         waveforms.isEmpty shouldBe true
-        waveformsRepoFile.readText() shouldBe "{}"
+        waveformsFile.readText() shouldBe "{}"
     }
 })

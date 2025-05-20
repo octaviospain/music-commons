@@ -55,7 +55,7 @@ internal class JavaFxPlayerTest : StringSpec({
 
     beforeEach {
         player = JavaFxPlayer()
-        jsonFile = Files.createTempFile("observableAudioItemRepository-test", ".json").toFile().apply { deleteOnExit() }
+        jsonFile = Files.createTempFile("observableAudioLibrary-test", ".json").toFile().apply { deleteOnExit() }
         jsonFileRepository = JsonFileRepository(jsonFile, ObservableAudioItemMapSerializer)
         observableAudioItemRepository = ObservableAudioLibrary(jsonFileRepository)
         audioItem = observableAudioItemRepository.createFromFile(Arb.realAudioFile(ID3_V_24).next())

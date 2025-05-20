@@ -15,14 +15,20 @@ import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
 
 class DefaultPlaylistHierarchy(
-    repository: Repository<Int, MutableAudioPlaylist> = VolatileRepository()
+    repository: Repository<Int, MutableAudioPlaylist> = VolatileRepository(),
+    // Only needed when the provided repository is not empty
+    audioLibrary: AudioLibrary<AudioItem>? = null
 ): PlaylistHierarchyBase<AudioItem, MutableAudioPlaylist>(repository) {
     private val logger = KotlinLogging.logger {}
 
-    constructor(repository: Repository<Int, MutableAudioPlaylist>, audioLibrary: AudioLibrary<AudioItem>) : this(repository) {
+    init {
+        require(repository.isEmpty || (repository.isEmpty.not() && audioLibrary != null)) {
+            "AudioLibrary is required when loading a non empty playlistHierarchy"
+        }
+
         disableEvents(CREATE, UPDATE, DELETE) // disable events until the initial load from the file is completed
         runForAll {
-            val playlistWithAudioItems = MutablePlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItems.toIds(), audioLibrary))
+            val playlistWithAudioItems = MutablePlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItems.toIds(), audioLibrary!!))
             // Remove the item from the repository to delete the subscription
             remove(it)
             add(playlistWithAudioItems)

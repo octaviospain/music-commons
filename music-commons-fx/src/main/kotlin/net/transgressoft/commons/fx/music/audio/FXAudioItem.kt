@@ -349,7 +349,12 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
             }
 
         private val _coverImageProperty =
-            SimpleObjectProperty(this, "cover image", Optional.ofNullable(coverImageBytes).map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) })
+            SimpleObjectProperty(
+                this,
+                "cover image",
+                Optional.ofNullable(coverImageBytes)
+                    .map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) }
+            )
 
         @Transient
         override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>> =

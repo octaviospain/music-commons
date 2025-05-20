@@ -23,10 +23,10 @@ dependencies {
 
     implementation 'com.google.guava:guava:33.4.0-jre'
     implementation 'net.jthink:jaudiotagger:3.0.1'
-    implementation 'net.transgressoft:transgressoft-commons-core:1.3.0-SNAPSHOT'
+    implementation 'net.transgressoft:transgressoft-commons-core:1.4.0-SNAPSHOT'
     implementation 'org.openjfx:javafx-controls:[22.0.1,)'
 
-    testApi project(path: ':music-commons-test')
+    testApi project(path: ':music-commons-fx-test')
     testImplementation(platform('org.junit:junit-bom:5.12.0'))
     testImplementation('org.junit.jupiter:junit-jupiter')
     testImplementation "io.kotest:kotest-assertions-json:$kotestVersion"

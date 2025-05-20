@@ -23,7 +23,7 @@ import java.time.Duration
 import java.util.*
 import kotlin.io.path.exists
 
-lateinit var playlistHierarchy: PlaylistHierarchy<AudioItem, MutableAudioPlaylist>
+private lateinit var playlistHierarchy: PlaylistHierarchy<AudioItem, MutableAudioPlaylist>
 
 internal class MutablePlaylistTest : StringSpec({
 
@@ -38,7 +38,7 @@ internal class MutablePlaylistTest : StringSpec({
     afterEach {
     }
 
-    "Mutable audio playlist attributes and operations" {
+    "Returns expected attributes" {
         val playlist1 = playlistHierarchy.createPlaylist("Playlist1")
 
         playlist1.id shouldBe 1
@@ -89,7 +89,7 @@ internal class MutablePlaylistTest : StringSpec({
         playlist1.audioItems.isEmpty() shouldBe true
     }
 
-    "Mutable audio directory attributes and operations" {
+    "Returns expected attributes when is playlist directory" {
         val directory1 = playlistHierarchy.createPlaylistDirectory("Directory1")
 
         directory1.isDirectory shouldBe true
@@ -127,7 +127,7 @@ internal class MutablePlaylistTest : StringSpec({
         directory1.audioItemsRecursive.size shouldBe 0
     }
 
-    "Export playlist to .m3u file" {
+    "Exports playlist to .m3u file" {
         val tempDirectory = tempdir("playlist-export-test").also { it.deleteOnExit() }.toPath()
 
         val numberOfAudioItems = 5

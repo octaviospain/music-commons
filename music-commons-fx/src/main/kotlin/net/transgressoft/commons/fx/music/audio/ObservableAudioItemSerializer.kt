@@ -13,6 +13,7 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 
+@get:JvmName("ObservableAudioItemMapSerializer")
 val ObservableAudioItemMapSerializer: KSerializer<Map<Int, ObservableAudioItem>> = MapSerializer(Int.serializer(), ObservableAudioItemSerializer)
 
 internal object ObservableAudioItemSerializer : AudioItemSerializerBase<ObservableAudioItem>() {

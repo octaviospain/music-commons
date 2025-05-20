@@ -1,0 +1,41 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
+
+plugins {
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+}
+
+description = 'Transgressoft Music Commons - Test Utilities'
+
+javafx {
+    version = JavaVersion.VERSION_17
+    modules = ['javafx.controls']
+}
+
+tasks.matching { it.name.startsWith("ktlint") || it.name.startsWith("jacoco")}.configureEach {
+    enabled = false
+}
+
+tasks.withType(KotlinJvmCompile).configureEach {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+        freeCompilerArgs.add('-Xadd-modules=javafx.base,javafx.graphics')
+    }
+}
+
+dependencies {
+    implementation 'net.transgressoft:transgressoft-commons-core:1.4.0-SNAPSHOT'
+    api project(path: ':music-commons-fx')
+    api project(path: ':music-commons-test')
+    implementation 'io.mockk:mockk:1.13.17'
+    implementation "io.kotest:kotest-property:$kotestVersion"
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += [
+            '--add-opens=javafx.base/javafx.beans=ALL-UNNAMED',
+            '--add-opens=javafx.base/javafx.beans.property=ALL-UNNAMED',
+            '--add-opens=javafx.base/javafx.collections=ALL-UNNAMED',
+            '--add-opens=javafx.graphics/javafx.scene.image=ALL-UNNAMED'
+    ]
+}

@@ -15,9 +15,17 @@
  *     along with this program.  If not, see <https://www.gnu.org/licenses/>. *
  ******************************************************************************/
 
-package net.transgressoft.commons.music.audio
+package net.transgressoft.commons.fx.music
 
-interface AudioItem : ReactiveAudioItem<AudioItem> {
+import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
+import net.transgressoft.commons.music.audio.AudioItemTestAttributes
+import io.kotest.property.Arb
+import io.kotest.property.arbitrary.next
+import java.util.function.Consumer
 
-    override fun clone(): AudioItem
+object FXAudioItemTestFactory {
+
+    @JvmStatic
+    fun FXAudioItemTestFactory.createFxAudioItem(attributes: Consumer<AudioItemTestAttributes>): ObservableAudioItem =
+        Arb.fxAudioItem(attributes::accept).next()
 }

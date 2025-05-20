@@ -63,6 +63,7 @@ internal class MutableAudioItem(
     // Constructor only for testing purposes
     internal constructor(audioItem: AudioItem) : this(audioItem.path, audioItem.id)
 
+    // Constructor for deserialization
     internal constructor(
         path: Path,
         id: Int,
@@ -146,6 +147,9 @@ internal class MutableAudioItem(
     override var lastDateModified: LocalDateTime = _dateOfCreation
 
     private var _playCount: Short = 0
+        set(value) {
+            setAndNotify(value, field) { field = it }
+        }
 
     @Serializable
     override val playCount: Short

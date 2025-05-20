@@ -38,7 +38,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
     }
 
     beforeEach {
-        jsonFile = tempfile("observableAudioItemRepository-test", ".json").also { it.deleteOnExit() }
+        jsonFile = tempfile("observableAudioLibrary-test", ".json").also { it.deleteOnExit() }
         jsonFileRepository = JsonFileRepository(jsonFile, ObservableAudioItemMapSerializer)
         repository = ObservableAudioLibrary(jsonFileRepository)
     }
@@ -52,7 +52,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
         ReactiveScope.resetDefaultIoScope()
     }
 
-    "Repository should create an observable audio item and serialize itself" {
+    "Creates an observable audio item and serialize itself" {
         val fxAudioItem = repository.createFromFile(Arb.virtualAudioFile().next())
 
         testDispatcher.scheduler.advanceUntilIdle()
@@ -69,7 +69,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
         }
     }
 
-    "Repository should expose changes on the ReadOnlySetProperty" {
+    "Expose changes on its audioItemsProperty" {
         val audioItemsProperty = repository.audioItemsProperty
         repository.emptyLibraryProperty.get() shouldBe true
         repository.audioItemsProperty.isEmpty() shouldBe true
@@ -90,7 +90,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
         repository.emptyLibraryProperty.get() shouldBe true
     }
 
-    "Repository items are reflected on the ReadOnlySetProperty after loading from Json file" {
+    "Contains expected items on its audioItemsProperty after loading from JsonFileRepository" {
         val fxAudioItem = repository.createFromFile(Arb.virtualAudioFile().next())
 
         testDispatcher.scheduler.advanceUntilIdle()

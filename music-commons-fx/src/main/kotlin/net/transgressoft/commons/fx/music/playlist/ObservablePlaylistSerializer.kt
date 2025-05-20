@@ -17,6 +17,11 @@ import java.util.Optional
 import java.util.concurrent.Flow
 import java.util.function.Consumer
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
+
+@get:JvmName("ObservablePlaylistMapSerializer")
+val ObservablePlaylistMapSerializer = MapSerializer(Int.serializer(), ObservablePlaylistSerializer)
 
 object ObservablePlaylistSerializer : AudioPlaylistSerializerBase<ObservableAudioItem, ObservablePlaylist>() {
     @Suppress("UNCHECKED_CAST")

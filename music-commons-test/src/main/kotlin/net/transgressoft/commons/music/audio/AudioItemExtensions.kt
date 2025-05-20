@@ -1,6 +1,6 @@
 package net.transgressoft.commons.music.audio
 
-fun AudioItem.update(change: AudioItemChange) {
+fun <I : ReactiveAudioItem<I>> I.update(change: AudioItemChange) {
     change.title?.let { title = it }
     change.artist?.let { artist = it }
     album =

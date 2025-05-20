@@ -1,14 +1,11 @@
 package net.transgressoft.commons.fx.music.playlist
 
 import net.transgressoft.commons.event.ReactiveScope
-import net.transgressoft.commons.fx.music.audio.FXAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
-import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
-import net.transgressoft.commons.music.audio.AudioItemTestAttributes
+import net.transgressoft.commons.fx.music.fxAudioItem
 import net.transgressoft.commons.music.playlist.asJsonKeyValues
 import net.transgressoft.commons.persistence.json.JsonFileRepository
-import net.transgressoft.commons.persistence.json.JsonRepository
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrowMessage
@@ -27,26 +24,18 @@ import io.kotest.property.arbitrary.next
 import io.mockk.every
 import io.mockk.mockk
 import org.testfx.api.FxToolkit
-import java.io.File
 import java.time.Duration
 import java.util.*
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.serialization.builtins.MapSerializer
-import kotlinx.serialization.builtins.serializer
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
 
 @ExperimentalCoroutinesApi
 class ObservablePlaylistHierarchyTest : StringSpec({
 
     val testDispatcher = UnconfinedTestDispatcher()
     val testScope = CoroutineScope(testDispatcher)
-    lateinit var jsonFile: File
-    lateinit var jsonFileRepository: JsonRepository<Int, ObservablePlaylist>
-    lateinit var observableAudioPlaylistRepository: ObservablePlaylistHierarchy
 
     beforeSpec {
         ReactiveScope.flowScope = testScope
@@ -54,44 +43,32 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         FxToolkit.registerPrimaryStage()
     }
 
-    beforeEach {
-        jsonFile = tempfile("observablePlaylistRepository-test", ".json").also { it.deleteOnExit() }
-        jsonFileRepository =
-            JsonFileRepository(
-                jsonFile, MapSerializer(Int.serializer(), ObservablePlaylistSerializer),
-                SerializersModule {
-                    polymorphic(ObservablePlaylist::class, ObservablePlaylistSerializer)
-                }
-            )
-        observableAudioPlaylistRepository = ObservablePlaylistHierarchy.createNew(jsonFileRepository)
-    }
-
-    afterEach {
-        jsonFileRepository.close()
-    }
-
     afterSpec {
         ReactiveScope.resetDefaultFlowScope()
         ReactiveScope.resetDefaultIoScope()
     }
 
-    "Repository serializes itself to file when playlists are modified" {
-        val rockAudioItem = testFxAudioItem { title = "50s Rock hit 1" }
+    "Reflects changes on a JsonFileRepository" {
+        val jsonFile = tempfile("observablePlaylistHierarchy-test", ".json").apply { deleteOnExit() }
+        val jsonFileRepository = JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer)
+        val playlistHierarchy = ObservablePlaylistHierarchy(jsonFileRepository)
+
+        val rockAudioItem = Arb.fxAudioItem { title = "50s Rock hit 1" }.next()
         val rockAudioItems = listOf(rockAudioItem)
-        val rock = observableAudioPlaylistRepository.createPlaylist("Rock", rockAudioItems)
+        val rock = playlistHierarchy.createPlaylist("Rock", rockAudioItems)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        observableAudioPlaylistRepository.playlistsProperty.shouldContainOnly(rock)
+        playlistHierarchy.playlistsProperty.shouldContainOnly(rock)
 
-        val rockFavAudioItem = testFxAudioItem { title = "Rock fav" }
+        val rockFavAudioItem = Arb.fxAudioItem { title = "Rock fav" }.next()
         val rockFavoritesAudioItems = listOf(rockFavAudioItem)
-        val rockFavorites = observableAudioPlaylistRepository.createPlaylist("Rock favorites", rockFavoritesAudioItems)
+        val rockFavorites = playlistHierarchy.createPlaylist("Rock favorites", rockFavoritesAudioItems)
 
-        observableAudioPlaylistRepository.movePlaylist(rockFavorites.name, rock.name)
+        playlistHierarchy.movePlaylist(rockFavorites.name, rock.name)
 
-        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, rockFavorites)
+        playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, rockFavorites)
 
-        observableAudioPlaylistRepository.findById(rock.id) shouldBePresent { updatedRock ->
+        playlistHierarchy.findById(rock.id) shouldBePresent { updatedRock ->
             updatedRock.playlists.shouldContainOnly(rockFavorites)
             updatedRock.id shouldBe rock.id
             updatedRock.isDirectory shouldBe false
@@ -108,7 +85,7 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         rock.name = "Rock directory"
 
         eventually(100.milliseconds) {
-            observableAudioPlaylistRepository.findByUniqueId(rock.uniqueId) shouldBePresent {
+            playlistHierarchy.findByUniqueId(rock.uniqueId) shouldBePresent {
                 it.isDirectory shouldBe true
                 it.name shouldBe "Rock directory"
             }
@@ -117,10 +94,12 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         testDispatcher.scheduler.advanceUntilIdle()
 
         jsonFile.readText().shouldEqualJson(listOf(rock, rockFavorites).asJsonKeyValues())
+
+        jsonFileRepository.close()
     }
 
-    "Creating repository from existing json file without AudioRepository throws Exception" {
-        val audioItem = testFxAudioItem { id = 453374921 }
+    "Throws Exception on creation from JsonFileRepository without AudioLibrary" {
+        val audioItem = Arb.fxAudioItem {}.next()
         val playlist =
             mockk<ObservablePlaylist> {
                 every { id } returns 1
@@ -130,15 +109,22 @@ class ObservablePlaylistHierarchyTest : StringSpec({
                 every { playlists } returns emptySet()
                 every { asJsonKeyValue() } answers { callOriginal() }
             }
-        jsonFile.writeText(listOf(playlist).asJsonKeyValues())
+        val jsonFile =
+            tempfile("observablePlaylistHierarchy-test", ".json").apply {
+                writeText(listOf(playlist).asJsonKeyValues())
+                deleteOnExit()
+            }
+        val jsonFileRepository = JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer)
 
-        shouldThrowMessage("An AudioItemRepository is required when loading from a non-empty json file") {
-            ObservablePlaylistHierarchy.createNew(jsonFileRepository)
+        shouldThrowMessage("AudioLibrary is required when loading a non empty playlistHierarchy") {
+            ObservablePlaylistHierarchy(jsonFileRepository)
         }
+
+        jsonFileRepository.close()
     }
 
-    "Existing repository loads from file" {
-        val audioItem = testFxAudioItem { id = 453374921 }
+    "Initializes from a non empty JsonFileRepository and AudioLibrary" {
+        val audioItem = Arb.fxAudioItem {}.next()
         val playlist =
             mockk<ObservablePlaylist> {
                 every { id } returns 1
@@ -148,21 +134,26 @@ class ObservablePlaylistHierarchyTest : StringSpec({
                 every { playlists } returns emptySet()
                 every { asJsonKeyValue() } answers { callOriginal() }
             }
-        jsonFile.writeText(listOf(playlist).asJsonKeyValues())
+        val jsonFile =
+            tempfile("observablePlaylistHierarchy-test", ".json").apply {
+                writeText(listOf(playlist).asJsonKeyValues())
+                deleteOnExit()
+            }
+        val jsonFileRepository = JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer)
 
-        val audioItemRepository =
+        val audioLibrary =
             mockk<ObservableAudioLibrary> {
-                every { findById(audioItem.id) } returns Optional.of(audioItem)
+                every { findById(any()) } answers { Optional.of(audioItem) }
             }
 
-        observableAudioPlaylistRepository = ObservablePlaylistHierarchy.loadExisting(jsonFileRepository, audioItemRepository)
+        val playlistHierarchy = ObservablePlaylistHierarchy(jsonFileRepository, audioLibrary)
 
-        observableAudioPlaylistRepository.size() shouldBe 1
-        observableAudioPlaylistRepository.contains {
+        playlistHierarchy.size() shouldBe 1
+        playlistHierarchy.contains {
             it.id == 1 && it.isDirectory && it.name == "Rock" && it.audioItems == listOf(audioItem) && it.playlists.isEmpty()
         } shouldBe true
 
-        observableAudioPlaylistRepository.playlistsProperty should {
+        playlistHierarchy.playlistsProperty should {
             it.size shouldBe 1
             it.first().id shouldBe 1
             it.first().isDirectory shouldBe true
@@ -173,155 +164,167 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         }
     }
 
-    // ├──Best hits
-    // │  ├──50s
-    // │  │  ├──Rock
-    // │  │  │  ├──:50s Rock hit 1
-    // │  │  │  └──:50s Rock hit 2 my fav
-    // │  │  ├──Pop
-    // │  │  ├──:50s hit 1
-    // │  │  └──:50s favorite song
-    // │  └──60s
-    // └──This weeks' favorites songs
-    "Mixed playlists hierarchy structure and audio items search" {
+    /** The following playlist hierarchy is used for the test:
+
+     ├──Best hits
+     │  ├──50s
+     │  │  ├──Rock
+     │  │  │  ├──:50s Rock hit 1
+     │  │  │  └──:50s Rock hit 2 my fav
+     │  │  ├──Pop
+     │  │  ├──:50s hit 1
+     │  │  └──:50s favorite song
+     │  └──60s
+     └──This weeks' favorites songs
+     */
+    "Creates and finds playlists and audio items" {
+        val playlistHierarchy = ObservablePlaylistHierarchy()
+
         val rockAudioItems =
             listOf(
-                testFxAudioItem {
+                Arb.fxAudioItem {
                     title = "50s Rock hit 1"
                     duration = Duration.ofSeconds(60)
-                },
-                testFxAudioItem {
+                }.next(),
+                Arb.fxAudioItem {
                     title = "50s Rock hit 2 my fav"
                     duration = Duration.ofSeconds(230)
-                }
+                }.next()
             )
-        val rock = observableAudioPlaylistRepository.createPlaylist("Rock", rockAudioItems)
+        val rock = playlistHierarchy.createPlaylist("Rock", rockAudioItems)
 
-        observableAudioPlaylistRepository.findByName(rock.name) shouldBePresent { it shouldBe rock }
+        playlistHierarchy.findByName(rock.name) shouldBePresent { it shouldBe rock }
         val playlistsThatContainsAllAudioItemsWith50sInTitle =
-            observableAudioPlaylistRepository.search { it.audioItemsAllMatch { audioItem -> audioItem.title.contains("50s") } }
+            playlistHierarchy.search { it.audioItemsAllMatch { audioItem -> audioItem.title.contains("50s") } }
         playlistsThatContainsAllAudioItemsWith50sInTitle.shouldContainOnly(rock)
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        observableAudioPlaylistRepository.playlistsProperty.shouldContainOnly(rock)
+        playlistHierarchy.playlistsProperty.shouldContainOnly(rock)
 
-        val pop = observableAudioPlaylistRepository.createPlaylist("Pop")
-        observableAudioPlaylistRepository.size() shouldBe 2
-        observableAudioPlaylistRepository.numberOfPlaylists() shouldBe 2
-
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop)
-
-        val fifties = observableAudioPlaylistRepository.createPlaylistDirectory("50s")
-        observableAudioPlaylistRepository.addPlaylistToDirectory(rock, fifties.name)
-        observableAudioPlaylistRepository.addPlaylistToDirectory(pop.name, fifties.name)
-        observableAudioPlaylistRepository.findByName(fifties.name) shouldBePresent { it.playlists shouldContainExactly setOf(pop, rock) }
-        observableAudioPlaylistRepository.numberOfPlaylistDirectories() shouldBe 1
+        val pop = playlistHierarchy.createPlaylist("Pop")
+        playlistHierarchy.size() shouldBe 2
+        playlistHierarchy.numberOfPlaylists() shouldBe 2
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop, fifties)
+        playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop)
 
-        val sixties = observableAudioPlaylistRepository.createPlaylistDirectory("60s")
+        val fifties = playlistHierarchy.createPlaylistDirectory("50s")
+        playlistHierarchy.addPlaylistToDirectory(rock, fifties.name)
+        playlistHierarchy.addPlaylistToDirectory(pop.name, fifties.name)
+        playlistHierarchy.findByName(fifties.name) shouldBePresent { it.playlists shouldContainExactly setOf(pop, rock) }
+        playlistHierarchy.numberOfPlaylistDirectories() shouldBe 1
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop, fifties)
+
+        val sixties = playlistHierarchy.createPlaylistDirectory("60s")
         sixties.playlists.isEmpty() shouldBe true
-        observableAudioPlaylistRepository.numberOfPlaylistDirectories() shouldBe 2
-        observableAudioPlaylistRepository.findByUniqueId("D-" + sixties.name) shouldBePresent { it shouldBe sixties }
+        playlistHierarchy.numberOfPlaylistDirectories() shouldBe 2
+        playlistHierarchy.findByUniqueId("D-" + sixties.name) shouldBePresent { it shouldBe sixties }
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, sixties)
+        playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, sixties)
 
-        val bestHits = observableAudioPlaylistRepository.createPlaylistDirectory("Best hits")
-        observableAudioPlaylistRepository.addPlaylistsToDirectory(setOf(fifties, sixties), bestHits.name)
+        val bestHits = playlistHierarchy.createPlaylistDirectory("Best hits")
+        playlistHierarchy.addPlaylistsToDirectory(setOf(fifties, sixties), bestHits.name)
         bestHits.playlists.isEmpty() shouldBe false
-        observableAudioPlaylistRepository.findByName(bestHits.name) shouldBePresent { it.playlists shouldContainExactly setOf(fifties, sixties) }
+        playlistHierarchy.findByName(bestHits.name) shouldBePresent { it.playlists shouldContainExactly setOf(fifties, sixties) }
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, sixties, bestHits)
+        playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, sixties, bestHits)
 
-        val thisWeeksFavorites = observableAudioPlaylistRepository.createPlaylist("This weeks' favorites songs")
-        observableAudioPlaylistRepository.search { "favorites" in it.name }.shouldContainExactly(thisWeeksFavorites)
-        observableAudioPlaylistRepository.size() shouldBe 6
-        observableAudioPlaylistRepository.addOrReplaceAll(setOf(bestHits, thisWeeksFavorites))
-        observableAudioPlaylistRepository.size() shouldBe 6
-        observableAudioPlaylistRepository.search { it.isDirectory.not() } shouldContainExactly setOf(rock, pop, thisWeeksFavorites)
+        val thisWeeksFavorites = playlistHierarchy.createPlaylist("This weeks' favorites songs")
+        playlistHierarchy.search { "favorites" in it.name }.shouldContainExactly(thisWeeksFavorites)
+        playlistHierarchy.size() shouldBe 6
+        playlistHierarchy.addOrReplaceAll(setOf(bestHits, thisWeeksFavorites))
+        playlistHierarchy.size() shouldBe 6
+        playlistHierarchy.search { it.isDirectory.not() } shouldContainExactly setOf(rock, pop, thisWeeksFavorites)
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, sixties, bestHits, thisWeeksFavorites)
+        playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, sixties, bestHits, thisWeeksFavorites)
 
-        observableAudioPlaylistRepository.search { it.isDirectory } shouldContainExactly setOf(fifties, sixties, bestHits)
+        playlistHierarchy.search { it.isDirectory } shouldContainExactly setOf(fifties, sixties, bestHits)
 
         val fiftiesItems =
             listOf(
-                testFxAudioItem {
+                Arb.fxAudioItem {
                     title = "50s hit"
                     duration = Duration.ofSeconds(30)
-                },
-                testFxAudioItem {
+                }.next(),
+                Arb.fxAudioItem {
                     title = "50s favorite song"
                     duration = Duration.ofSeconds(120)
-                }
+                }.next()
             )
 
-        observableAudioPlaylistRepository.addAudioItemToPlaylist(fiftiesItems[0], fifties.name)
-        observableAudioPlaylistRepository.addAudioItemsToPlaylist(fiftiesItems, fifties.name)
+        playlistHierarchy.addAudioItemToPlaylist(fiftiesItems[0], fifties.name)
+        playlistHierarchy.addAudioItemsToPlaylist(fiftiesItems, fifties.name)
         val playlistsThatContainsAnyAudioItemsWithHitInTitle =
-            observableAudioPlaylistRepository.search { it.audioItemsAnyMatch { audioItem -> "hit" in audioItem.title } }
+            playlistHierarchy.search { it.audioItemsAnyMatch { audioItem -> "hit" in audioItem.title } }
         playlistsThatContainsAnyAudioItemsWithHitInTitle shouldContainExactly setOf(rock, fifties)
         val playlistsThatContainsAudioItemsWithDurationBelow60 =
-            observableAudioPlaylistRepository.search {
+            playlistHierarchy.search {
                 it.audioItemsAnyMatch { audioItem: ObservableAudioItem -> audioItem.duration <= Duration.ofSeconds(60) }
             }
 
         playlistsThatContainsAudioItemsWithDurationBelow60 shouldContainExactly setOf(rock, fifties)
 
-        observableAudioPlaylistRepository.removeAudioItemFromPlaylist(fiftiesItems[0], fifties.name)
-        fiftiesItems[1].title = "new title"
+        playlistHierarchy.removeAudioItemFromPlaylist(fiftiesItems[0], fifties.name)
+
+        // this FXAudioItem instance is a mock
+        every { fiftiesItems[1].title } returns "new title"
 
         fifties.audioItemsAllMatch { it.title == "new title" } shouldBe true
         fifties.audioItems.find { it.title == "title" }?.shouldBeEqual(fiftiesItems[1])
 
         fifties.clearAudioItems()
 
-        observableAudioPlaylistRepository.findById(fifties.id) shouldBePresent { it.audioItems.isEmpty() shouldBe true }
-        observableAudioPlaylistRepository.runForAll { it.removeAudioItems(rockAudioItems) }
-        observableAudioPlaylistRepository.findById(rock.id) shouldBePresent { it.audioItems.isEmpty() shouldBe true }
+        playlistHierarchy.findById(fifties.id) shouldBePresent { it.audioItems.isEmpty() shouldBe true }
+        playlistHierarchy.runForAll { it.removeAudioItems(rockAudioItems) }
+        playlistHierarchy.findById(rock.id) shouldBePresent { it.audioItems.isEmpty() shouldBe true }
 
-        observableAudioPlaylistRepository.clear()
-        observableAudioPlaylistRepository.isEmpty shouldBe true
+        playlistHierarchy.clear()
+        playlistHierarchy.isEmpty shouldBe true
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        observableAudioPlaylistRepository.playlistsProperty.isEmpty() shouldBe true
+        playlistHierarchy.playlistsProperty.isEmpty() shouldBe true
     }
 
-    // ├──Best hits
-    // │  └──50s
-    // │     ├──Rock
-    // │     └──Pop
-    // └──Selection of playlists
-    "Move playlists in the hierarchy" {
-        val rock = observableAudioPlaylistRepository.createPlaylist("Rock")
-        observableAudioPlaylistRepository.findByName(rock.name) shouldBePresent { it shouldBe rock }
-        val pop = observableAudioPlaylistRepository.createPlaylist("Pop")
-        val fifties = observableAudioPlaylistRepository.createPlaylistDirectory("50s")
-        observableAudioPlaylistRepository.addPlaylistsToDirectory(setOf(rock.name, pop.name), fifties.name)
-        val bestHits = observableAudioPlaylistRepository.createPlaylistDirectory("Best hits")
-        observableAudioPlaylistRepository.addPlaylistsToDirectory(setOf(fifties.name), bestHits.name)
-        val selection = observableAudioPlaylistRepository.createPlaylistDirectory("Selection of playlists")
-        observableAudioPlaylistRepository.size() shouldBe 5
+    /** The following playlist hierarchy is used for the test:
+
+     ├──Best hits
+     │  └──50s
+     │     ├──Rock
+     │     └──Pop
+     └──Selection of playlists
+     */
+    "Moves playlists from/to playlist directories" {
+        val playlistHierarchy = ObservablePlaylistHierarchy()
+
+        val rock = playlistHierarchy.createPlaylist("Rock")
+        playlistHierarchy.findByName(rock.name) shouldBePresent { it shouldBe rock }
+        val pop = playlistHierarchy.createPlaylist("Pop")
+        val fifties = playlistHierarchy.createPlaylistDirectory("50s")
+        playlistHierarchy.addPlaylistsToDirectory(setOf(rock.name, pop.name), fifties.name)
+        val bestHits = playlistHierarchy.createPlaylistDirectory("Best hits")
+        playlistHierarchy.addPlaylistsToDirectory(setOf(fifties.name), bestHits.name)
+        val selection = playlistHierarchy.createPlaylistDirectory("Selection of playlists")
+        playlistHierarchy.size() shouldBe 5
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, bestHits, selection)
+        playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, bestHits, selection)
 
         selection.addPlaylist(rock)
         // same result as doing
-        // observableAudioPlaylistRepository.movePlaylist(rock.name, selection.name)
+        // playlistHierarchy.movePlaylist(rock.name, selection.name)
 
         // ├──Best hits
         // │  └──50s
@@ -329,18 +332,16 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         // └──Selection of playlists
         //    └──Rock
 
-        observableAudioPlaylistRepository.size() shouldBe 5
-        observableAudioPlaylistRepository.findByName(selection.name) shouldBePresent { it.playlists.shouldContainOnly(rock) }
-        observableAudioPlaylistRepository.findById(fifties.id) shouldBePresent { it.playlists.shouldNotContain(rock) }
-        observableAudioPlaylistRepository.findByName(bestHits.name) shouldBePresent { it.playlists.shouldContainOnly(fifties) }
+        playlistHierarchy.size() shouldBe 5
+        playlistHierarchy.findByName(selection.name) shouldBePresent { it.playlists.shouldContainOnly(rock) }
+        playlistHierarchy.findById(fifties.id) shouldBePresent { it.playlists.shouldNotContain(rock) }
+        playlistHierarchy.findByName(bestHits.name) shouldBePresent { it.playlists.shouldContainOnly(fifties) }
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        jsonFile.readText().shouldEqualJson(listOf(rock, pop, fifties, bestHits, selection).asJsonKeyValues())
-
         // --
 
-        observableAudioPlaylistRepository.movePlaylist(selection.name, fifties.name)
+        playlistHierarchy.movePlaylist(selection.name, fifties.name)
         // same result as doing
         // fifties.addPlaylist(selection)
 
@@ -350,19 +351,18 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         //       └──Selection of playlists
         //          └──Rock
 
-        observableAudioPlaylistRepository.size() shouldBe 5
-        observableAudioPlaylistRepository.findByName(selection.name) shouldBePresent { it.playlists.shouldContainOnly(rock) }
-        observableAudioPlaylistRepository.findByName(fifties.name) shouldBePresent { it.playlists shouldContainExactly setOf(pop, selection) }
+        playlistHierarchy.size() shouldBe 5
+        playlistHierarchy.findByName(selection.name) shouldBePresent { it.playlists.shouldContainOnly(rock) }
+        playlistHierarchy.findByName(fifties.name) shouldBePresent { it.playlists shouldContainExactly setOf(pop, selection) }
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        jsonFile.readText().shouldEqualJson(listOf(rock, pop, fifties, bestHits, selection).asJsonKeyValues())
-        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, bestHits, selection)
+        playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, bestHits, selection)
 
-        observableAudioPlaylistRepository.removeAll(setOf(bestHits)) shouldBe true
+        playlistHierarchy.removeAll(setOf(bestHits)) shouldBe true
 
-        observableAudioPlaylistRepository.size() shouldBe 0
-        observableAudioPlaylistRepository.isEmpty shouldBe true
+        playlistHierarchy.size() shouldBe 0
+        playlistHierarchy.isEmpty shouldBe true
         bestHits.playlists.shouldContainOnly(fifties)
         fifties.playlists shouldContainExactly setOf(pop, selection)
         selection.playlists.shouldContainOnly(rock)
@@ -371,20 +371,21 @@ class ObservablePlaylistHierarchyTest : StringSpec({
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        jsonFile.readText() shouldBe "{}"
-        observableAudioPlaylistRepository.playlistsProperty.isEmpty() shouldBe true
+        playlistHierarchy.playlistsProperty.isEmpty() shouldBe true
     }
 
-    "Removing playlist directory from repository is recursive and changes reflected on playlists" {
-        val pop = observableAudioPlaylistRepository.createPlaylist("Pop")
-        val fifties = observableAudioPlaylistRepository.createPlaylistDirectory("50s").also { it.addPlaylist(pop) }
-        val bestHits = observableAudioPlaylistRepository.createPlaylistDirectory("Best hits").also { it.addPlaylist(fifties) }
-        val rock = observableAudioPlaylistRepository.createPlaylist("Rock")
-        val selection = observableAudioPlaylistRepository.createPlaylistDirectory("Selection of playlists").also { it.addPlaylist(rock) }
+    "Removing playlist directory from it is recursive and changes reflects on playlists" {
+        val playlistHierarchy = ObservablePlaylistHierarchy()
+
+        val pop = playlistHierarchy.createPlaylist("Pop")
+        val fifties = playlistHierarchy.createPlaylistDirectory("50s").also { it.addPlaylist(pop) }
+        val bestHits = playlistHierarchy.createPlaylistDirectory("Best hits").also { it.addPlaylist(fifties) }
+        val rock = playlistHierarchy.createPlaylist("Rock")
+        val selection = playlistHierarchy.createPlaylistDirectory("Selection of playlists").also { it.addPlaylist(rock) }
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(pop, fifties, bestHits, rock, selection)
+        playlistHierarchy.playlistsProperty shouldContainExactly setOf(pop, fifties, bestHits, rock, selection)
 
         // ├──Best hits
         // │  └──50s
@@ -392,88 +393,108 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         // └──Selection of playlists
         //    └──Rock
 
-        observableAudioPlaylistRepository.size() shouldBe 5
-        observableAudioPlaylistRepository.findByName(selection.name) shouldBePresent { it.playlists.shouldContainOnly(rock) }
-        observableAudioPlaylistRepository.findById(fifties.id) shouldBePresent { it.playlists.shouldNotContain(rock) }
-        observableAudioPlaylistRepository.findByName(bestHits.name) shouldBePresent { it.playlists.shouldContainOnly(fifties) }
+        playlistHierarchy.size() shouldBe 5
+        playlistHierarchy.findByName(selection.name) shouldBePresent { it.playlists.shouldContainOnly(rock) }
+        playlistHierarchy.findById(fifties.id) shouldBePresent { it.playlists.shouldNotContain(rock) }
+        playlistHierarchy.findByName(bestHits.name) shouldBePresent { it.playlists.shouldContainOnly(fifties) }
 
-        observableAudioPlaylistRepository.removePlaylistFromDirectory(fifties.name, bestHits.name) shouldBe true
+        playlistHierarchy.removePlaylistFromDirectory(fifties.name, bestHits.name) shouldBe true
 
         // ├──Best hits
         // └──Selection of playlists
         //    └──Rock
 
-        observableAudioPlaylistRepository.size() shouldBe 3
-        observableAudioPlaylistRepository.findByName(pop.name).isEmpty shouldBe true
-        observableAudioPlaylistRepository.findByUniqueId(fifties.uniqueId).isEmpty shouldBe true
+        playlistHierarchy.size() shouldBe 3
+        playlistHierarchy.findByName(pop.name).isEmpty shouldBe true
+        playlistHierarchy.findByUniqueId(fifties.uniqueId).isEmpty shouldBe true
         bestHits.playlists.isEmpty() shouldBe true
         fifties.playlists.shouldContainOnly(pop)
 
-        observableAudioPlaylistRepository.removePlaylistFromDirectory(rock, selection.name) shouldBe true
+        playlistHierarchy.removePlaylistFromDirectory(rock, selection.name) shouldBe true
 
         // ├──Best hits
         // └──Selection of playlists
 
-        observableAudioPlaylistRepository.size() shouldBe 2
+        playlistHierarchy.size() shouldBe 2
         selection.playlists.isEmpty() shouldBe true
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        observableAudioPlaylistRepository.playlistsProperty shouldContainExactly setOf(bestHits, selection)
+        playlistHierarchy.playlistsProperty shouldContainExactly setOf(bestHits, selection)
     }
 
-    "Create playlists with existing name" {
-        val newPlaylistDirectory = observableAudioPlaylistRepository.createPlaylistDirectory("New playlist")
+    "Throws Exception when creating playlists with an existing name" {
+        val playlistHierarchy = ObservablePlaylistHierarchy()
 
-        shouldThrowMessage("Playlist with name 'New playlist' already exists") { observableAudioPlaylistRepository.createPlaylistDirectory("New playlist") }
-        observableAudioPlaylistRepository.size() shouldBe 1
+        val newPlaylistDirectory = playlistHierarchy.createPlaylistDirectory("New playlist")
 
-        shouldThrowMessage("Playlist with name 'New playlist' already exists") { observableAudioPlaylistRepository.createPlaylist("New playlist") }
-        observableAudioPlaylistRepository.size() shouldBe 1
+        shouldThrowMessage("Playlist with name 'New playlist' already exists") { playlistHierarchy.createPlaylistDirectory("New playlist") }
+        playlistHierarchy.size() shouldBe 1
 
-        observableAudioPlaylistRepository.remove(newPlaylistDirectory) shouldBe true
-        observableAudioPlaylistRepository.isEmpty shouldBe true
+        shouldThrowMessage("Playlist with name 'New playlist' already exists") { playlistHierarchy.createPlaylist("New playlist") }
+        playlistHierarchy.size() shouldBe 1
+
+        playlistHierarchy.remove(newPlaylistDirectory) shouldBe true
+        playlistHierarchy.isEmpty shouldBe true
     }
 
-    "Removing child playlists directly from one, does not remove them from the repository" {
-        val rock = observableAudioPlaylistRepository.createPlaylist("Rock")
-        val rockFavorites = observableAudioPlaylistRepository.createPlaylist("Rock Favorites")
-        val fifties = observableAudioPlaylistRepository.createPlaylistDirectory("50s")
-        observableAudioPlaylistRepository.addPlaylistToDirectory(rockFavorites, rock.name)
-        observableAudioPlaylistRepository.addPlaylistToDirectory(rock, fifties.name)
+    "Removing playlists from a directory, does not remove them from the playlistHierarchy" {
+        val playlistHierarchy = ObservablePlaylistHierarchy()
 
-        observableAudioPlaylistRepository.size() shouldBe 3
+        val fifties = playlistHierarchy.createPlaylistDirectory("50s")
+        val rock = playlistHierarchy.createPlaylistDirectory("Rock")
+        val rockFavorites = playlistHierarchy.createPlaylist("Rock Favorites")
+        playlistHierarchy.addPlaylistToDirectory(rockFavorites, rock.name)
+        playlistHierarchy.addPlaylistToDirectory(rock, fifties.name)
+
+        // └──50s
+        //    └──Rock
+        //        └──Rock Favorites
+
+        playlistHierarchy.size() shouldBe 3
         fifties.playlists.size shouldBe 1
         rock.playlists.size shouldBe 1
 
         rock.clearPlaylists()
 
-        observableAudioPlaylistRepository.size() shouldBe 3
+        // └──50s
+        //    └──Rock
+        //
+        // └ Rock Favorites (playlist remains in the playlistHierarchy)
+
+        playlistHierarchy.size() shouldBe 3
         rock.playlists.isEmpty() shouldBe true
         fifties.playlists.size shouldBe 1
 
         fifties.removePlaylist(rock.id)
 
-        observableAudioPlaylistRepository.size() shouldBe 3
+        // └──50s
+        //
+        // └ Rock (playlist remains in the playlistHierarchy)
+        // └ Rock Favorites
+
+        playlistHierarchy.size() shouldBe 3
         fifties.playlists.isEmpty() shouldBe true
     }
 
-    "Deleting playlist from the repository removes it from any parent one" {
-        val rock = observableAudioPlaylistRepository.createPlaylist("Rock")
-        val fifties = observableAudioPlaylistRepository.createPlaylistDirectory("50s")
-        observableAudioPlaylistRepository.addPlaylistToDirectory(rock, fifties.name)
+    "Deleting a playlist removes it from the playlistHierarchy and its parent directory" {
+        val playlistHierarchy = ObservablePlaylistHierarchy()
 
-        observableAudioPlaylistRepository.size() shouldBe 2
+        val rock = playlistHierarchy.createPlaylist("Rock")
+        val fifties = playlistHierarchy.createPlaylistDirectory("50s")
+        playlistHierarchy.addPlaylistToDirectory(rock, fifties.name)
+
+        // └──50s
+        //    └──Rock
+
+        playlistHierarchy.size() shouldBe 2
         fifties.playlists.size shouldBe 1
 
-        observableAudioPlaylistRepository.remove(rock)
+        playlistHierarchy.remove(rock)
 
-        observableAudioPlaylistRepository.size() shouldBe 1
+        // └──50s
+
+        playlistHierarchy.size() shouldBe 1
         fifties.playlists.isEmpty() shouldBe true
     }
 })
-
-fun testFxAudioItem(attributesAction: AudioItemTestAttributes.() -> Unit): ObservableAudioItem {
-    val path = Arb.realAudioFile(attributesAction = attributesAction).next()
-    return FXAudioItem(path)
-}

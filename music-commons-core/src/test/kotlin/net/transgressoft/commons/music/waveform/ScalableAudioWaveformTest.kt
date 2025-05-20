@@ -19,7 +19,7 @@ import kotlinx.coroutines.withContext
 
 internal class ScalableAudioWaveformTest : FunSpec({
 
-    context("Create waveform image from") {
+    context("Creates a waveform image from") {
         withData(
             mapOf(
                 "a wav file" to Arb.realAudioFile(WAV).next(),

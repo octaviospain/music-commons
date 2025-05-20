@@ -12,29 +12,29 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
         val albumArtistField: String = "",
         val expectedArtists: Set<String>
     )
-    context("Artists involved") {
+    context("Returns set of artists involved") {
 
-        context("In artist field only") {
-            context("Just one artist name") {
+        context("only from the artist field") {
+            context("with just one artist name in a") {
                 withData(
                     mapOf(
-                        "Simplest case" to
+                        "trivial name" to
                             AudioItemFields(
                                 artistField = "Dvs1", expectedArtists = setOf("Dvs1")
                             ),
-                        "Simplest with trail spaces" to
+                        "trivial name with trail spaces" to
                             AudioItemFields(
                                 artistField = "Adam Beyer    ", expectedArtists = setOf("Adam Beyer")
                             ),
-                        "Simplest with spaces in between words" to
+                        "trivial name with spaces in between words" to
                             AudioItemFields(
                                 artistField = "Adam      Beyer", expectedArtists = setOf("Adam Beyer")
                             ),
-                        "Simplest with leading and trailing spaces" to
+                        "trivial name with leading and trailing spaces" to
                             AudioItemFields(
                                 artistField = "   Adam Beyer    ", expectedArtists = setOf("Adam Beyer")
                             ),
-                        "Simplest with leading and trailing spaces" to
+                        "trivial name with leading and trailing spaces" to
                             AudioItemFields(
                                 artistField = "   Adam    Beyer    ", expectedArtists = setOf("Adam Beyer")
                             )
@@ -44,30 +44,30 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                 }
             }
 
-            context("Separated by comma") {
+            context("with comma-separated names of") {
                 withData(
                     mapOf(
-                        "Two names" to
+                        "two names" to
                             AudioItemFields(
                                 artistField = "adam Beyer, ida engberg", expectedArtists = setOf("Adam Beyer", "Ida Engberg")
                             ),
-                        "Two names with trailing spaces" to
+                        "two names with trailing spaces" to
                             AudioItemFields(
                                 artistField = "Adam Beyer  , Ida Engberg   ", expectedArtists = setOf("Adam Beyer", "Ida Engberg")
                             ),
-                        "Two names with leading spaces" to
+                        "two names with leading spaces" to
                             AudioItemFields(
                                 artistField = "Adam    Beyer, Ida   Engberg", expectedArtists = setOf("Adam Beyer", "Ida Engberg")
                             ),
-                        "Three names" to
+                        "three names" to
                             AudioItemFields(
                                 artistField = "Adam Beyer, Ida Engberg, UMEK", expectedArtists = setOf("Adam Beyer", "Ida Engberg", "UMEK")
                             ),
-                        "Three names with leading and trailing spaces" to
+                        "three names with leading and trailing spaces" to
                             AudioItemFields(
                                 artistField = "Adam    Beyer  ,   Ida  Engberg ,   UMEK ", expectedArtists = setOf("Adam Beyer", "Ida Engberg", "UMEK")
                             ),
-                        "Two repeated names" to
+                        "two repeated names" to
                             AudioItemFields(
                                 artistField = "Adam Beyer, Adam Beyer", expectedArtists = setOf("Adam Beyer")
                             )
@@ -77,26 +77,26 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                 }
             }
 
-            context("Separated by &") {
+            context("with names separated by '&' of") {
                 withData(
                     mapOf(
-                        "Two names" to
+                        "two names" to
                             AudioItemFields(
                                 artistField = "adam Beyer & ida engberg", expectedArtists = setOf("Adam Beyer", "Ida Engberg")
                             ),
-                        "Two names with leading and trailing spaces" to
+                        "two names with leading and trailing spaces" to
                             AudioItemFields(
                                 artistField = "Adam   Beyer  &     Ida Engberg ", expectedArtists = setOf("Adam Beyer", "Ida Engberg")
                             ),
-                        "Three names" to
+                        "three names" to
                             AudioItemFields(
                                 artistField = "Adam Beyer & Ida Engberg & UMEK", expectedArtists = setOf("Adam Beyer", "Ida Engberg", "UMEK")
                             ),
-                        "Three names with leading and trailing spaces" to
+                        "three names with leading and trailing spaces" to
                             AudioItemFields(
                                 artistField = "adam   beyer  & ida  engberg &  uMEK ", expectedArtists = setOf("Adam Beyer", "Ida Engberg", "UMEK")
                             ),
-                        "Two repeated names" to
+                        "two repeated names" to
                             AudioItemFields(
                                 artistField = "Adam Beyer & Adam Beyer", expectedArtists = setOf("Adam Beyer")
                             )
@@ -106,18 +106,18 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                 }
             }
 
-            context("Separated by 'vs'") {
+            context("with names separated by 'vs'") {
                 withData(
                     mapOf(
-                        "Two names" to
+                        "two names" to
                             AudioItemFields(
                                 artistField = "Adam Beyer vs Ida Engberg", expectedArtists = setOf("Adam Beyer", "Ida Engberg")
                             ),
-                        "Three names" to
+                        "three names" to
                             AudioItemFields(
                                 artistField = "Adam Beyer vs Ida Engberg VS UMEK", expectedArtists = setOf("Adam Beyer", "Ida Engberg", "UMEK")
                             ),
-                        "Two repeated names" to
+                        "two repeated names" to
                             AudioItemFields(
                                 artistField = "Adam Beyer vs Adam Beyer", expectedArtists = setOf("Adam Beyer")
                             )
@@ -127,18 +127,18 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                 }
             }
 
-            context("Separated by 'versus'") {
+            context("with names separated by 'versus'") {
                 withData(
                     mapOf(
-                        "Two names" to
+                        "two names" to
                             AudioItemFields(
                                 artistField = "Adam Beyer versus Ida Engberg", expectedArtists = setOf("Adam Beyer", "Ida Engberg")
                             ),
-                        "Three names" to
+                        "three names" to
                             AudioItemFields(
                                 artistField = "Adam Beyer versus Ida Engberg Versus UMEK", expectedArtists = setOf("Adam Beyer", "Ida Engberg", "UMEK")
                             ),
-                        "Two repeated names" to
+                        "two repeated names" to
                             AudioItemFields(
                                 artistField = "Adam Beyer versus Adam Beyer", expectedArtists = setOf("Adam Beyer")
                             )
@@ -148,18 +148,18 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                 }
             }
 
-            context("Separated by 'vs.'") {
+            context("with names separated by 'vs.'") {
                 withData(
                     mapOf(
-                        "Two names" to
+                        "two names" to
                             AudioItemFields(
                                 artistField = "Adam Beyer vs. Ida Engberg", expectedArtists = setOf("Adam Beyer", "Ida Engberg")
                             ),
-                        "Three names" to
+                        "three names" to
                             AudioItemFields(
                                 artistField = "Adam Beyer vs. Ida Engberg VS. UMEK", expectedArtists = setOf("Adam Beyer", "Ida Engberg", "UMEK")
                             ),
-                        "Two repeated names" to
+                        "two repeated names" to
                             AudioItemFields(
                                 artistField = "Adam Beyer vs. Adam Beyer", expectedArtists = setOf("Adam Beyer")
                             )
@@ -169,10 +169,10 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                 }
             }
 
-            context("Separated by 'Feat.'") {
+            context("with names separated by 'Feat.'") {
                 withData(
                     mapOf(
-                        "Two names" to
+                        "two names" to
                             AudioItemFields(
                                 artistField = "Adam Beyer Feat. Ida Engberg", expectedArtists = setOf("Adam Beyer", "Ida Engberg")
                             )
@@ -182,14 +182,14 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                 }
             }
 
-            context("Separated by Ft") {
+            context("with names separated by Ft") {
                 withData(
                     mapOf(
-                        "Two names" to
+                        "two names" to
                             AudioItemFields(
                                 artistField = "Ludacris Ft. Shawnna", expectedArtists = setOf("Ludacris", "Shawnna")
                             ),
-                        "Two names by Ft." to
+                        "two names by Ft." to
                             AudioItemFields(
                                 artistField = "Ludacris Ft Shawnna", expectedArtists = setOf("Ludacris", "Shawnna")
                             )
@@ -199,18 +199,18 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                 }
             }
 
-            context("Separated by comma and &") {
+            context("with names separated by ',' and '&'") {
                 withData(
                     mapOf(
-                        "Three names" to
+                        "three names" to
                             AudioItemFields(
                                 artistField = "Adam Beyer, Ida Engberg & Ansome", expectedArtists = setOf("Adam Beyer", "Ida Engberg", "Ansome")
                             ),
-                        "Four names" to
+                        "four names" to
                             AudioItemFields(
                                 artistField = "Adam Beyer & Ida Engberg, UMEK & Ansome", expectedArtists = setOf("Adam Beyer", "Ida Engberg", "Ansome", "UMEK")
                             ),
-                        "Five names with spaces" to
+                        "five names with spaces" to
                             AudioItemFields(
                                 artistField = "Adam    Beyer, UMEK   & Showtek, Ida  Engberg &   Ansome",
                                 expectedArtists = setOf("Adam Beyer", "Ida Engberg", "Ansome", "UMEK", "Showtek")
@@ -221,14 +221,14 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                 }
             }
 
-            context("Separated by Feat and &") {
+            context("with names separated by 'Feat' and '&'") {
                 withData(
                     mapOf(
-                        "Three names" to
+                        "three names" to
                             AudioItemFields(
                                 artistField = "Laidback Luke Feat. Chuckie & Martin", expectedArtists = setOf("Laidback Luke", "Chuckie", "Martin")
                             ),
-                        "Three names by Feat. and &" to
+                        "three names by Feat. and &" to
                             AudioItemFields(
                                 artistField = "Laidback Luke Feat. Chuckie & Martin", expectedArtists = setOf("Laidback Luke", "Chuckie", "Martin")
                             )
@@ -239,70 +239,70 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
             }
         }
 
-        context("In title field") {
+        context("only from the title field") {
             withData(
                 mapOf(
-                    "Just the track name" to
+                    "with a trivial track title" to
                         AudioItemFields(
                             titleField = "Nothing Left, Part 1", expectedArtists = emptySet()
                         ),
-                    "Original mix" to
+                    "with '(Original mix)'" to
                         AudioItemFields(
                             titleField = "Song Title (Original mix)", expectedArtists = emptySet()
                         ),
-                    "Edit version" to
+                    "with '(Edit version)'" to
                         AudioItemFields(
                             titleField = "Song Title (Special time edit)", expectedArtists = emptySet()
                         ),
-                    "Ends with 'Remix'" to
+                    "that ends with 'Remix'" to
                         AudioItemFields(
                             titleField = "Song   Title  (  adam  beyer  remix)", expectedArtists = setOf("Adam Beyer")
                         ),
-                    "Starts with 'Remix by'" to
+                    "that starts with 'Remix by'" to
                         AudioItemFields(
                             titleField = "Song Title   (Remix by Adam Beyer)", expectedArtists = setOf("Adam Beyer")
                         ),
-                    "Has 'Ft outside parenthesis" to
+                    "that has 'Ft outside parenthesis" to
                         AudioItemFields(
                             titleField = "Song Title  ft Adam  Beyer)", expectedArtists = setOf("Adam Beyer")
                         ),
-                    "Has 'Ft' inside parenthesis" to
+                    "that has 'Ft' inside parenthesis" to
                         AudioItemFields(
                             titleField = "Song Title   (  ft Adam Beyer)", expectedArtists = setOf("Adam Beyer")
                         ),
-                    "Has 'Feat' outside parenthesis" to
+                    "that has 'Feat' outside parenthesis" to
                         AudioItemFields(
                             titleField = "Song Title feat Adam Beyer", expectedArtists = setOf("Adam Beyer")
                         ),
-                    "Has 'Feat inside parenthesis" to
+                    "that has 'Feat' inside parenthesis" to
                         AudioItemFields(
                             titleField = "Song Title ( Feat Adam Beyer)", expectedArtists = setOf("Adam Beyer")
                         ),
-                    "Has 'featuring outside parenthesis" to
+                    "that has 'featuring' outside parenthesis" to
                         AudioItemFields(
                             titleField = "Song Title featuring Adam Beyer", expectedArtists = setOf("Adam Beyer")
                         ),
-                    "Has 'featuring inside parenthesis" to
+                    "that has 'featuring' inside parenthesis" to
                         AudioItemFields(
                             titleField = "Song Title (featuring Adam Beyer)", expectedArtists = setOf("Adam Beyer")
                         ),
-                    "Has 'with'" to
+                    "that has 'with'" to
                         AudioItemFields(
                             titleField = "Song Title (with Adam Beyer)", expectedArtists = setOf("Adam Beyer")
                         ),
-                    "Has 'featuring outside parenthesis" to
+                    "that has 'featuring' outside parenthesis" to
                         AudioItemFields(
                             titleField = "Song Title featuring Adam Beyer)", expectedArtists = setOf("Adam Beyer")
                         ),
-                    "Two names separated by '&' ending with 'Remix" to
+                    "with two names separated by '&' ending with 'Remix" to
                         AudioItemFields(
                             titleField = "Song Title (Adam beyer & pete tong remix)", expectedArtists = setOf("Adam Beyer", "Pete Tong")
                         ),
-                    "Two names separated by 'vs' ending with 'Remix'" to
+                    "with two names separated by 'vs' ending with 'Remix'" to
                         AudioItemFields(
                             titleField = "Fall (M83 vs Big Black Delta Remix)", expectedArtists = setOf("M83", "Big Black Delta")
                         ),
-                    "Four names separated by comma and & starting with 'feat'" to
+                    "with four names separated by comma and & starting with 'feat'" to
                         AudioItemFields(
                             titleField = "Jet Blue Jet (feat Leftside, GTA, Razz & Biggy)", expectedArtists = setOf("Leftside", "GTA", "Razz", "Biggy")
                         )
@@ -312,18 +312,18 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
             }
         }
 
-        context("In album artist field") {
+        context("only from album artist field") {
             withData(
                 mapOf(
-                    "Two names separated by commas" to
+                    "with two names separated by '," to
                         AudioItemFields(
                             albumArtistField = "Adam Beyer, UMEK", expectedArtists = setOf("Adam Beyer", "UMEK")
                         ),
-                    "Two names separated by &" to
+                    "with two names separated by '&" to
                         AudioItemFields(
                             albumArtistField = "Adam Beyer & UMEK", expectedArtists = setOf("Adam Beyer", "UMEK")
                         ),
-                    "Two names separated by & and comma" to
+                    "with two names separated by '&' and ','" to
                         AudioItemFields(
                             albumArtistField = "Adam Beyer, Pete Tong & UMEK", expectedArtists = setOf("Adam Beyer", "Pete Tong", "UMEK")
                         )
@@ -333,36 +333,45 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
             }
         }
 
-        context("In all fields") {
+        context("from title, artist and album artist fields") {
             withData(
                 mapOf(
-                    "Simple name, one artist, same album artist" to
+                    // the most common case
+                    "with a trivial title name, artist and same album artist" to
                         AudioItemFields(
-                            titleField = "Song title", artistField = "Pete Tong", albumArtistField = "Pete Tong", expectedArtists = setOf("Pete Tong")
+                            titleField = "Song title",
+                            artistField = "Pete Tong",
+                            albumArtistField = "Pete Tong",
+                            expectedArtists = setOf("Pete Tong")
                         ),
-                    "Simple name, one artist, one album artist" to
+                    "with a trivial title, one artist, one different album artist" to
                         AudioItemFields(
                             titleField = "Song title",
                             artistField = "Pete Tong",
                             albumArtistField = "Jeff Mills",
                             expectedArtists = setOf("Pete Tong", "Jeff Mills")
                         ),
-                    "Simple name, two artists, same album artist" to
+                    "with a trivial title, two artists, one of the artists in the album artist" to
                         AudioItemFields(
-                            titleField = "Song title", artistField = "Pete, UMEK", albumArtistField = "Pete", expectedArtists = setOf("Pete", "UMEK")
+                            titleField = "Song title",
+                            artistField = "Pete, UMEK",
+                            albumArtistField = "Pete",
+                            expectedArtists = setOf("Pete", "UMEK")
                         ),
-                    "Name with 'Remix', one artist, no album artist" to
+                    "with an artist name with 'Remix', one artist, no album artist" to
                         AudioItemFields(
-                            titleField = "Song title (Ansome Remix)", artistField = "Pete Tong", expectedArtists = setOf("Pete Tong", "Ansome")
+                            titleField = "Song title (Ansome Remix)",
+                            artistField = "Pete Tong",
+                            expectedArtists = setOf("Pete Tong", "Ansome")
                         ),
-                    "Name with featuring, two artists with comma, one repeated album artist" to
+                    "with an artist name with 'featuring', two artists with ',', one repeated album artist" to
                         AudioItemFields(
                             titleField = "Song title featuring Lulu Perez",
                             artistField = "Pete Tong & Ansome",
                             albumArtistField = "Pete Tong",
                             expectedArtists = setOf("Pete Tong", "Ansome", "Lulu Perez")
                         ),
-                    "Name with 'Remix by', two artists with &, one other album artist" to
+                    "with an artist name with 'Remix by', two artists with '&', one other album artist" to
                         AudioItemFields(
                             titleField = "Song title (Remix by Bonobo)",
                             artistField = "Laurent Garnier & Rone",

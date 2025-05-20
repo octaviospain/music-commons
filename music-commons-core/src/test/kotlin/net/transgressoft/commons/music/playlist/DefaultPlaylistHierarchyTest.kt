@@ -5,7 +5,6 @@ import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioLibrary
 import net.transgressoft.commons.music.audio.audioItem
 import net.transgressoft.commons.persistence.json.JsonFileRepository
-import net.transgressoft.commons.persistence.json.JsonRepository
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.throwables.shouldThrowMessage
 import io.kotest.core.spec.style.StringSpec
@@ -20,7 +19,6 @@ import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import io.mockk.every
 import io.mockk.mockk
-import java.io.File
 import java.time.Duration
 import java.util.*
 import kotlinx.coroutines.CoroutineScope
@@ -32,23 +30,10 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
 
     val testDispatcher = UnconfinedTestDispatcher()
     val testScope = CoroutineScope(testDispatcher)
-    lateinit var jsonFile: File
-    lateinit var jsonFileRepository: JsonRepository<Int, MutableAudioPlaylist>
-    lateinit var playlistHierarchy: PlaylistHierarchy<AudioItem, MutableAudioPlaylist>
 
     beforeSpec {
         ReactiveScope.flowScope = testScope
         ReactiveScope.ioScope = testScope
-    }
-
-    beforeEach {
-        jsonFile = tempfile("playlistRepository-test", ".json").also { it.deleteOnExit() }
-        jsonFileRepository = JsonFileRepository(jsonFile, AudioPlaylistMapSerializer)
-        playlistHierarchy = DefaultPlaylistHierarchy(jsonFileRepository)
-    }
-
-    afterEach {
-        jsonFileRepository.close()
     }
 
     afterSpec {
@@ -56,7 +41,11 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         ReactiveScope.resetDefaultIoScope()
     }
 
-    "Repository serializes itself to file when playlists are added" {
+    "Reflects changes on a JsonFileRepository" {
+        val jsonFile = tempfile("playlistRepository-test", ".json").apply { deleteOnExit() }
+        val jsonFileRepository = JsonFileRepository(jsonFile, AudioPlaylistMapSerializer)
+        val playlistHierarchy = DefaultPlaylistHierarchy(jsonFileRepository)
+
         val rockAudioItem = Arb.audioItem { title = "50s Rock hit 1" }.next()
         val rockAudioItems = listOf(rockAudioItem)
         val rock = playlistHierarchy.createPlaylist("Rock", rockAudioItems)
@@ -78,22 +67,28 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
 
         val json = listOf(rock, rockFavorites).asJsonKeyValues()
         jsonFile.readText() shouldEqualJson (json)
+
+        jsonFileRepository.close()
     }
 
-    "Existing repository loads from file" {
+    "Initializes from a non empty JsonFileRepository and AudioLibrary" {
         val audioItem = Arb.audioItem { id = 453374921 }.next()
-        jsonFile.writeText(
-            listOf(ImmutablePlaylist(1, true, "Rock", listOf(audioItem)))
-                .asJsonKeyValues()
-        )
-        jsonFileRepository = JsonFileRepository(jsonFile, AudioPlaylistMapSerializer)
+        val jsonFile =
+            tempfile("playlistRepository-test", ".json").apply {
+                writeText(
+                    listOf(ImmutablePlaylist(1, true, "Rock", listOf(audioItem)))
+                        .asJsonKeyValues()
+                )
+                deleteOnExit()
+            }
+        val jsonFileRepository = JsonFileRepository(jsonFile, AudioPlaylistMapSerializer)
 
         val audioLibrary =
             mockk<AudioLibrary<AudioItem>> {
                 every { findById(eq(453374921)) } returns Optional.of(audioItem)
             }
 
-        playlistHierarchy = DefaultPlaylistHierarchy(jsonFileRepository, audioLibrary)
+        val playlistHierarchy = DefaultPlaylistHierarchy(jsonFileRepository, audioLibrary)
 
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -103,17 +98,21 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         } shouldBe true
     }
 
-    // ├──Best hits
-    // │  ├──50s
-    // │  │  ├──Rock
-    // │  │  │  ├──:50s Rock hit 1
-    // │  │  │  └──:50s Rock hit 2 my fav
-    // │  │  ├──Pop
-    // │  │  ├──:50s hit 1
-    // │  │  └──:50s favorite song
-    // │  └──60s
-    // └──This weeks' favorites songs
-    "Mixed playlists hierarchy structure and audio items search" {
+    /** The following playlist hierarchy is used for the test:
+
+     ├──Best hits
+     │  ├──50s
+     │  │  ├──Rock
+     │  │  │  ├──:50s Rock hit 1
+     │  │  │  └──:50s Rock hit 2 my fav
+     │  │  ├──Pop
+     │  │  ├──:50s hit 1
+     │  │  └──:50s favorite song
+     │  └──60s
+     └──This weeks' favorites songs
+     */
+    "Creates and finds playlists and audio items" {
+        val playlistHierarchy = DefaultPlaylistHierarchy()
         val rockAudioItems =
             listOf(
                 Arb.audioItem {
@@ -201,12 +200,17 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         playlistHierarchy.isEmpty shouldBe true
     }
 
-    // ├──Best hits
-    // │  └──50s
-    // │     ├──Rock
-    // │     └──Pop
-    // └──Selection of playlists
-    "Move playlists in the hierarchy" {
+    /** The following playlist hierarchy is used for the test:
+
+     ├──Best hits
+     │  └──50s
+     │     ├──Rock
+     │     └──Pop
+     └──Selection of playlists
+     */
+    "Moves playlists from/to playlist directories" {
+        val playlistHierarchy = DefaultPlaylistHierarchy()
+
         val rock = playlistHierarchy.createPlaylist("Rock")
         playlistHierarchy.findByName(rock.name) shouldBePresent { it shouldBe rock }
         val pop = playlistHierarchy.createPlaylist("Pop")
@@ -232,12 +236,6 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         playlistHierarchy.findById(fifties.id) shouldBePresent { it.playlists.shouldNotContain(rock) }
         playlistHierarchy.findByName(bestHits.name) shouldBePresent { it.playlists.shouldContainOnly(fifties) }
 
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        jsonFile.readText().shouldEqualJson(listOf(rock, pop, fifties, bestHits, selection).asJsonKeyValues())
-
-        // --
-
         playlistHierarchy.movePlaylist(selection.name, fifties.name)
         // same result as doing
         // fifties.addPlaylist(selection)
@@ -252,10 +250,6 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         playlistHierarchy.findByName(selection.name) shouldBePresent { it.playlists.shouldContainOnly(rock) }
         playlistHierarchy.findByName(fifties.name) shouldBePresent { it.playlists shouldContainExactly setOf(pop, selection) }
 
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        jsonFile.readText().shouldEqualJson(listOf(rock, pop, fifties, bestHits, selection).asJsonKeyValues())
-
         playlistHierarchy.removeAll(setOf(bestHits)) shouldBe true
 
         playlistHierarchy.size() shouldBe 0
@@ -265,13 +259,11 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         selection.playlists.shouldContainOnly(rock)
         rock.playlists.isEmpty() shouldBe true
         pop.playlists.isEmpty() shouldBe true
-
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        jsonFile.readText() shouldBe "{}"
     }
 
-    "Removing playlist directory from repository is recursive and changes reflected on playlists" {
+    "Removing playlist directory from it is recursive and changes reflects on playlists" {
+        val playlistHierarchy = DefaultPlaylistHierarchy()
+
         val pop = playlistHierarchy.createPlaylist("Pop")
         val fifties = playlistHierarchy.createPlaylistDirectory("50s").also { it.addPlaylist(pop) }
         val bestHits = playlistHierarchy.createPlaylistDirectory("Best hits").also { it.addPlaylist(fifties) }
@@ -309,7 +301,9 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         selection.playlists.isEmpty() shouldBe true
     }
 
-    "Create playlists with existing name" {
+    "Throws Exception when creating playlists with an existing name" {
+        val playlistHierarchy = DefaultPlaylistHierarchy()
+
         playlistHierarchy.createPlaylistDirectory("New playlist")
         playlistHierarchy.size() shouldBe 1
 
@@ -321,9 +315,11 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
     }
 
     "Removing child playlist directly from one, does not remove them from the repository" {
-        val rock = playlistHierarchy.createPlaylist("Rock")
-        val rockFavorites = playlistHierarchy.createPlaylist("Rock Favorites")
+        val playlistHierarchy = DefaultPlaylistHierarchy()
+
         val fifties = playlistHierarchy.createPlaylistDirectory("50s")
+        val rock = playlistHierarchy.createPlaylistDirectory("Rock")
+        val rockFavorites = playlistHierarchy.createPlaylist("Rock Favorites")
         playlistHierarchy.addPlaylistToDirectory(rockFavorites, rock.name)
         playlistHierarchy.addPlaylistToDirectory(rock, fifties.name)
 
@@ -331,19 +327,35 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         fifties.playlists.size shouldBe 1
         rock.playlists.size shouldBe 1
 
+        // └──50s
+        //    └──Rock
+        //        └──Rock Favorites
+
         rock.clearPlaylists()
 
         playlistHierarchy.size() shouldBe 3
         rock.playlists.isEmpty() shouldBe true
         fifties.playlists.size shouldBe 1
 
+        // └──50s
+        //    └──Rock
+        //
+        // └ Rock Favorites (playlist remains in the playlistHierarchy)
+
         fifties.removePlaylist(rock.id)
+
+        // └──50s
+        //
+        // └ Rock (playlist remains in the playlistHierarchy)
+        // └ Rock Favorites
 
         playlistHierarchy.size() shouldBe 3
         fifties.playlists.isEmpty() shouldBe true
     }
 
     "Deleting playlist from the repository removes it from any parent one" {
+        val playlistHierarchy = DefaultPlaylistHierarchy()
+
         val rock = playlistHierarchy.createPlaylist("Rock")
         val fifties = playlistHierarchy.createPlaylistDirectory("50s")
         playlistHierarchy.addPlaylistToDirectory(rock, fifties.name)

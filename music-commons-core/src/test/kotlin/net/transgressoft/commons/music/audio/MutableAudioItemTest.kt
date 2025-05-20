@@ -50,7 +50,7 @@ internal class MutableAudioItemTest : FunSpec({
             playCount = 0
         ).next()
 
-    context("MutableAudioItem is created, serialized to json, and and write changes to file metadata from") {
+    context("Can be created, serialized to json, and and write changes to file metadata from") {
         withData(
             mapOf(
                 "a mp3 file" to Arb.realAudioFile(ID3_V_24, expectedAttributes).next(),
@@ -133,7 +133,7 @@ internal class MutableAudioItemTest : FunSpec({
         }
     }
 
-    context("MutableAudioItem returns coverImage after being deserialized") {
+    context("Has expected coverImage after deserialization") {
         val audioItem =
             MutableAudioItem(
                 Arb.realAudioFile(ID3_V_24) {
