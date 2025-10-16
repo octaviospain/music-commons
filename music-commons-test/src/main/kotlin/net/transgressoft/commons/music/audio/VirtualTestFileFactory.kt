@@ -15,17 +15,21 @@
  *     along with this program.  If not, see <https://www.gnu.org/licenses/>. *
  ******************************************************************************/
 
-package net.transgressoft.commons.fx.music
+package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
-import net.transgressoft.commons.music.audio.AudioItemTestAttributes
+import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import io.kotest.property.Arb
+import io.kotest.property.arbitrary.enum
 import io.kotest.property.arbitrary.next
+import java.nio.file.Path
 import java.util.function.Consumer
 
-object FXAudioItemTestFactory {
+object VirtualTestFileFactory {
 
     @JvmStatic
-    fun FXAudioItemTestFactory.createFxAudioItem(attributes: Consumer<AudioItemTestAttributes>): ObservableAudioItem =
-        Arb.fxAudioItem(attributes::accept).next()
+    fun createVirtualAudioFile(attributes: Consumer<AudioItemTestAttributes>): Path =
+        Arb.virtualAudioFile(
+            Arb.enum<AudioFileTagType>().next(),
+            attributes::accept
+        ).next()
 }

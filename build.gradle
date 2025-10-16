@@ -70,6 +70,14 @@ tasks.named('check') {
     dependsOn tasks.named('testCodeCoverageReport', JacocoReport)
 }
 
+allprojects {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven { url = 'https://jitpack.io' }
+    }
+}
+
 subprojects {
 
     apply plugin: 'jacoco'
@@ -90,18 +98,12 @@ subprojects {
 
         implementation 'com.neovisionaries:nv-i18n:1.29'
         implementation 'io.github.microutils:kotlin-logging-jvm:3.0.5'
-        implementation 'net.transgressoft:transgressoft-commons-api:1.4.0-SNAPSHOT'
+        implementation 'net.transgressoft:transgressoft-commons-api:1.5.0'
         implementation "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0'
 
         testImplementation 'ch.qos.logback:logback-core:1.5.16'
         testRuntimeOnly 'ch.qos.logback:logback-classic:1.5.16'
-    }
-
-    repositories {
-        mavenLocal()
-        mavenCentral()
-        maven { url = 'https://jitpack.io' }
     }
 
     java {

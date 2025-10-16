@@ -25,9 +25,16 @@ import io.kotest.property.Arb
 import io.kotest.property.arbitrary.arbitrary
 import io.mockk.every
 import io.mockk.mockk
+import javafx.beans.property.SimpleFloatProperty
+import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleObjectProperty
+import javafx.beans.property.SimpleSetProperty
+import javafx.beans.property.SimpleStringProperty
+import javafx.collections.FXCollections
 import javafx.scene.image.Image
+import java.io.ByteArrayInputStream
 import java.util.Optional
+import kotlin.io.path.extension
 
 fun Arb.Companion.fxAudioItem(attributesAction: AudioItemTestAttributes.() -> Unit = {}): Arb<ObservableAudioItem> =
     arbitrary {
@@ -49,6 +56,9 @@ fun Arb.Companion.fxAudioItem(attributes: AudioItemTestAttributes): Arb<Observab
             every { dateOfCreation } returns attributes.dateOfCreation
             every { lastDateModified } returns attributes.lastDateModified
             every { playCount } returns attributes.playCount
+            every { fileName } returns attributes.path.fileName.toString()
+            every { extension } returns attributes.path.extension
+            every { length } returns path.toFile().length()
 
             // mutable properties
             every { title } returns attributes.title
@@ -62,13 +72,41 @@ fun Arb.Companion.fxAudioItem(attributes: AudioItemTestAttributes): Arb<Observab
             every { coverImageBytes } returns attributes.coverImageBytes
             every { playCount } returns attributes.playCount
 
-            every { this@mockk.coverImageProperty } answers {
-                SimpleObjectProperty(this, "cover image", Optional.empty<Image>())
+            every { this@mockk.dateOfCreationProperty } answers {
+                SimpleObjectProperty(this, "date of creation", attributes.dateOfCreation)
             }
-
-            every { this@mockk.artistsInvolved } answers { callOriginal() }
-            every { this@mockk.asJsonKeyValue() } answers { callOriginal() }
-            every { this@mockk.asJsonValue() } answers { callOriginal() }
-            every { this@mockk.toString() } answers { callOriginal() }
+            every { this@mockk.artistProperty } answers {
+                SimpleObjectProperty(this, "artist", attributes.artist)
+            }
+            every { this@mockk.albumProperty } answers {
+                SimpleObjectProperty(this, "album", attributes.album)
+            }
+            every { this@mockk.genreProperty } answers {
+                SimpleObjectProperty(this, "genre", attributes.genre)
+            }
+            every { this@mockk.commentsProperty } answers {
+                SimpleStringProperty(this, "comments", attributes.comments)
+            }
+            every { this@mockk.trackNumberProperty } answers {
+                SimpleIntegerProperty(this, "track number", attributes.trackNumber!!.toInt())
+            }
+            every { this@mockk.discNumberProperty } answers {
+                SimpleIntegerProperty(this, "disc number", attributes.discNumber!!.toInt())
+            }
+            every { this@mockk.bpmProperty } answers {
+                SimpleFloatProperty(this, "bpm", attributes.bpm!!)
+            }
+            every { this@mockk.lastDateModifiedProperty } answers {
+                SimpleObjectProperty(this, "last date modified", attributes.lastDateModified)
+            }
+            every { this@mockk.coverImageProperty } answers {
+                SimpleObjectProperty(this, "cover image", Optional.of(Image(ByteArrayInputStream(coverImageBytes))))
+            }
+            every { this@mockk.artistsInvolvedProperty } answers {
+                SimpleSetProperty(this, "artists involved", FXCollections.observableSet(this@mockk.artistsInvolved))
+            }
+            every { this@mockk.playCountProperty } answers {
+                SimpleIntegerProperty(this, "play count", attributes.playCount.toInt())
+            }
         }
     }
