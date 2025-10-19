@@ -1,3 +1,20 @@
+/******************************************************************************
+ * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU General Public License as published by       *
+ * the Free Software Foundation, either version 3 of the License, or          *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU General Public License for more details.                               *
+ *                                                                            *
+ * You should have received a copy of the GNU General Public License          *
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
+ ******************************************************************************/
+
 package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.event.CrudEvent
@@ -16,6 +33,12 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.future.future
 
+/**
+ * Represents a library of audio items with repository capabilities and reactive event publishing.
+ *
+ * This interface extends [Repository] for CRUD operations and [Flow.Publisher] to publish
+ * events when audio items are created, updated, or deleted.
+ */
 interface AudioLibrary<I: ReactiveAudioItem<I>>: Repository<Int, I>, Flow.Publisher<CrudEvent<Int, I>> {
 
     val playerSubscriber: Flow.Subscriber<AudioItemPlayerEvent>
@@ -30,8 +53,13 @@ interface AudioLibrary<I: ReactiveAudioItem<I>>: Repository<Int, I>, Flow.Publis
 
     fun getRandomAudioItemsFromArtist(artist: Artist, size: Short = 100): List<I>
 
+    /**
+     * Creates audio items asynchronously from a batch of file paths using the specified dispatcher.
+     *
+     * The files are processed in batches of 500 for optimal performance.
+     */
     fun createFromFileBatchAsync(audioItemPaths: Collection<Path>, dispatcher: CoroutineDispatcher): CompletableFuture<List<I>> {
-        val batchSize = 500
+        val batchSize = 500 // TODO Parameterize this magic constant for customization
         return CoroutineScope(dispatcher).future {
             audioItemPaths.chunked(batchSize).map { batch ->
                 async {

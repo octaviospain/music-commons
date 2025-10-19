@@ -1,3 +1,20 @@
+/******************************************************************************
+ * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU General Public License as published by       *
+ * the Free Software Foundation, either version 3 of the License, or          *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU General Public License for more details.                               *
+ *                                                                            *
+ * You should have received a copy of the GNU General Public License          *
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
+ ******************************************************************************/
+
 package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.Album
@@ -16,6 +33,13 @@ import javafx.scene.image.Image
 import java.time.LocalDateTime
 import java.util.Optional
 
+/**
+ * JavaFX-compatible audio item interface exposing metadata as observable properties.
+ *
+ * Extends [ReactiveAudioItem] with JavaFX property bindings, enabling automatic UI updates
+ * when metadata changes. All mutable fields are accessible both as regular properties and
+ * as JavaFX properties for seamless integration with JavaFX data binding.
+ */
 interface ObservableAudioItem : ReactiveAudioItem<ObservableAudioItem> {
 
     val titleProperty: StringProperty

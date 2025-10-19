@@ -1,3 +1,20 @@
+/******************************************************************************
+ * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU General Public License as published by       *
+ * the Free Software Foundation, either version 3 of the License, or          *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU General Public License for more details.                               *
+ *                                                                            *
+ * You should have received a copy of the GNU General Public License          *
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
+ ******************************************************************************/
+
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.entity.toIds
@@ -14,6 +31,13 @@ import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
 
+/**
+ * Default implementation of [PlaylistHierarchy] for managing [MutableAudioPlaylist] instances.
+ *
+ * Handles deserialization of persisted playlists by reconstructing audio item references
+ * and playlist hierarchies from stored IDs. The audio library parameter enables resolution
+ * of audio item IDs to actual audio item instances during initialization.
+ */
 class DefaultPlaylistHierarchy(
     repository: Repository<Int, MutableAudioPlaylist> = VolatileRepository(),
     // Only needed when the provided repository is not empty
@@ -90,6 +114,13 @@ class DefaultPlaylistHierarchy(
 
     override fun toString() = "PlaylistRepository(playlistsCount=${size()})"
 
+    /**
+     * Concrete implementation of [MutableAudioPlaylist] bound to this hierarchy.
+     *
+     * Implemented as an inner class to inherit hierarchy management capabilities from
+     * [MutablePlaylistBase] while accessing the enclosing [DefaultPlaylistHierarchy]
+     * instance for playlist lookup operations during deserialization and hierarchy updates.
+     */
     private inner class MutablePlaylist(
         id: Int,
         isDirectory: Boolean,

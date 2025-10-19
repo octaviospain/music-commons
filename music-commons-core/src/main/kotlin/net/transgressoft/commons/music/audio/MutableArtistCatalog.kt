@@ -1,3 +1,20 @@
+/******************************************************************************
+ * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU General Public License as published by       *
+ * the Free Software Foundation, either version 3 of the License, or          *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU General Public License for more details.                               *
+ *                                                                            *
+ * You should have received a copy of the GNU General Public License          *
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
+ ******************************************************************************/
+
 package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.entity.IdentifiableEntity
@@ -5,6 +22,13 @@ import net.transgressoft.commons.music.AudioUtils
 import mu.KotlinLogging
 import java.util.*
 
+/**
+ * Internal catalog managing all audio items for a single artist.
+ *
+ * Organizes audio items by album and maintains them sorted by disc and track numbers.
+ * This structure enables efficient queries for artist discographies and album-specific
+ * track listings while providing thread-safe concurrent access.
+ */
 internal data class MutableArtistCatalog<I>(val artist: Artist) : IdentifiableEntity<String> where I : ReactiveAudioItem<I> {
 
     private val logger = KotlinLogging.logger {}

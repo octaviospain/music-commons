@@ -1,3 +1,20 @@
+/******************************************************************************
+ * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU General Public License as published by       *
+ * the Free Software Foundation, either version 3 of the License, or          *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU General Public License for more details.                               *
+ *                                                                            *
+ * You should have received a copy of the GNU General Public License          *
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
+ ******************************************************************************/
+
 package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.entity.ReactiveEntityBase
@@ -28,7 +45,6 @@ import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.time.Duration
 import java.time.LocalDateTime
-import javax.annotation.Nullable
 import kotlin.io.path.extension
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -41,6 +57,18 @@ import kotlinx.serialization.Transient
 
 const val UNASSIGNED_ID = 0
 
+/**
+ * Mutable implementation of [AudioItem] that reads and writes audio file metadata.
+ *
+ * Reads metadata from audio files using JAudioTagger library and provides reactive
+ * change notifications when metadata is modified. Supports asynchronous metadata
+ * writing back to audio files while maintaining data integrity through thread-safe operations.
+ *
+ * The implementation automatically extracts metadata from the file on construction and
+ * lazily caches immutable properties like duration and bitrate for performance.
+ *
+ * @see <a href=https://www.jthink.net/jaudiotagger/>JAudioTagger website</a>
+ */
 @Suppress("SERIALIZER_TYPE_INCOMPATIBLE")
 @Serializable(with = AudioItemSerializer::class)
 internal class MutableAudioItem(
@@ -128,14 +156,11 @@ internal class MutableAudioItem(
     private var _encoder: String? = getFieldIfExisting(tag, FieldKey.ENCODER)?.takeIf { it.isNotEmpty() }
 
     @Serializable
-    @Nullable
     override val encoder: String? = _encoder
 
-    @Nullable
     private var _encoding: String? = audioHeader.encodingType.takeIf { it.isNotEmpty() }
 
     @Serializable
-    @Nullable
     override val encoding: String? = _encoding
 
     private var _dateOfCreation: LocalDateTime = LocalDateTime.now()
@@ -200,28 +225,24 @@ internal class MutableAudioItem(
         }
 
     @Serializable
-    @Nullable
     override var comments: String? = getFieldIfExisting(tag, FieldKey.COMMENT)?.takeIf { it.isNotEmpty() }
         set(value) {
             setAndNotify(value, field) { field = it }
         }
 
     @Serializable
-    @Nullable
     override var trackNumber: Short? = getFieldIfExisting(tag, FieldKey.TRACK)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()?.takeIf { it > 0 }
         set(value) {
             setAndNotify(value, field) { field = it }
         }
 
     @Serializable
-    @Nullable
     override var discNumber: Short? = getFieldIfExisting(tag, FieldKey.DISC_NO)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()?.takeIf { it > 0 }
         set(value) {
             setAndNotify(value, field) { field = it }
         }
 
     @Serializable
-    @Nullable
     override var bpm: Float? = getFieldIfExisting(tag, FieldKey.BPM)?.takeUnless { it.isEmpty().and(it == "0") }?.toFloatOrNull()?.takeIf { it > 0 }
         set(value) {
             setAndNotify(value, field) { field = it }
@@ -234,7 +255,6 @@ internal class MutableAudioItem(
         }
 
     @Transient
-    @Nullable
     override var coverImageBytes: ByteArray? = getCoverBytes(tag)
         get() = field ?: getCoverBytes()
         set(value) {
@@ -288,6 +308,13 @@ internal class MutableAudioItem(
 
     private fun getCoverBytes(tag: Tag): ByteArray? = tag.artworkList.isNotEmpty().takeIf { it }?.let { tag.firstArtwork.binaryData }
 
+    /**
+     * Asynchronously writes the current metadata back to the audio file.
+     *
+     * Creates the appropriate tag format based on the file type and commits changes to disk.
+     * Errors during writing are logged but do not throw exceptions to prevent
+     * disrupting the application flow, especially during batch, background operations.
+     */
     override fun writeMetadata(): Job =
         ioScope.launch {
             logger.debug { "Writing metadata of $this to file '${path.toAbsolutePath()}'" }

@@ -27,7 +27,7 @@ dependencies {
     implementation 'net.transgressoft:transgressoft-commons-core:1.5.0'
     api project(path: ':music-commons-fx')
     api project(path: ':music-commons-test')
-    implementation 'io.mockk:mockk:1.13.17'
+    implementation 'io.mockk:mockk:1.14.6'
     implementation "io.kotest:kotest-property:$kotestVersion"
 }
 

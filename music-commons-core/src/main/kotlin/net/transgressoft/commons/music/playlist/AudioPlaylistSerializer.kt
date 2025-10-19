@@ -1,3 +1,20 @@
+/******************************************************************************
+ * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU General Public License as published by       *
+ * the Free Software Foundation, either version 3 of the License, or          *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU General Public License for more details.                               *
+ *                                                                            *
+ * You should have received a copy of the GNU General Public License          *
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
+ ******************************************************************************/
+
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.event.CrudEvent
@@ -45,6 +62,13 @@ import kotlinx.serialization.json.put
 @get:JvmName("AudioPlaylistMapSerializer")
 val AudioPlaylistMapSerializer: KSerializer<Map<Int, MutableAudioPlaylist>> = MapSerializer(Int.serializer(), MutableAudioPlaylistSerializer)
 
+/**
+ * Kotlinx serialization serializer for [MutableAudioPlaylist] instances.
+ *
+ * Serializes playlists by storing audio items and nested playlist IDs rather than full objects
+ * to minimize storage size. Creates dummy placeholder instances during deserialization that
+ * are later resolved to actual entities by [DefaultPlaylistHierarchy].
+ */
 internal object MutableAudioPlaylistSerializer : AudioPlaylistSerializerBase<AudioItem, MutableAudioPlaylist>() {
     @Suppress("UNCHECKED_CAST")
     override fun createInstance(propertiesList: List<Any?>): MutableAudioPlaylist =

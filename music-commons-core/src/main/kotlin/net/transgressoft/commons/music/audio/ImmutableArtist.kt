@@ -1,3 +1,20 @@
+/******************************************************************************
+ * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU General Public License as published by       *
+ * the Free Software Foundation, either version 3 of the License, or          *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU General Public License for more details.                               *
+ *                                                                            *
+ * You should have received a copy of the GNU General Public License          *
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
+ ******************************************************************************/
+
 package net.transgressoft.commons.music.audio
 
 import com.neovisionaries.i18n.CountryCode
@@ -6,7 +23,11 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * @author Octavio Calleya
+ * Immutable [Artist] implementation using the flyweight pattern for efficient memory usage.
+ *
+ * Artist instances are cached and reused based on their name and country code combination,
+ * ensuring that identical artists share the same object instance. This design reduces memory
+ * footprint when managing large audio libraries with many tracks by the same artists.
  */
 @Serializable
 @SerialName("ImmutableArtist")
@@ -50,6 +71,12 @@ class ImmutableArtist private constructor(override val name: String, override va
 
         private val artistMap: MutableMap<String, Artist> = ConcurrentHashMap(HashMap<String, Artist>().apply { put("", UNKNOWN) })
 
+        /**
+         * Returns a cached [Artist] instance for the given name and country code.
+         *
+         * Uses a flyweight pattern to ensure only one instance exists per unique artist,
+         * preventing duplicate objects and reducing memory consumption.
+         */
         @JvmStatic
         @JvmOverloads
         fun of(name: String, countryCode: CountryCode = CountryCode.UNDEFINED) =

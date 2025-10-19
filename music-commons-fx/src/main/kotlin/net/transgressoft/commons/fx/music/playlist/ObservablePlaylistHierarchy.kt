@@ -1,3 +1,20 @@
+/******************************************************************************
+ * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU General Public License as published by       *
+ * the Free Software Foundation, either version 3 of the License, or          *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU General Public License for more details.                               *
+ *                                                                            *
+ * You should have received a copy of the GNU General Public License          *
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
+ ******************************************************************************/
+
 package net.transgressoft.commons.fx.music.playlist
 
 import net.transgressoft.commons.entity.toIds
@@ -32,6 +49,14 @@ import java.util.*
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 
+/**
+ * JavaFX-compatible playlist hierarchy with observable playlist collections.
+ *
+ * Maintains an observable set of all playlists in the hierarchy that automatically syncs
+ * with repository changes. Enables JavaFX UI components to bind directly to the playlist
+ * collection and receive automatic updates when playlists are created, modified, or removed.
+ * All modifications are executed on the JavaFX Application Thread for thread safety.
+ */
 class ObservablePlaylistHierarchy
     @JvmOverloads
     constructor(
@@ -132,6 +157,13 @@ class ObservablePlaylistHierarchy
 
         override fun toString() = "observablePlaylistHierarchy(playlistsCount=${size()})"
 
+        /**
+         * JavaFX playlist implementation with bidirectional observable property bindings.
+         *
+         * Implemented as an inner class to access the enclosing hierarchy's parent tracking.
+         * All property modifications execute on the JavaFX Application Thread, and changes to
+         * nested playlists or audio items automatically update the recursive audio items property.
+         */
         private inner class FXPlaylist(
             id: Int,
             isDirectory: Boolean,

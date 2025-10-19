@@ -1,3 +1,20 @@
+/******************************************************************************
+ * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU General Public License as published by       *
+ * the Free Software Foundation, either version 3 of the License, or          *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU General Public License for more details.                               *
+ *                                                                            *
+ * You should have received a copy of the GNU General Public License          *
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
+ ******************************************************************************/
+
 package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.event.CrudEvent.Type.CREATE
@@ -10,6 +27,13 @@ import net.transgressoft.commons.persistence.Repository
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 
+/**
+ * Base implementation for [AudioLibrary] providing artist catalog management.
+ *
+ * Maintains an [ArtistCatalogRegistry] that automatically synchronizes with repository
+ * changes to provide efficient artist-based queries. Delegates repository operations
+ * to the underlying repository while managing the artist catalog as a secondary index.
+ */
 abstract class AudioLibraryBase<I : ReactiveAudioItem<I>>(
     protected val repository: Repository<Int, I>
 ): AudioLibrary<I>, Repository<Int, I> by repository {

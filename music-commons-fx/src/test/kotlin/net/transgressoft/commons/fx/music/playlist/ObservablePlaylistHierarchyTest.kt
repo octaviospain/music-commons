@@ -24,6 +24,7 @@ import io.kotest.property.arbitrary.next
 import io.mockk.every
 import io.mockk.mockk
 import org.testfx.api.FxToolkit
+import org.testfx.util.WaitForAsyncUtils
 import java.time.Duration
 import java.util.*
 import kotlin.time.Duration.Companion.milliseconds
@@ -293,6 +294,7 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         playlistHierarchy.isEmpty shouldBe true
 
         testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
 
         playlistHierarchy.playlistsProperty.isEmpty() shouldBe true
     }
@@ -419,6 +421,7 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         selection.playlists.isEmpty() shouldBe true
 
         testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
 
         playlistHierarchy.playlistsProperty shouldContainExactly setOf(bestHits, selection)
     }

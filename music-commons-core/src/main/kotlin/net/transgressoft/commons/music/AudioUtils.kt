@@ -1,3 +1,20 @@
+/******************************************************************************
+ * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU General Public License as published by       *
+ * the Free Software Foundation, either version 3 of the License, or          *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU General Public License for more details.                               *
+ *                                                                            *
+ * You should have received a copy of the GNU General Public License          *
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
+ ******************************************************************************/
+
 package net.transgressoft.commons.music
 
 import net.transgressoft.commons.music.audio.Album
@@ -7,8 +24,21 @@ import org.jetbrains.kotlin.com.google.common.base.CharMatcher
 import org.jetbrains.kotlin.com.google.common.base.Splitter
 import java.util.regex.Pattern
 
+/**
+ * Utility object providing helper functions for audio item operations.
+ *
+ * Includes comparators for sorting audio items and artist name extraction utilities
+ * that parse various metadata fields to identify all artists involved in a track.
+ */
 object AudioUtils {
 
+    /**
+     * Creates a comparator for sorting audio items by disc and track numbers.
+     *
+     * Items are first sorted by disc number, then by track number. Null values
+     * are considered greater than non-null values, placing items without disc/track
+     * numbers at the end of the sorted collection.
+     */
     fun <I: ReactiveAudioItem<I>> audioItemTrackDiscNumberComparator() =
         Comparator<I> { audioItem1, audioItem2 ->
             // Compare disc numbers first
@@ -176,6 +206,12 @@ object AudioUtils {
             .toSet()
     }
 
+    /**
+     * Standardizes artist name formatting for consistency.
+     *
+     * Normalizes whitespace, capitalizes the first character, and standardizes
+     * separators like "vs" and "versus" to ensure a uniform presentation.
+     */
     fun beautifyArtistName(name: String): String =
         name.replaceFirstChar(Char::titlecase)
             .replace("\\s+".toRegex(), " ")

@@ -1,3 +1,20 @@
+/******************************************************************************
+ * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU General Public License as published by       *
+ * the Free Software Foundation, either version 3 of the License, or          *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU General Public License for more details.                               *
+ *                                                                            *
+ * You should have received a copy of the GNU General Public License          *
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
+ ******************************************************************************/
+
 package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.entity.ReactiveEntityBase
@@ -50,7 +67,6 @@ import java.nio.file.StandardOpenOption
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.Optional
-import javax.annotation.Nullable
 import kotlin.io.path.extension
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -63,6 +79,14 @@ import kotlinx.serialization.Transient
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 
+/**
+ * JavaFX implementation of [ObservableAudioItem] with bidirectional property binding.
+ *
+ * Provides JavaFX properties that automatically sync with the underlying metadata values.
+ * Changes to JavaFX properties trigger reactive change events, while direct property
+ * modifications update the corresponding JavaFX properties. Includes special handling for
+ * cover images converted to JavaFX [Image] instances for UI display.
+ */
 @Suppress("SERIALIZER_TYPE_INCOMPATIBLE")
 @Serializable(with = ObservableAudioItemSerializer::class)
 class FXAudioItem internal constructor(override val path: Path, override val id: Int = UNASSIGNED_ID): ObservableAudioItem, Comparable<ObservableAudioItem>,
@@ -143,13 +167,11 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         private var _encoder: String? = getFieldIfExisting(tag, FieldKey.ENCODER) ?: ""
 
         @Serializable
-        @Nullable
         override val encoder: String? = _encoder
 
         private var _encoding: String? = audioHeader.encodingType
 
         @Serializable
-        @Nullable
         override val encoding: String? = _encoding
 
         private var _dateOfCreation: LocalDateTime = LocalDateTime.now()
@@ -261,7 +283,6 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                 }
             }
 
-        @Nullable
         override var comments: String? = getFieldIfExisting(tag, FieldKey.COMMENT)?.takeIf { it.isNotEmpty() }
             set(value) {
                 setAndNotify(value, field) {
@@ -277,7 +298,6 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                 }
             }
 
-        @Nullable
         override var trackNumber: Short? =
             getFieldIfExisting(tag, FieldKey.TRACK)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()?.takeIf { it > 0 }
             set(value) {
@@ -294,7 +314,6 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                 }
             }
 
-        @Nullable
         override var discNumber: Short? =
             getFieldIfExisting(tag, FieldKey.DISC_NO)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()?.takeIf { it > 0 }
             set(value) {
@@ -311,7 +330,6 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                 }
             }
 
-        @Nullable
         override var bpm: Float? = getFieldIfExisting(tag, FieldKey.BPM)?.takeUnless { it.isEmpty().and(it == "0") }?.toFloatOrNull()?.takeIf { it > 0 }
             set(value) {
                 setAndNotify(value, field) {
@@ -339,7 +357,6 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         @Transient
         override val lastDateModifiedProperty: ReadOnlyObjectProperty<LocalDateTime> = _lastDateModifiedProperty
 
-        @Nullable
         override var coverImageBytes: ByteArray? = getCoverBytes(tag)
             set(value) {
                 setAndNotify(value, field) {

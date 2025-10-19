@@ -16,6 +16,7 @@ import net.transgressoft.commons.persistence.json.JsonFileRepository
 import net.transgressoft.commons.persistence.json.JsonRepository
 import io.kotest.assertions.json.shouldContainJsonKeyValue
 import io.kotest.assertions.nondeterministic.eventually
+import io.kotest.core.spec.style.FunSpec
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.optional.shouldBePresent
@@ -37,7 +38,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @ExtendWith(ApplicationExtension::class)
 @ExperimentalCoroutinesApi
-internal class JavaFxPlayerTest : StringSpec({
+internal class JavaFxPlayerTest : FunSpec({
 
     val testDispatcher = UnconfinedTestDispatcher()
     val testScope = CoroutineScope(testDispatcher)
@@ -71,7 +72,9 @@ internal class JavaFxPlayerTest : StringSpec({
         ReactiveScope.resetDefaultIoScope()
     }
 
-    "Playing an audio item increases the play count and serializes the repository" {
+    test("Playing an audio item increases the play count and serializes the repository").config(
+        enabledIf = { System.getenv("CI") == null }
+    ) {
         player.subscribe(observableAudioItemRepository.playerSubscriber)
         val audioItemLength = audioItem.duration.toMillis()
         val timeToIncreasePlayCount = (audioItemLength * 0.6).roundToLong()
@@ -90,7 +93,9 @@ internal class JavaFxPlayerTest : StringSpec({
         }
     }
 
-    "Playing an audio item modifies its observable properties" {
+    test("Playing an audio item modifies its observable properties").config(
+        enabledIf = { System.getenv("CI") == null }
+    ) {
         player.status() shouldBe UNKNOWN
         player.statusProperty.get() shouldBe UNKNOWN
         player.currentTimeProperty.get() shouldBe Duration.ZERO

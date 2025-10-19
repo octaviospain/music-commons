@@ -1,3 +1,20 @@
+/******************************************************************************
+ * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU General Public License as published by       *
+ * the Free Software Foundation, either version 3 of the License, or          *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU General Public License for more details.                               *
+ *                                                                            *
+ * You should have received a copy of the GNU General Public License          *
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
+ ******************************************************************************/
+
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.entity.ReactiveEntityBase
@@ -20,6 +37,13 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.stream.Collectors.partitioningBy
 import kotlin.properties.Delegates.observable
 
+/**
+ * Base implementation for [PlaylistHierarchy] managing hierarchical playlist structures.
+ *
+ * Maintains a multimap to track parent-child relationships between playlists and provides
+ * reactive change notifications for all playlist modifications. Automatically synchronizes
+ * with audio item deletion events to remove deleted items from all playlists.
+ */
 abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPlaylist<I, P>>(
     protected val repository: Repository<Int, P> = VolatileRepository("PlaylistHierarchy")
 ): PlaylistHierarchy<I, P>, Repository<Int, P> by repository {
@@ -240,6 +264,13 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
         playlistsHierarchyMultiMap.remove(parentPlaylistUniqueId, playlist)
     }
 
+    /**
+     * Base reactive playlist implementation providing change notification and hierarchy management.
+     *
+     * Implemented as an inner class to access the enclosing [PlaylistHierarchyBase] instance's
+     * hierarchy tracking methods, enabling playlists to update their parent relationships
+     * when nested playlists are added or removed without requiring explicit parent references.
+     */
     protected abstract inner class MutablePlaylistBase(
         override val id: Int,
         isDirectory: Boolean,

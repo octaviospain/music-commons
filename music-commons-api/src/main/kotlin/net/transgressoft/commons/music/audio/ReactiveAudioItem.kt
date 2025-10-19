@@ -1,3 +1,20 @@
+/******************************************************************************
+ * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU General Public License as published by       *
+ * the Free Software Foundation, either version 3 of the License, or          *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU General Public License for more details.                               *
+ *                                                                            *
+ * You should have received a copy of the GNU General Public License          *
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
+ ******************************************************************************/
+
 package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.entity.ReactiveEntity
@@ -11,6 +28,12 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
+/**
+ * Represents a reactive audio item with comprehensive metadata and file information.
+ *
+ * This interface extends [ReactiveEntity] to provide reactive capabilities for audio items,
+ * allowing observation of changes to metadata and other properties.
+ */
 interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I> {
 
     val path: Path
@@ -44,6 +67,9 @@ interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I> {
     fun asJsonValue() = toJsonObject().toString()
 }
 
+/**
+ * Converts a collection of reactive audio items to a JSON string with items as key-value pairs.
+ */
 fun <R: ReactiveAudioItem<*>> Collection<R>.asJsonKeyValues(): String =
     buildJsonObject {
         forEach {
@@ -51,6 +77,9 @@ fun <R: ReactiveAudioItem<*>> Collection<R>.asJsonKeyValues(): String =
         }
     }.toString()
 
+/**
+ * Converts a reactive audio item to a [JsonObject] containing all metadata.
+ */
 fun ReactiveAudioItem<*>.toJsonObject(): JsonObject =
     buildJsonObject {
         put("id", id)

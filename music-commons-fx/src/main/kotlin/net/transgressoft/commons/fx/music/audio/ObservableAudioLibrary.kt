@@ -1,3 +1,20 @@
+/******************************************************************************
+ * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU General Public License as published by       *
+ * the Free Software Foundation, either version 3 of the License, or          *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU General Public License for more details.                               *
+ *                                                                            *
+ * You should have received a copy of the GNU General Public License          *
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
+ ******************************************************************************/
+
 package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.event.CrudEvent.Type.CREATE
@@ -17,6 +34,13 @@ import javafx.collections.MapChangeListener
 import mu.KotlinLogging
 import java.nio.file.Path
 
+/**
+ * JavaFX-compatible audio library with observable collections for UI binding.
+ *
+ * Maintains synchronized observable collections of audio items and artists that automatically
+ * update when the library changes. Provides JavaFX properties for direct binding to UI components,
+ * enabling reactive table views, list views, and other JavaFX controls without manual synchronization.
+ */
 class ObservableAudioLibrary(repository: Repository<Int, ObservableAudioItem>): AudioLibraryBase<ObservableAudioItem>(repository) {
     private val logger = KotlinLogging.logger {}
 

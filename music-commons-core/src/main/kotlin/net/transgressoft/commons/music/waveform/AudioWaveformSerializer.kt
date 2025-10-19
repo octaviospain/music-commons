@@ -1,3 +1,20 @@
+/******************************************************************************
+ * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU General Public License as published by       *
+ * the Free Software Foundation, either version 3 of the License, or          *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU General Public License for more details.                               *
+ *                                                                            *
+ * You should have received a copy of the GNU General Public License          *
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
+ ******************************************************************************/
+
 package net.transgressoft.commons.music.waveform
 
 import java.nio.file.Path
@@ -23,6 +40,12 @@ import kotlinx.serialization.json.put
 @get:JvmName("AudioWaveformMapSerializer")
 val AudioWaveformMapSerializer: KSerializer<Map<Int, AudioWaveform>> = MapSerializer(Int.serializer(), AudioWaveformSerializer)
 
+/**
+ * Kotlinx serialization serializer for [AudioWaveform] instances.
+ *
+ * Serializes waveforms by storing the audio file path and ID, allowing waveforms to be
+ * reconstructed on deserialization by re-reading the audio file.
+ */
 object AudioWaveformSerializer : KSerializer<AudioWaveform> {
 
     override val descriptor: SerialDescriptor =
