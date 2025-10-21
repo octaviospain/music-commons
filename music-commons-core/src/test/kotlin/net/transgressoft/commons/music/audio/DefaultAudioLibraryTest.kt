@@ -30,7 +30,7 @@ import kotlinx.serialization.json.jsonObject
 
 @ExperimentalKotest
 @ExperimentalCoroutinesApi
-internal class DefaultAudioLibraryTest : StringSpec({
+internal class DefaultAudioLibraryTest: StringSpec({
 
     val testDispatcher = UnconfinedTestDispatcher()
     val testScope = CoroutineScope(testDispatcher)
@@ -61,28 +61,29 @@ internal class DefaultAudioLibraryTest : StringSpec({
 
     "Creates an audio item and allow to query it on creation and after modification" {
         val audioFile = Arb.virtualAudioFile().next()
-        val audioItem: AudioItem =
-            audioRepository.createFromFile(audioFile).apply {
+        val audioItem: AudioItem = audioRepository.createFromFile(audioFile)
 
-                val artistNames = AudioUtils.getArtistsNamesInvolved(title, artist.name, album.albumArtist.name)
-
-                should {
-                    it.id shouldNotBe UNASSIGNED_ID
-                    audioRepository.add(it) shouldBe false
-                    audioRepository.addOrReplace(it) shouldBe false
-                    audioRepository.contains { audioItem -> audioItem == it } shouldBe true
-                    audioRepository.search { audioItem -> audioItem == it }.shouldContainOnly(it)
-                    audioRepository.findByUniqueId(it.uniqueId) shouldBePresent { found -> found shouldBe it }
-                    audioRepository.containsAudioItemWithArtist(it.artist.name) shouldBe artistNames.contains(it.artist.name)
-                    audioRepository.containsAudioItemWithArtist(it.album.albumArtist.name) shouldBe artistNames.contains(it.album.albumArtist.name)
-                    audioRepository.findAlbumAudioItems(it.artist, it.album.name).shouldContainOnly(it)
-                }
-            }
         testDispatcher.scheduler.advanceUntilIdle()
 
-        jsonFile shouldEqual audioItem.asJsonKeyValue()
+        audioItem should {
+
+            val artistNames = AudioUtils.getArtistsNamesInvolved(it.title, it.artist.name, it.album.albumArtist.name)
+
+            it.id shouldNotBe UNASSIGNED_ID
+            audioRepository.add(it) shouldBe false
+            audioRepository.addOrReplace(it) shouldBe false
+            audioRepository.contains { audioItem -> audioItem == it } shouldBe true
+            audioRepository.search { audioItem -> audioItem == it }.shouldContainOnly(it)
+            audioRepository.findByUniqueId(it.uniqueId) shouldBePresent { found -> found shouldBe it }
+            audioRepository.containsAudioItemWithArtist(it.artist.name) shouldBe artistNames.contains(it.artist.name)
+            audioRepository.containsAudioItemWithArtist(it.album.albumArtist.name) shouldBe artistNames.contains(it.album.albumArtist.name)
+            audioRepository.findAlbumAudioItems(it.artist, it.album.name).shouldContainOnly(it)
+        }
 
         audioItem.title = "New title"
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
         audioItem should {
 
             val artistNames = AudioUtils.getArtistsNamesInvolved(it.title, it.artist.name, it.album.albumArtist.name)
@@ -98,7 +99,6 @@ internal class DefaultAudioLibraryTest : StringSpec({
                 found shouldBeSameInstanceAs it
             }
         }
-        testDispatcher.scheduler.advanceUntilIdle()
 
         jsonFile shouldEqual audioItem.asJsonKeyValue()
     }

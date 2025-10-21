@@ -6,7 +6,7 @@ dependencies {
 
     implementation 'com.google.guava:guava:33.5.0-jre'
     implementation 'net.jthink:jaudiotagger:3.0.1'
-    implementation 'net.transgressoft:transgressoft-commons-core:1.5.0'
+    implementation "net.transgressoft:transgressoft-commons-core:$transgressoftVersion"
     implementation 'ws.schild:jave-core:3.5.0'
     implementation 'ws.schild:jave-nativebin-linux64:3.5.0'
 

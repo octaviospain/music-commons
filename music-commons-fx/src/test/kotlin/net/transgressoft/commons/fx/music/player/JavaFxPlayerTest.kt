@@ -16,7 +16,6 @@ import net.transgressoft.commons.persistence.json.JsonFileRepository
 import net.transgressoft.commons.persistence.json.JsonRepository
 import io.kotest.assertions.json.shouldContainJsonKeyValue
 import io.kotest.assertions.nondeterministic.eventually
-import io.kotest.core.spec.style.FunSpec
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.optional.shouldBePresent
@@ -38,7 +37,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @ExtendWith(ApplicationExtension::class)
 @ExperimentalCoroutinesApi
-internal class JavaFxPlayerTest : FunSpec({
+internal class JavaFxPlayerTest : StringSpec({
 
     val testDispatcher = UnconfinedTestDispatcher()
     val testScope = CoroutineScope(testDispatcher)
@@ -72,7 +71,7 @@ internal class JavaFxPlayerTest : FunSpec({
         ReactiveScope.resetDefaultIoScope()
     }
 
-    test("Playing an audio item increases the play count and serializes the repository").config(
+    "Playing an audio item increases the play count and serializes the repository".config(
         enabledIf = { System.getenv("CI") == null }
     ) {
         player.subscribe(observableAudioItemRepository.playerSubscriber)
@@ -93,7 +92,7 @@ internal class JavaFxPlayerTest : FunSpec({
         }
     }
 
-    test("Playing an audio item modifies its observable properties").config(
+    "Playing an audio item modifies its observable properties".config(
         enabledIf = { System.getenv("CI") == null }
     ) {
         player.status() shouldBe UNKNOWN

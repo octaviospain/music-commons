@@ -207,30 +207,41 @@ class ObservablePlaylistHierarchy
                 SimpleListProperty(this, "audioItems", FXCollections.observableArrayList(ArrayList(audioItems))).apply {
                     addListener { _, oldValue, newValue ->
                         setAndNotify(newValue, oldValue) {
-                            Platform.runLater { replaceRecursiveAudioItems() }
+                            replaceRecursiveAudioItems()
                             changePlaylistCover()
                         }
                     }
                 }
 
             private fun replaceRecursiveAudioItems() {
-                _audioItemsRecursiveProperty.clear()
-                _audioItemsRecursiveProperty.addAll(
-                    buildList<ObservableAudioItem> {
-                        addAll(audioItems)
-                        addAll(playlists.stream().flatMap { it.audioItemsRecursive.stream() }.toList())
-                    }
-                )
+                val currentPlaylists = _playlistsProperty.toList()
+                val currentAudioItems = _audioItemsProperty.toList()
+
+                Platform.runLater {
+                    _audioItemsRecursiveProperty.clear()
+                    _audioItemsRecursiveProperty.addAll(
+                        buildList<ObservableAudioItem> {
+                            addAll(currentAudioItems)
+                            addAll(currentPlaylists.flatMap { it.audioItemsRecursive })
+                        }
+                    )
+                }
             }
 
             private fun changePlaylistCover() {
-                audioItems.stream()
-                    .map { it.coverImageProperty.get() }
-                    .filter { it.isPresent }
-                    .findAny()
-                    .ifPresentOrElse(
-                        { Platform.runLater { _coverImageProperty.set(it) } }
-                    ) { Platform.runLater { _coverImageProperty.set(Optional.empty()) } }
+                val newCover =
+                    audioItems.stream()
+                        .map { it.coverImageProperty.get() }
+                        .filter { it.isPresent }
+                        .findAny()
+
+                Platform.runLater {
+                    if (newCover.isPresent) {
+                        _coverImageProperty.set(newCover.get())
+                    } else {
+                        _coverImageProperty.set(Optional.empty())
+                    }
+                }
             }
 
             override val audioItemsProperty: ReadOnlyListProperty<ObservableAudioItem> = _audioItemsProperty
@@ -274,15 +285,23 @@ class ObservablePlaylistHierarchy
             override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>> = _coverImageProperty
 
             override fun addAudioItems(audioItems: Collection<ObservableAudioItem>) =
-                this.audioItems.stream().anyMatch(audioItems::contains).not().also {
-                    Platform.runLater { _audioItemsProperty.addAll(audioItems) }
-                    logger.debug { "Added $audioItems to playlist $uniqueId" }
+                audioItems.stream().anyMatch { it !in _audioItemsProperty }.also { hasNew ->
+                    if (hasNew) {
+                        Platform.runLater {
+                            _audioItemsProperty.addAll(audioItems.filter { it !in _audioItemsProperty })
+                        }
+                        logger.debug { "Added $audioItems to playlist $uniqueId" }
+                    }
                 }
 
             override fun removeAudioItems(audioItems: Collection<ObservableAudioItem>) =
-                this.audioItems.stream().anyMatch(audioItems::contains).also {
-                    Platform.runLater { _audioItemsProperty.removeAll(audioItems.toSet()) }
-                    logger.debug { "Removed $audioItems from playlist $uniqueId" }
+                audioItems.stream().anyMatch { it in _audioItemsProperty }.also { hasItems ->
+                    if (hasItems) {
+                        Platform.runLater {
+                            _audioItemsProperty.removeAll(audioItems.toSet())
+                        }
+                        logger.debug { "Removed $audioItems from playlist $uniqueId" }
+                    }
                 }
 
             @Suppress("INAPPLICABLE_JVM_NAME")
@@ -300,28 +319,39 @@ class ObservablePlaylistHierarchy
                         logger.debug { "Playlist '${it.name}' removed from '$parentPlaylist'" }
                     }
                 }
-                val result = _playlistsProperty.stream().anyMatch(playlists::contains).not()
-                setAndNotify(_playlistsProperty + playlists, _playlistsProperty) {
-                    _playlistsProperty.addAll(playlists)
-                    replaceRecursiveAudioItems()
-                    repeat(playlists.size) {
-                        putAllPlaylistInHierarchy(uniqueId, playlists)
+                val hasNew = playlists.any { it !in _playlistsProperty }
+                if (hasNew) {
+                    val newPlaylists = playlists.filter { it !in _playlistsProperty }
+
+                    setAndNotify(_playlistsProperty + playlists, _playlistsProperty) {
+                        Platform.runLater {
+                            _playlistsProperty.addAll(newPlaylists)
+                            replaceRecursiveAudioItems()
+                        }
+                        repeat(playlists.size) {
+                            putAllPlaylistInHierarchy(uniqueId, playlists)
+                        }
+                        logger.debug { "Added $playlists to playlist $uniqueId" }
                     }
-                    logger.debug { "Added $playlists to playlist $uniqueId" }
                 }
-                return result
+                return hasNew
             }
 
             override fun removePlaylists(playlists: Collection<ObservablePlaylist>): Boolean {
-                val result = _playlistsProperty.stream().anyMatch(playlists::contains)
-                setAndNotify(_playlistsProperty - playlists.toSet(), _playlistsProperty) {
-                    _playlistsProperty.removeAll(playlists.toSet())
-                    playlists.forEach { playlist ->
-                        removePlaylistFromHierarchy(uniqueId, playlist)
+                val containsPlaylists = playlists.any { it in _playlistsProperty }
+                if (containsPlaylists) {
+                    setAndNotify(_playlistsProperty - playlists.toSet(), _playlistsProperty) {
+                        Platform.runLater {
+                            _playlistsProperty.removeAll(playlists.toSet())
+//                            replaceRecursiveAudioItems()
+                        }
+                        playlists.forEach { playlist ->
+                            removePlaylistFromHierarchy(uniqueId, playlist)
+                        }
+                        logger.debug { "Removed $playlists from playlist $uniqueId" }
                     }
-                    logger.debug { "Removed $playlists from playlist $uniqueId" }
                 }
-                return result
+                return containsPlaylists
             }
 
             @Suppress("INAPPLICABLE_JVM_NAME")

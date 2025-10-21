@@ -1,0 +1,103 @@
+name: master build
+
+on:
+    push:
+        branches:
+            - main
+        paths-ignore:
+            - "**.md"
+            - '.gitignore'
+            - 'docs/**'
+
+jobs:
+    build-analyze-release:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            packages: write
+
+        steps:
+            -   uses: actions/checkout@v4
+                with:
+                    fetch-depth: 0
+
+            -   name: Setup Git Credentials
+                run: |
+                    git config --global user.email "github-actions@github.com"
+                    git config --global user.name "github-actions"
+                    git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git
+
+            -   name: Set up JDK 17
+                uses: actions/setup-java@v4
+                with:
+                    java-version: 17
+                    distribution: 'liberica'
+                    java-package: 'jdk+fx'
+
+            -   name: Install dependencies
+                run: |
+                    sudo apt-get update
+                    sudo apt-get install -y \
+                      libgstreamer1.0-0 \
+                      gstreamer1.0-plugins-base \
+                      gstreamer1.0-plugins-good \
+                      gstreamer1.0-plugins-bad \
+                      gstreamer1.0-libav \
+                      gstreamer1.0-tools \
+                      libgstreamer-plugins-base1.0-dev \
+                      xvfb
+                      export DISPLAY=:99.0
+                      Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+                      echo "DISPLAY=:99.0" >> $GITHUB_ENV
+
+            -   name: Cache SonarQube packages
+                uses: actions/cache@v4
+                with:
+                    path: ~/.sonar/cache
+                    key: ${{ runner.os }}-sonar
+                    restore-keys: ${{ runner.os }}-sonar
+
+            -   name: Cache Gradle packages
+                uses: actions/cache@v4
+                with:
+                    path: |
+                        ~/.gradle/caches
+                        ~/.gradle/wrapper
+                    key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+                    restore-keys: |
+                        ${{ runner.os }}-gradle-
+
+            -   name: Verify Build with Virtual Display
+                env:
+                    CI: true
+                run: ./gradlew compileKotlin compileTestKotlin ktlintCheck test
+
+            -   name: Release
+                env:
+                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                    ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+                    ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+                    ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
+                    ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+                    ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+                run: |
+                    ./gradlew createRelease
+                    git push --tags origin HEAD
+                    ./gradlew publishToMavenCentral
+                    echo "Release completed ${{ steps.release.outputs.released-version }}"
+
+            -   name: Build with Gradle and Virtual Display
+                run: ./gradlew build
+
+            -   name: Upload Artifacts
+                uses: actions/upload-artifact@v4
+                with:
+                    name: release-build-libs
+                    path: build/libs
+                    retention-days: 14
+                    overwrite: true
+
+            -   name: SonarQube Scan
+                env:
+                    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+                run: ./gradlew sonar --info

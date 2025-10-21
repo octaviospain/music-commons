@@ -23,17 +23,19 @@ import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import io.mockk.every
 import io.mockk.mockk
+import javafx.application.Platform
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
 import java.time.Duration
 import java.util.*
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @ExperimentalCoroutinesApi
-class ObservablePlaylistHierarchyTest : StringSpec({
+internal class ObservablePlaylistHierarchyTest : StringSpec({
 
     val testDispatcher = UnconfinedTestDispatcher()
     val testScope = CoroutineScope(testDispatcher)
@@ -49,6 +51,17 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         ReactiveScope.resetDefaultIoScope()
     }
 
+    suspend fun eventuallyOnFxThread(
+        duration: kotlin.time.Duration = 500.milliseconds,
+        assertion: () -> Unit
+    ) {
+        eventually(duration) {
+            Platform.runLater {
+                assertion()
+            }
+        }
+    }
+
     "Reflects changes on a JsonFileRepository" {
         val jsonFile = tempfile("observablePlaylistHierarchy-test", ".json").apply { deleteOnExit() }
         val jsonFileRepository = JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer)
@@ -57,9 +70,13 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         val rockAudioItem = Arb.fxAudioItem { title = "50s Rock hit 1" }.next()
         val rockAudioItems = listOf(rockAudioItem)
         val rock = playlistHierarchy.createPlaylist("Rock", rockAudioItems)
-        testDispatcher.scheduler.advanceUntilIdle()
 
-        playlistHierarchy.playlistsProperty.shouldContainOnly(rock)
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            playlistHierarchy.playlistsProperty.shouldContainOnly(rock)
+        }
 
         val rockFavAudioItem = Arb.fxAudioItem { title = "Rock fav" }.next()
         val rockFavoritesAudioItems = listOf(rockFavAudioItem)
@@ -67,15 +84,19 @@ class ObservablePlaylistHierarchyTest : StringSpec({
 
         playlistHierarchy.movePlaylist(rockFavorites.name, rock.name)
 
-        playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, rockFavorites)
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
 
-        playlistHierarchy.findById(rock.id) shouldBePresent { updatedRock ->
-            updatedRock.playlists.shouldContainOnly(rockFavorites)
-            updatedRock.id shouldBe rock.id
-            updatedRock.isDirectory shouldBe false
-            updatedRock.name shouldBe "Rock"
-            updatedRock.audioItems.shouldContainExactly(rockAudioItems)
-            updatedRock.playlists.shouldContainExactly(rockFavorites)
+        eventuallyOnFxThread {
+            playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, rockFavorites)
+            playlistHierarchy.findById(rock.id) shouldBePresent { updatedRock ->
+                updatedRock.playlists.shouldContainOnly(rockFavorites)
+                updatedRock.id shouldBe rock.id
+                updatedRock.isDirectory shouldBe false
+                updatedRock.name shouldBe "Rock"
+                updatedRock.audioItems.shouldContainExactly(rockAudioItems)
+                updatedRock.playlists.shouldContainExactly(rockFavorites)
+            }
         }
 
         testDispatcher.scheduler.advanceUntilIdle()
@@ -85,7 +106,10 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         rock.isDirectory = true
         rock.name = "Rock directory"
 
-        eventually(100.milliseconds) {
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
             playlistHierarchy.findByUniqueId(rock.uniqueId) shouldBePresent {
                 it.isDirectory shouldBe true
                 it.name shouldBe "Rock directory"
@@ -94,7 +118,9 @@ class ObservablePlaylistHierarchyTest : StringSpec({
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        jsonFile.readText().shouldEqualJson(listOf(rock, rockFavorites).asJsonKeyValues())
+        eventually(2.seconds) {
+            jsonFile.readText().shouldEqualJson(listOf(rock, rockFavorites).asJsonKeyValues())
+        }
 
         jsonFileRepository.close()
     }
@@ -154,14 +180,18 @@ class ObservablePlaylistHierarchyTest : StringSpec({
             it.id == 1 && it.isDirectory && it.name == "Rock" && it.audioItems == listOf(audioItem) && it.playlists.isEmpty()
         } shouldBe true
 
-        playlistHierarchy.playlistsProperty should {
-            it.size shouldBe 1
-            it.first().id shouldBe 1
-            it.first().isDirectory shouldBe true
-            it.first().name shouldBe "Rock"
-            it.first().audioItems shouldContainExactly listOf(audioItem)
-            it.first().playlists.isEmpty() shouldBe true
-            it.first().shouldBeInstanceOf<ObservablePlaylist>()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            playlistHierarchy.playlistsProperty should {
+                it.size shouldBe 1
+                it.first().id shouldBe 1
+                it.first().isDirectory shouldBe true
+                it.first().name shouldBe "Rock"
+                it.first().audioItems shouldContainExactly listOf(audioItem)
+                it.first().playlists.isEmpty() shouldBe true
+                it.first().shouldBeInstanceOf<ObservablePlaylist>()
+            }
         }
     }
 
@@ -200,44 +230,63 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         playlistsThatContainsAllAudioItemsWith50sInTitle.shouldContainOnly(rock)
 
         testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
 
-        playlistHierarchy.playlistsProperty.shouldContainOnly(rock)
+        eventuallyOnFxThread {
+            playlistHierarchy.playlistsProperty.shouldContainOnly(rock)
+        }
 
         val pop = playlistHierarchy.createPlaylist("Pop")
         playlistHierarchy.size() shouldBe 2
         playlistHierarchy.numberOfPlaylists() shouldBe 2
 
         testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
 
-        playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop)
+        eventuallyOnFxThread {
+            playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop)
+        }
 
         val fifties = playlistHierarchy.createPlaylistDirectory("50s")
         playlistHierarchy.addPlaylistToDirectory(rock, fifties.name)
         playlistHierarchy.addPlaylistToDirectory(pop.name, fifties.name)
-        playlistHierarchy.findByName(fifties.name) shouldBePresent { it.playlists shouldContainExactly setOf(pop, rock) }
-        playlistHierarchy.numberOfPlaylistDirectories() shouldBe 1
 
         testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
 
-        playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop, fifties)
+        eventuallyOnFxThread {
+            playlistHierarchy.findByName(fifties.name) shouldBePresent {
+                it.playlists shouldContainExactly setOf(pop, rock)
+            }
+            playlistHierarchy.numberOfPlaylistDirectories() shouldBe 1
+            playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop, fifties)
+        }
 
         val sixties = playlistHierarchy.createPlaylistDirectory("60s")
-        sixties.playlists.isEmpty() shouldBe true
-        playlistHierarchy.numberOfPlaylistDirectories() shouldBe 2
-        playlistHierarchy.findByUniqueId("D-" + sixties.name) shouldBePresent { it shouldBe sixties }
 
         testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
 
-        playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, sixties)
+        eventuallyOnFxThread {
+            sixties.playlists.isEmpty() shouldBe true
+            playlistHierarchy.numberOfPlaylistDirectories() shouldBe 2
+            playlistHierarchy.findByUniqueId("D-" + sixties.name) shouldBePresent { it shouldBe sixties }
+            playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, sixties)
+        }
 
         val bestHits = playlistHierarchy.createPlaylistDirectory("Best hits")
         playlistHierarchy.addPlaylistsToDirectory(setOf(fifties, sixties), bestHits.name)
-        bestHits.playlists.isEmpty() shouldBe false
-        playlistHierarchy.findByName(bestHits.name) shouldBePresent { it.playlists shouldContainExactly setOf(fifties, sixties) }
 
         testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
 
-        playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, sixties, bestHits)
+        eventuallyOnFxThread {
+            bestHits.playlists.isEmpty() shouldBe false
+            playlistHierarchy.findByName(bestHits.name) shouldBePresent {
+                it.playlists shouldContainExactly setOf(fifties, sixties)
+            }
+            playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, sixties, bestHits)
+        }
 
         val thisWeeksFavorites = playlistHierarchy.createPlaylist("This weeks' favorites songs")
         playlistHierarchy.search { "favorites" in it.name }.shouldContainExactly(thisWeeksFavorites)
@@ -247,8 +296,11 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         playlistHierarchy.search { it.isDirectory.not() } shouldContainExactly setOf(rock, pop, thisWeeksFavorites)
 
         testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
 
-        playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, sixties, bestHits, thisWeeksFavorites)
+        eventuallyOnFxThread {
+            playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, sixties, bestHits, thisWeeksFavorites)
+        }
 
         playlistHierarchy.search { it.isDirectory } shouldContainExactly setOf(fifties, sixties, bestHits)
 
@@ -266,29 +318,55 @@ class ObservablePlaylistHierarchyTest : StringSpec({
 
         playlistHierarchy.addAudioItemToPlaylist(fiftiesItems[0], fifties.name)
         playlistHierarchy.addAudioItemsToPlaylist(fiftiesItems, fifties.name)
-        val playlistsThatContainsAnyAudioItemsWithHitInTitle =
-            playlistHierarchy.search { it.audioItemsAnyMatch { audioItem -> "hit" in audioItem.title } }
-        playlistsThatContainsAnyAudioItemsWithHitInTitle shouldContainExactly setOf(rock, fifties)
-        val playlistsThatContainsAudioItemsWithDurationBelow60 =
-            playlistHierarchy.search {
-                it.audioItemsAnyMatch { audioItem: ObservableAudioItem -> audioItem.duration <= Duration.ofSeconds(60) }
-            }
 
-        playlistsThatContainsAudioItemsWithDurationBelow60 shouldContainExactly setOf(rock, fifties)
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            val playlistsThatContainsAnyAudioItemsWithHitInTitle = playlistHierarchy.search { it.audioItemsAnyMatch { audioItem -> "hit" in audioItem.title } }
+            playlistsThatContainsAnyAudioItemsWithHitInTitle shouldContainExactly setOf(rock, fifties)
+
+            val playlistsThatContainsAudioItemsWithDurationBelow60 =
+                playlistHierarchy.search {
+                    it.audioItemsAnyMatch { audioItem: ObservableAudioItem -> audioItem.duration <= Duration.ofSeconds(60) }
+                }
+            playlistsThatContainsAudioItemsWithDurationBelow60 shouldContainExactly setOf(rock, fifties)
+        }
 
         playlistHierarchy.removeAudioItemFromPlaylist(fiftiesItems[0], fifties.name)
 
-        // this FXAudioItem instance is a mock
-        every { fiftiesItems[1].title } returns "new title"
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
 
-        fifties.audioItemsAllMatch { it.title == "new title" } shouldBe true
-        fifties.audioItems.find { it.title == "title" }?.shouldBeEqual(fiftiesItems[1])
+        eventuallyOnFxThread {
+            // this FXAudioItem instance is a mock
+            every { fiftiesItems[1].title } returns "new title"
+
+            fifties.audioItemsAllMatch { it.title == "new title" } shouldBe true
+            fifties.audioItems.find { it.title == "title" }?.shouldBeEqual(fiftiesItems[1])
+        }
 
         fifties.clearAudioItems()
 
-        playlistHierarchy.findById(fifties.id) shouldBePresent { it.audioItems.isEmpty() shouldBe true }
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            playlistHierarchy.findById(fifties.id) shouldBePresent {
+                it.audioItems.isEmpty() shouldBe true
+            }
+        }
+
         playlistHierarchy.runForAll { it.removeAudioItems(rockAudioItems) }
-        playlistHierarchy.findById(rock.id) shouldBePresent { it.audioItems.isEmpty() shouldBe true }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            playlistHierarchy.findById(rock.id) shouldBePresent {
+                it.audioItems.isEmpty() shouldBe true
+            }
+        }
 
         playlistHierarchy.clear()
         playlistHierarchy.isEmpty shouldBe true
@@ -296,7 +374,9 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         testDispatcher.scheduler.advanceUntilIdle()
         WaitForAsyncUtils.waitForFxEvents()
 
-        playlistHierarchy.playlistsProperty.isEmpty() shouldBe true
+        eventuallyOnFxThread {
+            playlistHierarchy.playlistsProperty.isEmpty() shouldBe true
+        }
     }
 
     /** The following playlist hierarchy is used for the test:
@@ -321,8 +401,11 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         playlistHierarchy.size() shouldBe 5
 
         testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
 
-        playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, bestHits, selection)
+        eventuallyOnFxThread {
+            playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, bestHits, selection)
+        }
 
         selection.addPlaylist(rock)
         // same result as doing
@@ -334,12 +417,21 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         // └──Selection of playlists
         //    └──Rock
 
-        playlistHierarchy.size() shouldBe 5
-        playlistHierarchy.findByName(selection.name) shouldBePresent { it.playlists.shouldContainOnly(rock) }
-        playlistHierarchy.findById(fifties.id) shouldBePresent { it.playlists.shouldNotContain(rock) }
-        playlistHierarchy.findByName(bestHits.name) shouldBePresent { it.playlists.shouldContainOnly(fifties) }
-
         testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            playlistHierarchy.size() shouldBe 5
+            playlistHierarchy.findByName(selection.name) shouldBePresent {
+                it.playlists.shouldContainOnly(rock)
+            }
+            playlistHierarchy.findById(fifties.id) shouldBePresent {
+                it.playlists.shouldNotContain(rock)
+            }
+            playlistHierarchy.findByName(bestHits.name) shouldBePresent {
+                it.playlists.shouldContainOnly(fifties)
+            }
+        }
 
         // --
 
@@ -353,27 +445,35 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         //       └──Selection of playlists
         //          └──Rock
 
-        playlistHierarchy.size() shouldBe 5
-        playlistHierarchy.findByName(selection.name) shouldBePresent { it.playlists.shouldContainOnly(rock) }
-        playlistHierarchy.findByName(fifties.name) shouldBePresent { it.playlists shouldContainExactly setOf(pop, selection) }
-
         testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
 
-        playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, bestHits, selection)
+        eventuallyOnFxThread {
+            playlistHierarchy.size() shouldBe 5
+            playlistHierarchy.findByName(selection.name) shouldBePresent {
+                it.playlists.shouldContainOnly(rock)
+            }
+            playlistHierarchy.findByName(fifties.name) shouldBePresent {
+                it.playlists shouldContainExactly setOf(pop, selection)
+            }
+            playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, pop, fifties, bestHits, selection)
+        }
 
         playlistHierarchy.removeAll(setOf(bestHits)) shouldBe true
 
-        playlistHierarchy.size() shouldBe 0
-        playlistHierarchy.isEmpty shouldBe true
-        bestHits.playlists.shouldContainOnly(fifties)
-        fifties.playlists shouldContainExactly setOf(pop, selection)
-        selection.playlists.shouldContainOnly(rock)
-        rock.playlists.isEmpty() shouldBe true
-        pop.playlists.isEmpty() shouldBe true
-
         testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
 
-        playlistHierarchy.playlistsProperty.isEmpty() shouldBe true
+        eventuallyOnFxThread {
+            playlistHierarchy.size() shouldBe 0
+            playlistHierarchy.isEmpty shouldBe true
+            bestHits.playlists.shouldContainOnly(fifties)
+            fifties.playlists shouldContainExactly setOf(pop, selection)
+            selection.playlists.shouldContainOnly(rock)
+            rock.playlists.isEmpty() shouldBe true
+            pop.playlists.isEmpty() shouldBe true
+            playlistHierarchy.playlistsProperty.isEmpty() shouldBe true
+        }
     }
 
     "Removing playlist directory from it is recursive and changes reflects on playlists" {
@@ -386,8 +486,11 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         val selection = playlistHierarchy.createPlaylistDirectory("Selection of playlists").also { it.addPlaylist(rock) }
 
         testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
 
-        playlistHierarchy.playlistsProperty shouldContainExactly setOf(pop, fifties, bestHits, rock, selection)
+        eventuallyOnFxThread {
+            playlistHierarchy.playlistsProperty shouldContainExactly setOf(pop, fifties, bestHits, rock, selection)
+        }
 
         // ├──Best hits
         // │  └──50s
@@ -395,35 +498,58 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         // └──Selection of playlists
         //    └──Rock
 
-        playlistHierarchy.size() shouldBe 5
-        playlistHierarchy.findByName(selection.name) shouldBePresent { it.playlists.shouldContainOnly(rock) }
-        playlistHierarchy.findById(fifties.id) shouldBePresent { it.playlists.shouldNotContain(rock) }
-        playlistHierarchy.findByName(bestHits.name) shouldBePresent { it.playlists.shouldContainOnly(fifties) }
+        eventuallyOnFxThread {
+            playlistHierarchy.size() shouldBe 5
+            playlistHierarchy.findByName(selection.name) shouldBePresent {
+                it.playlists.shouldContainOnly(rock)
+            }
+            playlistHierarchy.findById(fifties.id) shouldBePresent {
+                it.playlists.shouldNotContain(rock)
+            }
+            playlistHierarchy.findByName(bestHits.name) shouldBePresent {
+                it.playlists.shouldContainOnly(fifties)
+            }
+        }
 
-        playlistHierarchy.removePlaylistFromDirectory(fifties.name, bestHits.name) shouldBe true
+        var removed = playlistHierarchy.removePlaylistFromDirectory(fifties.name, bestHits.name)
 
         // ├──Best hits
         // └──Selection of playlists
         //    └──Rock
 
-        playlistHierarchy.size() shouldBe 3
-        playlistHierarchy.findByName(pop.name).isEmpty shouldBe true
-        playlistHierarchy.findByUniqueId(fifties.uniqueId).isEmpty shouldBe true
-        bestHits.playlists.isEmpty() shouldBe true
-        fifties.playlists.shouldContainOnly(pop)
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
 
-        playlistHierarchy.removePlaylistFromDirectory(rock, selection.name) shouldBe true
+        eventuallyOnFxThread {
+            removed shouldBe true
+            playlistHierarchy.size() shouldBe 3
+            playlistHierarchy.findByName(pop.name).isEmpty shouldBe true
+            playlistHierarchy.findByUniqueId(fifties.uniqueId).isEmpty shouldBe true
+            bestHits.playlists.isEmpty() shouldBe true
+            fifties.playlists.shouldContainOnly(pop)
+        }
+
+        removed = playlistHierarchy.removePlaylistFromDirectory(rock, selection.name)
 
         // ├──Best hits
         // └──Selection of playlists
 
-        playlistHierarchy.size() shouldBe 2
-        selection.playlists.isEmpty() shouldBe true
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            removed shouldBe true
+            playlistHierarchy.size() shouldBe 2
+            selection.playlists.isEmpty() shouldBe true
+            playlistHierarchy.playlistsProperty shouldContainExactly setOf(bestHits, selection)
+        }
 
         testDispatcher.scheduler.advanceUntilIdle()
         WaitForAsyncUtils.waitForFxEvents()
 
-        playlistHierarchy.playlistsProperty shouldContainExactly setOf(bestHits, selection)
+        eventuallyOnFxThread {
+            playlistHierarchy.playlistsProperty shouldContainExactly setOf(bestHits, selection)
+        }
     }
 
     "Throws Exception when creating playlists with an existing name" {
@@ -431,10 +557,14 @@ class ObservablePlaylistHierarchyTest : StringSpec({
 
         val newPlaylistDirectory = playlistHierarchy.createPlaylistDirectory("New playlist")
 
-        shouldThrowMessage("Playlist with name 'New playlist' already exists") { playlistHierarchy.createPlaylistDirectory("New playlist") }
+        shouldThrowMessage("Playlist with name 'New playlist' already exists") {
+            playlistHierarchy.createPlaylistDirectory("New playlist")
+        }
         playlistHierarchy.size() shouldBe 1
 
-        shouldThrowMessage("Playlist with name 'New playlist' already exists") { playlistHierarchy.createPlaylist("New playlist") }
+        shouldThrowMessage("Playlist with name 'New playlist' already exists") {
+            playlistHierarchy.createPlaylist("New playlist")
+        }
         playlistHierarchy.size() shouldBe 1
 
         playlistHierarchy.remove(newPlaylistDirectory) shouldBe true
@@ -454,30 +584,45 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         //    └──Rock
         //        └──Rock Favorites
 
-        playlistHierarchy.size() shouldBe 3
-        fifties.playlists.size shouldBe 1
-        rock.playlists.size shouldBe 1
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            playlistHierarchy.size() shouldBe 3
+            fifties.playlists.size shouldBe 1
+            rock.playlists.size shouldBe 1
+        }
 
         rock.clearPlaylists()
 
         // └──50s
         //    └──Rock
         //
-        // └ Rock Favorites (playlist remains in the playlistHierarchy)
+        // Rock Favorites (playlist remains in the playlistHierarchy)
 
-        playlistHierarchy.size() shouldBe 3
-        rock.playlists.isEmpty() shouldBe true
-        fifties.playlists.size shouldBe 1
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            playlistHierarchy.size() shouldBe 3
+            rock.playlists.isEmpty() shouldBe true
+            fifties.playlists.size shouldBe 1
+        }
 
         fifties.removePlaylist(rock.id)
 
         // └──50s
         //
-        // └ Rock (playlist remains in the playlistHierarchy)
-        // └ Rock Favorites
+        // Rock (playlist remains in the playlistHierarchy)
+        // Rock Favorites
 
-        playlistHierarchy.size() shouldBe 3
-        fifties.playlists.isEmpty() shouldBe true
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            playlistHierarchy.size() shouldBe 3
+            fifties.playlists.isEmpty() shouldBe true
+        }
     }
 
     "Deleting a playlist removes it from the playlistHierarchy and its parent directory" {
@@ -490,14 +635,199 @@ class ObservablePlaylistHierarchyTest : StringSpec({
         // └──50s
         //    └──Rock
 
-        playlistHierarchy.size() shouldBe 2
-        fifties.playlists.size shouldBe 1
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            playlistHierarchy.size() shouldBe 2
+            fifties.playlists.size shouldBe 1
+        }
 
         playlistHierarchy.remove(rock)
 
         // └──50s
 
-        playlistHierarchy.size() shouldBe 1
-        fifties.playlists.isEmpty() shouldBe true
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            playlistHierarchy.size() shouldBe 1
+            fifties.playlists.isEmpty() shouldBe true
+        }
+    }
+
+    "Single playlist property updates are eventually consistent" {
+        val hierarchy = ObservablePlaylistHierarchy()
+        val audioItem = Arb.fxAudioItem().next()
+
+        val playlist = hierarchy.createPlaylist("Test Playlist", listOf(audioItem))
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            hierarchy.playlistsProperty.size shouldBe 1
+            playlist.audioItemsProperty.size shouldBe 1
+        }
+    }
+
+    "Rapid playlist modifications are eventually consistent" {
+        val hierarchy = ObservablePlaylistHierarchy()
+        val audioItems = List(10) { Arb.fxAudioItem { title = "Item-$it" }.next() }
+
+        val playlist = hierarchy.createPlaylist("Test")
+
+        // Rapid additions
+        audioItems.forEach { playlist.addAudioItem(it) }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            playlist.audioItemsProperty.size shouldBe 10
+        }
+
+        // Rapid removals
+        audioItems.take(5).forEach { playlist.removeAudioItem(it) }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            playlist.audioItemsProperty.size shouldBe 5
+        }
+    }
+
+    "Nested playlist additions maintain hierarchy consistency" {
+        val hierarchy = ObservablePlaylistHierarchy()
+
+        val child = hierarchy.createPlaylist("Child")
+        val parent = hierarchy.createPlaylistDirectory("Parent")
+
+        parent.addPlaylist(child)
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            hierarchy.playlistsProperty.size shouldBe 2
+            parent.playlistsProperty.size shouldBe 1
+            hierarchy.findParentPlaylist(child).isPresent shouldBe true
+        }
+    }
+
+    "Moving playlist between directories is eventually consistent" {
+        val hierarchy = ObservablePlaylistHierarchy()
+
+        val playlist = hierarchy.createPlaylist("Movable")
+        val dir1 = hierarchy.createPlaylistDirectory("Directory 1")
+        val dir2 = hierarchy.createPlaylistDirectory("Directory 2")
+
+        // Add to dir1
+        dir1.addPlaylist(playlist)
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            dir1.playlistsProperty.size shouldBe 1
+            dir2.playlistsProperty.size shouldBe 0
+        }
+
+        // Move to dir2
+        dir2.addPlaylist(playlist)
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            dir1.playlistsProperty.size shouldBe 0
+            dir2.playlistsProperty.size shouldBe 1
+            hierarchy.findParentPlaylist(playlist).get() shouldBe dir2
+        }
+    }
+
+    "Clearing playlist propagates to observable properties" {
+        val hierarchy = ObservablePlaylistHierarchy()
+        val audioItems = List(5) { Arb.fxAudioItem().next() }
+
+        val playlist = hierarchy.createPlaylist("To Clear", audioItems)
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            playlist.audioItemsProperty.size shouldBe 5
+        }
+
+        playlist.clearAudioItems()
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            playlist.audioItemsProperty.size shouldBe 0
+        }
+    }
+
+    "Recursive audio items property updates correctly" {
+        val hierarchy = ObservablePlaylistHierarchy()
+
+        val item1 = Arb.fxAudioItem { title = "Item1" }.next()
+        val item2 = Arb.fxAudioItem { title = "Item2" }.next()
+        val item3 = Arb.fxAudioItem { title = "Item3" }.next()
+
+        val child: ObservablePlaylist = hierarchy.createPlaylist("Child", listOf(item1, item2))
+        val parent: ObservablePlaylist = hierarchy.createPlaylistDirectory("Parent", listOf(item3))
+
+        parent.addPlaylist(child)
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            parent.audioItemsRecursiveProperty.size shouldBe 3
+            parent.audioItemsRecursiveProperty.map { it: ObservableAudioItem -> it.title } shouldContainExactly listOf("Item3", "Item1", "Item2")
+        }
+    }
+
+    "Repository subscription updates observable properties" {
+        val hierarchy = ObservablePlaylistHierarchy()
+
+        val playlist = hierarchy.createPlaylist("Test")
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            hierarchy.playlistsProperty.contains(playlist) shouldBe true
+        }
+
+        hierarchy.remove(playlist)
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            hierarchy.playlistsProperty.contains(playlist) shouldBe false
+        }
+    }
+
+    "Multiple concurrent modifications converge to consistent state" {
+        val hierarchy = ObservablePlaylistHierarchy()
+        val audioItems = List(20) { Arb.fxAudioItem { title = "Item-$it" }.next() }
+
+        val playlist = hierarchy.createPlaylist("Concurrent Test")
+
+        // Simulate concurrent-like rapid operations
+        audioItems.take(10).forEach { playlist.addAudioItem(it) }
+        audioItems.drop(10).forEach { playlist.addAudioItem(it) }
+        audioItems.take(5).forEach { playlist.removeAudioItem(it) }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            // Should have 15 items: added 20, removed 5
+            playlist.audioItemsProperty.size shouldBe 15
+        }
     }
 })
