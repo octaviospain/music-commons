@@ -64,6 +64,8 @@ internal class DefaultAudioLibraryTest : StringSpec({
         val audioItem: AudioItem =
             audioRepository.createFromFile(audioFile).apply {
 
+                testDispatcher.scheduler.advanceUntilIdle()
+
                 val artistNames = AudioUtils.getArtistsNamesInvolved(title, artist.name, album.albumArtist.name)
 
                 should {

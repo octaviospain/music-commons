@@ -1,0 +1,70 @@
+name: non-master build
+
+on:
+    push:
+        branches-ignore:
+            - main
+        paths-ignore:
+            - "**.md"
+            - '.gitignore'
+            - 'docs/**'
+
+jobs:
+    build-and-test:
+        runs-on: ubuntu-latest
+
+        steps:
+            -   uses: actions/checkout@v4
+                with:
+                    fetch-depth: 0
+
+            -   name: Setup Git Credentials
+                run: |
+                    git config --global user.email "github-actions@github.com"
+                    git config --global user.name "github-actions"
+                    git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git
+
+            -   name: Set up JDK 17
+                uses: actions/setup-java@v4
+                with:
+                    java-version: 17
+                    distribution: 'liberica'
+                    java-package: 'jdk+fx'
+
+            -   name: Install dependencies
+                run: |
+                    sudo apt-get update
+                    sudo apt-get install -y \
+                      libgstreamer1.0-0 \
+                      gstreamer1.0-plugins-base \
+                      gstreamer1.0-plugins-good \
+                      gstreamer1.0-plugins-bad \
+                      gstreamer1.0-libav \
+                      gstreamer1.0-tools \
+                      libgstreamer-plugins-base1.0-dev \
+                      xvfb
+                      export DISPLAY=:99.0
+                      Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+                      echo "DISPLAY=:99.0" >> $GITHUB_ENV
+
+            -   name: Cache SonarQube packages
+                uses: actions/cache@v4
+                with:
+                    path: ~/.sonar/cache
+                    key: ${{ runner.os }}-sonar
+                    restore-keys: ${{ runner.os }}-sonar
+
+            -   name: Cache Gradle packages
+                uses: actions/cache@v4
+                with:
+                    path: |
+                        ~/.gradle/caches
+                        ~/.gradle/wrapper
+                    key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+                    restore-keys: |
+                        ${{ runner.os }}-gradle-
+
+            -   name: Build with Gradle and Virtual Display
+                env:
+                    CI: true
+                run: ./gradlew build

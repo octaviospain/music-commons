@@ -1,6 +1,6 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/octaviospain/music-commons)
 ![Maven Central Version](https://img.shields.io/maven-central/v/net.transgressoft/music-commons)
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/octaviospain/music-commons/.github%2Fworkflows%2Fbuild.yml?logo=github)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/octaviospain/music-commons/.github%2Fworkflows%2Fmaster.yml?logo=github)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=net.transgressoft%3Amusic-commons&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=net.transgressoft%3Amusic-commons)
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=net.transgressoft%3Amusic-commons&metric=bugs)](https://sonarcloud.io/summary/new_code?id=net.transgressoft%3Amusic-commons)
 [![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=net.transgressoft%3Amusic-commons&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=net.transgressoft%3Amusic-commons)

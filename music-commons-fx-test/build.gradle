@@ -24,7 +24,7 @@ tasks.withType(KotlinJvmCompile).configureEach {
 }
 
 dependencies {
-    implementation 'net.transgressoft:transgressoft-commons-core:1.5.0'
+    implementation "net.transgressoft:transgressoft-commons-core:$transgressoftVersion"
     api project(path: ':music-commons-fx')
     api project(path: ':music-commons-test')
     implementation 'io.mockk:mockk:1.14.6'

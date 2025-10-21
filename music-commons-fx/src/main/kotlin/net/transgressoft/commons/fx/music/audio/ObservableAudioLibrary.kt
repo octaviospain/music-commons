@@ -49,10 +49,14 @@ class ObservableAudioLibrary(repository: Repository<Int, ObservableAudioItem>): 
             addListener(
                 MapChangeListener { change ->
                     change?.valueRemoved?.let { removed ->
-                        audioItemsProperty.removeIf { it.id == removed.id }
+                        Platform.runLater {
+                            audioItemsProperty.removeIf { it.id == removed.id }
+                        }
                     }
                     change?.valueAdded?.let {
-                        audioItemsProperty.add(it)
+                        Platform.runLater {
+                            audioItemsProperty.add(it)
+                        }
                     }
                 }
             )
