@@ -1,11 +1,11 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/octaviospain/music-commons)
-![Maven Central Version](https://img.shields.io/maven-central/v/net.transgressoft/music-commons)
+![Maven Central Version](https://img.shields.io/maven-central/v/net.transgressoft/music-commons-core)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/octaviospain/music-commons/.github%2Fworkflows%2Fmaster.yml?logo=github)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=net.transgressoft%3Amusic-commons&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=net.transgressoft%3Amusic-commons)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=net.transgressoft%3Amusic-commons&metric=bugs)](https://sonarcloud.io/summary/new_code?id=net.transgressoft%3Amusic-commons)
-[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=net.transgressoft%3Amusic-commons&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=net.transgressoft%3Amusic-commons)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=net.transgressoft%3Amusic-commons&metric=coverage)](https://sonarcloud.io/summary/new_code?id=net.transgressoft%3Amusic-commons)
-[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=net.transgressoft%3Amusic-commons&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=net.transgressoft%3Amusic-commons)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=octaviospain_music-commons&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=octaviospain_music-commons)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=octaviospain_music-commons&metric=bugs)](https://sonarcloud.io/summary/new_code?id=octaviospain_music-commons)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=octaviospain_music-commons&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=octaviospain_music-commons)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=octaviospain_music-commons&metric=coverage)](https://sonarcloud.io/summary/new_code?id=octaviospain_music-commons)
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=octaviospain_music-commons&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=octaviospain_music-commons)
 # Music Commons
 
 A modular, reactive Kotlin library for managing audio libraries, playlists, and waveform visualizations. Originally extracted from the [Musicott](https://github.com/octaviospain/Musicott) desktop application to provide reusable core components for audio file management across multiple projects.
