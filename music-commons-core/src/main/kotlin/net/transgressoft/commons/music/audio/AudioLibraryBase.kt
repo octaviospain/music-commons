@@ -40,6 +40,13 @@ abstract class AudioLibraryBase<I : ReactiveAudioItem<I>>(
 
     private val artistCatalogRegistry = ArtistCatalogRegistry<I>()
 
+    init {
+        if (repository.isEmpty.not()) {
+            repository.runForAll { artistCatalogRegistry.addAudioItems(listOf(it)) }
+        }
+    }
+
+    // TODO figure out how do unsubscribe from the repository when it is closed
     private val subscription =
         repository.subscribe { event ->
             when (event.type) {
