@@ -17,9 +17,14 @@ import io.kotest.property.arbitrary.next
 import java.awt.Color
 import javax.imageio.ImageIO
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.withContext
 
+@OptIn(ExperimentalCoroutinesApi::class)
 internal class ScalableAudioWaveformTest : FunSpec({
+
+    val testDispatcher = UnconfinedTestDispatcher()
 
     context("Creates a waveform image from") {
         withData(
@@ -31,7 +36,7 @@ internal class ScalableAudioWaveformTest : FunSpec({
             )
         ) {
             val pngTempFile = tempfile(suffix = ".png")
-            ScalableAudioWaveform(1, it).createImage(pngTempFile, Color.RED, Color.BLUE, 780, 335)
+            ScalableAudioWaveform(1, it).createImage(pngTempFile, Color.RED, Color.BLUE, 780, 335, testDispatcher)
             pngTempFile.exists() shouldBe true
 
             pngTempFile.extension shouldBe "png"
@@ -53,7 +58,7 @@ internal class ScalableAudioWaveformTest : FunSpec({
 
         val exception =
             shouldThrow<AudioWaveformProcessingException> {
-                ScalableAudioWaveform(1, corruptedFile.toPath()).createImage(pngTempFile, Color.RED, Color.BLUE, 780, 335)
+                ScalableAudioWaveform(1, corruptedFile.toPath()).createImage(pngTempFile, Color.RED, Color.BLUE, 780, 335, testDispatcher)
             }
 
         exception.message shouldContain "Error processing waveform"

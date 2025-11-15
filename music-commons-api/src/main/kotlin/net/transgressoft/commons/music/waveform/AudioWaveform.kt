@@ -21,6 +21,8 @@ import net.transgressoft.commons.entity.ReactiveEntity
 import java.awt.Color
 import java.io.File
 import java.nio.file.Path
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 
 /**
  * Represents an audio waveform with capabilities to generate amplitude data and visual representations.
@@ -40,5 +42,12 @@ interface AudioWaveform : ReactiveEntity<Int, AudioWaveform> {
     /**
      * Creates a visual image of the waveform with the specified colors and dimensions.
      */
-    suspend fun createImage(outputFile: File, waveformColor: Color, backgroundColor: Color, width: Int, height: Int)
+    suspend fun createImage(
+        outputFile: File,
+        waveformColor: Color,
+        backgroundColor: Color,
+        width: Int,
+        height: Int,
+        dispatcher: CoroutineDispatcher = Dispatchers.IO
+    )
 }
