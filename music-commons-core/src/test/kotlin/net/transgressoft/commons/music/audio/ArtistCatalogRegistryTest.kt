@@ -149,5 +149,25 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
                 }
             }
         }
+
+        When("getting an artist view") {
+            val expectedArtist = ImmutableArtist.of("Radiohead", CountryCode.UK)
+            val expectedAlbum = ImmutableAlbum("OK Computer", ImmutableArtist.of("Radiohead", CountryCode.UK))
+            val audioItems = Arb.albumAudioItems(expectedArtist, expectedAlbum).next()
+
+            registry.addAudioItems(audioItems)
+
+            then("the artist view should contain the artist and album views with audio items") {
+                registry.getArtistView(expectedArtist) shouldBePresent { artistView ->
+                    artistView.artist shouldBe expectedArtist
+                    artistView.albums.size shouldBe 1
+
+                    artistView.albums.forEach { albumView ->
+                        albumView.albumName shouldBe expectedAlbum.name
+                        albumView.audioItems shouldBe audioItems.toSet()
+                    }
+                }
+            }
+        }
     }
 })

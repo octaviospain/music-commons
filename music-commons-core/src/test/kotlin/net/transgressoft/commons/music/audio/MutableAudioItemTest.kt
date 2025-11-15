@@ -13,6 +13,8 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.date.shouldBeAfter
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import java.time.Duration
@@ -82,6 +84,19 @@ internal class MutableAudioItemTest : FunSpec({
                                 )
                         }
                 }
+
+            // Test toString() and compareTo() for coverage
+            audioItem.album.toString() shouldContain "ImmutableAlbum"
+            audioItem.album.toString() shouldContain "Help!"
+            audioItem.artist.toString() shouldContain "The Beatles"
+            audioItem.album.compareTo(ImmutableAlbum.UNKNOWN) shouldNotBe 0
+            audioItem.artist.compareTo(ImmutableArtist.UNKNOWN) shouldNotBe 0
+            audioItem.album.label.compareTo(ImmutableLabel.UNKNOWN) shouldNotBe 0
+
+            // Test AudioFileType extension and toString() for coverage
+            val fileExtension = audioItem.path.extension
+            audioItem.path.extension.toAudioFileType().toString() shouldBe fileExtension
+            audioItem.path.extension.toAudioFileType().extension shouldBe fileExtension
 
             json.encodeToString(AudioItemSerializer, audioItem).let {
                 it shouldEqualJson audioItem.asJsonValue()
@@ -153,5 +168,20 @@ internal class MutableAudioItemTest : FunSpec({
 
             decodedAudioItem.coverImageBytes shouldBe testCoverBytes
         }
+    }
+
+    test("AudioItemManipulationException has proper message and cause") {
+        val testMessage = "Test error message"
+        val testCause = RuntimeException("Test cause")
+
+        val exceptionWithCause = AudioItemManipulationException(testMessage, testCause)
+        exceptionWithCause.message shouldBe testMessage
+        exceptionWithCause.cause shouldBe testCause
+        exceptionWithCause.toString()
+
+        val exceptionWithoutCause = AudioItemManipulationException(testMessage)
+        exceptionWithoutCause.message shouldBe testMessage
+        exceptionWithoutCause.cause shouldBe null
+        exceptionWithoutCause.toString()
     }
 })

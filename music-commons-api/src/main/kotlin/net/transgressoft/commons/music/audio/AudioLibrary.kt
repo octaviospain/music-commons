@@ -59,7 +59,7 @@ interface AudioLibrary<I: ReactiveAudioItem<I>>: Repository<Int, I>, Flow.Publis
      * The files are processed in batches of 500 for optimal performance.
      */
     fun createFromFileBatchAsync(audioItemPaths: Collection<Path>, dispatcher: CoroutineDispatcher): CompletableFuture<List<I>> {
-        val batchSize = 500 // TODO Parameterize this magic constant for customization
+        val batchSize = 500 // TODO #4 Parameterize this magic constant for customization
         return CoroutineScope(dispatcher).future {
             audioItemPaths.chunked(batchSize).map { batch ->
                 async {
