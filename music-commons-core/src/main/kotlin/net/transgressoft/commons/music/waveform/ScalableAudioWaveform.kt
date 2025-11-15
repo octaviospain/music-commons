@@ -42,7 +42,7 @@ import kotlin.io.path.extension
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToInt
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -182,7 +182,7 @@ class ScalableAudioWaveform(
             }
         }
 
-    override suspend fun createImage(outputFile: File, waveformColor: Color, backgroundColor: Color, width: Int, height: Int) {
+    override suspend fun createImage(outputFile: File, waveformColor: Color, backgroundColor: Color, width: Int, height: Int, dispatcher: CoroutineDispatcher) {
         check(width > 0) { "Width must be greater than 0" }
         check(height > 0) { "Height must be greater than 0" }
 
@@ -205,7 +205,7 @@ class ScalableAudioWaveform(
                 }
             }
 
-        withContext(Dispatchers.IO) {
+        withContext(dispatcher) {
             ImageIO.write(bufferedImage, "png", outputFile)
         }
     }
