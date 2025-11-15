@@ -5,11 +5,13 @@ import net.transgressoft.commons.music.audio.AudioFileTagType.FLAC
 import net.transgressoft.commons.music.audio.AudioFileTagType.ID3_V_24
 import net.transgressoft.commons.music.audio.AudioFileTagType.MP4_INFO
 import net.transgressoft.commons.music.audio.AudioFileTagType.WAV
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import java.awt.Color
@@ -42,5 +44,20 @@ internal class ScalableAudioWaveformTest : FunSpec({
             bufferedImage.width shouldBe 780
             bufferedImage.height shouldBe 335
         }
+    }
+
+    test("Throws AudioWaveformProcessingException when creating waveform from corrupted file") {
+        val corruptedFile = tempfile(suffix = ".mp3")
+        corruptedFile.writeText("This is not a valid mp3 file")
+        val pngTempFile = tempfile(suffix = ".png")
+
+        val exception =
+            shouldThrow<AudioWaveformProcessingException> {
+                ScalableAudioWaveform(1, corruptedFile.toPath()).createImage(pngTempFile, Color.RED, Color.BLUE, 780, 335)
+            }
+
+        exception.message shouldContain "Error processing waveform"
+        exception.cause shouldNotBe null
+        exception.toString()
     }
 })

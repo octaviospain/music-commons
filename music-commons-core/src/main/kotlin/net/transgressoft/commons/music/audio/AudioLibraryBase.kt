@@ -46,7 +46,7 @@ abstract class AudioLibraryBase<I : ReactiveAudioItem<I>>(
         }
     }
 
-    // TODO figure out how do unsubscribe from the repository when it is closed
+    // TODO #5 figure out how do unsubscribe from the repository when it is closed
     private val subscription =
         repository.subscribe { event ->
             when (event.type) {
