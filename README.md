@@ -38,7 +38,7 @@ This modular design enables you to:
 ## Requirements
 
 - **Java**: 17 or higher
-- **Kotlin**: 2.1.10 (or compatible version)
+- **Kotlin**: 2.2.21 (or compatible version)
 - **JavaFX**: 22.0.1 or higher (only required for `music-commons-fx` module)
 
 ## Key Features
