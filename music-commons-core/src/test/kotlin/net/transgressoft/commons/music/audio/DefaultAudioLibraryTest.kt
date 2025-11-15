@@ -155,4 +155,40 @@ internal class DefaultAudioLibraryTest: StringSpec({
 
         result.forEach { audioItem -> jsonObject shouldContainAudioItem audioItem }
     }
+
+    "Artist catalog registry should be populated when loading from existing repository" {
+        // Create some audio items and save them to the JSON file
+        val theBeatles = ImmutableArtist.of("The Beatles")
+        val abbeyRoad = ImmutableAlbum("Abbey Road", theBeatles)
+        val albumAudioFiles = Arb.virtualAlbumAudioFiles(theBeatles, abbeyRoad).next()
+
+        albumAudioFiles.forEach(audioRepository::createFromFile)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val originalAudioItems = audioRepository.search { it.album.name == abbeyRoad.name }
+        originalAudioItems.size shouldBe albumAudioFiles.size
+
+        // Close the current repository and create a new one from the same JSON file
+        // This simulates loading from a persisted file
+        jsonFileRepository.close()
+
+        val loadedJsonFileRepository = JsonFileRepository(jsonFile, AudioItemMapSerializer)
+        val loadedAudioRepository = DefaultAudioLibrary(loadedJsonFileRepository)
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // The loaded repository should have the same number of items
+        loadedAudioRepository.size() shouldBe albumAudioFiles.size
+
+        // The artist catalog methods should work correctly for the loaded items
+        // This will fail because the artistCatalogRegistry is not populated on initialization
+        loadedAudioRepository.findAlbumAudioItems(theBeatles, abbeyRoad.name) shouldContainExactlyInAnyOrder originalAudioItems
+        loadedAudioRepository.getArtistCatalog(theBeatles) shouldBePresent { artistView ->
+            artistView.artist shouldBe theBeatles
+            artistView.albums.map { it.albumName }.shouldContainOnly(abbeyRoad.name)
+        }
+        loadedAudioRepository.containsAudioItemWithArtist(theBeatles.name) shouldBe true
+
+        loadedJsonFileRepository.close()
+    }
 })
