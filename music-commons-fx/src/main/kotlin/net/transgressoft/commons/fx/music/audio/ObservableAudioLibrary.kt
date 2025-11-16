@@ -28,7 +28,9 @@ import net.transgressoft.commons.persistence.Repository
 import javafx.application.Platform
 import javafx.beans.property.ReadOnlyBooleanProperty
 import javafx.beans.property.ReadOnlyListProperty
+import javafx.beans.property.ReadOnlySetProperty
 import javafx.beans.property.SimpleListProperty
+import javafx.beans.property.SimpleSetProperty
 import javafx.collections.FXCollections
 import javafx.collections.MapChangeListener
 import mu.KotlinLogging
@@ -69,15 +71,15 @@ class ObservableAudioLibrary(repository: Repository<Int, ObservableAudioItem>): 
                 if (event.isDelete()) {
                     event.entities.forEach {
                         observableAudioItemMap.remove(it.key)
-                        artistsProperty.remove(it.value.artist)
+                        if (observableAudioItemMap.values.none { audioItem -> audioItem.artist == it.value.artist }) {
+                            artistsProperty.remove(it.value.artist)
+                        }
                     }
                 } else {
                     observableAudioItemMap.putAll(event.entities)
                     event.entities.values
                         .map(ObservableAudioItem::artistsInvolved)
-                        .flatten()
-                        .filterNot(artistsProperty::contains)
-                        .forEach(artistsProperty::add)
+                        .forEach { artistsProperty.addAll(it) }
                 }
             }
         }
@@ -90,13 +92,12 @@ class ObservableAudioLibrary(repository: Repository<Int, ObservableAudioItem>): 
     val emptyLibraryProperty: ReadOnlyBooleanProperty = audioItemsProperty.emptyProperty()
 
     @get:JvmName("artistsProperty")
-    val artistsProperty: ReadOnlyListProperty<Artist> =
-        SimpleListProperty(this, "artists", FXCollections.observableArrayList())
+    val artistsProperty: ReadOnlySetProperty<Artist> = SimpleSetProperty(this, "artists", FXCollections.observableSet())
 
     init {
         // Add all existing audio items to the observable collections on initialization
         runForAll {
-            observableAudioItemMap.put(it.id, it)
+            observableAudioItemMap[it.id] = it
             Platform.runLater { artistsProperty.addAll(it.artistsInvolved) }
         }
 

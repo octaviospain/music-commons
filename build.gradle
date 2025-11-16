@@ -47,7 +47,7 @@ scmVersion {
     }
     useHighestVersion = true
     ignoreUncommittedChanges = false
-    versionIncrementer 'incrementMinor'
+    versionIncrementer 'incrementPatch'
 
     checks {
         uncommittedChanges = false
