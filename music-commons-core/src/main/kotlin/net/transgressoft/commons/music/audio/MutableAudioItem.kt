@@ -58,6 +58,14 @@ import kotlinx.serialization.Transient
 const val UNASSIGNED_ID = 0
 
 /**
+ * Marker interface representing a concrete audio item implementation.
+ *
+ * Extends [ReactiveAudioItem] with self-referential type parameter to enable
+ * type-safe operations while providing a non-generic entry point for audio item usage.
+ */
+interface AudioItem : ReactiveAudioItem<AudioItem>
+
+/**
  * Mutable implementation of [AudioItem] that reads and writes audio file metadata.
  *
  * Reads metadata from audio files using JAudioTagger library and provides reactive
@@ -74,7 +82,7 @@ const val UNASSIGNED_ID = 0
 internal class MutableAudioItem(
     override val path: Path,
     override val id: Int = UNASSIGNED_ID
-) : AudioItem, Comparable<AudioItem>, ReactiveEntityBase<Int, AudioItem>() {
+) : AudioItem, ReactiveEntityBase<Int, AudioItem>() {
 
     @Transient
     private val logger = KotlinLogging.logger {}

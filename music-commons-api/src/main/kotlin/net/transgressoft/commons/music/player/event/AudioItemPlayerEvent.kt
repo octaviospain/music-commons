@@ -27,7 +27,7 @@ import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PL
  */
 sealed class AudioItemPlayerEvent : TransEvent<AudioItemPlayerEvent.Type> {
 
-    abstract override val entities: Map<*, ReactiveAudioItem<*>>
+    abstract override val entities: Map<Comparable<*>, ReactiveAudioItem<*>>
 
     /**
      * Types of audio player events.
@@ -48,6 +48,6 @@ sealed class AudioItemPlayerEvent : TransEvent<AudioItemPlayerEvent.Type> {
         val audioItem: ReactiveAudioItem<*>
     ): AudioItemPlayerEvent() {
         override val type: Type = PLAYED
-        override val entities: Map<*, ReactiveAudioItem<*>> = mapOf(audioItem.id to audioItem)
+        override val entities: Map<Comparable<*>, ReactiveAudioItem<*>> = mapOf(audioItem.id to audioItem)
     }
 }

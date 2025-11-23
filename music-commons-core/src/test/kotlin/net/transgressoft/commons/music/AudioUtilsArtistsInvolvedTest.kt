@@ -1,5 +1,6 @@
 package net.transgressoft.commons.music
 
+import net.transgressoft.commons.music.AudioUtils
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe

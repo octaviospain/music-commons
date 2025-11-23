@@ -30,13 +30,13 @@ import net.transgressoft.commons.music.playlist.ReactiveAudioPlaylist
  */
 open class AudioPlaylistEventSubscriber<P: ReactiveAudioPlaylist<I, P>, I: ReactiveAudioItem<I>>(
     name: String
-): TransEventSubscriberBase<P, CrudEvent.Type, CrudEvent<Int, out P>>(name) {
+): TransEventSubscriberBase<P, CrudEvent.Type, CrudEvent<Int, P>>(name) {
 
     override fun toString() =
         buildString {
             append("AudioPlaylistEventSubscriber(name=$name")
             subscription?.let {
-                append(", soruce=${it.source}")
+                append(", source=${it.source}")
             }
             append(")")
         }

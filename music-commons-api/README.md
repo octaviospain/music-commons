@@ -14,7 +14,7 @@ Core music library abstractions for managing audio items and their metadata.
 - **`ReactiveAudioItem`** - Audio file representation with comprehensive metadata (artist, album, genre, etc.)
 - **`AudioLibrary`** - Repository for CRUD operations on audio items with reactive event publishing
 - **`Artist`**, **`Album`**, **`Label`**, **`Genre`** - Metadata domain models
-- **`ArtistView`**, **`AlbumView`** - Aggregated views of artist catalogs and albums
+- **`ArtistCatalog`**, **`Albumset`** - Aggregated views of an artist album and its audio items
 - **`AudioFileType`** - Supported formats: MP3, M4A, WAV, FLAC
 
 ### `player`

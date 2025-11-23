@@ -34,7 +34,7 @@ import kotlinx.coroutines.asCoroutineDispatcher
  */
 interface AudioWaveformRepository<W : AudioWaveform, I : ReactiveAudioItem<I>> : Repository<Int, W> {
 
-    val audioItemEventSubscriber: TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, out I>>
+    val audioItemEventSubscriber: TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>>
 
     /**
      * Retrieves an existing waveform or creates a new one asynchronously for the given audio item.

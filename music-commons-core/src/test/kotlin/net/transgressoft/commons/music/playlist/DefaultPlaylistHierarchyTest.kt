@@ -1,6 +1,7 @@
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.event.ReactiveScope
+import net.transgressoft.commons.music.audio.ArtistCatalog
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioLibrary
 import net.transgressoft.commons.music.audio.audioItem
@@ -84,7 +85,7 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         val jsonFileRepository = JsonFileRepository(jsonFile, AudioPlaylistMapSerializer)
 
         val audioLibrary =
-            mockk<AudioLibrary<AudioItem>> {
+            mockk<AudioLibrary<AudioItem, ArtistCatalog<AudioItem>>> {
                 every { findById(eq(453374921)) } returns Optional.of(audioItem)
             }
 

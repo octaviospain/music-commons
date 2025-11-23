@@ -262,5 +262,7 @@ internal class DummyAudioItem(
 
     override fun subscribe(p0: Flow.Subscriber<in EntityChangeEvent<Int, AudioItem>>?) = throw IllegalStateException()
 
+    override fun compareTo(other: AudioItem): Int = throw IllegalStateException()
+
     override fun clone(): DummyAudioItem = DummyAudioItem(id)
 }
