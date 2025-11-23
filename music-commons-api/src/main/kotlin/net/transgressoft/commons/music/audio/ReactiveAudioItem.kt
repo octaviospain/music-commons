@@ -34,7 +34,7 @@ import kotlinx.serialization.json.put
  * This interface extends [ReactiveEntity] to provide reactive capabilities for audio items,
  * allowing observation of changes to metadata and other properties.
  */
-interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I> {
+interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I>, Comparable<I> {
 
     val path: Path
     val fileName: String

@@ -22,6 +22,7 @@ import net.transgressoft.commons.event.CrudEvent.Type.DELETE
 import net.transgressoft.commons.event.CrudEvent.Type.UPDATE
 import net.transgressoft.commons.event.StandardCrudEvent.Update
 import net.transgressoft.commons.music.audio.Artist
+import net.transgressoft.commons.music.audio.ArtistCatalog
 import net.transgressoft.commons.music.audio.AudioLibraryBase
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
 import net.transgressoft.commons.persistence.Repository
@@ -43,7 +44,9 @@ import java.nio.file.Path
  * update when the library changes. Provides JavaFX properties for direct binding to UI components,
  * enabling reactive table views, list views, and other JavaFX controls without manual synchronization.
  */
-class ObservableAudioLibrary(repository: Repository<Int, ObservableAudioItem>): AudioLibraryBase<ObservableAudioItem>(repository) {
+class ObservableAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
+: AudioLibraryBase<ObservableAudioItem, ArtistCatalog<ObservableAudioItem>>(repository) {
+
     private val logger = KotlinLogging.logger {}
 
     private val observableAudioItemMap =

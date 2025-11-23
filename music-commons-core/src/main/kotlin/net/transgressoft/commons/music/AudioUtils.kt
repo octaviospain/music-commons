@@ -17,12 +17,11 @@
 
 package net.transgressoft.commons.music
 
-import net.transgressoft.commons.music.audio.Album
-import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import org.jetbrains.kotlin.com.google.common.base.CharMatcher
 import org.jetbrains.kotlin.com.google.common.base.Splitter
 import java.util.regex.Pattern
+import kotlin.collections.iterator
 
 /**
  * Utility object providing helper functions for audio item operations.
@@ -90,9 +89,9 @@ object AudioUtils {
         }
 
     /**
-     * Returns the names of the artists that are involved in the fields of an [AudioItem],
-     * that is, every artist that could appear in the [AudioItem.artist] variable,
-     * or [Album.albumArtist] or in the [AudioItem.title].
+     * Returns the names of the artists that are involved in the fields of an [net.transgressoft.commons.music.audio.AudioItem],
+     * that is, every artist that could appear in the [ReactiveAudioItem.artist] variable,
+     * or [net.transgressoft.commons.music.audio.Album.albumArtist] or in the [ReactiveAudioItem.title].
      *
      * <h2>Example</h2>
      *
@@ -168,7 +167,7 @@ object AudioUtils {
     }
 
     /**
-     * Returns the names of the artists that are in a given string which is the title of an [AudioItem].
+     * Returns the names of the artists that are in a given string which is the title of an [net.transgressoft.commons.music.audio.AudioItem].
      * For example:
      *
      * The following audio item name field:

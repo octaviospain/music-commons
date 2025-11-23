@@ -32,7 +32,7 @@ import java.util.concurrent.Flow
  */
 interface PlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPlaylist<I, P>>: Repository<Int, P>, Flow.Publisher<CrudEvent<Int, P>> {
 
-    val audioItemEventSubscriber: TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, out I>>
+    val audioItemEventSubscriber: TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>>
 
     @Throws(IllegalArgumentException::class)
     fun createPlaylist(name: String): P

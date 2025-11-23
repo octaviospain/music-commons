@@ -67,7 +67,7 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
         return id
     }
 
-    override val audioItemEventSubscriber: TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, out I>> =
+    override val audioItemEventSubscriber: TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>> =
         AudioItemEventSubscriber<I>(this.toString()).apply {
             addOnNextEventAction(DELETE) { event ->
                 runForAll {
@@ -145,7 +145,7 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
             }
         }
 
-    override fun findByName(name: String): Optional<P> = findFirst { it.name == name }
+    override fun findByName(name: String): Optional<out P> = findFirst { it.name == name }
 
     override fun findParentPlaylist(playlist: ReactiveAudioPlaylist<I, P>): Optional<P> =
         if (playlistsHierarchyMultiMap.containsValue(playlist)) {

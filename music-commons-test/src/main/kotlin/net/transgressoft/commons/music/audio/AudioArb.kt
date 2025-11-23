@@ -17,6 +17,7 @@
 
 package net.transgressoft.commons.music.audio
 
+import net.transgressoft.commons.music.AudioUtils.audioItemTrackDiscNumberComparator
 import net.transgressoft.commons.music.AudioUtils.beautifyArtistName
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.property.Arb
@@ -61,7 +62,7 @@ fun Arb.Companion.albumAudioItems(
                     }.bind()
                 )
             }
-        }
+        }.sortedWith(audioItemTrackDiscNumberComparator())
     }
 
 fun Arb.Companion.audioItem(audioItem: AudioItem, changeAction: AudioItemChange.() -> Unit = {}): Arb<AudioItem> =
@@ -97,6 +98,10 @@ fun Arb.Companion.audioItem(audioItem: AudioItem, changeAction: AudioItemChange.
             every { bpm } returns (change.bpm ?: audioItem.bpm)
             every { coverImageBytes } returns (change.coverImageBytes ?: audioItem.coverImageBytes)
 
+            every { this@mockk.compareTo(any()) } answers {
+                val other = firstArg<AudioItem>()
+                audioItemTrackDiscNumberComparator<AudioItem>().compare(this@mockk, other)
+            }
             every { this@mockk.artistsInvolved } answers { callOriginal() }
             every { this@mockk.equals(any()) } answers { callOriginal() }
             every { this@mockk.hashCode() } answers { callOriginal() }
@@ -140,6 +145,10 @@ fun Arb.Companion.audioItem(attributes: AudioItemTestAttributes): Arb<AudioItem>
             every { this@mockk.artistsInvolved } answers { callOriginal() }
             every { this@mockk.asJsonKeyValue() } answers { callOriginal() }
             every { this@mockk.asJsonValue() } answers { callOriginal() }
+            every { this@mockk.compareTo(any()) } answers {
+                val other = firstArg<AudioItem>()
+                audioItemTrackDiscNumberComparator<AudioItem>().compare(this@mockk, other)
+            }
             every { this@mockk.equals(any()) } answers { callOriginal() }
             every { this@mockk.hashCode() } answers { callOriginal() }
             every { this@mockk.toString() } answers { callOriginal() }

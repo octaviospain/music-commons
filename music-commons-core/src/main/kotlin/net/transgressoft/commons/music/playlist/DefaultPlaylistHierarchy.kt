@@ -21,6 +21,7 @@ import net.transgressoft.commons.entity.toIds
 import net.transgressoft.commons.event.CrudEvent.Type.CREATE
 import net.transgressoft.commons.event.CrudEvent.Type.DELETE
 import net.transgressoft.commons.event.CrudEvent.Type.UPDATE
+import net.transgressoft.commons.music.audio.ArtistCatalog
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemManipulationException
 import net.transgressoft.commons.music.audio.AudioLibrary
@@ -41,7 +42,7 @@ import kotlinx.serialization.modules.subclass
 class DefaultPlaylistHierarchy(
     repository: Repository<Int, MutableAudioPlaylist> = VolatileRepository(),
     // Only needed when the provided repository is not empty
-    audioLibrary: AudioLibrary<AudioItem>? = null
+    audioLibrary: AudioLibrary<AudioItem, ArtistCatalog<AudioItem>>? = null
 ): PlaylistHierarchyBase<AudioItem, MutableAudioPlaylist>(repository) {
     private val logger = KotlinLogging.logger {}
 
@@ -71,7 +72,7 @@ class DefaultPlaylistHierarchy(
 
     private fun mapAudioItemsFromIds(
         audioItemIds: List<Int>,
-        audioLibrary: AudioLibrary<AudioItem>
+        audioLibrary: AudioLibrary<AudioItem, ArtistCatalog<AudioItem>>
     ) = audioItemIds.map {
         audioLibrary.findById(it)
             .orElseThrow { AudioItemManipulationException("AudioItem with id $it not found during deserialization") }

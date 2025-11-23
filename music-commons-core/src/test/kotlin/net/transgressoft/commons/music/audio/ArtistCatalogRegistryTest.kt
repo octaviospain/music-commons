@@ -4,6 +4,7 @@ import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.should
@@ -42,7 +43,7 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
                     artistCatalog should {
                         it.artist shouldBe ImmutableArtist.of("Moby", CountryCode.US)
                         it.size shouldBe 1
-                        it.findAlbumAudioItems(expectedAlbum.name).shouldContainOnly(audioItem)
+                        it.albumAudioItems(expectedAlbum.name).shouldContainOnly(audioItem)
                     }
                 }
             }
@@ -64,7 +65,7 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
                         artistCatalog should {
                             it.artist shouldBe audioItem.artist
                             it.size shouldBe 1
-                            it.findAlbumAudioItems(expectedAlbum.name).shouldContainOnly(audioItem)
+                            it.albumAudioItems(expectedAlbum.name).shouldContainOnly(audioItem)
                         }
                     }
                 }
@@ -85,7 +86,7 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
                         artistCatalog should {
                             it.artist shouldBe ImmutableArtist.of("Bjork", CountryCode.IS)
                             it.size shouldBe 1
-                            it.findAlbumAudioItems(expectedAlbum.name).shouldContainOnly(audioItem)
+                            it.albumAudioItems(expectedAlbum.name).shouldContainOnly(audioItem)
                         }
                     }
                     registry.findFirst("Moby").isEmpty shouldBe true
@@ -104,12 +105,12 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
 
                 then("the album in the artist catalog should be updated") {
                     eventually(100.milliseconds) {
-                        registry.findFirst(audioItem.artist) shouldBePresent { artistCatalog ->
+                        registry.findById(audioItem.artist) shouldBePresent { artistCatalog ->
                             artistCatalog.artist shouldBe audioItem.artist
                             artistCatalog should {
                                 it.artist shouldBe audioItem.artist
                                 it.size shouldBe 1
-                                it.findAlbumAudioItems(audioItem.album.name).shouldContainOnly(audioItem)
+                                it.albumAudioItems(audioItem.album.name).shouldContainOnly(audioItem)
                             }
                         }
                     }
@@ -121,7 +122,7 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
 
                 then("the artist catalog should not contain the artist and album with the audio item") {
                     registry.isEmpty shouldBe true
-                    registry.findFirst(audioItem.artist).isEmpty shouldBe true
+                    registry.findById(audioItem.artist).isEmpty shouldBe true
                     registry.findAlbumAudioItems(audioItem.artist, audioItem.album.name).isEmpty() shouldBe true
                 }
             }
@@ -144,27 +145,27 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
                     artistCatalog should {
                         it.artist shouldBe expectedArtist
                         it.size shouldBe pixiesAudioItems.size
-                        it.findAlbumAudioItems(expectedAlbum.name).shouldContainOnly(pixiesAudioItems)
+                        it.albumAudioItems(expectedAlbum.name).shouldContainOnly(pixiesAudioItems)
                     }
                 }
             }
         }
 
-        When("getting an artist view") {
+        When("getting an artist album set") {
             val expectedArtist = ImmutableArtist.of("Radiohead", CountryCode.UK)
             val expectedAlbum = ImmutableAlbum("OK Computer", ImmutableArtist.of("Radiohead", CountryCode.UK))
             val audioItems = Arb.albumAudioItems(expectedArtist, expectedAlbum).next()
 
             registry.addAudioItems(audioItems)
 
-            then("the artist view should contain the artist and album views with audio items") {
-                registry.getArtistView(expectedArtist) shouldBePresent { artistView ->
-                    artistView.artist shouldBe expectedArtist
-                    artistView.albums.size shouldBe 1
+            then("the album set should contain the artist and album views with audio items") {
+                registry.findById(expectedArtist) shouldBePresent { artistCatalog ->
+                    artistCatalog.artist shouldBe expectedArtist
+                    artistCatalog.albums.size shouldBe 1
 
-                    artistView.albums.forEach { albumView ->
-                        albumView.albumName shouldBe expectedAlbum.name
-                        albumView.audioItems shouldBe audioItems.toSet()
+                    artistCatalog.albums.forEach { albumSet ->
+                        albumSet.albumName shouldBe expectedAlbum.name
+                        albumSet shouldContainExactly audioItems
                     }
                 }
             }

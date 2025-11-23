@@ -18,7 +18,7 @@
 package net.transgressoft.commons.music.audio
 
 /**
- * Represents a music album with its associated metadata and artist information.
+ * Represents the album attributes of an audio item's album
  */
 interface Album : Comparable<Album> {
     val name: String
@@ -26,4 +26,20 @@ interface Album : Comparable<Album> {
     val isCompilation: Boolean
     val year: Short?
     val label: Label
+}
+
+/**
+ * Represents an album as a list of audio items.
+ *
+ * This interface extends [List] to provide convenient access to all audio items
+ * on an album while also exposing the album's name. Instances are typically
+ * immutable snapshots of an album's contents at a point in time.
+ *
+ * @param I The type of audio items in this album set
+ */
+interface AlbumSet<I : ReactiveAudioItem<I>> : List<I>, Comparable<AlbumSet<I>> {
+    /**
+     * The name of the album.
+     */
+    val albumName: String
 }

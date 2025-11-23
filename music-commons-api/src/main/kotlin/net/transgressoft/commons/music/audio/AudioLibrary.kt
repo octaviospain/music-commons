@@ -18,6 +18,7 @@
 package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.event.CrudEvent
+import net.transgressoft.commons.event.TransEventPublisher
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
 import net.transgressoft.commons.persistence.Repository
 import java.nio.file.Path
@@ -37,20 +38,80 @@ import kotlinx.coroutines.future.future
  * Represents a library of audio items with repository capabilities and reactive event publishing.
  *
  * This interface extends [Repository] for CRUD operations and [Flow.Publisher] to publish
- * events when audio items are created, updated, or deleted.
+ * events when audio items are created, updated, or deleted. It also provides artist-centric
+ * views through catalogs that organize items by artist and album.
+ *
+ * @param I The type of audio items stored in this library
+ * @param AC The type of artist catalog exposed by this library
  */
-interface AudioLibrary<I: ReactiveAudioItem<I>>: Repository<Int, I>, Flow.Publisher<CrudEvent<Int, I>> {
+interface AudioLibrary<I: ReactiveAudioItem<I>, AC: ReactiveArtistCatalog<AC, I>>: Repository<Int, I>, Flow.Publisher<CrudEvent<Int, I>> {
 
+    /**
+     * Subscriber for receiving player events such as when audio items are played.
+     */
     val playerSubscriber: Flow.Subscriber<AudioItemPlayerEvent>
 
+    /**
+     * Publisher for artist catalog events, enabling consumers to subscribe to changes
+     * in artist catalogs (creation, updates, deletion).
+     *
+     * Consumers can subscribe to be notified when:
+     * - A new artist catalog is created (new artist added to an audio library)
+     * - An artist catalog is updated (audio items added/removed for an artist)
+     * - An artist catalog is deleted (all items for an artist removed from an audio library)
+     *
+     * The published catalogs are immutable views that update reactively in the background.
+     */
+    val artistCatalogPublisher: TransEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>>
+
+    /**
+     * Creates an audio item from the file at the specified path.
+     *
+     * @param audioItemPath Path to the audio file
+     * @return The created audio item with populated metadata
+     */
     fun createFromFile(audioItemPath: Path): I
 
+    /**
+     * Finds all audio items for a specific album by an artist.
+     *
+     * @param artist The artist to search for
+     * @param albumName The name of the album
+     * @return Set of audio items matching the artist and album, or empty set if not found
+     */
     fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I>
 
-    fun getArtistCatalog(artist: Artist): Optional<ArtistView<I>>
+    /**
+     * Retrieves the artist catalog for the specified artist.
+     *
+     * @param artist The artist to get the catalog for
+     * @return Optional containing the artist catalog if found, or empty if artist not in library
+     */
+    fun getArtistCatalog(artist: Artist): Optional<out AC>
 
+    /**
+     * Retrieves the first artist catalog matching the specified name.
+     *
+     * @param artistName The artist name to search for (case-insensitive substring match)
+     * @return Optional containing the first matching artist catalog, or empty if not found
+     */
+    fun getArtistCatalog(artistName: String): Optional<out AC>
+
+    /**
+     * Checks whether the library contains any audio item involving the specified artist.
+     *
+     * @param artistName The artist names to check for (case-insensitive)
+     * @return true if at least one audio item involves the artist, false otherwise
+     */
     fun containsAudioItemWithArtist(artistName: String): Boolean
 
+    /**
+     * Retrieves a random selection of audio items from the specified artist.
+     *
+     * @param artist The artist to get items from
+     * @param size Maximum number of random items to return (default: 100)
+     * @return List of randomly selected audio items from the artist
+     */
     fun getRandomAudioItemsFromArtist(artist: Artist, size: Short = 100): List<I>
 
     /**
