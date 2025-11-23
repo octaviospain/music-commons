@@ -63,7 +63,7 @@ internal class MutableAudioItemTest : FunSpec({
         ) { filePath ->
             val date = LocalDateTime.now()
             val audioItem =
-                MutableAudioItem(filePath).apply {
+                MutableAudioItem(filePath, UNASSIGNED_ID).apply {
                     path shouldBe filePath
                     fileName shouldBe filePath.fileName.toString()
                     length shouldBe filePath.toFile().length()

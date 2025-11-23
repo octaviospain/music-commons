@@ -66,6 +66,7 @@ object VirtualFiles {
                             this.artist = arbitraryArtist
                             this.album = arbitraryAlbum
                             this.trackNumber = (it.plus(1)).toShort()
+                            this.discNumber = 1
                             this.coverImageBytes = testCoverBytes
                         }.bind()
                     )
