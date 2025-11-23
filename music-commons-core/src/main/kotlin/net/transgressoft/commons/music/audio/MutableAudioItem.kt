@@ -63,7 +63,10 @@ const val UNASSIGNED_ID = 0
  * Extends [ReactiveAudioItem] with self-referential type parameter to enable
  * type-safe operations while providing a non-generic entry point for audio item usage.
  */
-interface AudioItem : ReactiveAudioItem<AudioItem>
+interface AudioItem : ReactiveAudioItem<AudioItem> {
+
+    override fun clone(): AudioItem
+}
 
 /**
  * Mutable implementation of [AudioItem] that reads and writes audio file metadata.
@@ -97,7 +100,16 @@ internal class MutableAudioItem(
         )
 
     // Constructor only for testing purposes
-    internal constructor(audioItem: AudioItem) : this(audioItem.path, audioItem.id)
+    internal constructor(path: Path) : this(path, nextId())
+
+    internal companion object {
+        private var testId: Int? = null
+
+        fun nextId(): Int {
+            testId = testId?.plus(1) ?: 1
+            return testId!!
+        }
+    }
 
     // Constructor for deserialization
     internal constructor(

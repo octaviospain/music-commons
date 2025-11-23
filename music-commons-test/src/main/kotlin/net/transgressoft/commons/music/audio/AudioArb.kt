@@ -58,6 +58,7 @@ fun Arb.Companion.albumAudioItems(
                         this.artist = arbitraryArtist
                         this.album = arbitraryAlbum
                         this.trackNumber = (it.plus(1)).toShort()
+                        this.discNumber = 1
                         this.coverImageBytes = null
                     }.bind()
                 )
@@ -71,6 +72,7 @@ fun Arb.Companion.audioItem(audioItem: AudioItem, changeAction: AudioItemChange.
         mockk<AudioItem> {
             // immutable properties
             every { id } returns audioItem.id
+            every { uniqueId } answers { callOriginal() }
             every { path } returns audioItem.path
             every { duration } returns audioItem.duration
             every { bitRate } returns audioItem.bitRate
@@ -121,6 +123,7 @@ fun Arb.Companion.audioItem(attributes: AudioItemTestAttributes): Arb<AudioItem>
         mockk<AudioItem> {
             // immutable properties
             every { id } returns attributes.id
+            every { uniqueId } answers { callOriginal() }
             every { path } returns attributes.path
             every { duration } returns attributes.duration
             every { bitRate } returns attributes.bitRate
