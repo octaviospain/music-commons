@@ -18,6 +18,7 @@
 package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.music.AudioUtils
+import net.transgressoft.commons.music.AudioUtils.audioItemTrackDiscNumberComparator
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.fail
 import io.kotest.assertions.json.shouldEqualJson
@@ -110,4 +111,11 @@ infix fun JsonObject.shouldContainAudioItem(audioItem: AudioItem) {
 
 infix fun File.shouldEqual(audioItemJson: String) {
     this.readText() shouldEqualJson audioItemJson
+}
+
+fun List<AudioItem>.shouldBeOrdered() {
+    val comparator = audioItemTrackDiscNumberComparator<AudioItem>()
+    zipWithNext().all { (current, next) ->
+        comparator.compare(current, next) <= 0
+    } shouldBe true
 }

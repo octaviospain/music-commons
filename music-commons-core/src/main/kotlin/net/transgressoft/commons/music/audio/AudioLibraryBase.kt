@@ -58,7 +58,7 @@ abstract class AudioLibraryBase<I, AC: ReactiveArtistCatalog<in AC, I>>(protecte
 
     init {
         if (repository.isEmpty.not()) {
-            repository.runForAll { artistCatalogRegistry.addAudioItems(listOf(it)) }
+            repository.runForAll { artistCatalogRegistry.addAudioItem(it) }
         }
     }
 

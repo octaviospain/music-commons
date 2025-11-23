@@ -1,5 +1,9 @@
 package net.transgressoft.commons.music.audio
 
+import net.transgressoft.commons.event.CrudEvent
+import net.transgressoft.commons.event.CrudEvent.Type.CREATE
+import net.transgressoft.commons.event.CrudEvent.Type.DELETE
+import net.transgressoft.commons.event.CrudEvent.Type.UPDATE
 import net.transgressoft.commons.event.ReactiveScope
 import net.transgressoft.commons.music.AudioUtils
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAlbumAudioFiles
@@ -190,5 +194,153 @@ internal class DefaultAudioLibraryTest: StringSpec({
         loadedAudioRepository.containsAudioItemWithArtist(theBeatles.name) shouldBe true
 
         loadedJsonFileRepository.close()
+    }
+
+    "Artist catalog publisher emits CREATE events when audio items are added" {
+        val receivedEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
+
+        audioRepository.artistCatalogPublisher.subscribe(CREATE) { event ->
+            receivedEvents.add(event)
+        }
+
+        val audioFile = Arb.virtualAudioFile().next()
+        val audioItem = audioRepository.createFromFile(audioFile)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        receivedEvents.size shouldBe 1
+        receivedEvents[0].entities.size shouldBe 1
+        receivedEvents[0].entities.values.first().artist shouldBe audioItem.artist
+    }
+
+    "Artist catalog publisher does NOT emit UPDATE events when single audio item ordering is modified" {
+        val receivedEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
+
+        val audioFile = Arb.virtualAudioFile().next()
+        val audioItem = audioRepository.createFromFile(audioFile)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        audioRepository.artistCatalogPublisher.subscribe(UPDATE) { receivedEvents.add(it) }
+
+        // Modify track number on single item - should NOT trigger catalog UPDATE (no reordering possible)
+        audioRepository.runForSingle(audioItem.id) { it.trackNumber = 5 }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        receivedEvents.size shouldBe 0
+    }
+
+    "Artist catalog publisher emits UPDATE events when multiple audio items are reordered" {
+        val receivedEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
+
+        val theBeatles = ImmutableArtist.of("The Beatles")
+        val abbeyRoad = ImmutableAlbum("Abbey Road", theBeatles)
+
+        val audioFile1 =
+            Arb.virtualAudioFile {
+                artist = theBeatles
+                album = abbeyRoad
+                trackNumber = 1
+                discNumber = 1
+            }.next()
+        val audioItem1 = audioRepository.createFromFile(audioFile1)
+
+        val audioFile2 =
+            Arb.virtualAudioFile {
+                artist = theBeatles
+                album = abbeyRoad
+                trackNumber = 2
+                discNumber = 1
+            }.next()
+        val audioItem2 = audioRepository.createFromFile(audioFile2)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        audioRepository.artistCatalogPublisher.subscribe(UPDATE) { receivedEvents.add(it) }
+
+        // Modify track number on first item to make it last - should trigger catalog UPDATE (reordering)
+        audioRepository.runForSingle(audioItem1.id) { it.trackNumber = 5 }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        receivedEvents.size shouldBe 1
+        receivedEvents[0] should { event ->
+            event.entities.size shouldBe 1
+            event.entities.values.first() should { artistCatalog ->
+                artistCatalog.artist shouldBe theBeatles
+                artistCatalog.size shouldBe 2
+                artistCatalog.albumAudioItems(abbeyRoad.name) should { audioItems ->
+                    audioItems.size shouldBe 2
+                    // After reordering, audioItem1 should be last (highest track number)
+                    audioItems.last().id shouldBe audioItem1.id
+                    audioItems.last().trackNumber shouldBe 5
+                }
+            }
+        }
+    }
+
+    "Artist catalog publisher emits DELETE events when all artist items are removed" {
+        val receivedEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
+
+        val audioFile = Arb.virtualAudioFile().next()
+        val audioItem = audioRepository.createFromFile(audioFile)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        audioRepository.artistCatalogPublisher.subscribe(DELETE) { receivedEvents.add(it) }
+
+        audioRepository.removeAll(listOf(audioItem))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        receivedEvents.size shouldBe 1
+        receivedEvents[0].entities.size shouldBe 1
+        receivedEvents[0].entities.values.first().artist shouldBe audioItem.artist
+    }
+
+    "Artist catalog publisher emits events when artist changes between audio items" {
+        val createEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
+        val updateEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
+        val deleteEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
+
+        audioRepository.artistCatalogPublisher.subscribe(CREATE) { createEvents.add(it) }
+
+        audioRepository.artistCatalogPublisher.subscribe(UPDATE) { updateEvents.add(it) }
+
+        audioRepository.artistCatalogPublisher.subscribe(DELETE) { deleteEvents.add(it) }
+
+        val audioFile = Arb.virtualAudioFile().next()
+        val audioItem = audioRepository.createFromFile(audioFile)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val originalArtist = audioItem.artist
+        createEvents.size shouldBe 1
+
+        // Change artist - should delete old catalog and create new one
+        val newArtist = ImmutableArtist.of("New Artist")
+        audioRepository.runForSingle(audioItem.id) { it.artist = newArtist }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        createEvents.size shouldBe 2
+        createEvents[1].entities.values.first().artist shouldBe newArtist
+        deleteEvents.size shouldBe 1
+        deleteEvents[0].entities.values.first().artist shouldBe originalArtist
+    }
+
+    "Artist catalog publisher provides access to catalog albums and items" {
+        val receivedCatalogs = mutableListOf<ArtistCatalog<AudioItem>>()
+
+        audioRepository.artistCatalogPublisher.subscribe(CREATE) { event ->
+            receivedCatalogs.addAll(event.entities.values)
+        }
+
+        val theBeatles = ImmutableArtist.of("The Beatles")
+        val abbeyRoad = ImmutableAlbum("Abbey Road", theBeatles)
+        val albumFiles = Arb.virtualAlbumAudioFiles(theBeatles, abbeyRoad).next()
+
+        albumFiles.forEach { audioRepository.createFromFile(it) }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        receivedCatalogs.size shouldBe 1
+        receivedCatalogs[0] should { catalog ->
+            catalog.artist shouldBe theBeatles
+            catalog.albums.size shouldBe 1
+            catalog.albums.first().albumName shouldBe abbeyRoad.name
+            catalog.size shouldBe albumFiles.size
+        }
     }
 })

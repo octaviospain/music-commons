@@ -47,6 +47,8 @@ internal class ArtistCatalogRegistry<I>
         activateEvents(CREATE, UPDATE, DELETE)
     }
 
+    internal fun addAudioItem(audioItem: I): Boolean = addAudioItems(listOf(audioItem))
+
     /**
      * Adds audio items to their respective artist catalogs, creating new catalogs or
      * updating existing ones as needed.
@@ -61,7 +63,7 @@ internal class ArtistCatalogRegistry<I>
      * @param audioItems The audio items to add
      * @return true if any catalogs were created or updated, false otherwise
      */
-    fun addAudioItems(audioItems: Collection<I>): Boolean {
+    internal fun addAudioItems(audioItems: Collection<I>): Boolean {
         synchronized(this) {
             val catalogsBeforeUpdate = mutableListOf<MutableArtistCatalog<I>>()
 
@@ -108,11 +110,11 @@ internal class ArtistCatalogRegistry<I>
      * @param updatedAudioItem The audio item with updated properties
      * @param oldAudioItem The audio item before the update
      */
-    fun updateCatalog(updatedAudioItem: I, oldAudioItem: I) {
+    internal fun updateCatalog(updatedAudioItem: I, oldAudioItem: I) {
         synchronized(this) {
             if (artistOrAlbumChanged(updatedAudioItem, oldAudioItem)) {
-                val removed = removeAudioItems(listOf(oldAudioItem))
-                val added = addAudioItems(listOf(updatedAudioItem))
+                val removed = removeAudioItem(oldAudioItem)
+                val added = addAudioItem(updatedAudioItem)
                 check(removed || added) { "Update of an audio item in the catalog is supposed to happen at this point" }
 
                 log.debug { "Artist catalog of ${updatedAudioItem.artist.name} was updated as a result of updating $updatedAudioItem" }
@@ -122,8 +124,12 @@ internal class ArtistCatalogRegistry<I>
                         "Artist catalog for ${updatedAudioItem.artistUniqueId()} should exist already at this point"
                     )
                 val artistCatalogBeforeUpdate = artistCatalog.clone()
-                artistCatalog.mergeAudioItem(updatedAudioItem)
-                publisher.emitAsync(Update(artistCatalog, artistCatalogBeforeUpdate))
+                val reordered = artistCatalog.mergeAudioItem(updatedAudioItem)
+                // Only publish UPDATE when actual reordering occurred
+                // If the item is the only one in the catalog, no reordering can happen, so no catalog UPDATE event
+                if (reordered) {
+                    publisher.emitAsync(Update(artistCatalog, artistCatalogBeforeUpdate))
+                }
             }
         }
     }
@@ -140,6 +146,8 @@ internal class ArtistCatalogRegistry<I>
         return trackNumberChanged || discNumberChanged
     }
 
+    internal fun removeAudioItem(audioItem: I): Boolean = removeAudioItems(listOf(audioItem))
+
     /**
      * Removes audio items from their respective artist catalogs.
      *
@@ -150,7 +158,7 @@ internal class ArtistCatalogRegistry<I>
      * @param audioItems The audio items to remove
      * @return true if any catalogs were updated or deleted, false otherwise
      */
-    fun removeAudioItems(audioItems: Collection<I>): Boolean {
+    internal fun removeAudioItems(audioItems: Collection<I>): Boolean {
         synchronized(this) {
             val removedCatalogs = mutableListOf<MutableArtistCatalog<I>>()
             val catalogsBeforeUpdate = mutableListOf<MutableArtistCatalog<I>>()
@@ -190,10 +198,10 @@ internal class ArtistCatalogRegistry<I>
 
     private fun ReactiveAudioItem<I>.artistUniqueId() = ImmutableArtist.id(artist.name, artist.countryCode)
 
-    fun findFirst(artistName: String): Optional<MutableArtistCatalog<I>> =
+    internal fun findFirst(artistName: String): Optional<MutableArtistCatalog<I>> =
         Optional.ofNullable(entitiesById.entries.firstOrNull { it.key.name.lowercase().contains(artistName.lowercase()) }?.value)
 
-    fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I> = entitiesById[artist]?.albumAudioItems(albumName) ?: emptySet()
+    internal fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I> = entitiesById[artist]?.albumAudioItems(albumName) ?: emptySet()
 
     override fun toString() = "ArtistCatalogRegistry(numberOfArtists=${entitiesById.size})"
 }
