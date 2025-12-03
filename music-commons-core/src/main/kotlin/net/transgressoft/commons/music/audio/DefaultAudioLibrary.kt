@@ -38,7 +38,7 @@ class DefaultAudioLibrary(repository: Repository<Int, AudioItem>): AudioLibraryB
 
     init {
         playerSubscriber.addOnNextEventAction(PLAYED) { event ->
-            val audioItem = event.entities.values.first()
+            val audioItem = event.audioItem
             logger.info { "Audio item with id ${audioItem.id} was played" }
             if (audioItem is MutableAudioItem) {
                 val audioItemClone = audioItem.clone()

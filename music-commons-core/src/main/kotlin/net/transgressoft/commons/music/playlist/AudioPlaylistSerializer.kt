@@ -17,8 +17,7 @@
 
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.event.CrudEvent
-import net.transgressoft.commons.event.EntityChangeEvent
+import net.transgressoft.commons.event.MutationEvent
 import net.transgressoft.commons.event.TransEventPublisher
 import net.transgressoft.commons.event.TransEventSubscription
 import net.transgressoft.commons.music.audio.Album
@@ -179,7 +178,7 @@ internal class DummyPlaylist(
 
     override fun clearPlaylists() = throw IllegalStateException()
 
-    override fun subscribe(p0: Flow.Subscriber<in EntityChangeEvent<Int, MutableAudioPlaylist>>?) = throw IllegalStateException()
+    override fun subscribe(p0: Flow.Subscriber<in MutationEvent<Int, MutableAudioPlaylist>>?) = throw IllegalStateException()
 
     override fun removePlaylists(playlists: Collection<MutableAudioPlaylist>): Boolean = throw IllegalStateException()
 
@@ -187,26 +186,26 @@ internal class DummyPlaylist(
 
     override fun clone(): DummyPlaylist = DummyPlaylist(id)
 
-    override val changes: SharedFlow<EntityChangeEvent<Int, MutableAudioPlaylist>>
+    override val changes: SharedFlow<MutationEvent<Int, MutableAudioPlaylist>>
         get() = throw IllegalStateException()
 
-    override fun emitAsync(event: EntityChangeEvent<Int, MutableAudioPlaylist>): Unit = throw IllegalStateException()
+    override fun emitAsync(event: MutationEvent<Int, MutableAudioPlaylist>): Unit = throw IllegalStateException()
 
-    override fun subscribe(action: suspend (EntityChangeEvent<Int, MutableAudioPlaylist>) -> Unit):
-        TransEventSubscription<in MutableAudioPlaylist, CrudEvent.Type, EntityChangeEvent<Int, MutableAudioPlaylist>> =
+    override fun subscribe(action: suspend (MutationEvent<Int, MutableAudioPlaylist>) -> Unit):
+        TransEventSubscription<in MutableAudioPlaylist, MutationEvent.Type, MutationEvent<Int, MutableAudioPlaylist>> =
         FakeSubscription
 
-    override fun subscribe(action: Consumer<in EntityChangeEvent<Int, MutableAudioPlaylist>>):
-        TransEventSubscription<in MutableAudioPlaylist, CrudEvent.Type, EntityChangeEvent<Int, MutableAudioPlaylist>> =
+    override fun subscribe(action: Consumer<in MutationEvent<Int, MutableAudioPlaylist>>):
+        TransEventSubscription<in MutableAudioPlaylist, MutationEvent.Type, MutationEvent<Int, MutableAudioPlaylist>> =
         FakeSubscription
 
-    override fun subscribe(vararg eventTypes: CrudEvent.Type, action: Consumer<in EntityChangeEvent<Int, MutableAudioPlaylist>>):
-        TransEventSubscription<in MutableAudioPlaylist, CrudEvent.Type, EntityChangeEvent<Int, MutableAudioPlaylist>> =
+    override fun subscribe(vararg eventTypes: MutationEvent.Type, action: Consumer<in MutationEvent<Int, MutableAudioPlaylist>>):
+        TransEventSubscription<in MutableAudioPlaylist, MutationEvent.Type, MutationEvent<Int, MutableAudioPlaylist>> =
         FakeSubscription
 }
 
-object FakeSubscription : TransEventSubscription<MutableAudioPlaylist, CrudEvent.Type, EntityChangeEvent<Int, MutableAudioPlaylist>> {
-    override val source: TransEventPublisher<CrudEvent.Type, EntityChangeEvent<Int, MutableAudioPlaylist>>
+object FakeSubscription : TransEventSubscription<MutableAudioPlaylist, MutationEvent.Type, MutationEvent<Int, MutableAudioPlaylist>> {
+    override val source: TransEventPublisher<MutationEvent.Type, MutationEvent<Int, MutableAudioPlaylist>>
         get() = throw IllegalStateException()
 
     override fun request(n: Long): Unit = throw IllegalStateException()
@@ -234,21 +233,21 @@ internal class DummyAudioItem(
     override val encoding: String? = null
     override val dateOfCreation: LocalDateTime = LocalDateTime.MIN
     override val lastDateModified: LocalDateTime = LocalDateTime.MIN
-    override val changes: SharedFlow<EntityChangeEvent<Int, AudioItem>>
+    override val changes: SharedFlow<MutationEvent<Int, AudioItem>>
         get() = throw IllegalStateException()
 
-    override fun emitAsync(event: EntityChangeEvent<Int, AudioItem>): Unit = throw IllegalStateException()
+    override fun emitAsync(event: MutationEvent<Int, AudioItem>): Unit = throw IllegalStateException()
 
-    override fun subscribe(action: suspend (EntityChangeEvent<Int, AudioItem>) -> Unit):
-        TransEventSubscription<in AudioItem, CrudEvent.Type, EntityChangeEvent<Int, AudioItem>> = throw IllegalStateException()
+    override fun subscribe(action: suspend (MutationEvent<Int, AudioItem>) -> Unit):
+        TransEventSubscription<in AudioItem, MutationEvent.Type, MutationEvent<Int, AudioItem>> = throw IllegalStateException()
 
-    override fun subscribe(action: Consumer<in EntityChangeEvent<Int, AudioItem>>):
-        TransEventSubscription<in AudioItem, CrudEvent.Type, EntityChangeEvent<Int, AudioItem>> = throw IllegalStateException()
+    override fun subscribe(action: Consumer<in MutationEvent<Int, AudioItem>>):
+        TransEventSubscription<in AudioItem, MutationEvent.Type, MutationEvent<Int, AudioItem>> = throw IllegalStateException()
 
     override fun subscribe(
-        vararg eventTypes: CrudEvent.Type,
-        action: Consumer<in EntityChangeEvent<Int, AudioItem>>
-    ): TransEventSubscription<in AudioItem, CrudEvent.Type, EntityChangeEvent<Int, AudioItem>> = throw IllegalStateException()
+        vararg eventTypes: MutationEvent.Type,
+        action: Consumer<in MutationEvent<Int, AudioItem>>
+    ): TransEventSubscription<in AudioItem, MutationEvent.Type, MutationEvent<Int, AudioItem>> = throw IllegalStateException()
 
     override val uniqueId: String = ""
     override val fileName: String = ""
@@ -260,7 +259,7 @@ internal class DummyAudioItem(
 
     override fun writeMetadata(): Job = throw IllegalStateException()
 
-    override fun subscribe(p0: Flow.Subscriber<in EntityChangeEvent<Int, AudioItem>>?) = throw IllegalStateException()
+    override fun subscribe(p0: Flow.Subscriber<in MutationEvent<Int, AudioItem>>?) = throw IllegalStateException()
 
     override fun compareTo(other: AudioItem): Int = throw IllegalStateException()
 
