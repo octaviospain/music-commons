@@ -286,7 +286,7 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
 
         override var isDirectory: Boolean by observable(isDirectory) { _, oldValue, newValue ->
             if (newValue != oldValue) {
-                setAndNotify(newValue, oldValue)
+                mutateAndPublish(newValue, oldValue)
                 logger.trace { "Playlist $uniqueId changed isDirectory from $oldValue to $newValue" }
             }
         }
@@ -294,14 +294,14 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
         override var name: String by observable(name) { _, oldValue, newValue ->
             require(findByName(newValue).isPresent) { "Playlist with name '$newValue' already exists" }
             if (newValue != oldValue) {
-                setAndNotify(newValue, oldValue)
+                mutateAndPublish(newValue, oldValue)
                 logger.trace { "Playlist $uniqueId changed name from $oldValue to $newValue" }
             }
         }
 
         override fun addAudioItems(audioItems: Collection<I>): Boolean {
             val result = this.audioItems.stream().anyMatch { it !in audioItems }
-            setAndNotify(this.audioItems + audioItems, this.audioItems) {
+            mutateAndPublish(this.audioItems + audioItems, this.audioItems) {
                 this.audioItems.addAll(audioItems)
                 logger.debug { "Added $audioItems to playlist $uniqueId" }
             }
@@ -310,7 +310,7 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
 
         override fun removeAudioItems(audioItems: Collection<I>): Boolean {
             val result = this.audioItems.stream().anyMatch(audioItems::contains)
-            setAndNotify(this.audioItems - audioItems.toSet(), this.audioItems) {
+            mutateAndPublish(this.audioItems - audioItems.toSet(), this.audioItems) {
                 this.audioItems.removeAll(audioItems)
                 logger.debug { "Removed $audioItems from playlist $uniqueId" }
             }
@@ -321,7 +321,7 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
         @JvmName("removeAudioItemIds")
         override fun removeAudioItems(audioItemIds: Collection<Int>): Boolean {
             val result = this.audioItems.stream().anyMatch { it.id in audioItemIds }
-            setAndNotify(this.audioItems - audioItems.toSet(), this.audioItems) {
+            mutateAndPublish(this.audioItems - audioItems.toSet(), this.audioItems) {
                 this.audioItems.removeAll { it.id in audioItemIds }
                 logger.debug { "Removed audio items with ids $audioItemIds from playlist $uniqueId" }
             }
@@ -336,7 +336,7 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
                 }
             }
             val result = this.playlists.stream().anyMatch(playlists::contains).not()
-            setAndNotify(this.playlists + playlists, this.playlists) {
+            mutateAndPublish(this.playlists + playlists, this.playlists) {
                 this.playlists.addAll(playlists).also {
                     if (it) {
                         putAllPlaylistInHierarchy(uniqueId, playlists)
@@ -349,7 +349,7 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
 
         override fun removePlaylists(playlists: Collection<P>): Boolean {
             val result = this.playlists.stream().anyMatch(playlists::contains)
-            setAndNotify(this.playlists - playlists.toSet(), this.playlists) {
+            mutateAndPublish(this.playlists - playlists.toSet(), this.playlists) {
                 this.playlists.removeAll(playlists.toSet()).also {
                     if (it) {
                         playlists.forEach { playlist ->
@@ -382,7 +382,7 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
         override fun clearAudioItems() {
             if (audioItems.isNotEmpty()) {
                 val audioItemsSize = audioItems.size
-                setAndNotify(emptyList(), audioItems) {
+                mutateAndPublish(emptyList(), audioItems) {
                     audioItems.clear()
                 }
                 logger.debug { "Cleared $audioItemsSize audio items from playlist $uniqueId" }
@@ -392,7 +392,7 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
         override fun clearPlaylists() {
             if (playlists.isNotEmpty()) {
                 val playlistSize = playlists.size
-                setAndNotify(emptyList(), playlists) {
+                mutateAndPublish(emptyList(), playlists) {
                     playlists.clear()
                 }
                 logger.debug { "Cleared $playlistSize playlists from playlist $uniqueId" }

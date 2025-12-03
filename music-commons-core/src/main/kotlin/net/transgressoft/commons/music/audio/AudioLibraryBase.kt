@@ -22,7 +22,6 @@ import net.transgressoft.commons.event.CrudEvent.Type.CREATE
 import net.transgressoft.commons.event.CrudEvent.Type.DELETE
 import net.transgressoft.commons.event.CrudEvent.Type.READ
 import net.transgressoft.commons.event.CrudEvent.Type.UPDATE
-import net.transgressoft.commons.event.EntityChangeEvent
 import net.transgressoft.commons.event.TransEventPublisher
 import net.transgressoft.commons.music.event.PlayedEventSubscriber
 import net.transgressoft.commons.persistence.Repository
@@ -77,9 +76,11 @@ abstract class AudioLibraryBase<I, AC: ReactiveArtistCatalog<in AC, I>>(protecte
     private val subscription =
         repository.subscribe { event ->
             when (event.type) {
-                CREATE -> artistCatalogRegistry.addAudioItems(event.entities.values)
+                CREATE -> {
+                    artistCatalogRegistry.addAudioItems(event.entities.values)
+                }
+
                 UPDATE -> {
-                    event as EntityChangeEvent<Int, I>
                     event.entities.values.forEach { updatedAudioItem ->
                         val oldEntity =
                             event.oldEntities.values.firstOrNull { old -> old.id == updatedAudioItem.id }
@@ -88,8 +89,13 @@ abstract class AudioLibraryBase<I, AC: ReactiveArtistCatalog<in AC, I>>(protecte
                     }
                 }
 
-                DELETE -> artistCatalogRegistry.removeAudioItems(event.entities.values)
-                READ -> Unit // Nothing to do here
+                DELETE -> {
+                    artistCatalogRegistry.removeAudioItems(event.entities.values)
+                }
+
+                READ -> {
+                    Unit
+                } // Nothing to do here
             }
         }
 

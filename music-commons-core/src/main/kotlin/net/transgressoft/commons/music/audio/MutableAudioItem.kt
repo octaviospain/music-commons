@@ -181,7 +181,7 @@ internal class MutableAudioItem(
 
     private var _playCount: Short = 0
         set(value) {
-            setAndNotify(value, field) { field = it }
+            mutateAndPublish(value, field) { field = it }
         }
 
     @Serializable
@@ -217,56 +217,56 @@ internal class MutableAudioItem(
     @Serializable
     override var title: String = getFieldIfExisting(tag, FieldKey.TITLE) ?: ""
         set(value) {
-            setAndNotify(value, field) { field = it }
+            mutateAndPublish(value, field) { field = it }
         }
 
     @Serializable
     override var artist: Artist = readArtist(tag)
         set(value) {
-            setAndNotify(value, field) { field = it }
+            mutateAndPublish(value, field) { field = it }
         }
 
     @Serializable
     override var genre: Genre = getFieldIfExisting(tag, FieldKey.GENRE)?.let { Genre.parseGenre(it) } ?: Genre.UNDEFINED
         set(value) {
-            setAndNotify(value, field) { field = it }
+            mutateAndPublish(value, field) { field = it }
         }
 
     @Serializable
     override var comments: String? = getFieldIfExisting(tag, FieldKey.COMMENT)?.takeIf { it.isNotEmpty() }
         set(value) {
-            setAndNotify(value, field) { field = it }
+            mutateAndPublish(value, field) { field = it }
         }
 
     @Serializable
     override var trackNumber: Short? = getFieldIfExisting(tag, FieldKey.TRACK)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()?.takeIf { it > 0 }
         set(value) {
-            setAndNotify(value, field) { field = it }
+            mutateAndPublish(value, field) { field = it }
         }
 
     @Serializable
     override var discNumber: Short? = getFieldIfExisting(tag, FieldKey.DISC_NO)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()?.takeIf { it > 0 }
         set(value) {
-            setAndNotify(value, field) { field = it }
+            mutateAndPublish(value, field) { field = it }
         }
 
     @Serializable
     override var bpm: Float? = getFieldIfExisting(tag, FieldKey.BPM)?.takeUnless { it.isEmpty().and(it == "0") }?.toFloatOrNull()?.takeIf { it > 0 }
         set(value) {
-            setAndNotify(value, field) { field = it }
+            mutateAndPublish(value, field) { field = it }
         }
 
     @Serializable
     override var album: Album = readAlbum(tag, path.extension)
         set(value) {
-            setAndNotify(value, field) { field = it }
+            mutateAndPublish(value, field) { field = it }
         }
 
     @Transient
     override var coverImageBytes: ByteArray? = getCoverBytes(tag)
         get() = field ?: getCoverBytes()
         set(value) {
-            setAndNotify(value, field) { field = it }
+            mutateAndPublish(value, field) { field = it }
         }
 
     private fun getFieldIfExisting(tag: Tag, fieldKey: FieldKey): String? = tag.hasField(fieldKey).takeIf { it }.run { tag.getFirst(fieldKey) }
@@ -365,7 +365,9 @@ internal class MutableAudioItem(
                 tag
             }
 
-            else -> WavInfoTag()
+            else -> {
+                WavInfoTag()
+            }
         }.also {
             setTrackFieldsToTag(it)
         }

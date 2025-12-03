@@ -21,7 +21,7 @@ ext {
     kotlinVersion = '2.2.21'
     coroutinesVersion = '1.10.2'
     kotestVersion = '5.9.1'
-    transgressoftVersion = '1.5.2'
+    transgressoftVersion = '1.6.0'
 }
 
 dependencies {

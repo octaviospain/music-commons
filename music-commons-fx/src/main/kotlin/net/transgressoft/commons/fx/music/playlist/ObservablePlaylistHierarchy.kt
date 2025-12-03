@@ -176,7 +176,7 @@ class ObservablePlaylistHierarchy
             private val _nameProperty =
                 SimpleStringProperty(this, "name", name).apply {
                     addListener { _, oldValue, newValue ->
-                        setAndNotify(newValue, oldValue)
+                        mutateAndPublish(newValue, oldValue)
                     }
                 }
 
@@ -191,7 +191,7 @@ class ObservablePlaylistHierarchy
             private val _isDirectoryProperty =
                 SimpleBooleanProperty(this, "isDirectory", isDirectory).apply {
                     addListener { _, oldValue, newValue ->
-                        setAndNotify(newValue, oldValue)
+                        mutateAndPublish(newValue, oldValue)
                     }
                 }
 
@@ -206,7 +206,7 @@ class ObservablePlaylistHierarchy
             private val _audioItemsProperty =
                 SimpleListProperty(this, "audioItems", FXCollections.observableArrayList(ArrayList(audioItems))).apply {
                     addListener { _, oldValue, newValue ->
-                        setAndNotify(newValue, oldValue) {
+                        mutateAndPublish(newValue, oldValue) {
                             replaceRecursiveAudioItems()
                             changePlaylistCover()
                         }
@@ -323,7 +323,7 @@ class ObservablePlaylistHierarchy
                 if (hasNew) {
                     val newPlaylists = playlists.filter { it !in _playlistsProperty }
 
-                    setAndNotify(_playlistsProperty + playlists, _playlistsProperty) {
+                    mutateAndPublish(_playlistsProperty + playlists, _playlistsProperty) {
                         Platform.runLater {
                             _playlistsProperty.addAll(newPlaylists)
                             replaceRecursiveAudioItems()
@@ -340,7 +340,7 @@ class ObservablePlaylistHierarchy
             override fun removePlaylists(playlists: Collection<ObservablePlaylist>): Boolean {
                 val containsPlaylists = playlists.any { it in _playlistsProperty }
                 if (containsPlaylists) {
-                    setAndNotify(_playlistsProperty - playlists.toSet(), _playlistsProperty) {
+                    mutateAndPublish(_playlistsProperty - playlists.toSet(), _playlistsProperty) {
                         Platform.runLater {
                             _playlistsProperty.removeAll(playlists.toSet())
 //                            replaceRecursiveAudioItems()
@@ -359,7 +359,7 @@ class ObservablePlaylistHierarchy
             override fun removePlaylists(playlistIds: Collection<Int>): Boolean {
                 val result = _playlistsProperty.stream().anyMatch(playlists::contains)
                 val playlistsToRemove = playlistIds.map { findById(it) }.filter { it.isPresent }.map { it.get() }
-                setAndNotify(_playlistsProperty - playlistsToRemove.toSet(), _playlistsProperty) {
+                mutateAndPublish(_playlistsProperty - playlistsToRemove.toSet(), _playlistsProperty) {
                     _playlistsProperty.removeAll { playlistIds.contains(it.id) }
                     playlistIds.forEach { playlistId ->
                         findById(playlistId).ifPresent { playlist ->
@@ -379,7 +379,7 @@ class ObservablePlaylistHierarchy
             override fun clearPlaylists() {
                 if (_playlistsProperty.isNotEmpty()) {
                     val playlistsBeforeClear = _playlistsProperty.toSet()
-                    setAndNotify(emptySet(), playlistsBeforeClear) {
+                    mutateAndPublish(emptySet(), playlistsBeforeClear) {
                         _playlistsProperty.clear()
                         playlistsBeforeClear.forEach { playlist ->
                             removePlaylistFromHierarchy(uniqueId, playlist)

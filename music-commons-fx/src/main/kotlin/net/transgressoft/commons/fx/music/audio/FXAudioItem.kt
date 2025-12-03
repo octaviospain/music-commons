@@ -208,7 +208,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         override var title: String = getFieldIfExisting(tag, FieldKey.TITLE) ?: ""
             set(value) {
-                setAndNotify(value, field) {
+                mutateAndPublish(value, field) {
                     field = value
                     artistsInvolvedProperty.clear()
                     artistsInvolvedProperty.addAll(
@@ -229,7 +229,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         override var artist: Artist = readArtist(tag)
             set(value) {
-                setAndNotify(value, field) {
+                mutateAndPublish(value, field) {
                     field = value
                     artistsInvolvedProperty.addAll(
                         AudioUtils.getArtistsNamesInvolved(
@@ -249,7 +249,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         override var album: Album = readAlbum(tag, extension)
             set(value) {
-                setAndNotify(value, field) {
+                mutateAndPublish(value, field) {
                     field = value
                     artistsInvolvedProperty.clear()
                     artistsInvolvedProperty.addAll(
@@ -270,7 +270,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         override var genre: Genre = getFieldIfExisting(tag, FieldKey.GENRE)?.let { Genre.parseGenre(it) } ?: Genre.UNDEFINED
             set(value) {
-                setAndNotify(value, field) {
+                mutateAndPublish(value, field) {
                     field = value
                 }
             }
@@ -285,7 +285,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         override var comments: String? = getFieldIfExisting(tag, FieldKey.COMMENT)?.takeIf { it.isNotEmpty() }
             set(value) {
-                setAndNotify(value, field) {
+                mutateAndPublish(value, field) {
                     field = value
                 }
             }
@@ -301,7 +301,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         override var trackNumber: Short? =
             getFieldIfExisting(tag, FieldKey.TRACK)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()?.takeIf { it > 0 }
             set(value) {
-                setAndNotify(value, field) {
+                mutateAndPublish(value, field) {
                     field = value
                 }
             }
@@ -317,7 +317,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         override var discNumber: Short? =
             getFieldIfExisting(tag, FieldKey.DISC_NO)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()?.takeIf { it > 0 }
             set(value) {
-                setAndNotify(value, field) {
+                mutateAndPublish(value, field) {
                     field = value
                 }
             }
@@ -332,7 +332,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         override var bpm: Float? = getFieldIfExisting(tag, FieldKey.BPM)?.takeUnless { it.isEmpty().and(it == "0") }?.toFloatOrNull()?.takeIf { it > 0 }
             set(value) {
-                setAndNotify(value, field) {
+                mutateAndPublish(value, field) {
                     field = value
                 }
             }
@@ -359,7 +359,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         override var coverImageBytes: ByteArray? = getCoverBytes(tag)
             set(value) {
-                setAndNotify(value, field) {
+                mutateAndPublish(value, field) {
                     field = value
                     _coverImageProperty.set(Optional.ofNullable(value).map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) })
                 }
@@ -377,7 +377,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>> =
             _coverImageProperty.apply {
                 addListener { _, oldValue, newValue ->
-                    setAndNotify(newValue.orElse(null)?.url, oldValue.orElse(null)?.url) {}
+                    mutateAndPublish(newValue.orElse(null)?.url, oldValue.orElse(null)?.url) {}
                 }
             }
 
@@ -487,7 +487,9 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                     tag
                 }
 
-                else -> WavInfoTag()
+                else -> {
+                    WavInfoTag()
+                }
             }.also {
                 setTrackFieldsToTag(it)
             }
@@ -534,7 +536,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         }
 
         internal fun incrementPlayCount() {
-            setAndNotify(_playCountProperty.get() + 1, _playCountProperty.get()) {
+            mutateAndPublish(_playCountProperty.get() + 1, _playCountProperty.get()) {
                 _playCountProperty.set(_playCountProperty.get() + 1)
             }
         }

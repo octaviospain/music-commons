@@ -106,7 +106,7 @@ class ObservableAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
 
         // Subscribe to the player events to update the play count
         playerSubscriber.addOnNextEventAction(PLAYED) { event ->
-            val audioItem = event.entities.values.first()
+            val audioItem = event.audioItem
             if (audioItem is FXAudioItem) {
                 val audioItemClone = audioItem.clone()
                 audioItem.incrementPlayCount()
@@ -117,9 +117,11 @@ class ObservableAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
     }
 
     override fun clear() {
-        super.clear()
-        observableAudioItemMap.clear()
-        internalSubscription.cancel()
+        synchronized(observableAudioItemMap) {
+            super.clear()
+            observableAudioItemMap.clear()
+            internalSubscription.cancel()
+        }
     }
 
     override fun createFromFile(audioItemPath: Path): FXAudioItem =

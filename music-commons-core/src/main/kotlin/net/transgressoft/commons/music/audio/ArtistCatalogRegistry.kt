@@ -70,7 +70,7 @@ internal class ArtistCatalogRegistry<I>
                     .filter { audioItem -> entitiesById.any { it.value.containsAudioItem(audioItem) }.not() }
                     .map { audioItem ->
                         entitiesById.merge(audioItem.artist, MutableArtistCatalog(audioItem)) { artistCatalog, _ ->
-                            val catalogBeforeUpdate = artistCatalog.copy()
+                            val catalogBeforeUpdate = artistCatalog.clone()
                             artistCatalog.addAudioItem(audioItem)
                             catalogsBeforeUpdate.add(catalogBeforeUpdate)
                             artistCatalog
@@ -121,7 +121,7 @@ internal class ArtistCatalogRegistry<I>
                     entitiesById[updatedAudioItem.artist] ?: error(
                         "Artist catalog for ${updatedAudioItem.artistUniqueId()} should exist already at this point"
                     )
-                val artistCatalogBeforeUpdate = artistCatalog.copy()
+                val artistCatalogBeforeUpdate = artistCatalog.clone()
                 artistCatalog.mergeAudioItem(updatedAudioItem)
                 publisher.emitAsync(Update(artistCatalog, artistCatalogBeforeUpdate))
             }
@@ -158,7 +158,7 @@ internal class ArtistCatalogRegistry<I>
 
             audioItems.forEach { audioItem ->
                 entitiesById[audioItem.artist]?.let {
-                    val oldArtistCatalog = it.copy()
+                    val oldArtistCatalog = it.clone()
                     val wasRemoved = it.removeAudioItem(audioItem)
                     if (wasRemoved) {
                         if (it.isEmpty) {
