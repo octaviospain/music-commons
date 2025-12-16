@@ -46,11 +46,18 @@ import kotlin.properties.Delegates.observable
  */
 abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPlaylist<I, P>>(
     protected val repository: Repository<Int, P> = VolatileRepository("PlaylistHierarchy")
-): PlaylistHierarchy<I, P>, Repository<Int, P> by repository {
+): PlaylistHierarchy<I, P>,
+    Repository<Int, P> by repository,
+    TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>> by AudioItemEventSubscriber("PlaylistHierarchySubscriber") {
 
     init {
         repository.disableEvents(CREATE, UPDATE, DELETE)
         activateEvents(CREATE, UPDATE, DELETE)
+        addOnNextEventAction(DELETE) { event ->
+            runForAll {
+                it.removeAudioItems(event.entities.keys)
+            }
+        }
     }
 
     private val logger = KotlinLogging.logger {}
@@ -66,15 +73,6 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
         } while (contains(id))
         return id
     }
-
-    override val audioItemEventSubscriber: TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>> =
-        AudioItemEventSubscriber<I>(this.toString()).apply {
-            addOnNextEventAction(DELETE) { event ->
-                runForAll {
-                    it.removeAudioItems(event.entities.keys)
-                }
-            }
-        }
 
     override fun add(entity: P): Boolean = addInternal(entity)
 

@@ -17,7 +17,9 @@
 
 package net.transgressoft.commons.music.waveform
 
+import net.transgressoft.commons.event.CrudEvent
 import net.transgressoft.commons.event.CrudEvent.Type.DELETE
+import net.transgressoft.commons.event.TransEventSubscriber
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import net.transgressoft.commons.persistence.Repository
@@ -36,14 +38,15 @@ import kotlinx.coroutines.future.future
  */
 class DefaultAudioWaveformRepository<I: ReactiveAudioItem<I>>(
     private val repository: Repository<Int, AudioWaveform> = VolatileRepository("AudioWaveformRepository")
-): AudioWaveformRepository<AudioWaveform, I>, Repository<Int, AudioWaveform> by repository {
+): AudioWaveformRepository<AudioWaveform, I>,
+    Repository<Int, AudioWaveform> by repository,
+    TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>> by AudioItemEventSubscriber("AudioWaveformRepositorySubscriber") {
 
-    override val audioItemEventSubscriber =
-        AudioItemEventSubscriber<I>(this.toString()).apply {
-            addOnNextEventAction(DELETE) { event ->
-                removeByAudioItemIds(event.entities.keys)
-            }
+    init {
+        addOnNextEventAction(DELETE) { event ->
+            removeByAudioItemIds(event.entities.keys)
         }
+    }
 
     override fun getOrCreateWaveformAsync(
         audioItem: I,

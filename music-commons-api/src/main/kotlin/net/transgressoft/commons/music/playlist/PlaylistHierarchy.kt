@@ -30,9 +30,10 @@ import java.util.concurrent.Flow
  * Supports creating, organizing, and moving playlists and playlist directories, as well as
  * adding and removing audio items from playlists within the hierarchy.
  */
-interface PlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPlaylist<I, P>>: Repository<Int, P>, Flow.Publisher<CrudEvent<Int, P>> {
-
-    val audioItemEventSubscriber: TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>>
+interface PlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPlaylist<I, P>>
+: Repository<Int, P>,
+    TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>>,
+    Flow.Publisher<CrudEvent<Int, P>> {
 
     @Throws(IllegalArgumentException::class)
     fun createPlaylist(name: String): P

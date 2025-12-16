@@ -78,8 +78,8 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     }
 
     "Operations on audio items impact subscribed repositories" {
-        audioLibrary.subscribe(waveforms.audioItemEventSubscriber)
-        audioLibrary.subscribe(playlistHierarchy.audioItemEventSubscriber)
+        audioLibrary.subscribe(waveforms)
+        audioLibrary.subscribe(playlistHierarchy)
 
         val audioItem = audioLibrary.createFromFile(Arb.realAudioFile().next())
 
