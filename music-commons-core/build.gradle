@@ -4,19 +4,19 @@ dependencies {
     api project(path: ':music-commons-api')
     api 'org.jetbrains.kotlinx:kotlinx-coroutines-core'
 
-    implementation 'com.google.guava:guava:33.5.0-jre'
-    implementation 'net.jthink:jaudiotagger:3.0.1'
-    implementation "net.transgressoft:transgressoft-commons-core:$transgressoftVersion"
-    implementation 'ws.schild:jave-core:3.5.0'
-    implementation 'ws.schild:jave-nativebin-linux64:3.5.0'
+    implementation libs.guava.get()
+    implementation libs.jaudiotagger.get()
+    implementation libs.transgressoft.commons.core.get()
+    implementation libs.jave.core.get()
+    implementation libs.jave.nativebin.linux64.get()
 
     testApi project(path: ':music-commons-test')
-    testImplementation(platform('org.junit:junit-bom:6.0.1'))
-    testImplementation 'io.mockk:mockk:1.14.6'
-    testImplementation "io.kotest:kotest-runner-junit5:$kotestVersion"
-    testImplementation "io.kotest:kotest-assertions-core:$kotestVersion"
-    testImplementation "io.kotest:kotest-property:$kotestVersion"
-    testImplementation "io.kotest:kotest-framework-datatest:$kotestVersion"
-    testImplementation "io.kotest:kotest-assertions-json:$kotestVersion"
-    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2'
+    testImplementation(platform(libs.junit.bom.get()))
+    testImplementation libs.mockk.get()
+    testImplementation libs.kotest.runner.junit5.get()
+    testImplementation libs.kotest.assertions.core.get()
+    testImplementation libs.kotest.property.get()
+    testImplementation libs.kotest.framework.datatest.get()
+    testImplementation libs.kotest.assertions.json.get()
+    testImplementation libs.coroutines.test.get()
 }

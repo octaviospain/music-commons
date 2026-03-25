@@ -1,0 +1,68 @@
+[versions]
+kotlin = "2.2.21"
+coroutines = "1.10.2"
+kotest = "5.9.1"
+transgressoft = "1.7.0"
+guava = "33.5.0-jre"
+jaudiotagger = "3.0.1"
+jave = "3.5.0"
+nv-i18n = "1.29"
+kotlin-logging = "3.0.5"
+kotlinx-serialization = "1.9.0"
+logback = "1.5.20"
+junit = "6.0.1"
+mockk = "1.14.6"
+coroutines-test = "1.10.2"
+jimfs = "1.3.1"
+testfx = "4.0.18"
+monocle = "21.0.2"
+javafx-controls = "25.0.1"
+# Plugin versions
+maven-publish = "0.35.0"
+dokka = "2.1.0"
+ktlint = "14.0.1"
+sonarqube = "7.0.1.6134"
+axion-release = "1.21.0"
+javafx-plugin = "0.1.0"
+
+[libraries]
+kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
+coroutines-bom = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-bom", version.ref = "coroutines" }
+coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core" }
+coroutines-javafx = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-javafx" }
+coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines-test" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+transgressoft-commons-api = { module = "net.transgressoft:transgressoft-commons-api", version.ref = "transgressoft" }
+transgressoft-commons-core = { module = "net.transgressoft:transgressoft-commons-core", version.ref = "transgressoft" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
+jaudiotagger = { module = "net.jthink:jaudiotagger", version.ref = "jaudiotagger" }
+jave-core = { module = "ws.schild:jave-core", version.ref = "jave" }
+jave-nativebin-linux64 = { module = "ws.schild:jave-nativebin-linux64", version.ref = "jave" }
+nv-i18n = { module = "com.neovisionaries:nv-i18n", version.ref = "nv-i18n" }
+kotlin-logging = { module = "io.github.microutils:kotlin-logging-jvm", version.ref = "kotlin-logging" }
+logback-core = { module = "ch.qos.logback:logback-core", version.ref = "logback" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
+kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest" }
+kotest-framework-datatest = { module = "io.kotest:kotest-framework-datatest", version.ref = "kotest" }
+kotest-assertions-json = { module = "io.kotest:kotest-assertions-json", version.ref = "kotest" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+jimfs = { module = "com.google.jimfs:jimfs", version.ref = "jimfs" }
+testfx-core = { module = "org.testfx:testfx-core", version.ref = "testfx" }
+testfx-junit5 = { module = "org.testfx:testfx-junit5", version.ref = "testfx" }
+openjfx-monocle = { module = "org.testfx:openjfx-monocle", version.ref = "monocle" }
+javafx-controls = { module = "org.openjfx:javafx-controls", version.ref = "javafx-controls" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
+sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
+axion-release = { id = "pl.allegro.tech.build.axion-release", version.ref = "axion-release" }
+javafx = { id = "org.openjfx.javafxplugin", version.ref = "javafx-plugin" }
