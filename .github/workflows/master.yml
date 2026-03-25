@@ -36,10 +36,12 @@ jobs:
                       gstreamer1.0-libav \
                       gstreamer1.0-tools \
                       libgstreamer-plugins-base1.0-dev \
-                      xvfb
-                      export DISPLAY=:99.0
-                      Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-                      echo "DISPLAY=:99.0" >> $GITHUB_ENV
+                      xvfb \
+                      ffmpeg
+                    export DISPLAY=:99.0
+                    Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+                    sleep 2
+                    echo "DISPLAY=:99.0" >> $GITHUB_ENV
 
             -   name: Cache SonarQube packages
                 uses: actions/cache@v4
