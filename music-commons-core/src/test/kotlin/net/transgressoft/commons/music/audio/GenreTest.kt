@@ -53,6 +53,10 @@ class GenreTest : ShouldSpec({
             Genre.parseGenre("UNKNOWN") shouldBe Genre.UNDEFINED
         }
 
+        should("return UNDEFINED for empty string") {
+            Genre.parseGenre("") shouldBe Genre.UNDEFINED
+        }
+
         should("parse every genre's name back to itself") {
             Genre.entries.forEach { genre ->
                 Genre.parseGenre(genre.name) shouldBe genre
