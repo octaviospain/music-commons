@@ -32,9 +32,8 @@ import kotlinx.coroutines.asCoroutineDispatcher
  *
  * Provides asynchronous methods to retrieve or create waveforms on demand.
  */
-interface AudioWaveformRepository<W : AudioWaveform, I : ReactiveAudioItem<I>> : Repository<Int, W> {
-
-    val audioItemEventSubscriber: TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>>
+interface AudioWaveformRepository<W : AudioWaveform, I : ReactiveAudioItem<I>>
+: Repository<Int, W>, TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>> {
 
     /**
      * Retrieves an existing waveform or creates a new one asynchronously for the given audio item.

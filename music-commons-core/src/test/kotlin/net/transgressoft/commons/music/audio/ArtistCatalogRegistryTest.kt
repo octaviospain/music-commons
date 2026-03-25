@@ -19,10 +19,10 @@ import kotlin.time.Duration.Companion.milliseconds
 
 internal class ArtistCatalogRegistryTest : BehaviorSpec({
 
-    lateinit var registry: ArtistCatalogRegistry<AudioItem>
+    lateinit var registry: DefaultArtistCatalogRegistry<AudioItem>
 
     given("An artist catalog registry") {
-        registry = ArtistCatalogRegistry()
+        registry = DefaultArtistCatalogRegistry()
 
         When("an audio item that has the same album artist and artist is added") {
             val expectedAlbum = ImmutableAlbum("Play", ImmutableArtist.of("Moby", CountryCode.US))
@@ -176,7 +176,7 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
         }
 
         When("subscribing to CREATE events") {
-            registry = ArtistCatalogRegistry()
+            registry = DefaultArtistCatalogRegistry()
             val receivedEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
 
             registry.subscribe(CREATE) { receivedEvents.add(it) }
@@ -206,7 +206,7 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
         }
 
         When("subscribing to UPDATE events") {
-            registry = ArtistCatalogRegistry()
+            registry = DefaultArtistCatalogRegistry()
             val receivedEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
 
             val expectedArtist = ImmutableArtist.of("Radiohead", CountryCode.UK)
@@ -292,7 +292,7 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
         }
 
         When("subscribing to DELETE events") {
-            registry = ArtistCatalogRegistry()
+            registry = DefaultArtistCatalogRegistry()
             val receivedEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
 
             val expectedArtist = ImmutableArtist.of("Bjork", CountryCode.IS)
@@ -325,7 +325,7 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
         }
 
         When("multiple audio items from different artists are added") {
-            registry = ArtistCatalogRegistry()
+            registry = DefaultArtistCatalogRegistry()
             val receivedEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
 
             registry.subscribe(CREATE) { receivedEvents.add(it) }

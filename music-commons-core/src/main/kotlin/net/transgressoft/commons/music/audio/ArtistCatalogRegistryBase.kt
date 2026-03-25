@@ -17,9 +17,7 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.event.CrudEvent.Type.CREATE
-import net.transgressoft.commons.event.CrudEvent.Type.DELETE
-import net.transgressoft.commons.event.CrudEvent.Type.UPDATE
+import net.transgressoft.commons.event.CrudEvent
 import net.transgressoft.commons.event.FlowEventPublisher
 import net.transgressoft.commons.event.StandardCrudEvent.Create
 import net.transgressoft.commons.event.StandardCrudEvent.Delete
@@ -30,22 +28,60 @@ import java.util.Optional
 import java.util.stream.Collectors.partitioningBy
 
 /**
- * Internal registry managing all artist catalogs within an audio library.
+ * Abstract base class for registries managing artist catalogs within an audio library.
  *
- * Maintains a collection of [MutableArtistCatalog] instances, one per unique artist,
- * and automatically synchronizes catalog contents when audio items are added, updated,
- * or removed from the library. This enables efficient artist-based queries and ensures
- * catalog consistency with the underlying audio item collection.
+ * Provides collection management and CRUD event publishing for artist catalogs.
+ * Subclasses define how catalogs are created and how mutation operations are
+ * dispatched, enabling different catalog types (e.g., core vs. JavaFX observable).
+ *
+ * @param I The type of audio items stored in catalogs
+ * @param AC The concrete artist catalog type managed by this registry
+ * @param publisherName Name for the event publisher, used in logging
  */
-internal class ArtistCatalogRegistry<I>
-: RegistryBase<Artist, MutableArtistCatalog<I>>(publisher = FlowEventPublisher("ArtistCatalogRegistry"))
-    where I : ReactiveAudioItem<I>, I : Comparable<I> {
+abstract class ArtistCatalogRegistryBase<I, AC>(
+    publisherName: String = "ArtistCatalogRegistry"
+) : RegistryBase<Artist, AC>(publisher = FlowEventPublisher(publisherName))
+    where I : ReactiveAudioItem<I>, I : Comparable<I>,
+          AC : ReactiveArtistCatalog<AC, I>, AC : Comparable<AC> {
 
     private val log = KotlinLogging.logger {}
 
     init {
-        activateEvents(CREATE, UPDATE, DELETE)
+        activateEvents(CrudEvent.Type.CREATE, CrudEvent.Type.UPDATE, CrudEvent.Type.DELETE)
     }
+
+    /**
+     * Creates a new artist catalog for the given artist.
+     *
+     * @param artist The artist to create a catalog for
+     * @return A new catalog instance for the artist
+     */
+    protected abstract fun createCatalog(artist: Artist): AC
+
+    /**
+     * Adds an audio item to the given catalog.
+     */
+    protected abstract fun AC.addItem(audioItem: I): Boolean
+
+    /**
+     * Removes an audio item from the given catalog.
+     */
+    protected abstract fun AC.removeItem(audioItem: I): Boolean
+
+    /**
+     * Re-sorts an audio item within its catalog after ordering properties changed.
+     */
+    protected abstract fun AC.merge(audioItem: I): Boolean
+
+    /**
+     * Checks whether the given catalog contains the specified audio item.
+     */
+    protected abstract fun AC.containsItem(audioItem: I): Boolean
+
+    /**
+     * Creates a deep copy of the given catalog.
+     */
+    protected abstract fun AC.cloneCatalog(): AC
 
     internal fun addAudioItem(audioItem: I): Boolean = addAudioItems(listOf(audioItem))
 
@@ -53,7 +89,7 @@ internal class ArtistCatalogRegistry<I>
      * Adds audio items to their respective artist catalogs, creating new catalogs or
      * updating existing ones as needed.
      *
-     * For each audio item, this method either creates a new [MutableArtistCatalog] if the
+     * For each audio item, this method either creates a new catalog if the
      * artist doesn't exist yet, or adds the item to an existing catalog. Duplicate items
      * (items already in a catalog) are ignored.
      *
@@ -65,15 +101,16 @@ internal class ArtistCatalogRegistry<I>
      */
     internal fun addAudioItems(audioItems: Collection<I>): Boolean {
         synchronized(this) {
-            val catalogsBeforeUpdate = mutableListOf<MutableArtistCatalog<I>>()
+            val catalogsBeforeUpdate = mutableListOf<AC>()
 
-            val addedOrReplacedCatalogs: Map<Boolean, List<MutableArtistCatalog<I>>> =
+            val addedOrReplacedCatalogs: Map<Boolean, List<AC>> =
                 audioItems.stream()
-                    .filter { audioItem -> entitiesById.any { it.value.containsAudioItem(audioItem) }.not() }
+                    .filter { audioItem -> entitiesById.any { it.value.containsItem(audioItem) }.not() }
                     .map { audioItem ->
-                        entitiesById.merge(audioItem.artist, MutableArtistCatalog(audioItem)) { artistCatalog, _ ->
-                            val catalogBeforeUpdate = artistCatalog.clone()
-                            artistCatalog.addAudioItem(audioItem)
+                        val newCatalog = createCatalog(audioItem.artist).apply { addItem(audioItem) }
+                        entitiesById.merge(audioItem.artist, newCatalog) { artistCatalog, _ ->
+                            val catalogBeforeUpdate = artistCatalog.cloneCatalog()
+                            artistCatalog.addItem(audioItem)
                             catalogsBeforeUpdate.add(catalogBeforeUpdate)
                             artistCatalog
                         }!!
@@ -123,10 +160,8 @@ internal class ArtistCatalogRegistry<I>
                     entitiesById[updatedAudioItem.artist] ?: error(
                         "Artist catalog for ${updatedAudioItem.artistUniqueId()} should exist already at this point"
                     )
-                val artistCatalogBeforeUpdate = artistCatalog.clone()
-                val reordered = artistCatalog.mergeAudioItem(updatedAudioItem)
-                // Only publish UPDATE when actual reordering occurred
-                // If the item is the only one in the catalog, no reordering can happen, so no catalog UPDATE event
+                val artistCatalogBeforeUpdate = artistCatalog.cloneCatalog()
+                val reordered = artistCatalog.merge(updatedAudioItem)
                 if (reordered) {
                     publisher.emitAsync(Update(artistCatalog, artistCatalogBeforeUpdate))
                 }
@@ -160,14 +195,14 @@ internal class ArtistCatalogRegistry<I>
      */
     internal fun removeAudioItems(audioItems: Collection<I>): Boolean {
         synchronized(this) {
-            val removedCatalogs = mutableListOf<MutableArtistCatalog<I>>()
-            val catalogsBeforeUpdate = mutableListOf<MutableArtistCatalog<I>>()
-            val updatedCatalogs = mutableListOf<MutableArtistCatalog<I>>()
+            val removedCatalogs = mutableListOf<AC>()
+            val catalogsBeforeUpdate = mutableListOf<AC>()
+            val updatedCatalogs = mutableListOf<AC>()
 
             audioItems.forEach { audioItem ->
                 entitiesById[audioItem.artist]?.let {
-                    val oldArtistCatalog = it.clone()
-                    val wasRemoved = it.removeAudioItem(audioItem)
+                    val oldArtistCatalog = it.cloneCatalog()
+                    val wasRemoved = it.removeItem(audioItem)
                     if (wasRemoved) {
                         if (it.isEmpty) {
                             removedCatalogs.add(it)
@@ -194,14 +229,14 @@ internal class ArtistCatalogRegistry<I>
         }
     }
 
-    private fun Collection<MutableArtistCatalog<I>>.toArtistNames(): List<String> = map { it.artist.name }
+    private fun Collection<AC>.toArtistNames(): List<String> = map { it.artist.name }
 
     private fun ReactiveAudioItem<I>.artistUniqueId() = ImmutableArtist.id(artist.name, artist.countryCode)
 
-    internal fun findFirst(artistName: String): Optional<MutableArtistCatalog<I>> =
+    internal fun findFirst(artistName: String): Optional<AC> =
         Optional.ofNullable(entitiesById.entries.firstOrNull { it.key.name.lowercase().contains(artistName.lowercase()) }?.value)
 
     internal fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I> = entitiesById[artist]?.albumAudioItems(albumName) ?: emptySet()
 
-    override fun toString() = "ArtistCatalogRegistry(numberOfArtists=${entitiesById.size})"
+    override fun toString() = "${this::class.simpleName}(numberOfArtists=${entitiesById.size})"
 }
