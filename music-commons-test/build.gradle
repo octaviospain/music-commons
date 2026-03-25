@@ -1,5 +1,5 @@
 plugins {
-    id 'org.openjfx.javafxplugin' version '0.1.0'
+    id 'org.openjfx.javafxplugin'
 }
 
 description = 'Transgressoft Music Commons - Test Utilities'
@@ -15,12 +15,12 @@ tasks.matching { it.name.startsWith("ktlint") || it.name.startsWith("jacoco")}.c
 
 dependencies {
     api project(path: ':music-commons-core')
-    implementation 'com.google.jimfs:jimfs:1.3.1'
-    implementation 'io.mockk:mockk:1.14.6'
-    implementation "io.kotest:kotest-runner-junit5:$kotestVersion"
-    implementation "io.kotest:kotest-assertions-core:$kotestVersion"
-    implementation "io.kotest:kotest-property:$kotestVersion"
-    implementation "io.kotest:kotest-framework-datatest:$kotestVersion"
-    implementation "io.kotest:kotest-assertions-json:$kotestVersion"
-    implementation 'net.jthink:jaudiotagger:3.0.1'
+    implementation libs.jimfs.get()
+    implementation libs.mockk.get()
+    implementation libs.kotest.runner.junit5.get()
+    implementation libs.kotest.assertions.core.get()
+    implementation libs.kotest.property.get()
+    implementation libs.kotest.framework.datatest.get()
+    implementation libs.kotest.assertions.json.get()
+    implementation libs.jaudiotagger.get()
 }
