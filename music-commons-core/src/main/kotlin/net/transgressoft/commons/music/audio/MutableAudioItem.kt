@@ -340,7 +340,7 @@ internal class MutableAudioItem(
             logger.debug { "Writing metadata of $this to file '${path.toAbsolutePath()}'" }
             val audioFile = path.toFile()
             val audio = AudioFileIO.read(audioFile)
-            createTagTag(audio.audioHeader.format).let {
+            createTag(audio.audioHeader.format).let {
                 audio.tag = it
             }
 
@@ -348,7 +348,7 @@ internal class MutableAudioItem(
             logger.debug { "Metadata of $this successfully written to file" }
         }
 
-    private fun createTagTag(format: String): Tag =
+    private fun createTag(format: String): Tag =
         when {
             format.startsWith(WAV.extension, ignoreCase = true) -> {
                 val wavTag = WavTag(WavOptions.READ_ID3_ONLY)
