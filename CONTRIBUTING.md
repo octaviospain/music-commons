@@ -89,6 +89,15 @@ Alternatives considered:
 - Batching writes: Would introduce latency in persistence
 ```
 
+### Platform Requirements
+
+Music Commons bundles FFmpeg native binaries for **Linux 64-bit only** (via `jave-nativebin-linux64`). This affects the waveform transcoding module.
+
+**If you develop on macOS or Windows:**
+- Waveform-related tests (`music-commons-core` waveform tests) will fail due to missing native binaries
+- You can skip these tests locally and rely on CI (which runs on Linux) for full test validation
+- All other modules and tests work cross-platform without restrictions
+
 ## Style Guidelines
 
 - Use the provided `.editorconfig` and Kotlin style guide settings

@@ -255,6 +255,8 @@ player.play(audioItem)
 ./gradlew dokkaHtml
 ```
 
+> **Note:** Waveform transcoding requires FFmpeg native binaries that are only bundled for Linux 64-bit (`jave-nativebin-linux64`). Waveform-related tests will fail on macOS and Windows. Non-Linux developers can safely skip these tests locally and rely on CI for full test coverage.
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
