@@ -38,13 +38,13 @@ import org.jaudiotagger.tag.images.ArtworkFactory
 import org.jaudiotagger.tag.mp4.Mp4Tag
 import org.jaudiotagger.tag.wav.WavInfoTag
 import org.jaudiotagger.tag.wav.WavTag
-import org.jetbrains.kotlin.com.google.common.base.Objects
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.time.Duration
 import java.time.LocalDateTime
+import java.util.Objects
 import kotlin.io.path.extension
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -445,7 +445,7 @@ internal class MutableAudioItem(
             duration == that.duration
     }
 
-    override fun hashCode() = Objects.hashCode(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration)
+    override fun hashCode() = Objects.hash(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration)
 
     override fun clone(): MutableAudioItem =
         MutableAudioItem(
