@@ -8,6 +8,13 @@ on:
             - "**.md"
             - '.gitignore'
             - 'docs/**'
+    pull_request:
+        branches:
+            - main
+        paths-ignore:
+            - "**.md"
+            - '.gitignore'
+            - 'docs/**'
 
 jobs:
     build-and-test:
