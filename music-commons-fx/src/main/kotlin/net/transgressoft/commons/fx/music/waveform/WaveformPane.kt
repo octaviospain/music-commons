@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.fx
+package net.transgressoft.commons.fx.music.waveform
 
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import javafx.scene.canvas.Canvas

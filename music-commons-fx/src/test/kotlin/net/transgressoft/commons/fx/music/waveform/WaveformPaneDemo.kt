@@ -1,6 +1,5 @@
 package net.transgressoft.commons.fx.music.waveform
 
-import net.transgressoft.commons.fx.WaveformPane
 import net.transgressoft.commons.music.waveform.ScalableAudioWaveform
 import javafx.application.Application
 import javafx.scene.Scene
