@@ -33,7 +33,7 @@ package net.transgressoft.commons.music.audio
  * @param backing The list of audio items belonging to this album
  * @throws IllegalArgumentException if a backing list is empty, contains items from different albums or contains duplicate items
  */
-internal class AlbumView<I : ReactiveAudioItem<I>>(
+class AlbumView<I : ReactiveAudioItem<I>>(
     override val albumName: String,
     private val backing: List<I>
 ) : AlbumSet<I>, List<I> by backing {

@@ -1,0 +1,82 @@
+name: Manual Release to Maven Central
+
+on:
+    workflow_dispatch:
+
+jobs:
+    release:
+        runs-on: ubuntu-latest
+
+        steps:
+            -   uses: actions/checkout@v4
+                with:
+                    fetch-depth: 0
+
+            -   name: Setup Git Credentials
+                env:
+                    PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+                    REPO: ${{ github.repository }}
+                run: |
+                    git config --global user.email "github-actions@github.com"
+                    git config --global user.name "github-actions"
+                    git remote set-url origin "https://x-access-token:$PAT_TOKEN@github.com/$REPO.git"
+
+            -   name: Set up JDK 21
+                uses: actions/setup-java@v4
+                with:
+                    java-version: 21
+                    distribution: 'zulu'
+
+            -   name: Install dependencies
+                run: |
+                    sudo apt-get update
+                    sudo apt-get install -y \
+                      libgstreamer1.0-0 \
+                      gstreamer1.0-plugins-base \
+                      gstreamer1.0-plugins-good \
+                      gstreamer1.0-plugins-bad \
+                      gstreamer1.0-libav \
+                      gstreamer1.0-tools \
+                      libgstreamer-plugins-base1.0-dev \
+                      xvfb \
+                      ffmpeg
+                    export DISPLAY=:99.0
+                    Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+                    sleep 2
+                    echo "DISPLAY=:99.0" >> $GITHUB_ENV
+
+            -   name: Cache SonarQube packages
+                uses: actions/cache@v4
+                with:
+                    path: ~/.sonar/cache
+                    key: ${{ runner.os }}-sonar
+                    restore-keys: ${{ runner.os }}-sonar
+
+            -   name: Cache Gradle packages
+                uses: actions/cache@v4
+                with:
+                    path: |
+                        ~/.gradle/caches
+                        ~/.gradle/wrapper
+                    key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+                    restore-keys: |
+                        ${{ runner.os }}-gradle-
+
+            -   name: Build with Gradle and Virtual Display
+                env:
+                    CI: true
+                run: ./gradlew build
+
+            -   name: Release
+                env:
+                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                    ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+                    ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+                    ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
+                    ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+                    ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+                run: |
+                    ./gradlew createRelease
+                    git push --tags origin HEAD
+                    ./gradlew publishToMavenCentral
+                    echo "Release completed ${{ steps.release.outputs.released-version }}"

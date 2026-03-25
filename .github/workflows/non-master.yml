@@ -43,13 +43,6 @@ jobs:
                     sleep 2
                     echo "DISPLAY=:99.0" >> $GITHUB_ENV
 
-            -   name: Cache SonarQube packages
-                uses: actions/cache@v4
-                with:
-                    path: ~/.sonar/cache
-                    key: ${{ runner.os }}-sonar
-                    restore-keys: ${{ runner.os }}-sonar
-
             -   name: Cache Gradle packages
                 uses: actions/cache@v4
                 with:
@@ -64,3 +57,14 @@ jobs:
                 env:
                     CI: true
                 run: ./gradlew build
+
+            -   name: Upload coverage to Codecov
+                uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5
+                env:
+                    CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+            -   name: Upload test results to Codecov
+                if: ${{ !cancelled() }}
+                uses: codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 # v1
+                with:
+                    token: ${{ secrets.CODECOV_TOKEN }}

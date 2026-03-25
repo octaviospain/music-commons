@@ -1,6 +1,8 @@
 package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.event.ReactiveScope
+import net.transgressoft.commons.fx.music.createItemsByArtist
+import net.transgressoft.commons.fx.music.createItemsWithMultipleAlbums
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist.Companion.of
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
@@ -12,6 +14,7 @@ import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.collections.shouldContainOnly
+import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.should
@@ -21,6 +24,7 @@ import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import javafx.application.Platform
 import org.testfx.api.FxToolkit
+import org.testfx.util.WaitForAsyncUtils
 import java.io.File
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
@@ -156,29 +160,162 @@ internal class ObservableAudioLibraryTest : StringSpec({
         }
     }
 
-    /**
-     * Creates audio items for multiple artists and returns them grouped by artist.
-     *
-     * @param artistConfigs Map of artist name to number of items to create for that artist
-     * @return Map of Artist to List of created ObservableAudioItems
-     */
-    fun createItemsByArtist(artistConfigs: Map<String, Int>): Map<net.transgressoft.commons.music.audio.Artist, List<ObservableAudioItem>> =
-        artistConfigs.flatMap { (artistName, itemCount) ->
-            val artist = of(artistName)
-            val album = ImmutableAlbum("$artistName Album", artist)
-            List(itemCount) {
-                repository.createFromFile(
-                    Arb.virtualAudioFile {
-                        this.artist = artist
-                        this.album = album
-                    }.next()
-                )
-            }.map { artist to it }
-        }.groupBy({ it.first }, { it.second })
+    "ObservableAudioLibrary contains catalogs for all artists after adding items" {
+        val itemsByArtist =
+            repository.createItemsByArtist(
+                mapOf("Alpha" to 2, "Beta" to 3, "Gamma" to 1)
+            )
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventually(1.seconds) {
+            repository.artistCatalogsProperty.size shouldBe 3
+
+            val catalogArtists = repository.artistCatalogsProperty.get().map { it.artist }.toSet()
+            catalogArtists shouldContainOnly itemsByArtist.keys
+
+            itemsByArtist.forEach { (artist, items) ->
+                val catalog = repository.artistCatalogsProperty.get().first { it.artist == artist }
+                catalog.sizeProperty.get() shouldBe items.size
+            }
+        }
+    }
+
+    "ObservableAudioLibrary catalogs reflect correct album data with multiple albums per artist" {
+        val artistName = "Multi Album Artist"
+        val artist = of(artistName)
+        val album1 = ImmutableAlbum("First Album", artist)
+        val album2 = ImmutableAlbum("Second Album", artist)
+
+        repository.createItemsWithMultipleAlbums(
+            artistName,
+            mapOf("First Album" to 3, "Second Album" to 2)
+        )
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventually(1.seconds) {
+            repository.artistCatalogsProperty.size shouldBe 1
+
+            val catalog = repository.artistCatalogsProperty.get().first()
+            catalog.artist shouldBe artist
+            catalog.sizeProperty.get() shouldBe 5
+            catalog.albumCountProperty.get() shouldBe 2
+            catalog.albumsProperty shouldContainOnly setOf(album1, album2)
+
+            catalog.albumAudioItemsProperty("First Album").size shouldBe 3
+            catalog.albumAudioItemsProperty("Second Album").size shouldBe 2
+        }
+    }
+
+    "ObservableAudioLibrary removes catalog when all items for artist are deleted" {
+        val itemsByArtist =
+            repository.createItemsByArtist(
+                mapOf("Keep Artist" to 2, "Remove Artist" to 3)
+            )
+
+        val keepArtist = itemsByArtist.keys.first { it.name == "Keep Artist" }
+        val removeArtist = itemsByArtist.keys.first { it.name == "Remove Artist" }
+        val removeItems = itemsByArtist[removeArtist]!!
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventually(1.seconds) {
+            repository.artistCatalogsProperty.size shouldBe 2
+        }
+
+        removeItems.forEach { repository.remove(it) }
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventually(1.seconds) {
+            repository.artistCatalogsProperty.size shouldBe 1
+            repository.artistCatalogsProperty.get().first().artist shouldBe keepArtist
+        }
+    }
+
+    "ObservableAudioLibrary catalog sizeProperty decreases when item removed but artist remains" {
+        val artistName = "Partial Remove"
+        val items = repository.createItemsByArtist(mapOf(artistName to 3))[of(artistName)]!!
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventually(1.seconds) {
+            val catalog = repository.artistCatalogsProperty.get().first()
+            catalog.sizeProperty.get() shouldBe 3
+        }
+
+        repository.remove(items[0])
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventually(1.seconds) {
+            repository.artistCatalogsProperty.size shouldBe 1
+            repository.artistCatalogsProperty.get().first().sizeProperty.get() shouldBe 2
+        }
+    }
+
+    "ObservableAudioLibrary albumsProperty and albumCountProperty reflect aggregate across all catalogs" {
+        val artist1 = of("Artist One")
+        val artist2 = of("Artist Two")
+        val album1A = ImmutableAlbum("Album 1A", artist1)
+        val album1B = ImmutableAlbum("Album 1B", artist1)
+        val album2A = ImmutableAlbum("Album 2A", artist2)
+
+        repository.createItemsWithMultipleAlbums("Artist One", mapOf("Album 1A" to 2, "Album 1B" to 1))
+        repository.createItemsWithMultipleAlbums("Artist Two", mapOf("Album 2A" to 2))
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventually(1.seconds) {
+            repository.albumCountProperty.get() shouldBe 3
+            repository.albumsProperty shouldContainOnly setOf(album1A, album1B, album2A)
+        }
+    }
+
+    "ObservableAudioLibrary artistCatalogsProperty reflects correct state after rapid multi-artist operations" {
+        val itemsByArtist =
+            repository.createItemsByArtist(
+                mapOf("Rapid A" to 3, "Rapid B" to 2, "Rapid C" to 4, "Rapid D" to 1)
+            )
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventually(1.seconds) {
+            repository.artistCatalogsProperty.size shouldBe 4
+        }
+
+        val rapidB = itemsByArtist.keys.first { it.name == "Rapid B" }
+        val rapidD = itemsByArtist.keys.first { it.name == "Rapid D" }
+
+        itemsByArtist[rapidB]!!.forEach { repository.remove(it) }
+        itemsByArtist[rapidD]!!.forEach { repository.remove(it) }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventually(1.seconds) {
+            repository.artistCatalogsProperty.size shouldBe 2
+            val remainingArtists = repository.artistCatalogsProperty.get().map { it.artist.name }.toSet()
+            remainingArtists shouldContainOnly setOf("Rapid A", "Rapid C")
+
+            repository.artistCatalogsProperty.get().first { it.artist.name == "Rapid A" }.sizeProperty.get() shouldBe 3
+            repository.artistCatalogsProperty.get().first { it.artist.name == "Rapid C" }.sizeProperty.get() shouldBe 4
+
+            repository.albumCountProperty.get() shouldBeGreaterThanOrEqual 2
+            repository.albumsProperty.size shouldBeGreaterThanOrEqual 1
+        }
+    }
 
     "Artists are removed from artistsProperty only when all items with that artist are removed" {
         val itemsByArtist =
-            createItemsByArtist(
+            repository.createItemsByArtist(
                 mapOf(
                     "Shared Artist A" to 3, // 3 with "Shared Artist A",
                     "Unique Artist B" to 1, // 1 with "Unique Artist B",

@@ -33,7 +33,8 @@ import kotlinx.serialization.modules.subclass
  * the play count whenever an audio item is played. Provides factory methods to
  * create audio items from file paths by reading their metadata.
  */
-class DefaultAudioLibrary(repository: Repository<Int, AudioItem>): AudioLibraryBase<AudioItem, ArtistCatalog<AudioItem>>(repository) {
+class DefaultAudioLibrary(repository: Repository<Int, AudioItem>) :
+    AudioLibraryBase<AudioItem, ArtistCatalog<AudioItem>>(repository, DefaultArtistCatalogRegistry()) {
     private val logger = KotlinLogging.logger {}
 
     init {

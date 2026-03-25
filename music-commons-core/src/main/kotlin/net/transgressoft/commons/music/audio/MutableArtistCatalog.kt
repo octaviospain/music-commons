@@ -22,11 +22,12 @@ import mu.KotlinLogging
 import java.util.*
 
 /**
- * Concrete type alias for artist catalogs used internally by the library.
+ * Concrete artist catalog type used internally by the audio library infrastructure.
  *
- * This interface combines [ReactiveArtistCatalog] with [Comparable] to enable
- * sorting of catalogs. It's the concrete implementation type used throughout
- * the audio library infrastructure.
+ * Extends [ReactiveArtistCatalog] as a typed marker for catalog instances managed by
+ * the registry. Mutation operations are internal to the concrete implementations.
+ *
+ * @param I The type of audio items contained in this catalog
  */
 interface ArtistCatalog<I : ReactiveAudioItem<I>> : ReactiveArtistCatalog<ArtistCatalog<I>, I>, Comparable<ArtistCatalog<I>>
 

@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
  * Base implementation for [AudioLibrary] providing artist catalog management.
  *
- * Maintains an [ArtistCatalogRegistry] that automatically synchronizes with repository
+ * Maintains an [DefaultArtistCatalogRegistry] that automatically synchronizes with repository
  * changes to provide efficient artist-based queries. Delegates repository operations
  * to the underlying repository while managing the artist catalog as a secondary index.
  *
@@ -42,11 +42,14 @@ import java.util.concurrent.atomic.AtomicInteger
  * @param I The type of audio items stored in this library
  * @param AC The concrete artist catalog type (used by subclasses for specialized implementations)
  */
-abstract class AudioLibraryBase<I, AC: ReactiveArtistCatalog<in AC, I>>(protected val repository: Repository<Int, I>)
-: AudioLibrary<I, ArtistCatalog<I>>, Repository<Int, I> by repository
-    where I : ReactiveAudioItem<I>, I : Comparable<I> {
-
-    private val artistCatalogRegistry = ArtistCatalogRegistry<I>()
+abstract class AudioLibraryBase<I, AC>(
+    protected val repository: Repository<Int, I>,
+    protected val observableArtistCatalogRegistry: ArtistCatalogRegistryBase<I, AC>
+) : AudioLibrary<I, AC>, Repository<Int, I> by repository
+    where I : ReactiveAudioItem<I>,
+          I : Comparable<I>,
+          AC : ReactiveArtistCatalog<AC, I>,
+          AC : Comparable<AC> {
 
     /**
      * Publisher exposing the internal artist catalog registry.
@@ -54,11 +57,11 @@ abstract class AudioLibraryBase<I, AC: ReactiveArtistCatalog<in AC, I>>(protecte
      * This allows consumers to subscribe to artist catalog events without accessing
      * the mutable registry directly, maintaining encapsulation while providing reactive updates.
      */
-    override val artistCatalogPublisher: TransEventPublisher<CrudEvent.Type, CrudEvent<Artist, ArtistCatalog<I>>> = artistCatalogRegistry
+    override val artistCatalogPublisher: TransEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>> = observableArtistCatalogRegistry
 
     init {
         if (repository.isEmpty.not()) {
-            repository.runForAll { artistCatalogRegistry.addAudioItem(it) }
+            repository.runForAll { observableArtistCatalogRegistry.addAudioItem(it) }
         }
     }
 
@@ -77,25 +80,22 @@ abstract class AudioLibraryBase<I, AC: ReactiveArtistCatalog<in AC, I>>(protecte
         repository.subscribe { event ->
             when (event.type) {
                 CREATE -> {
-                    artistCatalogRegistry.addAudioItems(event.entities.values)
+                    observableArtistCatalogRegistry.addAudioItems(event.entities.values)
                 }
-
                 UPDATE -> {
                     event.entities.values.forEach { updatedAudioItem ->
                         val oldEntity =
                             event.oldEntities.values.firstOrNull { old -> old.id == updatedAudioItem.id }
                                 ?: error("Old entity not found for updated one with id ${updatedAudioItem.id}")
-                        artistCatalogRegistry.updateCatalog(updatedAudioItem, oldEntity)
+                        observableArtistCatalogRegistry.updateCatalog(updatedAudioItem, oldEntity)
                     }
                 }
-
                 DELETE -> {
-                    artistCatalogRegistry.removeAudioItems(event.entities.values)
+                    observableArtistCatalogRegistry.removeAudioItems(event.entities.values)
                 }
-
                 READ -> {
                     Unit
-                } // Nothing to do here
+                }
             }
         }
 
@@ -111,11 +111,11 @@ abstract class AudioLibraryBase<I, AC: ReactiveArtistCatalog<in AC, I>>(protecte
 
     override val playerSubscriber = PlayedEventSubscriber()
 
-    override fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I> = artistCatalogRegistry.findAlbumAudioItems(artist, albumName)
+    override fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I> = observableArtistCatalogRegistry.findAlbumAudioItems(artist, albumName)
 
-    override fun getArtistCatalog(artist: Artist): Optional<out ArtistCatalog<I>> = artistCatalogRegistry.findById(artist)
+    override fun getArtistCatalog(artist: Artist): Optional<out AC> = observableArtistCatalogRegistry.findById(artist)
 
-    override fun getArtistCatalog(artistName: String): Optional<out ArtistCatalog<I>> = artistCatalogRegistry.findFirst(artistName)
+    override fun getArtistCatalog(artistName: String): Optional<out AC> = observableArtistCatalogRegistry.findFirst(artistName)
 
     override fun containsAudioItemWithArtist(artistName: String) =
         repository.contains {
@@ -131,8 +131,8 @@ abstract class AudioLibraryBase<I, AC: ReactiveArtistCatalog<in AC, I>>(protecte
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false
         val that = other as AudioLibraryBase<*, *>
-        return artistCatalogRegistry == that.artistCatalogRegistry
+        return observableArtistCatalogRegistry == that.observableArtistCatalogRegistry
     }
 
-    override fun hashCode() = Objects.hash(artistCatalogRegistry)
+    override fun hashCode() = Objects.hash(observableArtistCatalogRegistry)
 }
