@@ -125,7 +125,7 @@ abstract class AudioLibraryBase<I, AC>(
         }
 
     override fun getRandomAudioItemsFromArtist(artist: Artist, size: Short): List<I> =
-        repository.search(2) { it.artist == artist }.shuffled().toList()
+        repository.search(size.toInt()) { it.artist == artist }.shuffled().toList()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
