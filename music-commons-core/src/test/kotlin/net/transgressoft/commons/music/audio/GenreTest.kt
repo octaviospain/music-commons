@@ -23,12 +23,12 @@ class GenreTest : ShouldSpec({
 
         should("always capitalize the first letter of the first word") {
             Genre.entries.forEach { genre ->
-                genre.name.first().isUpperCase() shouldBe true
+                genre.capitalize().first().isUpperCase() shouldBe true
             }
         }
     }
 
-    context("parseGenres()") {
+    context("parseGenre()") {
         should("match uppercase input") {
             Genre.parseGenre("ROCK") shouldBe Genre.ROCK
         }

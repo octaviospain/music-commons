@@ -43,7 +43,6 @@ enum class Genre {
     AVANTGARDE,
     AVANTGARDE_JAZZ,
     AVANTGARDE_METAL,
-    AVANT_GARDE,
     BACHATA,
     BAROQUE,
     BASS_MUSIC,
@@ -323,7 +322,6 @@ enum class Genre {
     PSYCHEDELIC,
     PSYCHEDELIC_POP,
     PSYCHEDELIC_ROCK,
-    PSYTRANCE,
     PSY_TRANCE,
     PUNK,
     PUNK_ROCK,
@@ -399,6 +397,18 @@ enum class Genre {
     WORLD,
     WORLD_FUSION;
 
+    /**
+     * Returns a capitalised representation of this genre by converting the enum constant's
+     * name to title case, replacing underscores with spaces.
+     *
+     * Each word (delimited by a space or comma) is capitalised, and all remaining characters
+     * are lowercased. For example:
+     * - HIP_HOP → Hip Hop
+     * - ROCK_AND_ROLL → Rock And Roll
+
+     *
+     * @return the title-cased, space-separated genre name.
+     */
     fun capitalize(): String {
         val replaced = name.replace('_', ' ')
         val capitalized = CharArray(replaced.length)
@@ -410,6 +420,21 @@ enum class Genre {
         return String(capitalized)
     }
 
+    /**
+     * Parses a string into a [Genre], ignoring case and treating spaces as underscores.
+     *
+     * The lookup is case-insensitive, and any spaces in [value] are replaced with underscores
+     * before matching against enum constant names. If no match is found, [UNDEFINED] is returned.
+     *
+     * Examples:
+     * - jazz → [JAZZ]
+     * - Hip Hop → [HIP_HOP]
+     * - DRUM AND BASS → [DRUM_AND_BASS]
+     * - unknown → [UNDEFINED]
+     *
+     * @param value the string to parse
+     * @return the matching [Genre], or [UNDEFINED] if no match is found.
+     */
     companion object {
         @JvmStatic
         fun parseGenre(value: String): Genre {
