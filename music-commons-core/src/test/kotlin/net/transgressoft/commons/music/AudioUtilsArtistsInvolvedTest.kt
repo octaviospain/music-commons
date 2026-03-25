@@ -385,9 +385,9 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
             }
         }
 
-        // TODO
-        xcontext("Has 'ft' and ends with Remix inside parenthesis") {
-            AudioUtils.getArtistsNamesInvolved("Pretendingtowalkslow ft Zeroh", "", "") shouldBe setOf("Zeroh", "M. Constant Remix")
+        context("Has 'ft' and remix in parentheses") {
+            AudioUtils.getArtistsNamesInvolved("Pretendingtowalkslow ft Zeroh (M. Constant Remix)", "Devonwho", "") shouldBe
+                setOf("Zeroh", "M. Constant", "Devonwho")
         }
     }
 })

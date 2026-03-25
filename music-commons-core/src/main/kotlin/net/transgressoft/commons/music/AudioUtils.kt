@@ -71,7 +71,7 @@ object AudioUtils {
      *  Function to get artist names in the title, artist field and album artist field
      **********************************************************************************/
 
-    private val endsWithRemix = Pattern.compile("[(|\\[](\\s*(&?\\s*(\\w+)\\s+)+(?i)(remix))[)|\\]]")
+    private val endsWithRemix = Pattern.compile("[(|\\[](\\s*(&?\\s*([\\w.]+)\\s+)+(?i)(remix))[)|\\]]")
     private val startsWithRemixBy = Pattern.compile("[(|\\[](?i)(remix)(\\s+)(?i)(by)(.+)[)|\\]]")
     private val hasFt = Pattern.compile("[(\\[|\\s](?i)(ft) (.+)")
     private val hasFeat = Pattern.compile("[(\\[|\\s](?i)(feat) (.+)")
@@ -183,24 +183,43 @@ object AudioUtils {
      * @return A Set with the artists found
      */
     private fun getNamesInTitle(title: String): Set<String> {
-        val artistsInsideParenthesis = mutableSetOf<String>()
-        for ((keyPattern, value) in artistsRegexMap) {
-            val matcher = value.matcher(title)
+        val artists = mutableSetOf<String>()
+        var remainingTitle = title
+
+        // First pass: extract artists from parenthetical patterns (remix, with)
+        for ((keyPattern, valuePattern) in artistsRegexMap) {
+            if (valuePattern === hasFt || valuePattern === hasFeat || valuePattern === hasFeaturing) continue
+            val matcher = valuePattern.matcher(remainingTitle)
             if (matcher.find()) {
                 val insideParenthesisString =
-                    title.substring(matcher.start()).replace("[(\\[|)\\]]".toRegex(), "").replace(keyPattern.pattern().toRegex(), "")
+                    remainingTitle.substring(matcher.start()).replace("[(\\[|)\\]]".toRegex(), "")
+                        .replace(keyPattern.pattern().toRegex(), "")
                         .replace("\\s(?i)(vs)\\s".toRegex(), "&").replace("\\s+".toRegex(), " ")
+                artists.addAll(
+                    Splitter.on(CharMatcher.anyOf("&,")).trimResults().omitEmptyStrings().splitToList(insideParenthesisString)
+                )
+                remainingTitle = remainingTitle.substring(0, matcher.start()).trimEnd()
+                break
+            }
+        }
 
-                artistsInsideParenthesis.addAll(
-                    Splitter.on(CharMatcher.anyOf("&,"))
-                        .trimResults()
-                        .omitEmptyStrings()
-                        .splitToList(insideParenthesisString)
+        // Second pass: extract artists from ft/feat/featuring on the title without parentheticals
+        for ((keyPattern, valuePattern) in artistsRegexMap) {
+            if (valuePattern !== hasFt && valuePattern !== hasFeat && valuePattern !== hasFeaturing) continue
+            val matcher = valuePattern.matcher(remainingTitle)
+            if (matcher.find()) {
+                val insideParenthesisString =
+                    remainingTitle.substring(matcher.start()).replace("[(\\[|)\\]]".toRegex(), "")
+                        .replace(keyPattern.pattern().toRegex(), "")
+                        .replace("\\s(?i)(vs)\\s".toRegex(), "&").replace("\\s+".toRegex(), " ")
+                artists.addAll(
+                    Splitter.on(CharMatcher.anyOf("&,")).trimResults().omitEmptyStrings().splitToList(insideParenthesisString)
                 )
                 break
             }
         }
-        return artistsInsideParenthesis
+
+        return artists
             .map { it.split(" ").joinToString(" ") { itt -> itt.replaceFirstChar(Char::titlecase) } }
             .toSet()
     }
