@@ -119,8 +119,8 @@ interface AudioLibrary<I: ReactiveAudioItem<I>, AC: ReactiveArtistCatalog<AC, I>
      *
      * The files are processed in batches of 500 for optimal performance.
      */
-    fun createFromFileBatchAsync(audioItemPaths: Collection<Path>, dispatcher: CoroutineDispatcher): CompletableFuture<List<I>> {
-        val batchSize = 500 // TODO #4 Parameterize this magic constant for customization
+    fun createFromFileBatchAsync(audioItemPaths: Collection<Path>, dispatcher: CoroutineDispatcher, batchSize: Int = 500): CompletableFuture<List<I>> {
+        require(batchSize > 0) { "Batch size must be greater than 0" }
         return CoroutineScope(dispatcher).future {
             audioItemPaths.chunked(batchSize).map { batch ->
                 async {
