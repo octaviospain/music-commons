@@ -117,7 +117,11 @@ interface AudioLibrary<I: ReactiveAudioItem<I>, AC: ReactiveArtistCatalog<AC, I>
     /**
      * Creates audio items asynchronously from a batch of file paths using the specified dispatcher.
      *
-     * The files are processed in batches of 500 for optimal performance.
+     * +     * The files are processed in batches of [batchSize] (default: 500).
+     * +     *
+     * +     * `@param` audioItemPaths File paths to process
+     * +     * `@param` dispatcher Dispatcher used for coroutine execution
+     * +     * `@param` batchSize Number of files per chunk; must be greater than 0
      */
     fun createFromFileBatchAsync(audioItemPaths: Collection<Path>, dispatcher: CoroutineDispatcher, batchSize: Int = 500): CompletableFuture<List<I>> {
         require(batchSize > 0) { "Batch size must be greater than 0" }
