@@ -18,8 +18,6 @@
 package net.transgressoft.commons.music
 
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
-import org.jetbrains.kotlin.com.google.common.base.CharMatcher
-import org.jetbrains.kotlin.com.google.common.base.Splitter
 import java.util.regex.Pattern
 import kotlin.collections.iterator
 
@@ -114,7 +112,7 @@ object AudioUtils {
      */
     fun getArtistsNamesInvolved(title: String, artistName: String, albumArtistName: String): Set<String> {
         val artistsInvolved: MutableSet<String> = mutableSetOf()
-        val albumArtistNames: Collection<String> = Splitter.on(CharMatcher.anyOf(",&")).trimResults().omitEmptyStrings().splitToList(albumArtistName)
+        val albumArtistNames: Collection<String> = albumArtistName.split("&", ",").map { it.trim() }.filter { it.isNotEmpty() }
 
         artistsInvolved.addAll(albumArtistNames)
         artistsInvolved.addAll(getNamesInArtist(artistName))
@@ -196,7 +194,7 @@ object AudioUtils {
                         .replace(keyPattern.pattern().toRegex(), "")
                         .replace("\\s(?i)(vs)\\s".toRegex(), "&").replace("\\s+".toRegex(), " ")
                 artists.addAll(
-                    Splitter.on(CharMatcher.anyOf("&,")).trimResults().omitEmptyStrings().splitToList(insideParenthesisString)
+                    insideParenthesisString.split("&", ",").map { it.trim() }.filter { it.isNotEmpty() }
                 )
                 remainingTitle = remainingTitle.substring(0, matcher.start()).trimEnd()
                 break
@@ -213,7 +211,7 @@ object AudioUtils {
                         .replace(keyPattern.pattern().toRegex(), "")
                         .replace("\\s(?i)(vs)\\s".toRegex(), "&").replace("\\s+".toRegex(), " ")
                 artists.addAll(
-                    Splitter.on(CharMatcher.anyOf("&,")).trimResults().omitEmptyStrings().splitToList(insideParenthesisString)
+                    insideParenthesisString.split("&", ",").map { it.trim() }.filter { it.isNotEmpty() }
                 )
                 break
             }
