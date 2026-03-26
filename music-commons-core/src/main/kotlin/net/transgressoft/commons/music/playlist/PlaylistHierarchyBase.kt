@@ -25,8 +25,6 @@ import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
 import net.transgressoft.lirp.event.LirpEventSubscriber
-import net.transgressoft.lirp.event.StandardCrudEvent.Create
-import net.transgressoft.lirp.event.StandardCrudEvent.Update
 import net.transgressoft.lirp.persistence.Repository
 import net.transgressoft.lirp.persistence.VolatileRepository
 import com.google.common.collect.Multimap
@@ -34,7 +32,6 @@ import com.google.common.collect.MultimapBuilder
 import mu.KotlinLogging
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.stream.Collectors.partitioningBy
 
 /**
  * Base implementation for [PlaylistHierarchy] managing hierarchical playlist structures.
@@ -83,42 +80,6 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
             added = added or addInternal(p)
         }
         return added
-    }
-
-    fun addOrReplace(entity: P) = addOrReplaceAll(setOf(entity))
-
-    fun addOrReplaceAll(entities: Set<P>): Boolean {
-        val entitiesBeforeUpdate = mutableListOf<P>()
-
-        val addedAndReplaced =
-            entities.stream().filter { it != null && repository.contains(it.id) }.collect(
-                partitioningBy { entity ->
-                    val entityBefore =
-                        repository.findById(entity.id).apply {
-                            ifPresent {
-                                entitiesBeforeUpdate.add(it)
-                            }
-                        }
-                    repository.remove(entity)
-                    repository.add(entity)
-                    return@partitioningBy entityBefore.isPresent
-                }
-            )
-
-        addedAndReplaced[true]?.let {
-            if (it.isNotEmpty()) {
-                repository.emitAsync(Create(it))
-                logger.debug { "${it.size} entities were added: $it" }
-            }
-        }
-        addedAndReplaced[false]?.let {
-            if (it.isNotEmpty()) {
-                repository.emitAsync(Update(it, entitiesBeforeUpdate))
-                logger.debug { "${it.size} entities were replaced: $it" }
-            }
-        }
-
-        return addedAndReplaced.values.stream().flatMap { it.stream() }.findAny().isPresent
     }
 
     override fun remove(entity: P): Boolean =
@@ -290,23 +251,14 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
         override val audioItems: MutableList<I> = ArrayList(audioItems)
         override val playlists: MutableSet<P> = HashSet(playlists)
 
-        override var isDirectory: Boolean = isDirectory
-            set(value) {
-                if (value != field) {
-                    mutateAndPublish { field = value }
-                    logger.trace { "Playlist $uniqueId changed isDirectory from $field to $value" }
-                }
-            }
+        override var isDirectory: Boolean by reactiveProperty(isDirectory)
 
         override var name: String = name
             set(value) {
                 require(!findByName(value).isPresent || findByName(value).get() === this) {
                     "Playlist with name '$value' already exists"
                 }
-                if (value != field) {
-                    mutateAndPublish { field = value }
-                    logger.trace { "Playlist $uniqueId changed name from $field to $value" }
-                }
+                mutateAndPublish { field = value }
             }
 
         override fun addAudioItems(audioItems: Collection<I>): Boolean {

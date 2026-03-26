@@ -30,11 +30,3 @@ dependencies {
     implementation libs.kotest.property.get()
 }
 
-tasks.withType(JavaCompile).configureEach {
-    options.compilerArgs += [
-            '--add-opens=javafx.base/javafx.beans=ALL-UNNAMED',
-            '--add-opens=javafx.base/javafx.beans.property=ALL-UNNAMED',
-            '--add-opens=javafx.base/javafx.collections=ALL-UNNAMED',
-            '--add-opens=javafx.graphics/javafx.scene.image=ALL-UNNAMED'
-    ]
-}

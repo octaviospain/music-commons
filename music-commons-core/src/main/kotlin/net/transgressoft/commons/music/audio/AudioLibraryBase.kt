@@ -24,8 +24,12 @@ import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.READ
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
 import net.transgressoft.lirp.event.LirpEventPublisher
+import net.transgressoft.lirp.event.LirpEventSubscription
+import net.transgressoft.lirp.event.MutationEvent
+import net.transgressoft.lirp.event.StandardCrudEvent.Update
 import net.transgressoft.lirp.persistence.Repository
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -59,10 +63,31 @@ abstract class AudioLibraryBase<I, AC>(
      */
     override val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>> = observableArtistCatalogRegistry
 
+    private val entitySubscriptions: MutableMap<Int, LirpEventSubscription<in I, MutationEvent.Type, MutationEvent<Int, I>>> =
+        ConcurrentHashMap()
+
     init {
         if (repository.isEmpty.not()) {
-            repository.forEach(observableArtistCatalogRegistry::addAudioItem)
+            repository.forEach {
+                observableArtistCatalogRegistry.addAudioItem(it)
+                subscribeMutations(it)
+            }
         }
+    }
+
+    /**
+     * Subscribes to an audio item's mutation events and bridges them to repository UPDATE events.
+     *
+     * When an audio item's properties change directly (not through repository operations),
+     * this subscription detects the change and emits a repository-level UPDATE event,
+     * enabling the artist catalog registry to stay synchronized with entity-level mutations.
+     */
+    private fun subscribeMutations(audioItem: I) {
+        val subscription =
+            audioItem.subscribe { mutationEvent ->
+                repository.emitAsync(Update(mutationEvent.newEntity, mutationEvent.oldEntity))
+            }
+        entitySubscriptions[audioItem.id] = subscription
     }
 
     /**
@@ -80,6 +105,7 @@ abstract class AudioLibraryBase<I, AC>(
             when (event.type) {
                 CREATE -> {
                     observableArtistCatalogRegistry.addAudioItems(event.entities.values)
+                    event.entities.values.forEach { subscribeMutations(it) }
                 }
                 UPDATE -> {
                     event.entities.values.forEach { updatedAudioItem ->
@@ -91,6 +117,7 @@ abstract class AudioLibraryBase<I, AC>(
                 }
                 DELETE -> {
                     observableArtistCatalogRegistry.removeAudioItems(event.entities.values)
+                    event.entities.values.forEach { entitySubscriptions.remove(it.id)?.cancel() }
                 }
                 READ -> {
                     Unit
@@ -134,6 +161,8 @@ abstract class AudioLibraryBase<I, AC>(
      */
     override fun close() {
         subscription.cancel()
+        entitySubscriptions.values.forEach { it.cancel() }
+        entitySubscriptions.clear()
         playerSubscriber.cancelSubscription()
     }
 
