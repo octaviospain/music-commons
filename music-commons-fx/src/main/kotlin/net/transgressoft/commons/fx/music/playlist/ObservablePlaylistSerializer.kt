@@ -73,38 +73,50 @@ internal class DummyPlaylist(
     override val playlistsProperty = SimpleSetProperty<ObservablePlaylist>()
     override val coverImageProperty = SimpleObjectProperty<Optional<Image>>()
 
-    override fun addAudioItems(audioItems: Collection<ObservableAudioItem>): Boolean = throw IllegalStateException()
+    override fun addAudioItems(audioItems: Collection<ObservableAudioItem>): Boolean =
+        throw IllegalStateException("DummyPlaylist does not support addAudioItems")
 
-    override fun removeAudioItems(audioItems: Collection<ObservableAudioItem>): Boolean = throw IllegalStateException()
+    override fun removeAudioItems(audioItems: Collection<ObservableAudioItem>): Boolean =
+        throw IllegalStateException("DummyPlaylist does not support removeAudioItems")
 
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removeAudioItemIds")
-    override fun removeAudioItems(audioItemIds: Collection<Int>): Boolean = throw IllegalStateException()
+    override fun removeAudioItems(audioItemIds: Collection<Int>): Boolean =
+        throw IllegalStateException("DummyPlaylist does not support removeAudioItems by id")
 
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removePlaylistIds")
-    override fun removePlaylists(playlistIds: Collection<Int>): Boolean = throw IllegalStateException()
+    override fun removePlaylists(playlistIds: Collection<Int>): Boolean =
+        throw IllegalStateException("DummyPlaylist does not support removePlaylists by id")
 
-    override fun clearAudioItems() = throw IllegalStateException()
+    override fun clearAudioItems() = throw IllegalStateException("DummyPlaylist does not support clearAudioItems")
 
-    override fun clearPlaylists() = throw IllegalStateException()
+    override fun clearPlaylists() = throw IllegalStateException("DummyPlaylist does not support clearPlaylists")
 
-    override fun subscribe(p0: Flow.Subscriber<in MutationEvent<Int, ObservablePlaylist>>?) = throw IllegalStateException()
+    override fun subscribe(p0: Flow.Subscriber<in MutationEvent<Int, ObservablePlaylist>>?) =
+        throw IllegalStateException("DummyPlaylist does not support Flow subscription")
 
-    override fun removePlaylists(playlists: Collection<ObservablePlaylist>): Boolean = throw IllegalStateException()
+    override fun removePlaylists(playlists: Collection<ObservablePlaylist>): Boolean =
+        throw IllegalStateException("DummyPlaylist does not support removePlaylists")
 
-    override fun addPlaylists(playlists: Collection<ObservablePlaylist>): Boolean = throw IllegalStateException()
+    override fun addPlaylists(playlists: Collection<ObservablePlaylist>): Boolean =
+        throw IllegalStateException("DummyPlaylist does not support addPlaylists")
 
-    override val isClosed: Boolean = false
+    private var closed: Boolean = false
+    override val isClosed: Boolean
+        get() = closed
 
-    override fun close() = throw IllegalStateException()
+    override fun close() {
+        closed = true
+    }
 
     override fun clone(): DummyPlaylist = DummyPlaylist(id)
 
     override val changes: SharedFlow<MutationEvent<Int, ObservablePlaylist>>
-        get() = throw UnsupportedOperationException()
+        get() = throw IllegalStateException("DummyPlaylist does not support changes")
 
-    override fun emitAsync(event: MutationEvent<Int, ObservablePlaylist>): Unit = throw UnsupportedOperationException()
+    override fun emitAsync(event: MutationEvent<Int, ObservablePlaylist>): Unit =
+        throw IllegalStateException("DummyPlaylist does not support emitAsync")
 
     override fun subscribe(action: suspend (MutationEvent<Int, ObservablePlaylist>) -> Unit):
         LirpEventSubscription<in ObservablePlaylist, MutationEvent.Type, MutationEvent<Int, ObservablePlaylist>> =
@@ -121,9 +133,9 @@ internal class DummyPlaylist(
 
 object FakeSubscription : LirpEventSubscription<ObservablePlaylist, MutationEvent.Type, MutationEvent<Int, ObservablePlaylist>> {
     override val source: LirpEventPublisher<MutationEvent.Type, MutationEvent<Int, ObservablePlaylist>>
-        get() = throw IllegalStateException()
+        get() = throw IllegalStateException("FakeSubscription has no source publisher")
 
-    override fun request(n: Long): Unit = throw IllegalStateException()
+    override fun request(n: Long): Unit = throw IllegalStateException("FakeSubscription does not support request")
 
     override fun cancel() {
         // No-op

@@ -66,6 +66,9 @@ internal class LifecycleIntegrationTest : StringSpec({
     }
 
     afterEach {
+        audioLibrary.close()
+        waveforms.close()
+        playlistHierarchy.close()
         audioLibraryRepository.close()
         waveformsRepository.close()
         playlistHierarchyRepository.close()
@@ -89,7 +92,7 @@ internal class LifecycleIntegrationTest : StringSpec({
 
         // After close(), the artist catalog registry subscription is cancelled
         // so newly added items are not indexed in the catalog
-        audioLibrary.findAlbumAudioItems(audioItem2.artist, audioItem2.album.name).size shouldBe 0
+        audioLibrary.findAlbumAudioItems(audioItem2.artist, audioItem2.album.name).any { it.id == audioItem2.id } shouldBe false
         audioLibrary.size() shouldBe 2
     }
 

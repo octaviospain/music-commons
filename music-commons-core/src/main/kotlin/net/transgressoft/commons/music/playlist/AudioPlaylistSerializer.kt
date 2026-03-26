@@ -162,38 +162,50 @@ internal class DummyPlaylist(
     override val playlists: Set<MutableAudioPlaylist> = emptySet(),
     override val lastDateModified: LocalDateTime = LocalDateTime.MIN
 ) : MutableAudioPlaylist {
-    override fun addAudioItems(audioItems: Collection<AudioItem>): Boolean = throw IllegalStateException()
+    override fun addAudioItems(audioItems: Collection<AudioItem>): Boolean =
+        throw IllegalStateException("DummyPlaylist does not support addAudioItems")
 
-    override fun removeAudioItems(audioItems: Collection<AudioItem>): Boolean = throw IllegalStateException()
+    override fun removeAudioItems(audioItems: Collection<AudioItem>): Boolean =
+        throw IllegalStateException("DummyPlaylist does not support removeAudioItems")
 
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removeAudioItemIds")
-    override fun removeAudioItems(audioItemIds: Collection<Int>): Boolean = throw IllegalStateException()
+    override fun removeAudioItems(audioItemIds: Collection<Int>): Boolean =
+        throw IllegalStateException("DummyPlaylist does not support removeAudioItems by id")
 
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removePlaylistIds")
-    override fun removePlaylists(playlistIds: Collection<Int>): Boolean = throw IllegalStateException()
+    override fun removePlaylists(playlistIds: Collection<Int>): Boolean =
+        throw IllegalStateException("DummyPlaylist does not support removePlaylists by id")
 
-    override fun clearAudioItems() = throw IllegalStateException()
+    override fun clearAudioItems() = throw IllegalStateException("DummyPlaylist does not support clearAudioItems")
 
-    override fun clearPlaylists() = throw IllegalStateException()
+    override fun clearPlaylists() = throw IllegalStateException("DummyPlaylist does not support clearPlaylists")
 
-    override fun subscribe(p0: Flow.Subscriber<in MutationEvent<Int, MutableAudioPlaylist>>?) = throw IllegalStateException()
+    override fun subscribe(p0: Flow.Subscriber<in MutationEvent<Int, MutableAudioPlaylist>>?) =
+        throw IllegalStateException("DummyPlaylist does not support Flow subscription")
 
-    override fun removePlaylists(playlists: Collection<MutableAudioPlaylist>): Boolean = throw IllegalStateException()
+    override fun removePlaylists(playlists: Collection<MutableAudioPlaylist>): Boolean =
+        throw IllegalStateException("DummyPlaylist does not support removePlaylists")
 
-    override fun addPlaylists(playlists: Collection<MutableAudioPlaylist>): Boolean = throw IllegalStateException()
+    override fun addPlaylists(playlists: Collection<MutableAudioPlaylist>): Boolean =
+        throw IllegalStateException("DummyPlaylist does not support addPlaylists")
 
-    override val isClosed: Boolean = false
+    private var closed: Boolean = false
+    override val isClosed: Boolean
+        get() = closed
 
-    override fun close() = throw IllegalStateException()
+    override fun close() {
+        closed = true
+    }
 
     override fun clone(): DummyPlaylist = DummyPlaylist(id)
 
     override val changes: SharedFlow<MutationEvent<Int, MutableAudioPlaylist>>
-        get() = throw IllegalStateException()
+        get() = throw IllegalStateException("DummyPlaylist does not support changes")
 
-    override fun emitAsync(event: MutationEvent<Int, MutableAudioPlaylist>): Unit = throw IllegalStateException()
+    override fun emitAsync(event: MutationEvent<Int, MutableAudioPlaylist>): Unit =
+        throw IllegalStateException("DummyPlaylist does not support emitAsync")
 
     override fun subscribe(action: suspend (MutationEvent<Int, MutableAudioPlaylist>) -> Unit):
         LirpEventSubscription<in MutableAudioPlaylist, MutationEvent.Type, MutationEvent<Int, MutableAudioPlaylist>> =
@@ -210,9 +222,9 @@ internal class DummyPlaylist(
 
 object FakeSubscription : LirpEventSubscription<MutableAudioPlaylist, MutationEvent.Type, MutationEvent<Int, MutableAudioPlaylist>> {
     override val source: LirpEventPublisher<MutationEvent.Type, MutationEvent<Int, MutableAudioPlaylist>>
-        get() = throw IllegalStateException()
+        get() = throw IllegalStateException("FakeSubscription has no source publisher")
 
-    override fun request(n: Long): Unit = throw IllegalStateException()
+    override fun request(n: Long): Unit = throw IllegalStateException("FakeSubscription does not support request")
 
     override fun cancel() {
         // No-op
@@ -221,7 +233,7 @@ object FakeSubscription : LirpEventSubscription<MutableAudioPlaylist, MutationEv
 
 internal class DummyAudioItem(
     override val id: Int
-): AudioItem {
+) : AudioItem {
     override val path: Path = Paths.get("")
     override var title: String = ""
     override val duration: Duration = Duration.ZERO
@@ -238,20 +250,24 @@ internal class DummyAudioItem(
     override val dateOfCreation: LocalDateTime = LocalDateTime.MIN
     override val lastDateModified: LocalDateTime = LocalDateTime.MIN
     override val changes: SharedFlow<MutationEvent<Int, AudioItem>>
-        get() = throw IllegalStateException()
+        get() = throw IllegalStateException("DummyAudioItem does not support changes")
 
-    override fun emitAsync(event: MutationEvent<Int, AudioItem>): Unit = throw IllegalStateException()
+    override fun emitAsync(event: MutationEvent<Int, AudioItem>): Unit =
+        throw IllegalStateException("DummyAudioItem does not support emitAsync")
 
     override fun subscribe(action: suspend (MutationEvent<Int, AudioItem>) -> Unit):
-        LirpEventSubscription<in AudioItem, MutationEvent.Type, MutationEvent<Int, AudioItem>> = throw IllegalStateException()
+        LirpEventSubscription<in AudioItem, MutationEvent.Type, MutationEvent<Int, AudioItem>> =
+        throw IllegalStateException("DummyAudioItem does not support suspend subscription")
 
     override fun subscribe(action: Consumer<in MutationEvent<Int, AudioItem>>):
-        LirpEventSubscription<in AudioItem, MutationEvent.Type, MutationEvent<Int, AudioItem>> = throw IllegalStateException()
+        LirpEventSubscription<in AudioItem, MutationEvent.Type, MutationEvent<Int, AudioItem>> =
+        throw IllegalStateException("DummyAudioItem does not support Consumer subscription")
 
     override fun subscribe(
         vararg eventTypes: MutationEvent.Type,
         action: Consumer<in MutationEvent<Int, AudioItem>>
-    ): LirpEventSubscription<in AudioItem, MutationEvent.Type, MutationEvent<Int, AudioItem>> = throw IllegalStateException()
+    ): LirpEventSubscription<in AudioItem, MutationEvent.Type, MutationEvent<Int, AudioItem>> =
+        throw IllegalStateException("DummyAudioItem does not support typed subscription")
 
     override val uniqueId: String = ""
     override val fileName: String = ""
@@ -261,15 +277,20 @@ internal class DummyAudioItem(
     override var coverImageBytes: ByteArray? = null
     override val playCount: Short = 0
 
-    override fun writeMetadata(): Job = throw IllegalStateException()
+    override fun writeMetadata(): Job = throw IllegalStateException("DummyAudioItem does not support writeMetadata")
 
-    override fun subscribe(p0: Flow.Subscriber<in MutationEvent<Int, AudioItem>>?) = throw IllegalStateException()
+    override fun subscribe(p0: Flow.Subscriber<in MutationEvent<Int, AudioItem>>?) =
+        throw IllegalStateException("DummyAudioItem does not support Flow subscription")
 
-    override fun compareTo(other: AudioItem): Int = throw IllegalStateException()
+    override fun compareTo(other: AudioItem): Int = throw IllegalStateException("DummyAudioItem does not support compareTo")
 
-    override val isClosed: Boolean = false
+    private var closed: Boolean = false
+    override val isClosed: Boolean
+        get() = closed
 
-    override fun close() = throw IllegalStateException()
+    override fun close() {
+        closed = true
+    }
 
     override fun clone(): DummyAudioItem = DummyAudioItem(id)
 }
