@@ -37,10 +37,11 @@ import kotlinx.coroutines.future.future
  * removes waveforms when their corresponding audio items are deleted to maintain consistency.
  */
 class DefaultAudioWaveformRepository<I: ReactiveAudioItem<I>>(
-    private val repository: Repository<Int, AudioWaveform> = VolatileRepository("AudioWaveformRepository")
+    private val repository: Repository<Int, AudioWaveform> = VolatileRepository("AudioWaveformRepository"),
+    private val audioItemEventSubscriber: AudioItemEventSubscriber<I> = AudioItemEventSubscriber("AudioWaveformRepositorySubscriber")
 ): AudioWaveformRepository<AudioWaveform, I>,
     Repository<Int, AudioWaveform> by repository,
-    LirpEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>> by AudioItemEventSubscriber("AudioWaveformRepositorySubscriber") {
+    LirpEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>> by audioItemEventSubscriber {
 
     init {
         addOnNextEventAction(DELETE) { event ->
@@ -65,6 +66,13 @@ class DefaultAudioWaveformRepository<I: ReactiveAudioItem<I>>(
                     }.await()
                 }
             }
+
+    /**
+     * Cancels the audio item event subscription used to synchronize waveform removal with audio item deletions.
+     */
+    override fun close() {
+        audioItemEventSubscriber.cancelSubscription()
+    }
 
     override fun hashCode() = repository.hashCode()
 

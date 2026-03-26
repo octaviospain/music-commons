@@ -29,6 +29,13 @@ import net.transgressoft.lirp.event.LirpEventSubscriberBase
  */
 open class PlayedEventSubscriber: LirpEventSubscriberBase<ReactiveAudioItem<*>, AudioItemPlayerEvent.Type, AudioItemPlayerEvent>("PlayedEventSubscriber") {
 
+    /**
+     * Cancels the current subscription, stopping event delivery from the publisher.
+     */
+    fun cancelSubscription() {
+        subscription?.cancel()
+    }
+
     override fun toString() =
         buildString {
             append("PlayedEventSubscriber(name=$name")

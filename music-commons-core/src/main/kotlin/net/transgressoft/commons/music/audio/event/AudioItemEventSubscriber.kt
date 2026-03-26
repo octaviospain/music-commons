@@ -31,6 +31,13 @@ open class AudioItemEventSubscriber<I: ReactiveAudioItem<I>>(
     name: String
 ): LirpEventSubscriberBase<I, CrudEvent.Type, CrudEvent<Int, I>>(name) {
 
+    /**
+     * Cancels the current subscription, stopping event delivery from the publisher.
+     */
+    fun cancelSubscription() {
+        subscription?.cancel()
+    }
+
     override fun toString() =
         buildString {
             append("AudioItemEventSubscriber(name=$name")

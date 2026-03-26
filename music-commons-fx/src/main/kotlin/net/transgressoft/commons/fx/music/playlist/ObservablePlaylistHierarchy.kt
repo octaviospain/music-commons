@@ -156,6 +156,14 @@ class ObservablePlaylistHierarchy
             }
         }
 
+        /**
+         * Cancels the base class subscriptions and the internal playlist changes subscriber.
+         */
+        override fun close() {
+            super.close()
+            playlistChangesSubscriber.cancelSubscription()
+        }
+
         override fun toString() = "observablePlaylistHierarchy(playlistsCount=${size()})"
 
         /**

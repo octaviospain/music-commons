@@ -24,12 +24,8 @@ import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.READ
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
 import net.transgressoft.lirp.event.LirpEventPublisher
-import net.transgressoft.lirp.event.LirpEventSubscription
-import net.transgressoft.lirp.event.MutationEvent
-import net.transgressoft.lirp.event.StandardCrudEvent.Update
 import net.transgressoft.lirp.persistence.Repository
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -49,7 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger
 abstract class AudioLibraryBase<I, AC>(
     protected val repository: Repository<Int, I>,
     protected val observableArtistCatalogRegistry: ArtistCatalogRegistryBase<I, AC>
-) : AudioLibrary<I, AC>, Repository<Int, I> by repository
+) : AudioLibrary<I, AC>, Repository<Int, I> by repository, AutoCloseable
     where I : ReactiveAudioItem<I>,
           I : Comparable<I>,
           AC : ReactiveArtistCatalog<AC, I>,
@@ -63,30 +59,10 @@ abstract class AudioLibraryBase<I, AC>(
      */
     override val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>> = observableArtistCatalogRegistry
 
-    private val entitySubscriptions: MutableMap<Int, LirpEventSubscription<in I, MutationEvent.Type, MutationEvent<Int, I>>> = ConcurrentHashMap()
-
     init {
         if (repository.isEmpty.not()) {
-            repository.forEach {
-                observableArtistCatalogRegistry.addAudioItem(it)
-                subscribeToEntityMutations(it)
-            }
+            repository.forEach(observableArtistCatalogRegistry::addAudioItem)
         }
-    }
-
-    /**
-     * Subscribes to an audio item's mutation events and bridges them to repository UPDATE events.
-     *
-     * When an audio item's properties change directly (not through repository operations),
-     * this subscription detects the change and emits a repository-level UPDATE event,
-     * enabling the artist catalog registry to stay synchronized with entity-level mutations.
-     */
-    private fun subscribeToEntityMutations(entity: I) {
-        val subscription =
-            entity.subscribe { mutationEvent ->
-                repository.emitAsync(Update(mutationEvent.newEntity, mutationEvent.oldEntity))
-            }
-        entitySubscriptions[entity.id] = subscription
     }
 
     /**
@@ -98,14 +74,12 @@ abstract class AudioLibraryBase<I, AC>(
      * - DELETE events remove audio items, delete empty catalogs, and unsubscribe from mutations
      * - READ events are ignored (no catalog changes needed)
      *
-     * TODO #5 figure out how do unsubscribe from the repository when it is closed
      */
     private val subscription =
         repository.subscribe { event ->
             when (event.type) {
                 CREATE -> {
                     observableArtistCatalogRegistry.addAudioItems(event.entities.values)
-                    event.entities.values.forEach { subscribeToEntityMutations(it) }
                 }
                 UPDATE -> {
                     event.entities.values.forEach { updatedAudioItem ->
@@ -117,7 +91,6 @@ abstract class AudioLibraryBase<I, AC>(
                 }
                 DELETE -> {
                     observableArtistCatalogRegistry.removeAudioItems(event.entities.values)
-                    event.entities.values.forEach { entitySubscriptions.remove(it.id)?.cancel() }
                 }
                 READ -> {
                     Unit
@@ -152,6 +125,17 @@ abstract class AudioLibraryBase<I, AC>(
 
     override fun getRandomAudioItemsFromArtist(artist: Artist, size: Short): List<I> =
         repository.search(size.toInt()) { it.artist == artist }.shuffled().toList()
+
+    /**
+     * Cancels all event subscriptions managed by this library.
+     *
+     * Cancels the repository event subscription that synchronizes the artist catalog registry,
+     * all per-entity mutation subscriptions, and the player subscriber's subscription.
+     */
+    override fun close() {
+        subscription.cancel()
+        playerSubscriber.cancelSubscription()
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
