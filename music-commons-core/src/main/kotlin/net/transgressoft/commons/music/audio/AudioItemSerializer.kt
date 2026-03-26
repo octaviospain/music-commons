@@ -54,64 +54,110 @@ val AudioItemMapSerializer: KSerializer<Map<Int, AudioItem>> = MapSerializer(Int
  * fields including artist, album, and label information. Creates [MutableAudioItem]
  * instances during deserialization to enable metadata modification.
  */
-internal object AudioItemSerializer: AudioItemSerializerBase<AudioItem>() {
+internal object AudioItemSerializer : AudioItemSerializerBase<AudioItem>() {
 
-    override fun createInstance(propertiesList: List<Any?>): AudioItem =
+    override fun constructEntity(
+        path: Path,
+        id: Int,
+        title: String,
+        duration: Duration,
+        bitRate: Int,
+        artist: Artist,
+        album: Album,
+        genre: Genre,
+        comments: String?,
+        trackNumber: Short?,
+        discNumber: Short?,
+        bpm: Float?,
+        encoder: String?,
+        encoding: String?,
+        dateOfCreation: LocalDateTime,
+        lastDateModified: LocalDateTime,
+        playCount: Short
+    ): AudioItem =
         MutableAudioItem(
-            // path
-            propertiesList[0] as Path,
-            // id
-            propertiesList[1] as Int,
-            // title
-            propertiesList[2] as String,
-            // duration
-            propertiesList[3] as Duration,
-            // bitRate
-            propertiesList[4] as Int,
-            // artist name and artist country code
-            ImmutableArtist.of(propertiesList[5] as String, CountryCode.getByCode(propertiesList[6] as String)),
-            ImmutableAlbum(
-                // album name
-                propertiesList[7] as String,
-                // album artist name
-                ImmutableArtist.of(propertiesList[8] as String),
-                // album isCompilation
-                propertiesList[9] as Boolean,
-                // album year
-                propertiesList[10] as Short?,
-                // album label name
-                ImmutableLabel.of(propertiesList[11] as String)
-            ),
-            // genre
-            Genre.parseGenre(propertiesList[12] as String),
-            // comments
-            propertiesList[13] as String?,
-            // trackNumber
-            propertiesList[14] as Short?,
-            // discNumber
-            propertiesList[15] as Short?,
-            // bpm
-            propertiesList[16] as Float?,
-            // encoder
-            propertiesList[17] as String?,
-            // encoding
-            propertiesList[18] as String?,
-            // dateOfCreation
-            propertiesList[19] as LocalDateTime,
-            // lastDateModified
-            propertiesList[20] as LocalDateTime,
-            // playCount
-            propertiesList[21] as Short
+            path, id, title, duration, bitRate, artist, album, genre,
+            comments, trackNumber, discNumber, bpm, encoder, encoding,
+            dateOfCreation, lastDateModified, playCount
         )
 }
 
-abstract class AudioItemSerializerBase<I: ReactiveAudioItem<I>>: LirpEntityPolymorphicSerializer<I> {
+abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>> : LirpEntityPolymorphicSerializer<I> {
 
     override val descriptor: SerialDescriptor =
         buildClassSerialDescriptor("AudioItem") {
             element<String>("id")
             element<String>("path")
         }
+
+    /**
+     * Constructs a concrete audio item instance from deserialized properties.
+     *
+     * @param path audio file path
+     * @param id entity identifier
+     * @param title track title
+     * @param duration track duration
+     * @param bitRate audio bitrate in kbps
+     * @param artist track artist
+     * @param album track album
+     * @param genre track genre
+     * @param comments optional comments
+     * @param trackNumber optional track number
+     * @param discNumber optional disc number
+     * @param bpm optional beats per minute
+     * @param encoder optional encoder name
+     * @param encoding optional encoding type
+     * @param dateOfCreation creation timestamp
+     * @param lastDateModified last modification timestamp
+     * @param playCount number of times played
+     */
+    protected abstract fun constructEntity(
+        path: Path,
+        id: Int,
+        title: String,
+        duration: Duration,
+        bitRate: Int,
+        artist: Artist,
+        album: Album,
+        genre: Genre,
+        comments: String?,
+        trackNumber: Short?,
+        discNumber: Short?,
+        bpm: Float?,
+        encoder: String?,
+        encoding: String?,
+        dateOfCreation: LocalDateTime,
+        lastDateModified: LocalDateTime,
+        playCount: Short
+    ): I
+
+    override fun createInstance(propertiesList: List<Any?>): I =
+        constructEntity(
+            path = propertiesList[0] as Path,
+            id = propertiesList[1] as Int,
+            title = propertiesList[2] as String,
+            duration = propertiesList[3] as Duration,
+            bitRate = propertiesList[4] as Int,
+            artist = ImmutableArtist.of(propertiesList[5] as String, CountryCode.getByCode(propertiesList[6] as String)),
+            album =
+                ImmutableAlbum(
+                    propertiesList[7] as String,
+                    ImmutableArtist.of(propertiesList[8] as String),
+                    propertiesList[9] as Boolean,
+                    propertiesList[10] as Short?,
+                    ImmutableLabel.of(propertiesList[11] as String)
+                ),
+            genre = Genre.parseGenre(propertiesList[12] as String),
+            comments = propertiesList[13] as String?,
+            trackNumber = propertiesList[14] as Short?,
+            discNumber = propertiesList[15] as Short?,
+            bpm = propertiesList[16] as Float?,
+            encoder = propertiesList[17] as String?,
+            encoding = propertiesList[18] as String?,
+            dateOfCreation = propertiesList[19] as LocalDateTime,
+            lastDateModified = propertiesList[20] as LocalDateTime,
+            playCount = propertiesList[21] as Short
+        )
 
     override fun getPropertiesList(decoder: Decoder): List<Any?> {
         val propertiesList = mutableListOf<Any?>()
