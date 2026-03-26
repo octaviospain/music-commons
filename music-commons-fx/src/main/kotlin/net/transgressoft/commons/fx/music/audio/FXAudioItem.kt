@@ -17,21 +17,16 @@
 
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.music.AudioUtils
+import net.transgressoft.commons.music.AudioUtils.audioItemTrackDiscNumberComparator
+import net.transgressoft.commons.music.AudioUtils.getArtistsNamesInvolved
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
-import net.transgressoft.commons.music.audio.AudioFileType.FLAC
-import net.transgressoft.commons.music.audio.AudioFileType.MP3
-import net.transgressoft.commons.music.audio.AudioFileType.WAV
-import net.transgressoft.commons.music.audio.AudioItemManipulationException
+import net.transgressoft.commons.music.audio.AudioItemMetadataUtils.readMetadata
+import net.transgressoft.commons.music.audio.AudioItemMetadataUtils.writeMetadataToFile
 import net.transgressoft.commons.music.audio.Genre
-import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
-import net.transgressoft.commons.music.audio.ImmutableLabel
-import net.transgressoft.commons.music.audio.Label
 import net.transgressoft.commons.music.audio.UNASSIGNED_ID
 import net.transgressoft.lirp.entity.ReactiveEntityBase
-import com.neovisionaries.i18n.CountryCode
 import javafx.beans.property.ObjectProperty
 import javafx.beans.property.ReadOnlyIntegerProperty
 import javafx.beans.property.ReadOnlyObjectProperty
@@ -45,24 +40,9 @@ import javafx.beans.property.StringProperty
 import javafx.collections.FXCollections
 import javafx.scene.image.Image
 import mu.KotlinLogging
-import org.jaudiotagger.audio.AudioFileIO
-import org.jaudiotagger.audio.AudioHeader
-import org.jaudiotagger.audio.wav.WavOptions
-import org.jaudiotagger.tag.FieldKey
-import org.jaudiotagger.tag.Tag
-import org.jaudiotagger.tag.TagOptionSingleton
-import org.jaudiotagger.tag.flac.FlacTag
-import org.jaudiotagger.tag.id3.ID3v24Tag
-import org.jaudiotagger.tag.images.Artwork
-import org.jaudiotagger.tag.images.ArtworkFactory
-import org.jaudiotagger.tag.mp4.Mp4Tag
-import org.jaudiotagger.tag.wav.WavInfoTag
-import org.jaudiotagger.tag.wav.WavTag
 import java.io.ByteArrayInputStream
-import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.Objects
@@ -145,36 +125,30 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
             suppressEvents = false
         }
 
-        @Transient
-        private val audioFile = AudioFileIO.read(path.toFile())
-
-        @Transient
-        private val audioHeader = audioFile.audioHeader
-
-        @Transient
-        private val tag: Tag = audioFile.tag
-
         init {
             require(Files.exists(path)) { "File '${path.toAbsolutePath()}' does not exist" }
         }
 
+        @Transient
+        private val metadata = readMetadata(path, path.extension)
+
         /** Immutable properties */
 
-        private var _bitRate: Int = getBitRate(audioHeader)
+        private var _bitRate: Int = metadata.bitRate
 
         @Serializable
         override val bitRate: Int = _bitRate
 
-        private var _duration: Duration = Duration.ofSeconds(audioHeader.trackLength.toLong())
+        private var _duration: Duration = metadata.duration
 
         override val duration: Duration = _duration
 
-        private var _encoder: String? = getFieldIfExisting(tag, FieldKey.ENCODER) ?: ""
+        private var _encoder: String? = metadata.encoder?.takeIf { it.isNotEmpty() }
 
         @Serializable
         override val encoder: String? = _encoder
 
-        private var _encoding: String? = audioHeader.encodingType
+        private var _encoding: String? = metadata.encoding?.takeIf { it.isNotEmpty() }
 
         @Serializable
         override val encoding: String? = _encoding
@@ -211,14 +185,14 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         /** Mutable properties */
 
-        override var title: String = getFieldIfExisting(tag, FieldKey.TITLE) ?: ""
+        override var title: String = metadata.title
             set(value) {
                 if (!suppressEvents) {
                     mutateAndPublish {
                         field = value
                         artistsInvolvedProperty.clear()
                         artistsInvolvedProperty.addAll(
-                            AudioUtils.getArtistsNamesInvolved(
+                            getArtistsNamesInvolved(
                                 value, artistProperty.value.name, albumProperty.value.albumArtist.name
                             ).map { ImmutableArtist.of(it) }.toSet()
                         )
@@ -236,14 +210,14 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                 }
             }
 
-        override var artist: Artist = readArtist(tag)
+        override var artist: Artist = metadata.artist
             set(value) {
                 if (!suppressEvents) {
                     mutateAndPublish {
                         field = value
                         artistsInvolvedProperty.clear()
                         artistsInvolvedProperty.addAll(
-                            AudioUtils.getArtistsNamesInvolved(
+                            getArtistsNamesInvolved(
                                 titleProperty.value, value.name, albumProperty.value.albumArtist.name
                             ).map { ImmutableArtist.of(it) }.toSet()
                         )
@@ -261,14 +235,14 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                 }
             }
 
-        override var album: Album = readAlbum(tag, extension)
+        override var album: Album = metadata.album
             set(value) {
                 if (!suppressEvents) {
                     mutateAndPublish {
                         field = value
                         artistsInvolvedProperty.clear()
                         artistsInvolvedProperty.addAll(
-                            AudioUtils.getArtistsNamesInvolved(
+                            getArtistsNamesInvolved(
                                 titleProperty.value, artistProperty.value.name, value.albumArtist.name
                             ).map { ImmutableArtist.of(it) }.toSet()
                         )
@@ -286,7 +260,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                 }
             }
 
-        override var genre: Genre = getFieldIfExisting(tag, FieldKey.GENRE)?.let { Genre.parseGenre(it) } ?: Genre.UNDEFINED
+        override var genre: Genre = metadata.genre
             set(value) {
                 if (!suppressEvents) mutateAndPublish { field = value } else field = value
             }
@@ -299,7 +273,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                 }
             }
 
-        override var comments: String? = getFieldIfExisting(tag, FieldKey.COMMENT)?.takeIf { it.isNotEmpty() }
+        override var comments: String? = metadata.comments
             set(value) {
                 if (!suppressEvents) mutateAndPublish { field = value } else field = value
             }
@@ -312,8 +286,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                 }
             }
 
-        override var trackNumber: Short? =
-            getFieldIfExisting(tag, FieldKey.TRACK)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()?.takeIf { it > 0 }
+        override var trackNumber: Short? = metadata.trackNumber
             set(value) {
                 if (!suppressEvents) mutateAndPublish { field = value } else field = value
             }
@@ -326,8 +299,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                 }
             }
 
-        override var discNumber: Short? =
-            getFieldIfExisting(tag, FieldKey.DISC_NO)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()?.takeIf { it > 0 }
+        override var discNumber: Short? = metadata.discNumber
             set(value) {
                 if (!suppressEvents) mutateAndPublish { field = value } else field = value
             }
@@ -340,7 +312,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                 }
             }
 
-        override var bpm: Float? = getFieldIfExisting(tag, FieldKey.BPM)?.takeUnless { it.isEmpty().and(it == "0") }?.toFloatOrNull()?.takeIf { it > 0 }
+        override var bpm: Float? = metadata.bpm
             set(value) {
                 if (!suppressEvents) mutateAndPublish { field = value } else field = value
             }
@@ -365,7 +337,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         @Transient
         override val lastDateModifiedProperty: ReadOnlyObjectProperty<LocalDateTime> = _lastDateModifiedProperty
 
-        override var coverImageBytes: ByteArray? = getCoverBytes(tag)
+        override var coverImageBytes: ByteArray? = metadata.coverBytes
             set(value) {
                 if (!suppressEvents) {
                     mutateAndPublish {
@@ -393,7 +365,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
             SimpleSetProperty(
                 this, "artists involved",
                 FXCollections.observableSet(
-                    AudioUtils.getArtistsNamesInvolved(
+                    getArtistsNamesInvolved(
                         titleProperty.value, artistProperty.value.name, albumProperty.value.albumArtist.name
                     ).map { ImmutableArtist.of(it) }.toSet()
                 )
@@ -411,136 +383,16 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         @Transient
         override val playCountProperty: ReadOnlyIntegerProperty = _playCountProperty
 
-        private fun getFieldIfExisting(tag: Tag, fieldKey: FieldKey): String? = tag.hasField(fieldKey).takeIf { it }.run { tag.getFirst(fieldKey) }
-
-        private fun readArtist(tag: Tag): Artist =
-            getFieldIfExisting(tag, FieldKey.ARTIST)?.let { artistName ->
-                val country =
-                    getFieldIfExisting(tag, FieldKey.COUNTRY)?.let { _country ->
-                        if (_country.isNotEmpty()) CountryCode.valueOf(_country)
-                        else CountryCode.UNDEFINED
-                    } ?: CountryCode.UNDEFINED
-                ImmutableArtist.of(AudioUtils.beautifyArtistName(artistName), country)
-            } ?: ImmutableArtist.UNKNOWN
-
-        private fun readAlbum(tag: Tag, extension: String): Album =
-            getFieldIfExisting(tag, FieldKey.ALBUM).let { albumName ->
-                return if (albumName == null) {
-                    ImmutableAlbum.UNKNOWN
-                } else {
-                    val albumArtistName = getFieldIfExisting(tag, FieldKey.ALBUM_ARTIST) ?: ""
-                    val isCompilation =
-                        getFieldIfExisting(tag, FieldKey.IS_COMPILATION)?.let {
-                            if ("m4a" == extension) "1" == tag.getFirst(FieldKey.IS_COMPILATION)
-                            else "true" == tag.getFirst(FieldKey.IS_COMPILATION)
-                        } == true
-                    val year = getFieldIfExisting(tag, FieldKey.YEAR)?.toShortOrNull()?.takeIf { it > 0 }
-                    val label = getFieldIfExisting(tag, FieldKey.GROUPING)?.let { ImmutableLabel.of(it) } as Label
-                    ImmutableAlbum(albumName, ImmutableArtist.of(AudioUtils.beautifyArtistName(albumArtistName)), isCompilation, year, label)
-                }
-            }
-
-        private fun getBitRate(audioHeader: AudioHeader): Int {
-            val bitRate = audioHeader.bitRate
-            return if ("~" == bitRate.substring(0, 1)) {
-                bitRate.substring(1).toInt()
-            } else {
-                bitRate.toInt()
-            }
-        }
-
-        private fun getCoverBytes(tag: Tag): ByteArray? = tag.artworkList.isNotEmpty().takeIf { it }?.let { tag.firstArtwork.binaryData }
-
         override fun writeMetadata(): Job =
             ioScope.launch {
                 logger.debug { "Writing metadata of $this to file '${path.toAbsolutePath()}'" }
-
-                val audioFile = path.toFile()
-                val audio = AudioFileIO.read(audioFile)
-                createTag(audio.audioHeader.format).let {
-                    audio.tag = it
-                }
-
-                audio.commit()
+                writeMetadataToFile(
+                    path, title, album, artist, genre,
+                    comments, trackNumber, discNumber, bpm, encoder,
+                    coverImageBytes, fileName, logger
+                )
                 logger.debug { "Metadata of $this successfully written to file" }
             }
-
-        private fun createTag(format: String): Tag =
-            when {
-                format.startsWith(WAV.extension, ignoreCase = true) -> {
-                    val wavTag = WavTag(WavOptions.READ_ID3_ONLY)
-                    wavTag.iD3Tag = ID3v24Tag()
-                    wavTag.infoTag = WavInfoTag()
-                    wavTag
-                }
-
-                format.startsWith(MP3.extension, ignoreCase = true) -> {
-                    TagOptionSingleton.getInstance().isWriteMp3GenresAsText = true
-                    val tag: Tag = ID3v24Tag()
-                    tag.artworkList.clear()
-                    tag
-                }
-
-                format.startsWith(FLAC.extension, ignoreCase = true) -> {
-                    val tag: Tag = FlacTag()
-                    tag.artworkList.clear()
-                    tag
-                }
-
-                format.startsWith("Aac", ignoreCase = true) -> {
-                    TagOptionSingleton.getInstance().isWriteMp4GenresAsText = true
-                    val tag: Tag = Mp4Tag()
-                    tag.artworkList.clear()
-                    tag
-                }
-
-                else -> {
-                    WavInfoTag()
-                }
-            }.also {
-                setTrackFieldsToTag(it)
-            }
-
-        private fun setTrackFieldsToTag(tag: Tag) {
-            tag.setField(FieldKey.TITLE, title)
-            tag.setField(FieldKey.ALBUM, album.name)
-            tag.setField(FieldKey.ALBUM_ARTIST, album.albumArtist.name)
-            tag.setField(FieldKey.ARTIST, artist.name)
-            tag.setField(FieldKey.GENRE, genre.capitalize())
-            tag.setField(FieldKey.COUNTRY, artist.countryCode.name)
-            comments?.let { tag.setField(FieldKey.COMMENT, it) }
-            trackNumber?.let { tag.setField(FieldKey.TRACK, it.toString()) }
-            album.year?.let { tag.setField(FieldKey.YEAR, it.toString()) }
-            tag.setField(FieldKey.ENCODER, encoder)
-            tag.setField(FieldKey.GROUPING, album.label.name)
-            discNumber?.let { tag.setField(FieldKey.DISC_NO, it.toString()) }
-            tag.setField(FieldKey.IS_COMPILATION, album.isCompilation.toString())
-            bpm?.let {
-                if (tag is Mp4Tag) {
-                    tag.setField(FieldKey.BPM, it.toInt().toString())
-                } else {
-                    tag.setField(FieldKey.BPM, it.toString())
-                }
-            }
-            coverImageBytes?.let {
-                tag.deleteArtworkField()
-                tag.addField(createArtwork(it))
-            }
-        }
-
-        private fun createArtwork(coverBytes: ByteArray): Artwork {
-            val tempCover: Path
-            try {
-                tempCover = Files.createTempFile("tempCover_$fileName", ".tmp")
-                Files.write(tempCover, coverBytes, StandardOpenOption.CREATE)
-                tempCover.toFile().deleteOnExit()
-                return ArtworkFactory.createArtworkFromFile(tempCover.toFile())
-            } catch (exception: IOException) {
-                val errorText = "Error creating artwork of $this"
-                logger.error(errorText, exception)
-                throw AudioItemManipulationException(errorText, exception)
-            }
-        }
 
         internal fun incrementPlayCount() {
             mutateAndPublish {
@@ -548,7 +400,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
             }
         }
 
-        override operator fun compareTo(other: ObservableAudioItem) = AudioUtils.audioItemTrackDiscNumberComparator<ObservableAudioItem>().compare(this, other)
+        override operator fun compareTo(other: ObservableAudioItem) = audioItemTrackDiscNumberComparator<ObservableAudioItem>().compare(this, other)
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true

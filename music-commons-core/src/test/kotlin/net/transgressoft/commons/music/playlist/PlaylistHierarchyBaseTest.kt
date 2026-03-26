@@ -11,7 +11,6 @@ import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
-import io.mockk.unmockkAll
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -32,10 +31,13 @@ internal class PlaylistHierarchyBaseTest : StringSpec({
         playlistHierarchy = TestPlaylistHierarchy()
     }
 
+    afterEach {
+        playlistHierarchy.close()
+    }
+
     afterSpec {
         ReactiveScope.resetDefaultFlowScope()
         ReactiveScope.resetDefaultIoScope()
-        unmockkAll()
     }
 
     "PlaylistHierarchyBase creates playlist and stores in repository" {

@@ -281,6 +281,8 @@ internal class MusicLibraryIntegrationTest : StringSpec({
             restoredPlaylist.audioItems.any { it.id == item2Id } shouldBe true
         }
 
+        reopenedAudioLibrary.close()
+        reopenedPlaylistHierarchy.close()
         reopenedAudioRepository.close()
         reopenedPlaylistRepository.close()
     }

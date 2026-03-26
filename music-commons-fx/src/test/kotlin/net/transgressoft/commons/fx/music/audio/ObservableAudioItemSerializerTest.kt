@@ -7,6 +7,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
+import java.time.temporal.ChronoUnit.SECONDS
 import kotlinx.serialization.json.Json
 
 /**
@@ -53,6 +54,14 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
         decoded.artist shouldBe original.artist
         decoded.album shouldBe original.album
         decoded.genre shouldBe original.genre
+        decoded.comments shouldBe original.comments
+        decoded.trackNumber shouldBe original.trackNumber
+        decoded.discNumber shouldBe original.discNumber
+        decoded.bpm shouldBe original.bpm
+        decoded.encoder shouldBe original.encoder
+        decoded.encoding shouldBe original.encoding
+        decoded.dateOfCreation.truncatedTo(SECONDS) shouldBe original.dateOfCreation.truncatedTo(SECONDS)
+        decoded.lastDateModified.truncatedTo(SECONDS) shouldBe original.lastDateModified.truncatedTo(SECONDS)
         decoded.playCount shouldBe original.playCount
     }
 

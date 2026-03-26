@@ -4,6 +4,10 @@ import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Tests for [MutableAudioPlaylistSerializer] covering golden JSON fixture deserialization
@@ -85,10 +89,11 @@ internal class AudioPlaylistSerializerTest : StringSpec({
 
         val encoded = json.encodeToString(AudioPlaylistMapSerializer, mapOf(3 to playlist))
 
-        // Verify the encoded JSON contains audioItemIds (not full objects)
-        encoded.contains("audioItemIds") shouldBe true
-        encoded.contains("\"10\"") shouldBe false // not full object with id field quoted as key
-        encoded.contains("10") shouldBe true
-        encoded.contains("20") shouldBe true
+        val jsonElement = Json.parseToJsonElement(encoded)
+        val playlistJson = jsonElement.jsonObject["3"]!!.jsonObject
+        playlistJson.containsKey("audioItemIds") shouldBe true
+        playlistJson.containsKey("audioItems") shouldBe false
+        val audioItemIds = playlistJson["audioItemIds"]!!.jsonArray.map { it.jsonPrimitive.int }
+        audioItemIds shouldBe listOf(10, 20)
     }
 })
