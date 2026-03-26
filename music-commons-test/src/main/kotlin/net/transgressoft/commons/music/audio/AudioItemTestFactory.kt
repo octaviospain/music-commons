@@ -22,6 +22,7 @@ import io.kotest.property.Arb
 import io.kotest.property.arbitrary.enum
 import io.kotest.property.arbitrary.next
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
 
 /**
@@ -29,6 +30,16 @@ import java.util.function.Consumer
  * This class serves as a bridge to the Kotlin-based arbitrary generators.
  */
 object AudioItemTestFactory {
+
+    private val testIdCounter = AtomicInteger(1)
+
+    @JvmStatic
+    fun nextTestId(): Int = testIdCounter.getAndIncrement()
+
+    @JvmStatic
+    fun resetTestIdCounter() {
+        testIdCounter.set(1)
+    }
 
     @JvmStatic
     fun createAudioItem(attributes: Consumer<AudioItemTestAttributes>): AudioItem = Arb.audioItem(attributes::accept).next()

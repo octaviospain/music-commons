@@ -99,18 +99,6 @@ internal class MutableAudioItem(
                 }
         )
 
-    // Constructor only for testing purposes
-    internal constructor(path: Path) : this(path, nextId())
-
-    internal companion object {
-        private var testId: Int? = null
-
-        fun nextId(): Int {
-            testId = testId?.plus(1) ?: 1
-            return testId!!
-        }
-    }
-
     // Constructor for deserialization
     internal constructor(
         path: Path,

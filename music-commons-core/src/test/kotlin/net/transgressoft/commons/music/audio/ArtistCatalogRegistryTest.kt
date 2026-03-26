@@ -1,10 +1,11 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.event.CrudEvent
-import net.transgressoft.commons.event.CrudEvent.Type.CREATE
-import net.transgressoft.commons.event.CrudEvent.Type.DELETE
-import net.transgressoft.commons.event.CrudEvent.Type.UPDATE
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
+import net.transgressoft.commons.music.audio.MutableAudioItemTestBridge.createAudioItem
+import net.transgressoft.lirp.event.CrudEvent
+import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
+import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
+import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.BehaviorSpec
@@ -34,7 +35,7 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
                     discNumber = 1
                 }.next()
             var audioItem =
-                MutableAudioItem(audioFilePath).also {
+                createAudioItem(audioFilePath).also {
                     registry.addAudioItem(it)
                 }
 
@@ -188,7 +189,7 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
                     artist = expectedArtist
                     album = expectedAlbum
                 }.next()
-            val audioItem = MutableAudioItem(audioFilePath)
+            val audioItem = createAudioItem(audioFilePath)
 
             registry.addAudioItem(audioItem)
 
@@ -219,7 +220,7 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
                     discNumber = 1
                     genre = Genre.UNDEFINED
                 }.next()
-            val audioItem = MutableAudioItem(audioFilePath)
+            val audioItem = createAudioItem(audioFilePath)
 
             registry.addAudioItem(audioItem)
 
@@ -235,7 +236,7 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
                         trackNumber = 2
                         discNumber = 1
                     }.next()
-                val secondAudioItem = MutableAudioItem(secondAudioFilePath)
+                val secondAudioItem = createAudioItem(secondAudioFilePath)
 
                 registry.addAudioItem(secondAudioItem)
 
@@ -302,7 +303,7 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
                     artist = expectedArtist
                     album = expectedAlbum
                 }.next()
-            val audioItem = MutableAudioItem(audioFilePath)
+            val audioItem = createAudioItem(audioFilePath)
 
             registry.addAudioItem(audioItem)
 
@@ -336,14 +337,14 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
             val album2 = ImmutableAlbum("IV", artist2)
 
             val audioItem1 =
-                MutableAudioItem(
+                createAudioItem(
                     Arb.realAudioFile {
                         artist = artist1
                         album = album1
                     }.next()
                 )
             val audioItem2 =
-                MutableAudioItem(
+                createAudioItem(
                     Arb.realAudioFile {
                         artist = artist2
                         album = album2
