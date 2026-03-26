@@ -1,6 +1,5 @@
 package net.transgressoft.commons.fx.music.player
 
-import net.transgressoft.commons.event.ReactiveScope
 import net.transgressoft.commons.fx.music.audio.FXAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItemMapSerializer
@@ -12,8 +11,9 @@ import net.transgressoft.commons.music.player.AudioItemPlayer.Status.PAUSED
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status.PLAYING
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status.STOPPED
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status.UNKNOWN
-import net.transgressoft.commons.persistence.json.JsonFileRepository
-import net.transgressoft.commons.persistence.json.JsonRepository
+import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.lirp.persistence.json.JsonFileRepository
+import net.transgressoft.lirp.persistence.json.JsonRepository
 import io.kotest.assertions.json.shouldContainJsonKeyValue
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec

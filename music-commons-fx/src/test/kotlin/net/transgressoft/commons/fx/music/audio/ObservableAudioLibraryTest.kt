@@ -1,14 +1,14 @@
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.event.ReactiveScope
 import net.transgressoft.commons.fx.music.createItemsByArtist
 import net.transgressoft.commons.fx.music.createItemsWithMultipleAlbums
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist.Companion.of
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.commons.music.audio.shouldEqual
-import net.transgressoft.commons.persistence.json.JsonFileRepository
-import net.transgressoft.commons.persistence.json.JsonRepository
+import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.lirp.persistence.json.JsonFileRepository
+import net.transgressoft.lirp.persistence.json.JsonRepository
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec

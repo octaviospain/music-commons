@@ -17,18 +17,18 @@
 
 package net.transgressoft.commons.fx.music.playlist
 
-import net.transgressoft.commons.entity.toIds
-import net.transgressoft.commons.event.CrudEvent.Type.CREATE
-import net.transgressoft.commons.event.CrudEvent.Type.DELETE
-import net.transgressoft.commons.event.CrudEvent.Type.UPDATE
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
 import net.transgressoft.commons.music.audio.AudioItemManipulationException
 import net.transgressoft.commons.music.playlist.AudioPlaylist
 import net.transgressoft.commons.music.playlist.PlaylistHierarchyBase
 import net.transgressoft.commons.music.playlist.event.AudioPlaylistEventSubscriber
-import net.transgressoft.commons.persistence.Repository
-import net.transgressoft.commons.persistence.VolatileRepository
+import net.transgressoft.lirp.entity.toIds
+import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
+import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
+import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
+import net.transgressoft.lirp.persistence.Repository
+import net.transgressoft.lirp.persistence.VolatileRepository
 import com.google.common.base.Objects
 import javafx.application.Platform
 import javafx.beans.property.ReadOnlyBooleanProperty
@@ -92,18 +92,19 @@ class ObservablePlaylistHierarchy
             }
 
             disableEvents(CREATE, UPDATE, DELETE) // disable events until the initial load from the file is completed
-            runForAll {
+            forEach {
                 val playlistWithAudioItems = FXPlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItems.toIds(), audioLibrary!!))
-                repository.addOrReplace(playlistWithAudioItems)
+                repository.findById(it.id).ifPresent { old -> repository.remove(old) }
+                repository.add(playlistWithAudioItems)
             }
-            runForAll {
+            forEach {
                 val playlistMissingPlaylists =
                     repository.findById(it.id)
                         .orElseThrow { IllegalStateException("Playlist ID ${it.id} not found after initial processing") }
                 val foundPlaylists = findDeserializedPlaylistsFromIds(it.playlists.toIds(), repository)
                 playlistMissingPlaylists.addPlaylists(foundPlaylists)
             }
-            repository.runForAll {
+            repository.forEach {
                 Platform.runLater { observablePlaylistsSet.add(it) }
             }
 
@@ -173,43 +174,39 @@ class ObservablePlaylistHierarchy
         ): MutablePlaylistBase(id, isDirectory, name, audioItems, playlists), ObservablePlaylist {
             private val logger = KotlinLogging.logger {}
 
-            private val _nameProperty =
-                SimpleStringProperty(this, "name", name).apply {
-                    addListener { _, oldValue, newValue ->
-                        mutateAndPublish(newValue, oldValue)
-                    }
-                }
+            private val _nameProperty = SimpleStringProperty(this, "name", name)
 
             override val nameProperty: ReadOnlyStringProperty = _nameProperty
 
             override var name: String
-                get() = nameProperty.get()
+                get() = _nameProperty.get()
                 set(value) {
-                    Platform.runLater { _nameProperty.set(value) }
-                }
-
-            private val _isDirectoryProperty =
-                SimpleBooleanProperty(this, "isDirectory", isDirectory).apply {
-                    addListener { _, oldValue, newValue ->
-                        mutateAndPublish(newValue, oldValue)
+                    if (value != _nameProperty.get()) {
+                        mutateAndPublish {
+                            _nameProperty.set(value)
+                        }
                     }
                 }
+
+            private val _isDirectoryProperty = SimpleBooleanProperty(this, "isDirectory", isDirectory)
 
             override val isDirectoryProperty: ReadOnlyBooleanProperty = _isDirectoryProperty
 
             override var isDirectory: Boolean
-                get() = isDirectoryProperty.get()
+                get() = _isDirectoryProperty.get()
                 set(value) {
-                    Platform.runLater { _isDirectoryProperty.set(value) }
+                    if (value != _isDirectoryProperty.get()) {
+                        mutateAndPublish {
+                            _isDirectoryProperty.set(value)
+                        }
+                    }
                 }
 
             private val _audioItemsProperty =
                 SimpleListProperty(this, "audioItems", FXCollections.observableArrayList(ArrayList(audioItems))).apply {
-                    addListener { _, oldValue, newValue ->
-                        mutateAndPublish(newValue, oldValue) {
-                            replaceRecursiveAudioItems()
-                            changePlaylistCover()
-                        }
+                    addListener { _, _, _ ->
+                        replaceRecursiveAudioItems()
+                        changePlaylistCover()
                     }
                 }
 
@@ -323,7 +320,7 @@ class ObservablePlaylistHierarchy
                 if (hasNew) {
                     val newPlaylists = playlists.filter { it !in _playlistsProperty }
 
-                    mutateAndPublish(_playlistsProperty + playlists, _playlistsProperty) {
+                    mutateAndPublish {
                         Platform.runLater {
                             _playlistsProperty.addAll(newPlaylists)
                             replaceRecursiveAudioItems()
@@ -340,10 +337,9 @@ class ObservablePlaylistHierarchy
             override fun removePlaylists(playlists: Collection<ObservablePlaylist>): Boolean {
                 val containsPlaylists = playlists.any { it in _playlistsProperty }
                 if (containsPlaylists) {
-                    mutateAndPublish(_playlistsProperty - playlists.toSet(), _playlistsProperty) {
+                    mutateAndPublish {
                         Platform.runLater {
                             _playlistsProperty.removeAll(playlists.toSet())
-//                            replaceRecursiveAudioItems()
                         }
                         playlists.forEach { playlist ->
                             removePlaylistFromHierarchy(uniqueId, playlist)
@@ -359,7 +355,7 @@ class ObservablePlaylistHierarchy
             override fun removePlaylists(playlistIds: Collection<Int>): Boolean {
                 val result = _playlistsProperty.stream().anyMatch(playlists::contains)
                 val playlistsToRemove = playlistIds.map { findById(it) }.filter { it.isPresent }.map { it.get() }
-                mutateAndPublish(_playlistsProperty - playlistsToRemove.toSet(), _playlistsProperty) {
+                mutateAndPublish {
                     _playlistsProperty.removeAll { playlistIds.contains(it.id) }
                     playlistIds.forEach { playlistId ->
                         findById(playlistId).ifPresent { playlist ->
@@ -379,7 +375,7 @@ class ObservablePlaylistHierarchy
             override fun clearPlaylists() {
                 if (_playlistsProperty.isNotEmpty()) {
                     val playlistsBeforeClear = _playlistsProperty.toSet()
-                    mutateAndPublish(emptySet(), playlistsBeforeClear) {
+                    mutateAndPublish {
                         _playlistsProperty.clear()
                         playlistsBeforeClear.forEach { playlist ->
                             removePlaylistFromHierarchy(uniqueId, playlist)
@@ -402,10 +398,14 @@ class ObservablePlaylistHierarchy
                 if (this === other) return true
                 if (other == null || javaClass != other.javaClass) return false
                 val that = other as FXPlaylist
-                return Objects.equal(name, that.name) && Objects.equal(id, that.id)
+                return id == that.id &&
+                    isDirectory == that.isDirectory &&
+                    name == that.name &&
+                    audioItems == that.audioItems &&
+                    playlists == that.playlists
             }
 
-            override fun hashCode() = Objects.hashCode(name, id)
+            override fun hashCode() = Objects.hashCode(id, isDirectory, name, audioItems, playlists)
 
             override fun clone(): FXPlaylist = FXPlaylist(id, isDirectory, name, audioItems.toList(), playlists.toSet())
 

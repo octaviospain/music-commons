@@ -17,15 +17,15 @@
 
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.event.CrudEvent.Type.CREATE
-import net.transgressoft.commons.event.CrudEvent.Type.DELETE
-import net.transgressoft.commons.event.CrudEvent.Type.UPDATE
-import net.transgressoft.commons.event.StandardCrudEvent.Update
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioLibraryBase
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
-import net.transgressoft.commons.persistence.Repository
+import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
+import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
+import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
+import net.transgressoft.lirp.event.StandardCrudEvent.Update
+import net.transgressoft.lirp.persistence.Repository
 import javafx.application.Platform
 import javafx.beans.property.ReadOnlyBooleanProperty
 import javafx.beans.property.ReadOnlyIntegerProperty
@@ -141,13 +141,13 @@ class ObservableAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
 
     init {
         // Add all existing audio items to the observable collections on initialization
-        runForAll {
+        forEach {
             observableAudioItemMap[it.id] = it
             Platform.runLater { artistsProperty.addAll(it.artistsInvolved) }
         }
 
         // Populate observable catalog set with catalogs created during initialization
-        observableArtistCatalogRegistry.runForAll {
+        observableArtistCatalogRegistry.forEach {
             Platform.runLater { observableArtistCatalogSet.add(it) }
         }
         Platform.runLater { updateAggregateProperties() }

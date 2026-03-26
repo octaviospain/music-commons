@@ -17,11 +17,11 @@
 
 package net.transgressoft.commons.fx.music.playlist
 
-import net.transgressoft.commons.event.MutationEvent
-import net.transgressoft.commons.event.TransEventPublisher
-import net.transgressoft.commons.event.TransEventSubscription
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.music.playlist.AudioPlaylistSerializerBase
+import net.transgressoft.lirp.event.LirpEventPublisher
+import net.transgressoft.lirp.event.LirpEventSubscription
+import net.transgressoft.lirp.event.MutationEvent
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleListProperty
 import javafx.beans.property.SimpleObjectProperty
@@ -95,6 +95,10 @@ internal class DummyPlaylist(
 
     override fun addPlaylists(playlists: Collection<ObservablePlaylist>): Boolean = throw IllegalStateException()
 
+    override val isClosed: Boolean = false
+
+    override fun close() = throw IllegalStateException()
+
     override fun clone(): DummyPlaylist = DummyPlaylist(id)
 
     override val changes: SharedFlow<MutationEvent<Int, ObservablePlaylist>>
@@ -103,20 +107,20 @@ internal class DummyPlaylist(
     override fun emitAsync(event: MutationEvent<Int, ObservablePlaylist>): Unit = throw UnsupportedOperationException()
 
     override fun subscribe(action: suspend (MutationEvent<Int, ObservablePlaylist>) -> Unit):
-        TransEventSubscription<in ObservablePlaylist, MutationEvent.Type, MutationEvent<Int, ObservablePlaylist>> =
+        LirpEventSubscription<in ObservablePlaylist, MutationEvent.Type, MutationEvent<Int, ObservablePlaylist>> =
         FakeSubscription
 
     override fun subscribe(action: Consumer<in MutationEvent<Int, ObservablePlaylist>>):
-        TransEventSubscription<in ObservablePlaylist, MutationEvent.Type, MutationEvent<Int, ObservablePlaylist>> =
+        LirpEventSubscription<in ObservablePlaylist, MutationEvent.Type, MutationEvent<Int, ObservablePlaylist>> =
         FakeSubscription
 
     override fun subscribe(vararg eventTypes: MutationEvent.Type, action: Consumer<in MutationEvent<Int, ObservablePlaylist>>):
-        TransEventSubscription<in ObservablePlaylist, MutationEvent.Type, MutationEvent<Int, ObservablePlaylist>> =
+        LirpEventSubscription<in ObservablePlaylist, MutationEvent.Type, MutationEvent<Int, ObservablePlaylist>> =
         FakeSubscription
 }
 
-object FakeSubscription : TransEventSubscription<ObservablePlaylist, MutationEvent.Type, MutationEvent<Int, ObservablePlaylist>> {
-    override val source: TransEventPublisher<MutationEvent.Type, MutationEvent<Int, ObservablePlaylist>>
+object FakeSubscription : LirpEventSubscription<ObservablePlaylist, MutationEvent.Type, MutationEvent<Int, ObservablePlaylist>> {
+    override val source: LirpEventPublisher<MutationEvent.Type, MutationEvent<Int, ObservablePlaylist>>
         get() = throw IllegalStateException()
 
     override fun request(n: Long): Unit = throw IllegalStateException()

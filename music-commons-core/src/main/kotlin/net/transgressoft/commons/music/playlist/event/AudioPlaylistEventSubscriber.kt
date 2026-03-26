@@ -17,10 +17,10 @@
 
 package net.transgressoft.commons.music.playlist.event
 
-import net.transgressoft.commons.event.CrudEvent
-import net.transgressoft.commons.event.TransEventSubscriberBase
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.playlist.ReactiveAudioPlaylist
+import net.transgressoft.lirp.event.CrudEvent
+import net.transgressoft.lirp.event.LirpEventSubscriberBase
 
 /**
  * Event subscriber for reacting to playlist CRUD operations.
@@ -30,7 +30,7 @@ import net.transgressoft.commons.music.playlist.ReactiveAudioPlaylist
  */
 open class AudioPlaylistEventSubscriber<P: ReactiveAudioPlaylist<I, P>, I: ReactiveAudioItem<I>>(
     name: String
-): TransEventSubscriberBase<P, CrudEvent.Type, CrudEvent<Int, P>>(name) {
+): LirpEventSubscriberBase<P, CrudEvent.Type, CrudEvent<Int, P>>(name) {
 
     override fun toString() =
         buildString {

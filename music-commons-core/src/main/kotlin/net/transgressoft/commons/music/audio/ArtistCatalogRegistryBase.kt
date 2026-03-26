@@ -17,12 +17,12 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.event.CrudEvent
-import net.transgressoft.commons.event.FlowEventPublisher
-import net.transgressoft.commons.event.StandardCrudEvent.Create
-import net.transgressoft.commons.event.StandardCrudEvent.Delete
-import net.transgressoft.commons.event.StandardCrudEvent.Update
-import net.transgressoft.commons.persistence.RegistryBase
+import net.transgressoft.lirp.event.CrudEvent
+import net.transgressoft.lirp.event.FlowEventPublisher
+import net.transgressoft.lirp.event.StandardCrudEvent.Create
+import net.transgressoft.lirp.event.StandardCrudEvent.Delete
+import net.transgressoft.lirp.event.StandardCrudEvent.Update
+import net.transgressoft.lirp.persistence.RegistryBase
 import mu.KotlinLogging
 import java.util.Optional
 import java.util.stream.Collectors.partitioningBy

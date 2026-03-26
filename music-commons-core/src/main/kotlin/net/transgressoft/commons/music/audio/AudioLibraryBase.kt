@@ -17,15 +17,19 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.event.CrudEvent
-import net.transgressoft.commons.event.CrudEvent.Type.CREATE
-import net.transgressoft.commons.event.CrudEvent.Type.DELETE
-import net.transgressoft.commons.event.CrudEvent.Type.READ
-import net.transgressoft.commons.event.CrudEvent.Type.UPDATE
-import net.transgressoft.commons.event.TransEventPublisher
 import net.transgressoft.commons.music.event.PlayedEventSubscriber
-import net.transgressoft.commons.persistence.Repository
+import net.transgressoft.lirp.event.CrudEvent
+import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
+import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
+import net.transgressoft.lirp.event.CrudEvent.Type.READ
+import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
+import net.transgressoft.lirp.event.LirpEventPublisher
+import net.transgressoft.lirp.event.LirpEventSubscription
+import net.transgressoft.lirp.event.MutationEvent
+import net.transgressoft.lirp.event.StandardCrudEvent.Update
+import net.transgressoft.lirp.persistence.Repository
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -57,21 +61,41 @@ abstract class AudioLibraryBase<I, AC>(
      * This allows consumers to subscribe to artist catalog events without accessing
      * the mutable registry directly, maintaining encapsulation while providing reactive updates.
      */
-    override val artistCatalogPublisher: TransEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>> = observableArtistCatalogRegistry
+    override val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>> = observableArtistCatalogRegistry
+
+    private val entitySubscriptions: MutableMap<Int, LirpEventSubscription<in I, MutationEvent.Type, MutationEvent<Int, I>>> = ConcurrentHashMap()
 
     init {
         if (repository.isEmpty.not()) {
-            repository.runForAll { observableArtistCatalogRegistry.addAudioItem(it) }
+            repository.forEach {
+                observableArtistCatalogRegistry.addAudioItem(it)
+                subscribeToEntityMutations(it)
+            }
         }
+    }
+
+    /**
+     * Subscribes to an audio item's mutation events and bridges them to repository UPDATE events.
+     *
+     * When an audio item's properties change directly (not through repository operations),
+     * this subscription detects the change and emits a repository-level UPDATE event,
+     * enabling the artist catalog registry to stay synchronized with entity-level mutations.
+     */
+    private fun subscribeToEntityMutations(entity: I) {
+        val subscription =
+            entity.subscribe { mutationEvent ->
+                repository.emitAsync(Update(mutationEvent.newEntity, mutationEvent.oldEntity))
+            }
+        entitySubscriptions[entity.id] = subscription
     }
 
     /**
      * Subscription to repository events that keeps the artist catalog registry synchronized.
      *
      * This subscription ensures that:
-     * - CREATE events add audio items to their respective artist catalogs
+     * - CREATE events add audio items to their respective artist catalogs and subscribe to mutations
      * - UPDATE events modify catalogs when artist/album/ordering changes occur
-     * - DELETE events remove audio items and delete empty catalogs
+     * - DELETE events remove audio items, delete empty catalogs, and unsubscribe from mutations
      * - READ events are ignored (no catalog changes needed)
      *
      * TODO #5 figure out how do unsubscribe from the repository when it is closed
@@ -81,6 +105,7 @@ abstract class AudioLibraryBase<I, AC>(
             when (event.type) {
                 CREATE -> {
                     observableArtistCatalogRegistry.addAudioItems(event.entities.values)
+                    event.entities.values.forEach { subscribeToEntityMutations(it) }
                 }
                 UPDATE -> {
                     event.entities.values.forEach { updatedAudioItem ->
@@ -92,6 +117,7 @@ abstract class AudioLibraryBase<I, AC>(
                 }
                 DELETE -> {
                     observableArtistCatalogRegistry.removeAudioItems(event.entities.values)
+                    event.entities.values.forEach { entitySubscriptions.remove(it.id)?.cancel() }
                 }
                 READ -> {
                     Unit

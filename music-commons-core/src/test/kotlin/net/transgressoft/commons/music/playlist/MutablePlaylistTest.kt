@@ -3,8 +3,8 @@ package net.transgressoft.commons.music.playlist
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.artist
 import net.transgressoft.commons.music.audio.audioItem
-import net.transgressoft.commons.persistence.json.JsonFileRepository
-import net.transgressoft.commons.persistence.json.JsonRepository
+import net.transgressoft.lirp.persistence.json.JsonFileRepository
+import net.transgressoft.lirp.persistence.json.JsonRepository
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempdir
 import io.kotest.engine.spec.tempfile

@@ -17,7 +17,6 @@
 
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.entity.ReactiveEntityBase
 import net.transgressoft.commons.music.AudioUtils
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
@@ -31,6 +30,7 @@ import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.ImmutableLabel
 import net.transgressoft.commons.music.audio.Label
 import net.transgressoft.commons.music.audio.UNASSIGNED_ID
+import net.transgressoft.lirp.entity.ReactiveEntityBase
 import com.neovisionaries.i18n.CountryCode
 import javafx.beans.property.ObjectProperty
 import javafx.beans.property.ReadOnlyIntegerProperty
@@ -95,6 +95,9 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         @Transient
         private val logger = KotlinLogging.logger {}
 
+        @Transient
+        private var suppressEvents = false
+
         private val ioScope =
             CoroutineScope(
                 Dispatchers.IO + SupervisorJob() +
@@ -123,6 +126,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
             lastDateModified: LocalDateTime,
             playCount: Short
         ): this(path, id) {
+            suppressEvents = true
             this.title = title
             this._duration = duration
             this.artist = artist
@@ -138,6 +142,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
             this._dateOfCreation = dateOfCreation
             this.lastDateModified = lastDateModified
             _playCountProperty.set(playCount.toInt())
+            suppressEvents = false
         }
 
         @Transient
@@ -208,14 +213,18 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         override var title: String = getFieldIfExisting(tag, FieldKey.TITLE) ?: ""
             set(value) {
-                mutateAndPublish(value, field) {
+                if (!suppressEvents) {
+                    mutateAndPublish {
+                        field = value
+                        artistsInvolvedProperty.clear()
+                        artistsInvolvedProperty.addAll(
+                            AudioUtils.getArtistsNamesInvolved(
+                                value, artistProperty.value.name, albumProperty.value.albumArtist.name
+                            ).map { ImmutableArtist.of(it) }.toSet()
+                        )
+                    }
+                } else {
                     field = value
-                    artistsInvolvedProperty.clear()
-                    artistsInvolvedProperty.addAll(
-                        AudioUtils.getArtistsNamesInvolved(
-                            value, artistProperty.value.name, albumProperty.value.albumArtist.name
-                        ).map { ImmutableArtist.of(it) }.toSet()
-                    )
                 }
             }
 
@@ -229,13 +238,17 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         override var artist: Artist = readArtist(tag)
             set(value) {
-                mutateAndPublish(value, field) {
+                if (!suppressEvents) {
+                    mutateAndPublish {
+                        field = value
+                        artistsInvolvedProperty.addAll(
+                            AudioUtils.getArtistsNamesInvolved(
+                                titleProperty.value, value.name, albumProperty.value.albumArtist.name
+                            ).map { ImmutableArtist.of(it) }.toSet()
+                        )
+                    }
+                } else {
                     field = value
-                    artistsInvolvedProperty.addAll(
-                        AudioUtils.getArtistsNamesInvolved(
-                            titleProperty.value, value.name, albumProperty.value.albumArtist.name
-                        ).map { ImmutableArtist.of(it) }.toSet()
-                    )
                 }
             }
 
@@ -249,14 +262,18 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         override var album: Album = readAlbum(tag, extension)
             set(value) {
-                mutateAndPublish(value, field) {
+                if (!suppressEvents) {
+                    mutateAndPublish {
+                        field = value
+                        artistsInvolvedProperty.clear()
+                        artistsInvolvedProperty.addAll(
+                            AudioUtils.getArtistsNamesInvolved(
+                                titleProperty.value, artistProperty.value.name, value.albumArtist.name
+                            ).map { ImmutableArtist.of(it) }.toSet()
+                        )
+                    }
+                } else {
                     field = value
-                    artistsInvolvedProperty.clear()
-                    artistsInvolvedProperty.addAll(
-                        AudioUtils.getArtistsNamesInvolved(
-                            titleProperty.value, artistProperty.value.name, value.albumArtist.name
-                        ).map { ImmutableArtist.of(it) }.toSet()
-                    )
                 }
             }
 
@@ -270,9 +287,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         override var genre: Genre = getFieldIfExisting(tag, FieldKey.GENRE)?.let { Genre.parseGenre(it) } ?: Genre.UNDEFINED
             set(value) {
-                mutateAndPublish(value, field) {
-                    field = value
-                }
+                if (!suppressEvents) mutateAndPublish { field = value } else field = value
             }
 
         @Transient
@@ -285,9 +300,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         override var comments: String? = getFieldIfExisting(tag, FieldKey.COMMENT)?.takeIf { it.isNotEmpty() }
             set(value) {
-                mutateAndPublish(value, field) {
-                    field = value
-                }
+                if (!suppressEvents) mutateAndPublish { field = value } else field = value
             }
 
         @Transient
@@ -301,9 +314,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         override var trackNumber: Short? =
             getFieldIfExisting(tag, FieldKey.TRACK)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()?.takeIf { it > 0 }
             set(value) {
-                mutateAndPublish(value, field) {
-                    field = value
-                }
+                if (!suppressEvents) mutateAndPublish { field = value } else field = value
             }
 
         @Transient
@@ -317,9 +328,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         override var discNumber: Short? =
             getFieldIfExisting(tag, FieldKey.DISC_NO)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()?.takeIf { it > 0 }
             set(value) {
-                mutateAndPublish(value, field) {
-                    field = value
-                }
+                if (!suppressEvents) mutateAndPublish { field = value } else field = value
             }
 
         @Transient
@@ -332,9 +341,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         override var bpm: Float? = getFieldIfExisting(tag, FieldKey.BPM)?.takeUnless { it.isEmpty().and(it == "0") }?.toFloatOrNull()?.takeIf { it > 0 }
             set(value) {
-                mutateAndPublish(value, field) {
-                    field = value
-                }
+                if (!suppressEvents) mutateAndPublish { field = value } else field = value
             }
 
         @Transient
@@ -349,7 +356,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         override var lastDateModified: LocalDateTime = dateOfCreation
             set(value) {
                 field = value
-                _lastDateModifiedProperty.set(value)
+                if (!suppressEvents) _lastDateModifiedProperty.set(value)
             }
 
         private val _lastDateModifiedProperty = SimpleObjectProperty(this, "date of last modification", lastDateModified)
@@ -359,9 +366,13 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         override var coverImageBytes: ByteArray? = getCoverBytes(tag)
             set(value) {
-                mutateAndPublish(value, field) {
+                if (!suppressEvents) {
+                    mutateAndPublish {
+                        field = value
+                        _coverImageProperty.set(Optional.ofNullable(value).map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) })
+                    }
+                } else {
                     field = value
-                    _coverImageProperty.set(Optional.ofNullable(value).map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) })
                 }
             }
 
@@ -374,12 +385,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
             )
 
         @Transient
-        override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>> =
-            _coverImageProperty.apply {
-                addListener { _, oldValue, newValue ->
-                    mutateAndPublish(newValue.orElse(null)?.url, oldValue.orElse(null)?.url) {}
-                }
-            }
+        override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>> = _coverImageProperty
 
         @Transient
         override val artistsInvolvedProperty: ReadOnlySetProperty<Artist> =
@@ -536,7 +542,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         }
 
         internal fun incrementPlayCount() {
-            mutateAndPublish(_playCountProperty.get() + 1, _playCountProperty.get()) {
+            mutateAndPublish {
                 _playCountProperty.set(_playCountProperty.get() + 1)
             }
         }
@@ -556,30 +562,18 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                 album == that.album &&
                 genre === that.genre &&
                 comments == that.comments &&
-                duration == that.duration
+                duration == that.duration &&
+                playCount == that.playCount &&
+                coverImageBytes.contentEquals(that.coverImageBytes)
         }
 
-        override fun hashCode() = Objects.hash(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration)
+        override fun hashCode() = Objects.hash(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration, playCount)
 
         override fun clone(): FXAudioItem =
             FXAudioItem(
-                path,
-                id,
-                title,
-                duration,
-                bitRate,
-                artist,
-                album,
-                genre,
-                comments,
-                trackNumber,
-                discNumber,
-                bpm,
-                encoder,
-                encoding,
-                dateOfCreation,
-                lastDateModified,
-                playCount
+                path, id, title, duration, bitRate, artist, album, genre,
+                comments, trackNumber, discNumber, bpm, encoder, encoding,
+                dateOfCreation, lastDateModified, playCount
             )
 
         override fun toString() = "ObservableAudioItem(id=$id, path=$path, title=$title, artist=${artist.name})"

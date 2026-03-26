@@ -1,11 +1,11 @@
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.event.ReactiveScope
 import net.transgressoft.commons.music.audio.ArtistCatalog
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioLibrary
 import net.transgressoft.commons.music.audio.audioItem
-import net.transgressoft.commons.persistence.json.JsonFileRepository
+import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.throwables.shouldThrowMessage
 import io.kotest.core.spec.style.StringSpec
@@ -194,7 +194,7 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         fifties.clearAudioItems()
 
         playlistHierarchy.findById(fifties.id) shouldBePresent { it.audioItems.isEmpty() shouldBe true }
-        playlistHierarchy.runForAll { it.removeAudioItems(rockAudioItems) }
+        playlistHierarchy.forEach { it.removeAudioItems(rockAudioItems) }
         playlistHierarchy.findById(rock.id) shouldBePresent { it.audioItems.isEmpty() shouldBe true }
 
         playlistHierarchy.clear()

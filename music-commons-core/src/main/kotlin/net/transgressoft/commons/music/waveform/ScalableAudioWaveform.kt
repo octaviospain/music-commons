@@ -17,13 +17,13 @@
 
 package net.transgressoft.commons.music.waveform
 
-import net.transgressoft.commons.entity.ReactiveEntityBase
 import net.transgressoft.commons.music.audio.AudioFileType
 import net.transgressoft.commons.music.audio.AudioFileType.FLAC
 import net.transgressoft.commons.music.audio.AudioFileType.M4A
 import net.transgressoft.commons.music.audio.AudioFileType.MP3
 import net.transgressoft.commons.music.audio.AudioFileType.WAV
 import net.transgressoft.commons.music.audio.toAudioFileType
+import net.transgressoft.lirp.entity.ReactiveEntityBase
 import ws.schild.jave.Encoder
 import ws.schild.jave.MultimediaObject
 import ws.schild.jave.encode.AudioAttributes

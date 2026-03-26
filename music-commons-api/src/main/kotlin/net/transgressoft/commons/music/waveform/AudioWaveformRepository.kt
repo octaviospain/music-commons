@@ -17,10 +17,10 @@
 
 package net.transgressoft.commons.music.waveform
 
-import net.transgressoft.commons.event.CrudEvent
-import net.transgressoft.commons.event.TransEventSubscriber
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
-import net.transgressoft.commons.persistence.Repository
+import net.transgressoft.lirp.event.CrudEvent
+import net.transgressoft.lirp.event.LirpEventSubscriber
+import net.transgressoft.lirp.persistence.Repository
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 import kotlinx.coroutines.CoroutineDispatcher
@@ -33,7 +33,7 @@ import kotlinx.coroutines.asCoroutineDispatcher
  * Provides asynchronous methods to retrieve or create waveforms on demand.
  */
 interface AudioWaveformRepository<W : AudioWaveform, I : ReactiveAudioItem<I>>
-: Repository<Int, W>, TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>> {
+: Repository<Int, W>, LirpEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>> {
 
     /**
      * Retrieves an existing waveform or creates a new one asynchronously for the given audio item.

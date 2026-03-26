@@ -17,7 +17,7 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.entity.IdentifiableEntity
+import net.transgressoft.lirp.entity.IdentifiableEntity
 
 /**
  * Represents the exhaustive set of fields that are mutable in an audio item.

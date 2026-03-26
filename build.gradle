@@ -26,7 +26,7 @@ dependencies {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 tasks.named('jar').configure {
@@ -102,7 +102,7 @@ subprojects {
 
         implementation libs.nv.i18n.get()
         implementation libs.kotlin.logging.get()
-        implementation libs.transgressoft.commons.api.get()
+        implementation libs.lirp.api.get()
         implementation libs.kotlinx.serialization.json.get()
 
         testImplementation libs.logback.core.get()
@@ -116,12 +116,12 @@ subprojects {
     }
 
     kotlin {
-        jvmToolchain(17)
+        jvmToolchain(21)
     }
 
     tasks.withType(KotlinJvmCompile).configureEach {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_17)
+            jvmTarget.set(JvmTarget.JVM_21)
             freeCompilerArgs.add('-Xjsr305=strict')
         }
     }

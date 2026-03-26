@@ -17,7 +17,7 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.persistence.json.TransEntityPolymorphicSerializer
+import net.transgressoft.lirp.persistence.json.LirpEntityPolymorphicSerializer
 import com.neovisionaries.i18n.CountryCode
 import java.nio.file.Path
 import java.time.Duration
@@ -105,7 +105,7 @@ internal object AudioItemSerializer: AudioItemSerializerBase<AudioItem>() {
         )
 }
 
-abstract class AudioItemSerializerBase<I: ReactiveAudioItem<I>>: TransEntityPolymorphicSerializer<I> {
+abstract class AudioItemSerializerBase<I: ReactiveAudioItem<I>>: LirpEntityPolymorphicSerializer<I> {
 
     override val descriptor: SerialDescriptor =
         buildClassSerialDescriptor("AudioItem") {
