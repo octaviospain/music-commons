@@ -156,6 +156,14 @@ class ObservablePlaylistHierarchy
             }
         }
 
+        /**
+         * Cancels the base class subscriptions and the internal playlist changes subscriber.
+         */
+        override fun close() {
+            super.close()
+            playlistChangesSubscriber.cancelSubscription()
+        }
+
         override fun toString() = "observablePlaylistHierarchy(playlistsCount=${size()})"
 
         /**
@@ -354,7 +362,6 @@ class ObservablePlaylistHierarchy
             @JvmName("removePlaylistIds")
             override fun removePlaylists(playlistIds: Collection<Int>): Boolean {
                 val result = _playlistsProperty.stream().anyMatch(playlists::contains)
-                val playlistsToRemove = playlistIds.map { findById(it) }.filter { it.isPresent }.map { it.get() }
                 mutateAndPublish {
                     _playlistsProperty.removeAll { playlistIds.contains(it.id) }
                     playlistIds.forEach { playlistId ->
