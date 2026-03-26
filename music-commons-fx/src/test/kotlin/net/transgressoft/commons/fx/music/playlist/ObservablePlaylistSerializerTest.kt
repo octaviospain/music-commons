@@ -29,7 +29,7 @@ internal class ObservablePlaylistSerializerTest : StringSpec({
         playlist.id shouldBe 1
         playlist.isDirectory shouldBe false
         playlist.name shouldBe "My Playlist"
-        // audioItems are deserialized as dummy placeholders with only IDs set, resolved later by the hierarchy
+        // audioItems are deserialized as DummyAudioItem placeholders, resolved later by the hierarchy — verify count only
         playlist.audioItems.size shouldBe 2
         playlist.playlists.isEmpty() shouldBe true
     }

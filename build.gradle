@@ -131,6 +131,8 @@ subprojects {
             property 'sonar.moduleKey', "${project.name}"
             property 'sonar.sources', 'src/main'
             property 'sonar.exclusions', 'src/test/**'
+            property 'sonar.coverage.jacoco.xmlReportPaths',
+                    "${rootProject.layout.buildDirectory.get().asFile.absolutePath}/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml"
         }
     }
 

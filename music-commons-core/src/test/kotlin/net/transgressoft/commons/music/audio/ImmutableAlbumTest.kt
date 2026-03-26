@@ -64,6 +64,11 @@ internal class ImmutableAlbumTest : StringSpec({
         // label ordering
         (albumLabelA.compareTo(albumLabelB) < 0) shouldBe true
         (albumLabelB.compareTo(albumLabelA) > 0) shouldBe true
+
+        // name ordering when all other fields are equal
+        val albumNameA = ImmutableAlbum("A", artistA, label = labelA)
+        val albumNameB = ImmutableAlbum("B", artistA, label = labelA)
+        (albumNameA.compareTo(albumNameB) < 0) shouldBe true
     }
 
     "ImmutableAlbum compareTo orders by year when labels are equal" {
