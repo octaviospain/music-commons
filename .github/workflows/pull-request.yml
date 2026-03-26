@@ -1,14 +1,8 @@
 name: non-master build
 
 on:
-    push:
-        branches-ignore:
-            - main
-        paths-ignore:
-            - "**.md"
-            - '.gitignore'
-            - 'docs/**'
     pull_request:
+        types: [opened, synchronize, reopened]
         branches:
             - main
         paths-ignore:
