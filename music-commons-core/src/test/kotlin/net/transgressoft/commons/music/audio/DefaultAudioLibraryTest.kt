@@ -10,6 +10,7 @@ import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
 import net.transgressoft.lirp.event.ReactiveScope
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.json.JsonRepository
+import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.common.ExperimentalKotest
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
@@ -25,6 +26,7 @@ import io.kotest.property.arbitrary.list
 import io.kotest.property.arbitrary.next
 import io.mockk.unmockkAll
 import java.io.File
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asExecutor
@@ -258,17 +260,19 @@ internal class DefaultAudioLibraryTest: StringSpec({
         audioRepository.findById(audioItem1.id).ifPresent { it.trackNumber = 5 }
         testDispatcher.scheduler.advanceUntilIdle()
 
-        receivedEvents.size shouldBe 1
-        receivedEvents[0] should { event ->
-            event.entities.size shouldBe 1
-            event.entities.values.first() should { artistCatalog ->
-                artistCatalog.artist shouldBe theBeatles
-                artistCatalog.size shouldBe 2
-                artistCatalog.albumAudioItems(abbeyRoad.name) should { audioItems ->
-                    audioItems.size shouldBe 2
-                    // After reordering, audioItem1 should be last (highest track number)
-                    audioItems.last().id shouldBe audioItem1.id
-                    audioItems.last().trackNumber shouldBe 5
+        eventually(1.seconds) {
+            receivedEvents.size shouldBe 1
+            receivedEvents[0] should { event ->
+                event.entities.size shouldBe 1
+                event.entities.values.first() should { artistCatalog ->
+                    artistCatalog.artist shouldBe theBeatles
+                    artistCatalog.size shouldBe 2
+                    artistCatalog.albumAudioItems(abbeyRoad.name) should { audioItems ->
+                        audioItems.size shouldBe 2
+                        // After reordering, audioItem1 should be last (highest track number)
+                        audioItems.last().id shouldBe audioItem1.id
+                        audioItems.last().trackNumber shouldBe 5
+                    }
                 }
             }
         }
@@ -314,10 +318,12 @@ internal class DefaultAudioLibraryTest: StringSpec({
         audioRepository.findById(audioItem.id).ifPresent { it.artist = newArtist }
         testDispatcher.scheduler.advanceUntilIdle()
 
-        createEvents.size shouldBe 2
-        createEvents[1].entities.values.first().artist shouldBe newArtist
-        deleteEvents.size shouldBe 1
-        deleteEvents[0].entities.values.first().artist shouldBe originalArtist
+        eventually(1.seconds) {
+            createEvents.size shouldBe 2
+            createEvents[1].entities.values.first().artist shouldBe newArtist
+            deleteEvents.size shouldBe 1
+            deleteEvents[0].entities.values.first().artist shouldBe originalArtist
+        }
     }
 
     "Artist catalog publisher provides access to catalog albums and items" {

@@ -435,12 +435,10 @@ internal class MutableAudioItem(
             album == that.album &&
             genre === that.genre &&
             comments == that.comments &&
-            duration == that.duration &&
-            playCount == that.playCount &&
-            coverImageBytes.contentEquals(that.coverImageBytes)
+            duration == that.duration
     }
 
-    override fun hashCode() = Objects.hash(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration, playCount)
+    override fun hashCode() = Objects.hash(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration)
 
     override fun clone(): MutableAudioItem =
         MutableAudioItem(

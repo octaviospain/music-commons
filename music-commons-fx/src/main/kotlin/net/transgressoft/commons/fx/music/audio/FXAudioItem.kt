@@ -241,6 +241,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                 if (!suppressEvents) {
                     mutateAndPublish {
                         field = value
+                        artistsInvolvedProperty.clear()
                         artistsInvolvedProperty.addAll(
                             AudioUtils.getArtistsNamesInvolved(
                                 titleProperty.value, value.name, albumProperty.value.albumArtist.name
@@ -567,7 +568,8 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                 coverImageBytes.contentEquals(that.coverImageBytes)
         }
 
-        override fun hashCode() = Objects.hash(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration, playCount)
+        override fun hashCode() =
+            Objects.hash(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration, playCount, coverImageBytes.contentHashCode())
 
         override fun clone(): FXAudioItem =
             FXAudioItem(

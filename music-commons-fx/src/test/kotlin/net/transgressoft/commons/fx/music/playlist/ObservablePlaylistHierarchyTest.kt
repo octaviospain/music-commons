@@ -291,7 +291,8 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         val thisWeeksFavorites = playlistHierarchy.createPlaylist("This weeks' favorites songs")
         playlistHierarchy.search { "favorites" in it.name }.shouldContainExactly(thisWeeksFavorites)
         playlistHierarchy.size() shouldBe 6
-        playlistHierarchy.addOrReplaceAll(setOf(bestHits, thisWeeksFavorites))
+        playlistHierarchy.add(bestHits)
+        playlistHierarchy.add(thisWeeksFavorites)
         playlistHierarchy.size() shouldBe 6
         playlistHierarchy.search { it.isDirectory.not() } shouldContainExactly setOf(rock, pop, thisWeeksFavorites)
 

@@ -114,6 +114,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
         repository = ObservableAudioLibrary(jsonFileRepository)
 
         testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
 
         // Assert items are all present after reloading
         repository.size() shouldBe createdItems.size
