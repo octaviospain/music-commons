@@ -44,10 +44,11 @@ import java.util.stream.Collectors.partitioningBy
  * with audio item deletion events to remove deleted items from all playlists.
  */
 abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPlaylist<I, P>>(
-    protected val repository: Repository<Int, P> = VolatileRepository("PlaylistHierarchy")
+    protected val repository: Repository<Int, P> = VolatileRepository("PlaylistHierarchy"),
+    private val audioItemEventSubscriber: AudioItemEventSubscriber<I> = AudioItemEventSubscriber("PlaylistHierarchySubscriber")
 ): PlaylistHierarchy<I, P>,
     Repository<Int, P> by repository,
-    LirpEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>> by AudioItemEventSubscriber("PlaylistHierarchySubscriber") {
+    LirpEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>> by audioItemEventSubscriber {
 
     init {
         repository.disableEvents(CREATE, UPDATE, DELETE)
@@ -253,6 +254,13 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
     override fun numberOfPlaylists() = repository.search { it.isDirectory.not() }.count()
 
     override fun numberOfPlaylistDirectories() = repository.search { it.isDirectory }.count()
+
+    /**
+     * Cancels the audio item event subscription used to synchronize playlists with audio item deletions.
+     */
+    override fun close() {
+        audioItemEventSubscriber.cancelSubscription()
+    }
 
     protected fun putAllPlaylistInHierarchy(parentPlaylistUniqueId: String, playlist: Collection<P>) {
         playlistsHierarchyMultiMap.putAll(parentPlaylistUniqueId, playlist)

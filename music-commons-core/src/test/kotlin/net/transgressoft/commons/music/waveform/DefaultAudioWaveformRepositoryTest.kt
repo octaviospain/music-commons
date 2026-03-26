@@ -1,7 +1,12 @@
 package net.transgressoft.commons.music.waveform
 
+import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
+import net.transgressoft.commons.music.audio.ArtistCatalog
 import net.transgressoft.commons.music.audio.AudioFileTagType.WAV
 import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.AudioItemMapSerializer
+import net.transgressoft.commons.music.audio.AudioLibrary
+import net.transgressoft.commons.music.audio.DefaultAudioLibrary
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.commons.music.audio.audioItem
 import net.transgressoft.lirp.event.ReactiveScope
@@ -100,5 +105,30 @@ internal class DefaultAudioWaveformRepositoryTest : StringSpec({
         waveform2 shouldBe audioWaveform
         audioWaveformRepository.removeByAudioItemIds(setOf(audioItem.id))
         audioWaveformRepository.isEmpty shouldBe true
+    }
+
+    "DefaultAudioWaveformRepository does not react to DELETE events after close()" {
+        val audioLibraryFile = tempfile("audioLibrary-test", ".json").also { it.deleteOnExit() }
+        val audioLibraryRepository: JsonRepository<Int, AudioItem> = JsonFileRepository(audioLibraryFile, AudioItemMapSerializer)
+        val audioLibrary: AudioLibrary<AudioItem, ArtistCatalog<AudioItem>> = DefaultAudioLibrary(audioLibraryRepository)
+
+        audioLibrary.subscribe(audioWaveformRepository)
+
+        val audioItem = audioLibrary.createFromFile(Arb.realAudioFile().next())
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val waveform = ScalableAudioWaveform(audioItem.id, audioItem.path)
+        audioWaveformRepository.add(waveform) shouldBe true
+        audioWaveformRepository.size() shouldBe 1
+
+        (audioWaveformRepository as DefaultAudioWaveformRepository).close()
+
+        audioLibrary.remove(audioItem) shouldBe true
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        audioWaveformRepository.size() shouldBe 1
+        audioWaveformRepository.findById(audioItem.id) shouldBePresent { it shouldBe waveform }
+
+        audioLibraryRepository.close()
     }
 })

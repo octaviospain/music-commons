@@ -32,6 +32,13 @@ open class AudioPlaylistEventSubscriber<P: ReactiveAudioPlaylist<I, P>, I: React
     name: String
 ): LirpEventSubscriberBase<P, CrudEvent.Type, CrudEvent<Int, P>>(name) {
 
+    /**
+     * Cancels the current subscription, stopping event delivery from the publisher.
+     */
+    fun cancelSubscription() {
+        subscription?.cancel()
+    }
+
     override fun toString() =
         buildString {
             append("AudioPlaylistEventSubscriber(name=$name")

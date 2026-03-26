@@ -176,6 +176,16 @@ class ObservableAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
         _albumCountProperty.set(allAlbums.size)
     }
 
+    /**
+     * Cancels all event subscriptions managed by this library, including those from the base class
+     * and the FX-specific internal and catalog subscriptions.
+     */
+    override fun close() {
+        super.close()
+        internalSubscription.cancel()
+        catalogSubscription.cancel()
+    }
+
     override fun clear() {
         synchronized(observableAudioItemMap) {
             super.clear()
@@ -183,8 +193,6 @@ class ObservableAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
             observableArtistCatalogSet.clear()
             _albumsProperty.clear()
             _albumCountProperty.set(0)
-            internalSubscription.cancel()
-            catalogSubscription.cancel()
         }
     }
 
