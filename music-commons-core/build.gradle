@@ -6,7 +6,7 @@ dependencies {
 
     implementation libs.guava.get()
     implementation libs.jaudiotagger.get()
-    implementation libs.transgressoft.commons.core.get()
+    implementation libs.lirp.core.get()
     implementation libs.jave.core.get()
     implementation libs.jave.nativebin.linux64.get()
 

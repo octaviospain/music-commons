@@ -5,8 +5,8 @@ plugins {
 description = 'Transgressoft Music Commons - JavaFX'
 
 javafx {
-    version = JavaVersion.VERSION_17
-    modules = ['javafx.controls']
+    version = JavaVersion.VERSION_21
+    modules = ['javafx.controls', 'javafx.media']
 }
 
 tasks.register('runWaveformPaneDemo', JavaExec) {
@@ -73,7 +73,7 @@ dependencies {
 
     implementation libs.guava.get()
     implementation libs.jaudiotagger.get()
-    implementation libs.transgressoft.commons.core.get()
+    implementation libs.lirp.core.get()
     implementation libs.javafx.controls.get()
 
     testApi project(path: ':music-commons-fx-test')

@@ -17,9 +17,9 @@
 
 package net.transgressoft.commons.music.audio.event
 
-import net.transgressoft.commons.event.CrudEvent
-import net.transgressoft.commons.event.TransEventSubscriberBase
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
+import net.transgressoft.lirp.event.CrudEvent
+import net.transgressoft.lirp.event.LirpEventSubscriberBase
 
 /**
  * Event subscriber for reacting to audio item CRUD operations.
@@ -29,7 +29,7 @@ import net.transgressoft.commons.music.audio.ReactiveAudioItem
  */
 open class AudioItemEventSubscriber<I: ReactiveAudioItem<I>>(
     name: String
-): TransEventSubscriberBase<I, CrudEvent.Type, CrudEvent<Int, I>>(name) {
+): LirpEventSubscriberBase<I, CrudEvent.Type, CrudEvent<Int, I>>(name) {
 
     override fun toString() =
         buildString {

@@ -17,8 +17,8 @@
 
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.entity.ReactiveEntity
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
+import net.transgressoft.lirp.entity.ReactiveEntity
 
 /**
  * Reactive extension of [AudioPlaylist] that allows mutation of the playlist and observation of changes.

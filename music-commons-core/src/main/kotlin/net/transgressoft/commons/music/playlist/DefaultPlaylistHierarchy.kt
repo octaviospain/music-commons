@@ -17,16 +17,16 @@
 
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.entity.toIds
-import net.transgressoft.commons.event.CrudEvent.Type.CREATE
-import net.transgressoft.commons.event.CrudEvent.Type.DELETE
-import net.transgressoft.commons.event.CrudEvent.Type.UPDATE
 import net.transgressoft.commons.music.audio.ArtistCatalog
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemManipulationException
 import net.transgressoft.commons.music.audio.AudioLibrary
-import net.transgressoft.commons.persistence.Repository
-import net.transgressoft.commons.persistence.VolatileRepository
+import net.transgressoft.lirp.entity.toIds
+import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
+import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
+import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
+import net.transgressoft.lirp.persistence.Repository
+import net.transgressoft.lirp.persistence.VolatileRepository
 import mu.KotlinLogging
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
@@ -52,13 +52,13 @@ class DefaultPlaylistHierarchy(
         }
 
         disableEvents(CREATE, UPDATE, DELETE) // disable events until the initial load from the file is completed
-        runForAll {
+        forEach {
             val playlistWithAudioItems = MutablePlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItems.toIds(), audioLibrary!!))
             // Remove the item from the repository to delete the subscription
             remove(it)
             add(playlistWithAudioItems)
         }
-        runForAll {
+        forEach {
             val playlistMissingPlaylists =
                 repository.findById(it.id).orElseThrow {
                     IllegalStateException("Playlist ID ${it.id} not found after initial processing")

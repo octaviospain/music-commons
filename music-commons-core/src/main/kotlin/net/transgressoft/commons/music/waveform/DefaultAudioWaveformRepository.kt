@@ -17,13 +17,13 @@
 
 package net.transgressoft.commons.music.waveform
 
-import net.transgressoft.commons.event.CrudEvent
-import net.transgressoft.commons.event.CrudEvent.Type.DELETE
-import net.transgressoft.commons.event.TransEventSubscriber
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
-import net.transgressoft.commons.persistence.Repository
-import net.transgressoft.commons.persistence.VolatileRepository
+import net.transgressoft.lirp.event.CrudEvent
+import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
+import net.transgressoft.lirp.event.LirpEventSubscriber
+import net.transgressoft.lirp.persistence.Repository
+import net.transgressoft.lirp.persistence.VolatileRepository
 import java.util.concurrent.CompletableFuture
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -40,7 +40,7 @@ class DefaultAudioWaveformRepository<I: ReactiveAudioItem<I>>(
     private val repository: Repository<Int, AudioWaveform> = VolatileRepository("AudioWaveformRepository")
 ): AudioWaveformRepository<AudioWaveform, I>,
     Repository<Int, AudioWaveform> by repository,
-    TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>> by AudioItemEventSubscriber("AudioWaveformRepositorySubscriber") {
+    LirpEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>> by AudioItemEventSubscriber("AudioWaveformRepositorySubscriber") {
 
     init {
         addOnNextEventAction(DELETE) { event ->

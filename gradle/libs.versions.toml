@@ -1,14 +1,14 @@
 [versions]
-kotlin = "2.2.21"
+kotlin = "2.3.0"
 coroutines = "1.10.2"
 kotest = "5.9.1"
-transgressoft = "1.7.0"
+lirp = "1.2.0"
 guava = "33.5.0-jre"
 jaudiotagger = "3.0.1"
 jave = "3.5.0"
 nv-i18n = "1.29"
 kotlin-logging = "3.0.5"
-kotlinx-serialization = "1.9.0"
+kotlinx-serialization = "1.10.0"
 logback = "1.5.20"
 junit = "6.0.1"
 mockk = "1.14.6"
@@ -16,7 +16,7 @@ coroutines-test = "1.10.2"
 jimfs = "1.3.1"
 testfx = "4.0.18"
 monocle = "21.0.2"
-javafx-controls = "25.0.1"
+javafx-controls = "21.0.7"
 # Plugin versions
 maven-publish = "0.35.0"
 dokka = "2.1.0"
@@ -33,8 +33,8 @@ coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core" }
 coroutines-javafx = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-javafx" }
 coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines-test" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
-transgressoft-commons-api = { module = "net.transgressoft:transgressoft-commons-api", version.ref = "transgressoft" }
-transgressoft-commons-core = { module = "net.transgressoft:transgressoft-commons-core", version.ref = "transgressoft" }
+lirp-api = { module = "net.transgressoft:lirp-api", version.ref = "lirp" }
+lirp-core = { module = "net.transgressoft:lirp-core", version.ref = "lirp" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 jaudiotagger = { module = "net.jthink:jaudiotagger", version.ref = "jaudiotagger" }
 jave-core = { module = "ws.schild:jave-core", version.ref = "jave" }

@@ -17,7 +17,7 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.entity.ReactiveEntityBase
+import net.transgressoft.lirp.entity.ReactiveEntityBase
 import mu.KotlinLogging
 import java.util.*
 

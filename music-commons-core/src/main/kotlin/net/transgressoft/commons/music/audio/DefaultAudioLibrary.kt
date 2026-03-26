@@ -17,9 +17,9 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.event.StandardCrudEvent.Update
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
-import net.transgressoft.commons.persistence.Repository
+import net.transgressoft.lirp.event.StandardCrudEvent.Update
+import net.transgressoft.lirp.persistence.Repository
 import mu.KotlinLogging
 import java.nio.file.Path
 import kotlinx.serialization.modules.SerializersModule

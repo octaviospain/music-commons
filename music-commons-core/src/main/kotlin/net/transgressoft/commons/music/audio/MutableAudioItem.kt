@@ -17,12 +17,12 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.entity.ReactiveEntityBase
 import net.transgressoft.commons.music.AudioUtils
 import net.transgressoft.commons.music.AudioUtils.audioItemTrackDiscNumberComparator
 import net.transgressoft.commons.music.audio.AudioFileType.FLAC
 import net.transgressoft.commons.music.audio.AudioFileType.MP3
 import net.transgressoft.commons.music.audio.AudioFileType.WAV
+import net.transgressoft.lirp.entity.ReactiveEntityBase
 import com.neovisionaries.i18n.CountryCode
 import mu.KotlinLogging
 import org.jaudiotagger.audio.AudioFileIO
@@ -90,6 +90,9 @@ internal class MutableAudioItem(
     @Transient
     private val logger = KotlinLogging.logger {}
 
+    @Transient
+    private var suppressEvents = false
+
     private val ioScope =
         CoroutineScope(
             Dispatchers.IO + SupervisorJob() +
@@ -119,6 +122,7 @@ internal class MutableAudioItem(
         lastDateModified: LocalDateTime,
         playCount: Short
     ) : this(path, id) {
+        suppressEvents = true
         this.title = title
         this._duration = duration
         this.artist = artist
@@ -134,6 +138,7 @@ internal class MutableAudioItem(
         this._dateOfCreation = dateOfCreation
         this.lastDateModified = lastDateModified
         this._playCount = playCount
+        suppressEvents = false
     }
 
     @Transient
@@ -181,7 +186,7 @@ internal class MutableAudioItem(
 
     private var _playCount: Short = 0
         set(value) {
-            mutateAndPublish(value, field) { field = it }
+            if (!suppressEvents) mutateAndPublish { field = value } else field = value
         }
 
     @Serializable
@@ -217,56 +222,56 @@ internal class MutableAudioItem(
     @Serializable
     override var title: String = getFieldIfExisting(tag, FieldKey.TITLE) ?: ""
         set(value) {
-            mutateAndPublish(value, field) { field = it }
+            if (!suppressEvents) mutateAndPublish { field = value } else field = value
         }
 
     @Serializable
     override var artist: Artist = readArtist(tag)
         set(value) {
-            mutateAndPublish(value, field) { field = it }
+            if (!suppressEvents) mutateAndPublish { field = value } else field = value
         }
 
     @Serializable
     override var genre: Genre = getFieldIfExisting(tag, FieldKey.GENRE)?.let { Genre.parseGenre(it) } ?: Genre.UNDEFINED
         set(value) {
-            mutateAndPublish(value, field) { field = it }
+            if (!suppressEvents) mutateAndPublish { field = value } else field = value
         }
 
     @Serializable
     override var comments: String? = getFieldIfExisting(tag, FieldKey.COMMENT)?.takeIf { it.isNotEmpty() }
         set(value) {
-            mutateAndPublish(value, field) { field = it }
+            if (!suppressEvents) mutateAndPublish { field = value } else field = value
         }
 
     @Serializable
     override var trackNumber: Short? = getFieldIfExisting(tag, FieldKey.TRACK)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()?.takeIf { it > 0 }
         set(value) {
-            mutateAndPublish(value, field) { field = it }
+            if (!suppressEvents) mutateAndPublish { field = value } else field = value
         }
 
     @Serializable
     override var discNumber: Short? = getFieldIfExisting(tag, FieldKey.DISC_NO)?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()?.takeIf { it > 0 }
         set(value) {
-            mutateAndPublish(value, field) { field = it }
+            if (!suppressEvents) mutateAndPublish { field = value } else field = value
         }
 
     @Serializable
     override var bpm: Float? = getFieldIfExisting(tag, FieldKey.BPM)?.takeUnless { it.isEmpty().and(it == "0") }?.toFloatOrNull()?.takeIf { it > 0 }
         set(value) {
-            mutateAndPublish(value, field) { field = it }
+            if (!suppressEvents) mutateAndPublish { field = value } else field = value
         }
 
     @Serializable
     override var album: Album = readAlbum(tag, path.extension)
         set(value) {
-            mutateAndPublish(value, field) { field = it }
+            if (!suppressEvents) mutateAndPublish { field = value } else field = value
         }
 
     @Transient
     override var coverImageBytes: ByteArray? = getCoverBytes(tag)
         get() = field ?: getCoverBytes()
         set(value) {
-            mutateAndPublish(value, field) { field = it }
+            if (!suppressEvents) mutateAndPublish { field = value } else field = value
         }
 
     private fun getFieldIfExisting(tag: Tag, fieldKey: FieldKey): String? = tag.hasField(fieldKey).takeIf { it }.run { tag.getFirst(fieldKey) }
@@ -430,30 +435,18 @@ internal class MutableAudioItem(
             album == that.album &&
             genre === that.genre &&
             comments == that.comments &&
-            duration == that.duration
+            duration == that.duration &&
+            playCount == that.playCount &&
+            coverImageBytes.contentEquals(that.coverImageBytes)
     }
 
-    override fun hashCode() = Objects.hash(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration)
+    override fun hashCode() = Objects.hash(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration, playCount)
 
     override fun clone(): MutableAudioItem =
         MutableAudioItem(
-            path,
-            id,
-            title,
-            duration,
-            bitRate,
-            artist,
-            album,
-            genre,
-            comments,
-            trackNumber,
-            discNumber,
-            bpm,
-            encoder,
-            encoding,
-            dateOfCreation,
-            lastDateModified,
-            playCount
+            path, id, title, duration, bitRate, artist, album, genre,
+            comments, trackNumber, discNumber, bpm, encoder, encoding,
+            dateOfCreation, lastDateModified, _playCount
         )
 
     override fun toString() = "AudioItem(id=$id, path=$path, title=$title, artist=${artist.name})"

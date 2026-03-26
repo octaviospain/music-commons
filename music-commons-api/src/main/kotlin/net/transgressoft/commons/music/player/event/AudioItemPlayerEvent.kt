@@ -17,15 +17,15 @@
 
 package net.transgressoft.commons.music.player.event
 
-import net.transgressoft.commons.event.EventType
-import net.transgressoft.commons.event.TransEvent
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
+import net.transgressoft.lirp.event.EventType
+import net.transgressoft.lirp.event.LirpEvent
 
 /**
  * Sealed class hierarchy representing events emitted by an audio item player.
  */
-sealed class AudioItemPlayerEvent : TransEvent<AudioItemPlayerEvent.Type> {
+sealed class AudioItemPlayerEvent : LirpEvent<AudioItemPlayerEvent.Type> {
 
     abstract val audioItem: ReactiveAudioItem<*>
 

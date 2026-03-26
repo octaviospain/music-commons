@@ -1,4 +1,13 @@
+plugins {
+    id 'org.openjfx.javafxplugin'
+}
+
 description = 'Transgressoft Music Commons - API'
+
+javafx {
+    version = JavaVersion.VERSION_21
+    modules = ['javafx.controls']
+}
 
 dependencies {
     api 'org.jetbrains.kotlinx:kotlinx-coroutines-core'

@@ -1,15 +1,15 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.event.CrudEvent
-import net.transgressoft.commons.event.CrudEvent.Type.CREATE
-import net.transgressoft.commons.event.CrudEvent.Type.DELETE
-import net.transgressoft.commons.event.CrudEvent.Type.UPDATE
-import net.transgressoft.commons.event.ReactiveScope
 import net.transgressoft.commons.music.AudioUtils
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAlbumAudioFiles
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
-import net.transgressoft.commons.persistence.json.JsonFileRepository
-import net.transgressoft.commons.persistence.json.JsonRepository
+import net.transgressoft.lirp.event.CrudEvent
+import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
+import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
+import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
+import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.lirp.persistence.json.JsonFileRepository
+import net.transgressoft.lirp.persistence.json.JsonRepository
 import io.kotest.common.ExperimentalKotest
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
@@ -75,7 +75,6 @@ internal class DefaultAudioLibraryTest: StringSpec({
 
             it.id shouldNotBe UNASSIGNED_ID
             audioRepository.add(it) shouldBe false
-            audioRepository.addOrReplace(it) shouldBe false
             audioRepository.contains { audioItem -> audioItem == it } shouldBe true
             audioRepository.search { audioItem -> audioItem == it }.shouldContainOnly(it)
             audioRepository.findByUniqueId(it.uniqueId) shouldBePresent { found -> found shouldBe it }
@@ -114,7 +113,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
 
         jsonFile shouldEqual audioItem.asJsonKeyValue()
 
-        audioRepository.runForSingle(audioItem.id) { it.bpm = 135f }
+        audioRepository.findById(audioItem.id).ifPresent { it.bpm = 135f }
         testDispatcher.scheduler.advanceUntilIdle()
 
         audioItem.bpm shouldBe 135f
@@ -222,7 +221,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         audioRepository.artistCatalogPublisher.subscribe(UPDATE) { receivedEvents.add(it) }
 
         // Modify track number on single item - should NOT trigger catalog UPDATE (no reordering possible)
-        audioRepository.runForSingle(audioItem.id) { it.trackNumber = 5 }
+        audioRepository.findById(audioItem.id).ifPresent { it.trackNumber = 5 }
         testDispatcher.scheduler.advanceUntilIdle()
 
         receivedEvents.size shouldBe 0
@@ -256,7 +255,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         audioRepository.artistCatalogPublisher.subscribe(UPDATE) { receivedEvents.add(it) }
 
         // Modify track number on first item to make it last - should trigger catalog UPDATE (reordering)
-        audioRepository.runForSingle(audioItem1.id) { it.trackNumber = 5 }
+        audioRepository.findById(audioItem1.id).ifPresent { it.trackNumber = 5 }
         testDispatcher.scheduler.advanceUntilIdle()
 
         receivedEvents.size shouldBe 1
@@ -312,7 +311,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
 
         // Change artist - should delete old catalog and create new one
         val newArtist = ImmutableArtist.of("New Artist")
-        audioRepository.runForSingle(audioItem.id) { it.artist = newArtist }
+        audioRepository.findById(audioItem.id).ifPresent { it.artist = newArtist }
         testDispatcher.scheduler.advanceUntilIdle()
 
         createEvents.size shouldBe 2

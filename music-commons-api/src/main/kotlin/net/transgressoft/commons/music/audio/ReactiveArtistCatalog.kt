@@ -17,7 +17,7 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.entity.ReactiveEntity
+import net.transgressoft.lirp.entity.ReactiveEntity
 
 /**
  * Represents a reactive catalog of all audio items for a specific artist.

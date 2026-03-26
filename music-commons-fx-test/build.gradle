@@ -8,7 +8,7 @@ plugins {
 description = 'Transgressoft Music Commons - Test Utilities'
 
 javafx {
-    version = JavaVersion.VERSION_17
+    version = JavaVersion.VERSION_21
     modules = ['javafx.controls']
 }
 
@@ -18,13 +18,12 @@ tasks.matching { it.name.startsWith("ktlint") || it.name.startsWith("jacoco")}.c
 
 tasks.withType(KotlinJvmCompile).configureEach {
     compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
-        freeCompilerArgs.add('-Xadd-modules=javafx.base,javafx.graphics')
+        jvmTarget.set(JvmTarget.JVM_21)
     }
 }
 
 dependencies {
-    implementation libs.transgressoft.commons.core.get()
+    implementation libs.lirp.core.get()
     api project(path: ':music-commons-fx')
     api project(path: ':music-commons-test')
     implementation libs.mockk.get()

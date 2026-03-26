@@ -17,10 +17,10 @@
 
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.event.CrudEvent
-import net.transgressoft.commons.event.TransEventSubscriber
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
-import net.transgressoft.commons.persistence.Repository
+import net.transgressoft.lirp.event.CrudEvent
+import net.transgressoft.lirp.event.LirpEventSubscriber
+import net.transgressoft.lirp.persistence.Repository
 import java.util.*
 import java.util.concurrent.Flow
 
@@ -32,7 +32,7 @@ import java.util.concurrent.Flow
  */
 interface PlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPlaylist<I, P>>
 : Repository<Int, P>,
-    TransEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>>,
+    LirpEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>>,
     Flow.Publisher<CrudEvent<Int, P>> {
 
     @Throws(IllegalArgumentException::class)

@@ -17,9 +17,9 @@
 
 package net.transgressoft.commons.music.event
 
-import net.transgressoft.commons.event.TransEventSubscriberBase
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
+import net.transgressoft.lirp.event.LirpEventSubscriberBase
 
 /**
  * Event subscriber for tracking audio item playback events.
@@ -27,7 +27,7 @@ import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
  * Connects audio libraries to player components, allowing libraries to react to
  * playback events such as updating play counts or triggering related actions.
  */
-open class PlayedEventSubscriber: TransEventSubscriberBase<ReactiveAudioItem<*>, AudioItemPlayerEvent.Type, AudioItemPlayerEvent>("PlayedEventSubscriber") {
+open class PlayedEventSubscriber: LirpEventSubscriberBase<ReactiveAudioItem<*>, AudioItemPlayerEvent.Type, AudioItemPlayerEvent>("PlayedEventSubscriber") {
 
     override fun toString() =
         buildString {

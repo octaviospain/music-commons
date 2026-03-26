@@ -17,10 +17,10 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.event.CrudEvent
-import net.transgressoft.commons.event.TransEventPublisher
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
-import net.transgressoft.commons.persistence.Repository
+import net.transgressoft.lirp.event.CrudEvent
+import net.transgressoft.lirp.event.LirpEventPublisher
+import net.transgressoft.lirp.persistence.Repository
 import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.CompletableFuture
@@ -62,7 +62,7 @@ interface AudioLibrary<I: ReactiveAudioItem<I>, AC: ReactiveArtistCatalog<AC, I>
      *
      * The published catalogs are immutable views that update reactively in the background.
      */
-    val artistCatalogPublisher: TransEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>>
+    val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>>
 
     /**
      * Creates an audio item from the file at the specified path.

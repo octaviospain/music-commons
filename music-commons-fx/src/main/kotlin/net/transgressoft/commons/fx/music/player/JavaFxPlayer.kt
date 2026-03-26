@@ -17,8 +17,6 @@
 
 package net.transgressoft.commons.fx.music.player
 
-import net.transgressoft.commons.event.FlowEventPublisher
-import net.transgressoft.commons.event.TransEventPublisher
 import net.transgressoft.commons.music.audio.AudioFileType.M4A
 import net.transgressoft.commons.music.audio.AudioFileType.MP3
 import net.transgressoft.commons.music.audio.AudioFileType.WAV
@@ -28,6 +26,8 @@ import net.transgressoft.commons.music.player.AudioItemPlayer
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Played
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
+import net.transgressoft.lirp.event.FlowEventPublisher
+import net.transgressoft.lirp.event.LirpEventPublisher
 import javafx.application.Platform
 import javafx.beans.property.DoubleProperty
 import javafx.beans.property.ObjectProperty
@@ -45,8 +45,8 @@ import java.util.EnumSet
  * Basic player that uses the native JavaFX [MediaPlayer]
  */
 class JavaFxPlayer(
-    private val publisher: TransEventPublisher<AudioItemPlayerEvent.Type, AudioItemPlayerEvent> = FlowEventPublisher("JavaFxPlayer")
-): TransEventPublisher<AudioItemPlayerEvent.Type, AudioItemPlayerEvent> by publisher, AudioItemPlayer {
+    private val publisher: LirpEventPublisher<AudioItemPlayerEvent.Type, AudioItemPlayerEvent> = FlowEventPublisher("JavaFxPlayer")
+): LirpEventPublisher<AudioItemPlayerEvent.Type, AudioItemPlayerEvent> by publisher, AudioItemPlayer {
     companion object {
         private const val PLAY_COUNT_THRESHOLD_POLICY = 0.6
 

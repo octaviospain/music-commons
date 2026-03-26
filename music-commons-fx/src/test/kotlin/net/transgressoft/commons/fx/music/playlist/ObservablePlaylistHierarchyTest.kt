@@ -1,11 +1,11 @@
 package net.transgressoft.commons.fx.music.playlist
 
-import net.transgressoft.commons.event.ReactiveScope
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
 import net.transgressoft.commons.fx.music.fxAudioItem
 import net.transgressoft.commons.music.playlist.asJsonKeyValues
-import net.transgressoft.commons.persistence.json.JsonFileRepository
+import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrowMessage
@@ -357,7 +357,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
             }
         }
 
-        playlistHierarchy.runForAll { it.removeAudioItems(rockAudioItems) }
+        playlistHierarchy.forEach { it.removeAudioItems(rockAudioItems) }
 
         testDispatcher.scheduler.advanceUntilIdle()
         WaitForAsyncUtils.waitForFxEvents()

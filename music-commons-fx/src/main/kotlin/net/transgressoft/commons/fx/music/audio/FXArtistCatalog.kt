@@ -17,12 +17,12 @@
 
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.entity.ReactiveEntityBase
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.AlbumSet
 import net.transgressoft.commons.music.audio.AlbumView
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.id
+import net.transgressoft.lirp.entity.ReactiveEntityBase
 import javafx.application.Platform
 import javafx.beans.property.ReadOnlyBooleanProperty
 import javafx.beans.property.ReadOnlyBooleanWrapper
