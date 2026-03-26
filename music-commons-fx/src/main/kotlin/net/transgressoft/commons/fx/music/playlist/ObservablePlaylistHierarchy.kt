@@ -362,7 +362,6 @@ class ObservablePlaylistHierarchy
             @JvmName("removePlaylistIds")
             override fun removePlaylists(playlistIds: Collection<Int>): Boolean {
                 val result = _playlistsProperty.stream().anyMatch(playlists::contains)
-                val playlistsToRemove = playlistIds.map { findById(it) }.filter { it.isPresent }.map { it.get() }
                 mutateAndPublish {
                     _playlistsProperty.removeAll { playlistIds.contains(it.id) }
                     playlistIds.forEach { playlistId ->
