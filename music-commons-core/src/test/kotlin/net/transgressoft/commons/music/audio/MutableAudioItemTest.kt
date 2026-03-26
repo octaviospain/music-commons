@@ -5,6 +5,7 @@ import net.transgressoft.commons.music.audio.AudioFileTagType.FLAC
 import net.transgressoft.commons.music.audio.AudioFileTagType.ID3_V_24
 import net.transgressoft.commons.music.audio.AudioFileTagType.MP4_INFO
 import net.transgressoft.commons.music.audio.AudioFileTagType.WAV
+import net.transgressoft.commons.music.audio.MutableAudioItemTestBridge.createAudioItem
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.json.shouldEqualJson
@@ -63,7 +64,7 @@ internal class MutableAudioItemTest : FunSpec({
         ) { filePath ->
             val date = LocalDateTime.now()
             val audioItem =
-                MutableAudioItem(filePath, UNASSIGNED_ID).apply {
+                createAudioItem(filePath, UNASSIGNED_ID).apply {
                     path shouldBe filePath
                     fileName shouldBe filePath.fileName.toString()
                     length shouldBe filePath.toFile().length()
@@ -107,7 +108,7 @@ internal class MutableAudioItemTest : FunSpec({
             audioItem.update(audioItemChanges)
 
             audioItem.writeMetadata().join()
-            val loadedAudioItem: AudioItem = MutableAudioItem(filePath, audioItem.id)
+            val loadedAudioItem: AudioItem = createAudioItem(filePath, audioItem.id)
 
             assertSoftly {
                 loadedAudioItem.id shouldBe audioItem.id
@@ -150,7 +151,7 @@ internal class MutableAudioItemTest : FunSpec({
 
     context("Has expected coverImage after deserialization") {
         val audioItem =
-            MutableAudioItem(
+            createAudioItem(
                 Arb.realAudioFile(ID3_V_24) {
                     coverImageBytes = null
                 }.next()
