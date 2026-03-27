@@ -672,6 +672,21 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         }
     }
 
+    "FXPlaylist allows adding duplicate audio items" {
+        val hierarchy = ObservablePlaylistHierarchy()
+        val item = Arb.fxAudioItem { title = "Duplicate Me" }.next()
+        val playlist = hierarchy.createPlaylist("Dupes", listOf(item))
+
+        playlist.addAudioItem(item)
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            playlist.audioItemsProperty.size shouldBe 2
+        }
+    }
+
     "Rapid playlist modifications are eventually consistent" {
         val hierarchy = ObservablePlaylistHierarchy()
         val audioItems = List(10) { Arb.fxAudioItem { title = "Item-$it" }.next() }
