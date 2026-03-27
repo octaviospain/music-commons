@@ -367,7 +367,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                 FXCollections.observableSet(
                     getArtistsNamesInvolved(
                         titleProperty.value, artistProperty.value.name, albumProperty.value.albumArtist.name
-                    ).map { ImmutableArtist.of(it) }.toSet()
+                    ).map { ImmutableArtist.of(it) }.toMutableSet()
                 )
             )
 

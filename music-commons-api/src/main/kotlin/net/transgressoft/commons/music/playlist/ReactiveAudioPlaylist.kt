@@ -33,6 +33,12 @@ interface ReactiveAudioPlaylist<I : ReactiveAudioItem<I>, P : ReactiveAudioPlayl
 
     fun addAudioItem(audioItem: I): Boolean = addAudioItems(listOf(audioItem))
 
+    /**
+     * Adds the given audio items to this playlist. Duplicate items are allowed — if an item
+     * already exists in the playlist, it will be added again.
+     *
+     * @return `true` if any existing item in the playlist is not contained in the given collection
+     */
     fun addAudioItems(audioItems: Collection<I>): Boolean
 
     fun removeAudioItem(audioItem: I): Boolean = removeAudioItems(listOf(audioItem))

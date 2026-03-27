@@ -289,33 +289,50 @@ class ObservablePlaylistHierarchy
 
             override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>> = _coverImageProperty
 
-            override fun addAudioItems(audioItems: Collection<ObservableAudioItem>) =
-                audioItems.stream().anyMatch { it !in _audioItemsProperty }.also { hasNew ->
-                    if (hasNew) {
-                        Platform.runLater {
-                            _audioItemsProperty.addAll(audioItems.filter { it !in _audioItemsProperty })
-                        }
-                        logger.debug { "Added $audioItems to playlist $uniqueId" }
+            override fun addAudioItems(audioItems: Collection<ObservableAudioItem>): Boolean {
+                val itemsToAdd = audioItems.toList()
+                val currentItems = synchronized(_audioItemsProperty) { _audioItemsProperty.toList() }
+                val result = currentItems.any { it !in itemsToAdd }
+                Platform.runLater {
+                    synchronized(_audioItemsProperty) {
+                        _audioItemsProperty.addAll(itemsToAdd)
                     }
                 }
+                logger.debug { "Added $itemsToAdd to playlist $uniqueId" }
+                return result
+            }
 
-            override fun removeAudioItems(audioItems: Collection<ObservableAudioItem>) =
-                audioItems.stream().anyMatch { it in _audioItemsProperty }.also { hasItems ->
-                    if (hasItems) {
-                        Platform.runLater {
-                            _audioItemsProperty.removeAll(audioItems.toSet())
-                        }
-                        logger.debug { "Removed $audioItems from playlist $uniqueId" }
+            override fun removeAudioItems(audioItems: Collection<ObservableAudioItem>): Boolean {
+                val itemsToRemove = audioItems.toSet()
+                val currentItems = synchronized(_audioItemsProperty) { _audioItemsProperty.toSet() }
+                val hasItems = itemsToRemove.any { it in currentItems }
+                Platform.runLater {
+                    synchronized(_audioItemsProperty) {
+                        _audioItemsProperty.removeAll(itemsToRemove)
                     }
                 }
+                if (hasItems) {
+                    logger.debug { "Removed $itemsToRemove from playlist $uniqueId" }
+                }
+                return hasItems
+            }
 
             @Suppress("INAPPLICABLE_JVM_NAME")
             @JvmName("removeAudioItemIds")
-            override fun removeAudioItems(audioItemIds: Collection<Int>) =
-                this.audioItems.stream().anyMatch { it.id in audioItemIds }.also {
-                    Platform.runLater { _audioItemsProperty.removeAll { it.id in audioItemIds } }
-                    logger.debug { "Removed audio items with ids $audioItemIds from playlist $uniqueId" }
+            override fun removeAudioItems(audioItemIds: Collection<Int>): Boolean {
+                val idsToRemove = audioItemIds.toSet()
+                val currentItems = synchronized(_audioItemsProperty) { _audioItemsProperty.toList() }
+                val hasItems = currentItems.any { it.id in idsToRemove }
+                Platform.runLater {
+                    synchronized(_audioItemsProperty) {
+                        _audioItemsProperty.removeAll { it.id in idsToRemove }
+                    }
                 }
+                if (hasItems) {
+                    logger.debug { "Removed audio items with ids $idsToRemove from playlist $uniqueId" }
+                }
+                return hasItems
+            }
 
             override fun addPlaylists(playlists: Collection<ObservablePlaylist>): Boolean {
                 playlists.forEach {
