@@ -8,135 +8,117 @@
 [![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=octaviospain_music-commons&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=octaviospain_music-commons)
 # Music Commons
 
-A modular, reactive Kotlin library for managing audio libraries, playlists, and waveform visualizations. Originally extracted from the [Musicott](https://github.com/octaviospain/Musicott) desktop application to provide reusable core components for audio file management across multiple projects.
+A modular, reactive Kotlin library for managing audio libraries, playlists, and waveform visualizations. Originally extracted from the [Musicott](https://github.com/octaviospain/Musicott) desktop application. Published to Maven Central under `net.transgressoft`.
+
+See the [Wiki](https://github.com/octaviospain/music-commons/wiki) for detailed guides and architecture documentation.
 
 ## Overview
 
-Music Commons was born from the need to separate the core audio management logic from the Musicott desktop application into a standalone, reusable library. The goal was to create a foundation that could power not just Musicott, but any project that needs to manage audio files and related operations—whether that's handling playlists, generating waveforms, managing metadata, or implementing import/export functionality.
+music-commons was born from the need to separate the core audio management logic from the Musicott desktop application into a standalone, reusable library. The goal was to create a foundation that could power not just Musicott, but any project that needs to manage audio files and related operations—whether that's handling playlists, generating waveforms, managing metadata, or implementing import/export functionality. It provides reusable core components for audio file management: metadata handling, playlist organization, waveform generation, and playback control. The library offers a clean, layered architecture with reactive event-driven updates and optional JavaFX integration, enabling both headless services and desktop applications.### Built on lirp
 
-By extracting these components into a dedicated library, Music Commons enables developers to build various types of audio management applications without being tied to a specific UI framework or implementation. Whether you're creating a desktop music player, a headless audio processing service, a DJ application, or any other audio-centric tool, Music Commons provides the building blocks you need.
-
-The library provides a clean, layered architecture with comprehensive metadata handling, reactive event-driven updates, and optional JavaFX integration. It is designed with flexibility in mind, allowing developers to use only the components they need while maintaining consistent behavior across different UI frameworks or headless environments.
-
-### Built on Transgressoft Commons
-
-Music Commons leverages [Transgressoft Commons](https://github.com/octaviospain/transgressoft-commons), another library extracted from the Musicott refactoring effort, which provides the foundational reactive entity framework and persistence infrastructure. Transgressoft Commons handles the repository pattern, automatic JSON serialization, and event-driven architecture that Music Commons builds upon. This separation allows Music Commons to focus on audio-specific functionality while delegating core reactive and persistence concerns to a proven, reusable foundation.
+Music Commons leverages [lirp](https://github.com/octaviospain/lirp), which provides the foundational reactive entity framework, repository pattern, automatic JSON serialization, and event-driven architecture that Music Commons builds upon.
 
 ### Architecture
 
 The library is organized into three main modules:
 
-- **`music-commons-api`**: Core interfaces and contracts defining the audio management domain model
-- **`music-commons-core`**: Concrete implementations with JSON persistence and reactive event subscriptions
+- **`music-commons-api`**: Interfaces and contracts defining the audio management domain model
+- **`music-commons-core`**: Implementations with JSON persistence and reactive event subscriptions
 - **`music-commons-fx`**: JavaFX integration layer with observable properties and UI components
-
-This modular design enables you to:
-- Build headless audio management services using only the core module
-- Create desktop applications with full JavaFX integration
-- Implement custom backends by providing your own implementations of the API interfaces
 
 ## Requirements
 
-- **Java**: 17 or higher
-- **Kotlin**: 2.2.21 (or compatible version)
-- **JavaFX**: 22.0.1 or higher (only required for `music-commons-fx` module)
+- **Java**: 21 or higher
+- **Kotlin**: 2.3.0
+- **JavaFX**: 21.0.7 or higher (only required for `music-commons-fx` module)
+
+## Installation
+
+```kotlin
+// Gradle (Kotlin DSL)
+dependencies {
+    implementation("net.transgressoft:music-commons-api:$version")
+    implementation("net.transgressoft:music-commons-core:$version")
+    implementation("net.transgressoft:music-commons-fx:$version") // Optional, for JavaFX apps
+}
+```
+
+The core module depends on [lirp](https://github.com/octaviospain/lirp):
+
+```kotlin
+implementation("net.transgressoft:lirp-api:1.2.0")
+implementation("net.transgressoft:lirp-core:1.2.0")
+```
 
 ## Key Features
 
 ### Audio Library Management
 
-- **Comprehensive Metadata Support**: Track title, artist, album, genre, label, year, BPM, play count, ratings, and custom tags
-- **Multi-Format Support**: MP3, M4A, WAV, and FLAC file types with automatic metadata extraction
-- **Reactive Updates**: All entities implement reactive property change notifications via `ReactiveEntity`
-- **Event-Driven Architecture**: CRUD operations publish events through Java Flow API for automatic synchronization
-- **Artist Catalog Indexing**: Automatic organization of audio items by artist and album with aggregated views
-- **Batch Operations**: Asynchronous batch creation and modification of audio items with coroutine dispatchers
-- **Type-Safe Generics**: Compile-time safety through parameterized types for audio item implementations
+- **Multi-format support**: MP3, M4A, WAV, and FLAC with automatic metadata extraction
+- **Artist catalog indexing**: Automatic organization by artist and album with aggregated views
+- **Batch operations**: Asynchronous batch creation via `CompletableFuture` API
+- **Reactive updates**: CRUD operations publish events through Java Flow API
 
 ### Playlist Management
 
-- **Hierarchical Organization**: Support for nested playlist structures with arbitrary depth
-- **M3U Export**: Export playlists to M3U format with directory structure preservation
-- **Reactive Synchronization**: Automatic updates when audio items are modified or removed from the library
-- **Observable Collections**: JavaFX integration provides observable playlist sets for UI binding
-- **Folder-Like Structure**: Organize playlists in a tree hierarchy similar to filesystem directories
+- **Hierarchical organization**: Nested playlist structures with directories
+- **M3U export**: Export playlists preserving directory structure
+- **Automatic synchronization**: Playlists update when audio items are modified or removed
 
 ### Waveform Visualization
 
-- **Asynchronous Generation**: Non-blocking waveform creation with `CompletableFuture` API
-- **Scalable Processing**: Generate waveforms at any resolution with configurable width and height
-- **Image Export**: Create visual representations as `BufferedImage` for rendering or export
-- **Repository Pattern**: Centralized waveform creation and caching through `AudioWaveformRepository`
-- **JavaFX Integration**: Custom `WaveformPane` component with automatic canvas redraw on resize
+- **Asynchronous generation**: Non-blocking waveform creation with configurable resolution
+- **Repository caching**: Waveforms are cached and reused across requests
+- **JavaFX component**: Custom `WaveformPane` canvas with automatic redraw on resize
 
 ### Audio Playback
 
-- **Player Abstraction**: `AudioItemPlayer` interface for implementing custom playback engines
-- **Status Monitoring**: Track playback state transitions (READY, PLAYING, PAUSED, STOPPED, etc.)
-- **Event Notifications**: Receive player events for synchronizing UI or triggering actions
-- **JavaFX Player Implementation**: Ready-to-use `JavaFxPlayer` wrapping native JavaFX MediaPlayer
-- **Play Count Tracking**: Automatic play count increment at 60% playback threshold (JavaFX implementation)
+- **Player abstraction**: `AudioItemPlayer` interface for custom playback engines
+- **JavaFX implementation**: `JavaFxPlayer` wrapping native MediaPlayer with status monitoring
+- **Play count tracking**: Automatic increment at 60% playback threshold
 
-### Persistence & Serialization
+### Persistence
 
-- **JSON File Storage**: Powered by [Transgressoft Commons](https://github.com/octaviospain/transgressoft-commons)'s `JsonFileRepository`, providing automatic, thread-safe JSON persistence with debounced file I/O
-- **Automatic Serialization**: Built-in serializers for audio items, playlists, and waveforms using kotlinx-serialization
-- **Transparent Persistence**: Changes to entities are automatically persisted without manual save operations
+- **JSON file storage**: Powered by [lirp](https://github.com/octaviospain/lirp)'s `JsonFileRepository` with debounced file I/O
+- **Automatic serialization**: Built-in kotlinx-serialization serializers for all entities
+- **Transparent persistence**: Entity changes are persisted without manual save operations
 
 ### JavaFX Integration
 
-- **Observable Properties**: Bidirectional binding with JavaFX property system for automatic UI updates
-- **Thread Safety**: All JavaFX property modifications executed on the Application Thread
-- **TableView/ListView Support**: Observable collections integrate seamlessly with standard JavaFX controls
-- **Custom Controls**: `WaveformPane` component for embedding waveform visualizations
-- **Property Binding**: Changes in core data structures automatically propagate to UI components
+- **Observable properties**: Direct binding to JavaFX TableView, ListView, and other controls
+- **Thread safety**: All property modifications routed through `Platform.runLater`
+- **Custom controls**: `WaveformPane` component for waveform visualization
 
 ## Module Details
 
 ### music-commons-api
 
-Defines the contracts and interfaces for the audio management domain without any implementation details. This module is ideal for:
-- Defining your own implementations with custom backends
-- Ensuring loose coupling between layers
-- Building abstractions that work with any implementation
+Defines contracts and interfaces for the audio management domain.
 
 **Key Interfaces:**
-- `ReactiveAudioItem<I>`: Audio file representation with comprehensive metadata
-- `AudioLibrary<I>`: Repository for CRUD operations with reactive event publishing
-- `AudioItemPlayer`: Playback controls with status monitoring
-- `AudioPlaylist<I>` / `ReactiveAudioPlaylist<I>`: Playlist management with M3U export
-- `PlaylistHierarchy<I, P>`: Nested playlist structure repository
-- `AudioWaveform`: Waveform amplitude data and image generation
-- `AudioWaveformRepository`: Asynchronous waveform retrieval and creation
+- `ReactiveAudioItem<I>` -- Audio file representation with metadata
+- `AudioLibrary<I, AC>` -- CRUD repository with reactive event publishing
+- `AudioPlaylist<I>` / `PlaylistHierarchy<I, P>` -- Playlist management with M3U export
+- `AudioWaveform` / `AudioWaveformRepository` -- Waveform data and generation
+- `AudioItemPlayer` -- Playback controls with status monitoring
 
 ### music-commons-core
 
-Provides concrete implementations of all API interfaces with JSON file persistence (via [Transgressoft Commons](https://github.com/octaviospain/transgressoft-commons)) and reactive event subscriptions. This module includes:
-- `DefaultAudioLibrary`: Full-featured audio library with artist catalog indexing and automatic JSON persistence
-- `DefaultPlaylistHierarchy`: Hierarchical playlist management with automatic synchronization
-- `DefaultAudioWaveformRepository`: Waveform generation and caching with dispatcher support
-- JSON serializers for all entities using kotlinx-serialization
-- Event subscribers for automatic reactive synchronization between components
-- Integration with Transgressoft Commons repository infrastructure for transparent persistence
+Concrete implementations with JSON file persistence via [lirp](https://github.com/octaviospain/lirp) and reactive event subscriptions.
 
-**Use this module for:**
-- Building headless audio management services
-- Command-line tools for audio metadata manipulation
-- Backend services that don't require UI integration
+- `DefaultAudioLibrary` -- Full audio library with artist catalog indexing
+- `DefaultPlaylistHierarchy` -- Hierarchical playlist management with automatic sync
+- `DefaultAudioWaveformRepository` -- Waveform generation and caching
+- Event subscribers for reactive synchronization between components
 
 ### music-commons-fx
 
-Bridges the reactive core module with JavaFX's property binding system, providing:
-- `ObservableAudioLibrary`: JavaFX observable collections for TableView/ListView binding
-- `ObservablePlaylist`: Observable playlist sets with property bindings
-- `JavaFxPlayer`: Native JavaFX MediaPlayer wrapper with reactive playback events
-- `WaveformPane`: Custom Canvas component for audio waveform visualization
-- Automatic UI synchronization through bidirectional property binding
+Bridges core module with JavaFX's property binding system.
 
-**Use this module for:**
-- Building JavaFX desktop applications
-- Creating rich, reactive user interfaces for audio management
-- Applications that need automatic UI updates when data changes
+- `ObservableAudioLibrary` -- Observable collections for TableView/ListView binding
+- `ObservablePlaylistHierarchy` -- Observable playlist sets with property bindings
+- `JavaFxPlayer` -- Native JavaFX MediaPlayer wrapper with reactive events
+- `WaveformPane` -- Custom Canvas component for waveform visualization
 
 ## Usage Examples
 
@@ -144,7 +126,7 @@ Bridges the reactive core module with JavaFX's property binding system, providin
 
 ```kotlin
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
-import net.transgressoft.commons.core.JsonFileRepository
+import net.transgressoft.lirp.persistence.json.JsonFileRepository
 
 // Create a repository backed by a JSON file
 val repository = JsonFileRepository(
@@ -155,11 +137,11 @@ val repository = JsonFileRepository(
 // Initialize the library
 val audioLibrary = DefaultAudioLibrary(repository)
 
-// Add audio files
+// Add a single audio file
 val audioItem = audioLibrary.createFromFile(Paths.get("/path/to/song.mp3"))
 
-// Batch import
-val audioItems = audioLibrary.createFromFileBatchAsync(listOfPaths).await()
+// Batch import (returns CompletableFuture)
+val audioItems = audioLibrary.createFromFileBatchAsync(listOfPaths).get()
 ```
 
 ### Working with Playlists
@@ -167,16 +149,15 @@ val audioItems = audioLibrary.createFromFileBatchAsync(listOfPaths).await()
 ```kotlin
 import net.transgressoft.commons.music.playlist.DefaultPlaylistHierarchy
 
-// Create a playlist hierarchy
-val playlistRepository = JsonFileRepository(
-    File("playlists.json"),
-    PlaylistMapSerializer
-)
 val hierarchy = DefaultPlaylistHierarchy(playlistRepository, audioLibrary)
 
-// Create a new playlist
-val playlist = hierarchy.create("Favorites")
-playlist.add(audioItem)
+// Create playlists
+val playlist = hierarchy.createPlaylist("Favorites")
+val folder = hierarchy.createPlaylistDirectory("By Genre")
+
+// Add items and organize
+hierarchy.addAudioItemToPlaylist(audioItem, "Favorites")
+hierarchy.addPlaylistToDirectory(playlist, "By Genre")
 
 // Export to M3U
 playlist.exportToM3uFile(Paths.get("favorites.m3u"))
@@ -187,31 +168,29 @@ playlist.exportToM3uFile(Paths.get("favorites.m3u"))
 ```kotlin
 import net.transgressoft.commons.music.waveform.DefaultAudioWaveformRepository
 
-val waveformRepo = DefaultAudioWaveformRepository()
+val waveformRepo = DefaultAudioWaveformRepository(repository, audioItemEventSubscriber)
 
-// Generate waveform asynchronously
+// Generate waveform asynchronously (width and height are Short)
 val waveform = waveformRepo
-    .getOrCreateWaveformAsync(audioItem, width = 800, height = 300)
+    .getOrCreateWaveformAsync(audioItem, 800.toShort(), 300.toShort(), Dispatchers.IO)
     .get()
 
-// Get the waveform image
-val image = waveform.getWaveformImage()
+// Create a waveform image file
+runBlocking {
+    waveform.createImage(File("waveform.png"), Color.CYAN, Color.BLACK, 800, 300)
+}
 ```
 
 ### JavaFX Integration
 
 ```kotlin
 import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
-import javafx.scene.control.TableView
 
 // Create observable library
 val observableLibrary = ObservableAudioLibrary(repository)
 
-// Bind to TableView
+// Bind to TableView -- changes automatically update the table
 tableView.itemsProperty().bind(observableLibrary.audioItemsProperty)
-
-// Changes to the library automatically update the table
-observableLibrary.createFromFile(Paths.get("/path/to/song.mp3"))
 ```
 
 ### Audio Playback
@@ -219,53 +198,68 @@ observableLibrary.createFromFile(Paths.get("/path/to/song.mp3"))
 ```kotlin
 import net.transgressoft.commons.fx.music.player.JavaFxPlayer
 
-// Create a player
 val player = JavaFxPlayer()
 
-// Subscribe to playback events
-player.events().subscribe { event ->
-    when (event) {
-        is AudioItemPlayerEvent.StatusChanged ->
-            println("Status: ${event.newStatus}")
-        is AudioItemPlayerEvent.ProgressUpdate ->
-            println("Progress: ${event.currentTime}")
-    }
-}
-
-// Play an audio item
+// Play, pause, resume, stop
 player.play(audioItem)
+player.pause()
+player.resume()
+player.stop()
+
+// Monitor status and position
+player.statusProperty.addListener { _, _, newStatus -> println("Status: $newStatus") }
+player.currentTimeProperty.addListener { _, _, time -> println("Time: $time") }
+
+// Control volume and seek
+player.setVolume(0.8)
+player.seek(30000.0) // seek to 30 seconds
+
+player.dispose()
+```
+
+### Waveform Visualization (JavaFX)
+
+```kotlin
+import net.transgressoft.commons.fx.music.waveform.WaveformPane
+import javafx.scene.paint.Color
+
+val waveformPane = WaveformPane()
+waveformPane.drawWaveformAsync(waveform, Color.CYAN, Color.BLACK)
+
+// Add to scene -- auto-redraws on resize
+stackPane.children.add(waveformPane)
 ```
 
 ## Building the Project
 
 ```bash
 # Build all modules
-./gradlew build
+gradle build
 
 # Run tests
-./gradlew test
+gradle test
 
-# Generate code coverage report
-./gradlew jacocoTestReport
+# Generate aggregated coverage report
+gradle testCodeCoverageReport
 
 # Check code formatting
-./gradlew ktlintCheck
+gradle ktlintCheck
 
 # Generate documentation
-./gradlew dokkaHtml
+gradle dokkaHtml
 ```
 
 > **Note:** Waveform transcoding requires FFmpeg native binaries that are only bundled for Linux 64-bit (`jave-nativebin-linux64`). Waveform-related tests will fail on macOS and Windows. Non-Linux developers can safely skip these tests locally and rely on CI for full test coverage.
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
-## 📄 License and Attributions
+## License and Attributions
 
-Copyright (c) 2025 Octavio Calleya García.
+Copyright (c) 2025-2026 Octavio Calleya Garcia.
 
-Transgressoft Commons is free software under GNU GPL version 3 license and is available [here](https://www.gnu.org/licenses/gpl-3.0.en.html#license-text).
+Music Commons is free software under GNU GPL version 3 license, available [here](https://www.gnu.org/licenses/gpl-3.0.en.html#license-text).
 
 This project builds upon several excellent open-source libraries:
 
@@ -274,8 +268,7 @@ This project builds upon several excellent open-source libraries:
 - **[Kotlin Coroutines](https://github.com/Kotlin/kotlinx.coroutines)**: Library support for Kotlin coroutines
 - **[kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization)**: Kotlin multiplatform serialization
 - **[Guava](https://github.com/google/guava)**: Google Core Libraries for Java
+- **[lirp](https://github.com/octaviospain/lirp)**: Reactive entity framework and persistence infrastructure
 - **[Kotest](https://kotest.io/)**: Kotlin testing framework
 - **[MockK](https://mockk.io/)**: Mocking library for Kotlin
 - **[TestFX](https://github.com/TestFX/TestFX)**: JavaFX testing framework
-
-Special thanks to the contributors of these projects for making this library possible.
