@@ -6,22 +6,27 @@ import net.transgressoft.commons.fx.music.audio.ObservableAudioItemMapSerializer
 import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.AudioFileTagType.ID3_V_24
+import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.player.AudioItemPlayer
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status.PAUSED
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status.PLAYING
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status.STOPPED
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status.UNKNOWN
+import net.transgressoft.commons.music.player.UnsupportedAudioPlaybackException
 import net.transgressoft.lirp.event.ReactiveScope
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.json.JsonRepository
 import io.kotest.assertions.json.shouldContainJsonKeyValue
 import io.kotest.assertions.nondeterministic.eventually
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
+import io.mockk.every
+import io.mockk.mockk
 import javafx.util.Duration
 import org.junit.jupiter.api.extension.ExtendWith
 import org.testfx.api.FxToolkit
@@ -127,6 +132,81 @@ internal class JavaFxPlayerTest : StringSpec({
             player.status() shouldBe STOPPED
             player.statusProperty.get() shouldBe STOPPED
             player.currentTimeProperty.get() shouldBe Duration.ZERO
+        }
+    }
+
+    "JavaFxPlayer.isPlayable returns true when encoding and encoder are both null" {
+        val item =
+            mockk<ReactiveAudioItem<*>> {
+                every { extension } returns "mp3"
+                every { encoding } returns null
+                every { encoder } returns null
+            }
+
+        JavaFxPlayer.isPlayable(item) shouldBe true
+    }
+
+    "JavaFxPlayer.isPlayable returns true when encoding is null and encoder has a non-iTunes value" {
+        val item =
+            mockk<ReactiveAudioItem<*>> {
+                every { extension } returns "mp3"
+                every { encoding } returns null
+                every { encoder } returns "LAME 3.100"
+            }
+
+        JavaFxPlayer.isPlayable(item) shouldBe true
+    }
+
+    "JavaFxPlayer.isPlayable returns true when encoder is null and encoding is not Apple Lossless" {
+        val item =
+            mockk<ReactiveAudioItem<*>> {
+                every { extension } returns "mp3"
+                every { encoding } returns "MPEG-1 Audio Layer 3"
+                every { encoder } returns null
+            }
+
+        JavaFxPlayer.isPlayable(item) shouldBe true
+    }
+
+    "JavaFxPlayer.isPlayable returns false when encoding starts with Apple" {
+        val item =
+            mockk<ReactiveAudioItem<*>> {
+                every { extension } returns "m4a"
+                every { encoding } returns "Apple Lossless"
+                every { encoder } returns null
+            }
+
+        JavaFxPlayer.isPlayable(item) shouldBe false
+    }
+
+    "JavaFxPlayer.isPlayable returns false when encoder starts with iTunes" {
+        val item =
+            mockk<ReactiveAudioItem<*>> {
+                every { extension } returns "m4a"
+                every { encoding } returns null
+                every { encoder } returns "iTunes 12.9.0.164"
+            }
+
+        JavaFxPlayer.isPlayable(item) shouldBe false
+    }
+
+    "JavaFxPlayer.play throws UnsupportedAudioPlaybackException when Media source URI is invalid" {
+        val nonExistentFile =
+            Files.createTempFile("corrupt-audio", ".mp3").also {
+                it.toFile().delete() // ensure file does not exist so JavaFX Media throws
+            }
+        val item =
+            mockk<ReactiveAudioItem<*>> {
+                every { extension } returns "mp3"
+                every { encoding } returns null
+                every { encoder } returns null
+                every { fileName } returns "corrupt.mp3"
+                every { duration } returns java.time.Duration.ofSeconds(0)
+                every { path } returns nonExistentFile
+            }
+
+        shouldThrow<UnsupportedAudioPlaybackException> {
+            player.play(item)
         }
     }
 })

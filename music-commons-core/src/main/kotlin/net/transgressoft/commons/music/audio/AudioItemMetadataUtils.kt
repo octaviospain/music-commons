@@ -82,9 +82,8 @@ object AudioItemMetadataUtils {
      * value object containing only plain Kotlin/Java types.
      *
      * @param path path to the audio file
-     * @param extension file extension used to determine compilation flag parsing (m4a vs others)
      */
-    fun readMetadata(path: Path, extension: String): AudioFileMetadata {
+    fun readMetadata(path: Path): AudioFileMetadata {
         val audioFile = AudioFileIO.read(path.toFile())
         val header = audioFile.audioHeader
         val tag = audioFile.tag
@@ -95,7 +94,7 @@ object AudioItemMetadataUtils {
             encoding = header.encodingType,
             title = getFieldIfExisting(tag, FieldKey.TITLE) ?: "",
             artist = parseArtist(tag),
-            album = parseAlbum(tag, extension),
+            album = parseAlbum(tag),
             genre = getFieldIfExisting(tag, FieldKey.GENRE)?.let { Genre.parseGenre(it) } ?: Genre.UNDEFINED,
             comments = getFieldIfExisting(tag, FieldKey.COMMENT)?.takeIf { it.isNotEmpty() },
             trackNumber = parseOptionalShort(getFieldIfExisting(tag, FieldKey.TRACK)),
@@ -163,7 +162,7 @@ object AudioItemMetadataUtils {
             ImmutableArtist.of(AudioUtils.beautifyArtistName(artistName), country)
         } ?: ImmutableArtist.UNKNOWN
 
-    private fun parseAlbum(tag: Tag, extension: String): ImmutableAlbum =
+    private fun parseAlbum(tag: Tag): ImmutableAlbum =
         getFieldIfExisting(tag, FieldKey.ALBUM).let { albumName ->
             return if (albumName == null) {
                 ImmutableAlbum.UNKNOWN

@@ -63,9 +63,13 @@ jobs:
                 uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5
                 env:
                     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+                with:
+                    files: build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml
 
             -   name: Upload test results to Codecov
                 if: ${{ !cancelled() }}
-                uses: codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 # v1
+                uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5
                 with:
                     token: ${{ secrets.CODECOV_TOKEN }}
+                    report_type: test_results
+                    files: "**/build/test-results/test/*.xml"
