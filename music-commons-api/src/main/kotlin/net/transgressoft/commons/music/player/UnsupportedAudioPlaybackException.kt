@@ -17,54 +17,8 @@
 
 package net.transgressoft.commons.music.player
 
-import net.transgressoft.commons.music.audio.ReactiveAudioItem
-import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
-import javafx.beans.property.DoubleProperty
-import javafx.beans.property.ReadOnlyObjectProperty
-import javafx.util.Duration
-import java.util.concurrent.Flow
-
 /**
- * Interface for playing audio items with playback controls and status monitoring.
- *
- * This interface publishes [AudioItemPlayerEvent] to notify subscribers of player state changes.
+ * Exception thrown when an audio item cannot be played because its format or encoding
+ * is not supported by the underlying player implementation.
  */
-interface AudioItemPlayer : Flow.Publisher<AudioItemPlayerEvent> {
-    /**
-     * Represents the possible states of the audio player.
-     */
-    enum class Status {
-        UNKNOWN,
-        READY,
-        PAUSED,
-        PLAYING,
-        STOPPED,
-        STALLED,
-        HALTED,
-        DISPOSED
-    }
-
-    val totalDuration: Duration
-    val volumeProperty: DoubleProperty
-    val statusProperty: ReadOnlyObjectProperty<Status>
-    val currentTimeProperty: ReadOnlyObjectProperty<Duration>
-
-    @Throws(UnsupportedAudioPlaybackException::class)
-    fun play(audioItem: ReactiveAudioItem<*>)
-
-    fun pause()
-
-    fun resume()
-
-    fun stop()
-
-    fun dispose()
-
-    fun status(): Status
-
-    fun setVolume(value: Double)
-
-    fun seek(milliSeconds: Double)
-
-    fun onFinish(value: Runnable)
-}
+class UnsupportedAudioPlaybackException(message: String, cause: Throwable? = null) : Exception(message, cause)

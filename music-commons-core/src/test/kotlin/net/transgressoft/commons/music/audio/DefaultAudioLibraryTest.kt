@@ -80,8 +80,10 @@ internal class DefaultAudioLibraryTest: StringSpec({
             audioRepository.contains { audioItem -> audioItem == it } shouldBe true
             audioRepository.search { audioItem -> audioItem == it }.shouldContainOnly(it)
             audioRepository.findByUniqueId(it.uniqueId) shouldBePresent { found -> found shouldBe it }
-            audioRepository.containsAudioItemWithArtist(it.artist.name) shouldBe artistNames.contains(it.artist.name)
-            audioRepository.containsAudioItemWithArtist(it.album.albumArtist.name) shouldBe artistNames.contains(it.album.albumArtist.name)
+            val containsArtist = artistNames.any { name -> name.equals(it.artist.name, ignoreCase = true) }
+            val containsAlbumArtist = artistNames.any { name -> name.equals(it.album.albumArtist.name, ignoreCase = true) }
+            audioRepository.containsAudioItemWithArtist(it.artist.name) shouldBe containsArtist
+            audioRepository.containsAudioItemWithArtist(it.album.albumArtist.name) shouldBe containsAlbumArtist
             audioRepository.findAlbumAudioItems(it.artist, it.album.name).shouldContainOnly(it)
         }
 
@@ -97,8 +99,10 @@ internal class DefaultAudioLibraryTest: StringSpec({
             audioRepository.contains { audioItem -> it.title == "New title" } shouldBe true
             audioRepository.search { audioItem -> it.title == "New title" }.shouldContainOnly(it)
             audioRepository.findByUniqueId(it.uniqueId) shouldBePresent { found -> found shouldBe it }
-            audioRepository.containsAudioItemWithArtist(it.artist.name) shouldBe artistNames.contains(it.artist.name)
-            audioRepository.containsAudioItemWithArtist(it.album.albumArtist.name) shouldBe artistNames.contains(it.album.albumArtist.name)
+            val containsArtist = artistNames.any { name -> name.equals(it.artist.name, ignoreCase = true) }
+            val containsAlbumArtist = artistNames.any { name -> name.equals(it.album.albumArtist.name, ignoreCase = true) }
+            audioRepository.containsAudioItemWithArtist(it.artist.name) shouldBe containsArtist
+            audioRepository.containsAudioItemWithArtist(it.album.albumArtist.name) shouldBe containsAlbumArtist
             audioRepository.findAlbumAudioItems(it.artist, it.album.name).shouldContainOnly(it)
             audioRepository.findFirst { audioItem -> audioItem.title == "New title" } shouldBePresent { found ->
                 found shouldBeSameInstanceAs it

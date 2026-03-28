@@ -23,6 +23,7 @@ import net.transgressoft.commons.music.audio.AudioFileType.WAV
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.toAudioFileType
 import net.transgressoft.commons.music.player.AudioItemPlayer
+import net.transgressoft.commons.music.player.UnsupportedAudioPlaybackException
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Played
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
@@ -37,6 +38,7 @@ import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.value.ChangeListener
 import javafx.beans.value.ObservableValue
 import javafx.scene.media.Media
+import javafx.scene.media.MediaException
 import javafx.scene.media.MediaPlayer
 import javafx.util.Duration
 import java.util.EnumSet
@@ -66,7 +68,7 @@ class JavaFxPlayer(
 
         fun isPlayable(audioItem: ReactiveAudioItem<*>): Boolean =
             audioItem.extension.toAudioFileType() in SUPPORTED_AUDIO_TYPES &&
-                !(audioItem.encoding!!.startsWith("Apple") || audioItem.encoder!!.startsWith("iTunes"))
+                !(audioItem.encoding?.startsWith("Apple") == true || audioItem.encoder?.startsWith("iTunes") == true)
     }
 
     init {
@@ -101,27 +103,32 @@ class JavaFxPlayer(
         val file = audioItem.path.toFile()
         val audioItemDuration = audioItem.duration.toMillis()
         var playCountIncreased = false
-        val media = Media(file.toURI().toString())
 
-        mediaPlayer?.dispose()
-        mediaPlayer?.volumeProperty()?.unbind()
-        mediaPlayer?.statusProperty()?.removeListener(statusPropertyListener)
-        mediaPlayer?.currentTimeProperty()?.removeListener(currentTimePropertyListener)
+        try {
+            val media = Media(file.toURI().toString())
 
-        mediaPlayer = MediaPlayer(media)
-        mediaPlayer!!.volumeProperty().bind(_volumeProperty)
-        mediaPlayer!!.statusProperty().addListener(statusPropertyListener)
+            mediaPlayer?.dispose()
+            mediaPlayer?.volumeProperty()?.unbind()
+            mediaPlayer?.statusProperty()?.removeListener(statusPropertyListener)
+            mediaPlayer?.currentTimeProperty()?.removeListener(currentTimePropertyListener)
 
-        currentTimePropertyListener =
-            ChangeListener<Duration> { _: ObservableValue<*>, _: Duration, newValue: Duration ->
-                _currentTimeProperty.set(newValue)
-                if (isTimeToIncreasePlayCount(audioItemDuration, newValue, playCountIncreased)) {
-                    publisher.emitAsync(Played(audioItem))
-                    playCountIncreased = true
+            mediaPlayer = MediaPlayer(media)
+            mediaPlayer!!.volumeProperty().bind(_volumeProperty)
+            mediaPlayer!!.statusProperty().addListener(statusPropertyListener)
+
+            currentTimePropertyListener =
+                ChangeListener<Duration> { _: ObservableValue<*>, _: Duration, newValue: Duration ->
+                    _currentTimeProperty.set(newValue)
+                    if (isTimeToIncreasePlayCount(audioItemDuration, newValue, playCountIncreased)) {
+                        publisher.emitAsync(Played(audioItem))
+                        playCountIncreased = true
+                    }
                 }
-            }
-        mediaPlayer!!.currentTimeProperty().addListener(currentTimePropertyListener)
-        mediaPlayer!!.play()
+            mediaPlayer!!.currentTimeProperty().addListener(currentTimePropertyListener)
+            mediaPlayer!!.play()
+        } catch (exception: MediaException) {
+            throw UnsupportedAudioPlaybackException("Cannot play audio item '${audioItem.fileName}': ${exception.message}", exception)
+        }
     }
 
     private fun isTimeToIncreasePlayCount(

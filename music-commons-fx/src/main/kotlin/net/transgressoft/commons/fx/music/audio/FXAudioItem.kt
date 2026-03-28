@@ -130,7 +130,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         }
 
         @Transient
-        private val metadata = readMetadata(path, path.extension)
+        private val metadata = readMetadata(path)
 
         /** Immutable properties */
 

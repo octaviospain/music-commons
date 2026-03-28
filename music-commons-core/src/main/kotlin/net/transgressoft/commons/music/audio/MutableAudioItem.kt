@@ -130,7 +130,7 @@ internal class MutableAudioItem(
     }
 
     @Transient
-    private val metadata = readMetadata(path, path.extension)
+    private val metadata = readMetadata(path)
 
     private var _bitRate: Int = metadata.bitRate
 
