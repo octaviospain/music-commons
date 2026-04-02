@@ -42,20 +42,20 @@ internal class AudioPlaylistSerializerTest : StringSpec({
         playlist.id shouldBe 1
         playlist.isDirectory shouldBe false
         playlist.name shouldBe "Test Playlist"
-        playlist.audioItems.size shouldBe 2
-        playlist.audioItems.map { it.id }.containsAll(listOf(10, 20)) shouldBe true
+        // Decoded as ImmutablePlaylist stubs; audioItemIds carry the IDs for deferred resolution
+        (playlist as ImmutablePlaylist).audioItemIds shouldBe listOf(10, 20)
         playlist.playlists.isEmpty() shouldBe true
     }
 
     "AudioPlaylistSerializer round-trip serialization produces equal entity fields" {
-        val nestedPlaylist = DummyPlaylist(6, isDirectory = false, name = "Sub Playlist")
-        val audioItem1 = DummyAudioItem(100)
+        val nestedPlaylist = ImmutablePlaylist(6, isDirectory = false, name = "Sub Playlist")
         val playlist =
-            DummyPlaylist(
+            ImmutablePlaylist(
                 id = 5,
                 isDirectory = true,
                 name = "My Directory",
-                audioItems = listOf(audioItem1),
+                audioItemIds = listOf(100),
+                playlistIds = setOf(6),
                 playlists = setOf(nestedPlaylist)
             )
 
@@ -65,26 +65,22 @@ internal class AudioPlaylistSerializerTest : StringSpec({
         decoded.size shouldBe 1
         decoded.containsKey(5) shouldBe true
 
-        val decodedPlaylist = decoded.getValue(5)
+        val decodedPlaylist = decoded.getValue(5) as ImmutablePlaylist
 
         decodedPlaylist.id shouldBe 5
         decodedPlaylist.isDirectory shouldBe true
         decodedPlaylist.name shouldBe "My Directory"
-        decodedPlaylist.audioItems.size shouldBe 1
-        decodedPlaylist.audioItems.first().id shouldBe 100
-        decodedPlaylist.playlists.size shouldBe 1
-        decodedPlaylist.playlists.first().id shouldBe 6
+        decodedPlaylist.audioItemIds shouldBe listOf(100)
+        decodedPlaylist.playlistIds shouldBe setOf(6)
     }
 
     "AudioPlaylistSerializer encodes audio item ids not full objects" {
-        val audioItem1 = DummyAudioItem(10)
-        val audioItem2 = DummyAudioItem(20)
         val playlist =
-            DummyPlaylist(
+            ImmutablePlaylist(
                 id = 3,
                 isDirectory = false,
                 name = "Encoded Playlist",
-                audioItems = listOf(audioItem1, audioItem2)
+                audioItemIds = listOf(10, 20)
             )
 
         val encoded = json.encodeToString(AudioPlaylistMapSerializer, mapOf(3 to playlist))

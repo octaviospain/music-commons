@@ -1,10 +1,10 @@
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.music.audio.ArtistCatalog
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.AudioLibrary
+import net.transgressoft.commons.music.audio.DefaultAudioLibrary
 import net.transgressoft.commons.music.audio.audioItem
 import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.lirp.persistence.VolatileRepository
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.throwables.shouldThrowMessage
@@ -19,12 +19,11 @@ import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import io.mockk.every
-import io.mockk.mockk
 import java.time.Duration
-import java.util.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.serialization.json.Json
 
 @ExperimentalCoroutinesApi
 internal class DefaultPlaylistHierarchyTest : StringSpec({
@@ -69,6 +68,7 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         val json = listOf(rock, rockFavorites).asJsonKeyValues()
         jsonFile.readText() shouldEqualJson (json)
 
+        playlistHierarchy.close()
         jsonFileRepository.close()
     }
 
@@ -76,20 +76,21 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         val audioItem = Arb.audioItem { id = 453374921 }.next()
         val jsonFile =
             tempfile("playlistRepository-test", ".json").apply {
-                writeText(
-                    listOf(ImmutablePlaylist(1, true, "Rock", listOf(audioItem)))
-                        .asJsonKeyValues()
-                )
+                val jsonContent =
+                    Json.encodeToString(
+                        AudioPlaylistMapSerializer,
+                        mapOf(1 to ImmutablePlaylist(id = 1, isDirectory = true, name = "Rock", audioItemIds = listOf(453374921)))
+                    )
+                writeText(jsonContent)
                 deleteOnExit()
             }
         val jsonFileRepository = JsonFileRepository(jsonFile, AudioPlaylistMapSerializer)
 
-        val audioLibrary =
-            mockk<AudioLibrary<AudioItem, ArtistCatalog<AudioItem>>> {
-                every { findById(eq(453374921)) } returns Optional.of(audioItem)
-            }
+        val audioLibraryRepository = VolatileRepository<Int, AudioItem>()
+        val audioLibrary = DefaultAudioLibrary(audioLibraryRepository)
+        audioLibrary.add(audioItem)
 
-        val playlistHierarchy = DefaultPlaylistHierarchy(jsonFileRepository, audioLibrary)
+        val playlistHierarchy = DefaultPlaylistHierarchy(jsonFileRepository)
 
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -97,6 +98,11 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         playlistHierarchy.contains {
             it.id == 1 && it.isDirectory && it.name == "Rock" && it.audioItems == listOf(audioItem) && it.playlists.isEmpty()
         } shouldBe true
+
+        playlistHierarchy.close()
+        audioLibrary.close()
+        audioLibraryRepository.close()
+        jsonFileRepository.close()
     }
 
     /** The following playlist hierarchy is used for the test:
@@ -200,6 +206,8 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
 
         playlistHierarchy.clear()
         playlistHierarchy.isEmpty shouldBe true
+
+        playlistHierarchy.close()
     }
 
     /** The following playlist hierarchy is used for the test:
@@ -261,6 +269,8 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         selection.playlists.shouldContainOnly(rock)
         rock.playlists.isEmpty() shouldBe true
         pop.playlists.isEmpty() shouldBe true
+
+        playlistHierarchy.close()
     }
 
     "Removing playlist directory from it is recursive and changes reflects on playlists" {
@@ -301,6 +311,8 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
 
         playlistHierarchy.size() shouldBe 2
         selection.playlists.isEmpty() shouldBe true
+
+        playlistHierarchy.close()
     }
 
     "Throws Exception when creating playlists with an existing name" {
@@ -314,6 +326,8 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
 
         shouldThrowMessage("Playlist with name 'New playlist' already exists") { playlistHierarchy.createPlaylist("New playlist") }
         playlistHierarchy.size() shouldBe 1
+
+        playlistHierarchy.close()
     }
 
     "Removing child playlist directly from one, does not remove them from the repository" {
@@ -353,6 +367,8 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
 
         playlistHierarchy.size() shouldBe 3
         fifties.playlists.isEmpty() shouldBe true
+
+        playlistHierarchy.close()
     }
 
     "Deleting playlist from the repository removes it from any parent one" {
@@ -369,5 +385,7 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
 
         playlistHierarchy.size() shouldBe 1
         fifties.playlists.isEmpty() shouldBe true
+
+        playlistHierarchy.close()
     }
 })

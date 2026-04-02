@@ -1,5 +1,6 @@
 plugins {
     id 'org.openjfx.javafxplugin'
+    id 'com.google.devtools.ksp'
 }
 
 description = 'Transgressoft Music Commons - JavaFX'
@@ -54,6 +55,9 @@ dependencies {
     implementation libs.jaudiotagger.get()
     implementation libs.lirp.core.get()
     implementation libs.javafx.controls.get()
+
+    ksp libs.lirp.ksp.get()
+    kspTest libs.lirp.ksp.get()
 
     testApi project(path: ':music-commons-fx-test')
     testImplementation(platform(libs.junit.bom.get()))

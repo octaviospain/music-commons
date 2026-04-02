@@ -19,6 +19,8 @@ package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
 import net.transgressoft.lirp.event.StandardCrudEvent.Update
+import net.transgressoft.lirp.persistence.LirpRepository
+import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.Repository
 import mu.KotlinLogging
 import java.nio.file.Path
@@ -32,12 +34,19 @@ import kotlinx.serialization.modules.subclass
  * Handles play count tracking by subscribing to player events and incrementing
  * the play count whenever an audio item is played. Provides factory methods to
  * create audio items from file paths by reading their metadata.
+ *
+ * Registers its backing repository in [net.transgressoft.lirp.persistence.LirpContext] on construction
+ * via [RegistryBase.registerRepository], enabling playlist hierarchies to resolve audio item references
+ * lazily through the context. Deregisters on [close] to support repeated construction within the same JVM.
  */
+@LirpRepository
 class DefaultAudioLibrary(repository: Repository<Int, AudioItem>) :
     AudioLibraryBase<AudioItem, ArtistCatalog<AudioItem>>(repository, DefaultArtistCatalogRegistry()) {
     private val logger = KotlinLogging.logger {}
 
     init {
+        deregisterExistingAudioItemRegistration()
+        RegistryBase.registerRepository(AudioItem::class.java, repository)
         playerSubscriber.addOnNextEventAction(PLAYED) { event ->
             val audioItem = event.audioItem
             logger.info { "Audio item with id ${audioItem.id} was played" }
@@ -56,6 +65,58 @@ class DefaultAudioLibrary(repository: Repository<Int, AudioItem>) :
                 add(audioItem)
                 logger.debug { "New AudioItem was created from file $audioItemPath with id ${audioItem.id}" }
             }
+
+    override fun close() {
+        super.close()
+        deregisterFromLirpContext(repository)
+    }
+
+    private fun deregisterExistingAudioItemRegistration() {
+        try {
+            val context = getContext(repository) ?: return
+            val registryForMethod =
+                context.javaClass.methods
+                    .firstOrNull { it.name.startsWith("registryFor") && it.parameterCount == 1 && it.parameterTypes[0] == Class::class.java }
+                    ?: return
+            val existing = registryForMethod.invoke(context, AudioItem::class.java) ?: return
+            if (existing !== repository) {
+                val registryInterface = Class.forName("net.transgressoft.lirp.persistence.Registry")
+                val deregisterMethod =
+                    context.javaClass.methods
+                        .firstOrNull { it.name.startsWith("deregister") && it.parameterCount == 1 && registryInterface.isAssignableFrom(it.parameterTypes[0]) }
+                        ?: return
+                deregisterMethod.invoke(context, existing)
+            }
+        } catch (_: Exception) {
+            // Best-effort; failure is non-critical since registerRepository will detect conflicts
+        }
+    }
+
+    private fun deregisterFromLirpContext(repo: Any) {
+        try {
+            val context = getContext(repo) ?: return
+            val registryInterface = Class.forName("net.transgressoft.lirp.persistence.Registry")
+            val deregisterMethod =
+                context.javaClass.methods
+                    .firstOrNull { it.name.startsWith("deregister") && it.parameterCount == 1 && registryInterface.isAssignableFrom(it.parameterTypes[0]) }
+                    ?: return
+            deregisterMethod.invoke(context, repo)
+        } catch (_: Exception) {
+            // Deregistration is best-effort; failure does not impact lifecycle semantics
+        }
+    }
+
+    private fun getContext(repo: Any): Any? {
+        return try {
+            val getContextMethod =
+                repo.javaClass.methods
+                    .firstOrNull { it.name.startsWith("getContext") && it.parameterCount == 0 }
+                    ?: return null
+            getContextMethod.invoke(repo)
+        } catch (_: Exception) {
+            null
+        }
+    }
 
     override fun toString() = "AudioItemJsonRepository(audioItemsCount=${size()})"
 }

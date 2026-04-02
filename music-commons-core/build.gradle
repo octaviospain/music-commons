@@ -1,3 +1,7 @@
+plugins {
+    id 'com.google.devtools.ksp'
+}
+
 description = 'Transgressoft Music Commons - Core'
 
 dependencies {
@@ -9,6 +13,9 @@ dependencies {
     implementation libs.lirp.core.get()
     implementation libs.jave.core.get()
     implementation libs.jave.nativebin.linux64.get()
+
+    ksp libs.lirp.ksp.get()
+    kspTest libs.lirp.ksp.get()
 
     testApi project(path: ':music-commons-test')
     testImplementation(platform(libs.junit.bom.get()))

@@ -46,8 +46,8 @@ dependencies {
 The core module depends on [lirp](https://github.com/octaviospain/lirp):
 
 ```kotlin
-implementation("net.transgressoft:lirp-api:1.2.0")
-implementation("net.transgressoft:lirp-core:1.2.0")
+implementation("net.transgressoft:lirp-api:2.1.0")
+implementation("net.transgressoft:lirp-core:2.1.0")
 ```
 
 ## Key Features
@@ -149,7 +149,9 @@ val audioItems = audioLibrary.createFromFileBatchAsync(listOfPaths).get()
 ```kotlin
 import net.transgressoft.commons.music.playlist.DefaultPlaylistHierarchy
 
-val hierarchy = DefaultPlaylistHierarchy(playlistRepository, audioLibrary)
+// Audio library must be constructed first so it registers in LirpContext
+val audioLibrary = DefaultAudioLibrary(audioRepository)
+val hierarchy = DefaultPlaylistHierarchy(playlistRepository)
 
 // Create playlists
 val playlist = hierarchy.createPlaylist("Favorites")

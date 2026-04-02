@@ -29,13 +29,14 @@ internal class ObservablePlaylistSerializerTest : StringSpec({
         playlist.id shouldBe 1
         playlist.isDirectory shouldBe false
         playlist.name shouldBe "My Playlist"
-        // audioItems are deserialized as DummyAudioItem placeholders, resolved later by the hierarchy — verify count only
-        playlist.audioItems.size shouldBe 2
+        // audioItemIds carry the IDs for deferred resolution by the hierarchy — audioItems is empty until resolved
+        (playlist as ImmutableObservablePlaylist).audioItemIds shouldBe listOf(10, 20)
+        playlist.audioItems.isEmpty() shouldBe true
         playlist.playlists.isEmpty() shouldBe true
     }
 
     "ObservablePlaylistSerializer encodes all required JSON fields" {
-        val playlist = DummyPlaylist(id = 5, isDirectory = true, name = "Rock")
+        val playlist = ImmutableObservablePlaylist(id = 5, isDirectory = true, name = "Rock")
 
         val encoded = json.encodeToString(ObservablePlaylistSerializer, playlist)
 
@@ -47,7 +48,7 @@ internal class ObservablePlaylistSerializerTest : StringSpec({
     }
 
     "ObservablePlaylistSerializer round-trip preserves all fields" {
-        val original = DummyPlaylist(id = 3, isDirectory = false, name = "Favorites")
+        val original = ImmutableObservablePlaylist(id = 3, isDirectory = false, name = "Favorites")
 
         val encoded = json.encodeToString(ObservablePlaylistSerializer, original)
         val decoded = json.decodeFromString(ObservablePlaylistSerializer, encoded)
@@ -60,8 +61,8 @@ internal class ObservablePlaylistSerializerTest : StringSpec({
     }
 
     "ObservablePlaylistMapSerializer round-trip preserves map entries" {
-        val playlist1 = DummyPlaylist(id = 1, name = "Rock")
-        val playlist2 = DummyPlaylist(id = 2, name = "Jazz")
+        val playlist1 = ImmutableObservablePlaylist(id = 1, name = "Rock")
+        val playlist2 = ImmutableObservablePlaylist(id = 2, name = "Jazz")
         val originalMap = mapOf(1 to playlist1, 2 to playlist2)
 
         val encoded = json.encodeToString(ObservablePlaylistMapSerializer, originalMap)

@@ -8,6 +8,7 @@ pluginManagement {
         id 'org.sonarqube' version '7.0.1.6134'
         id 'pl.allegro.tech.build.axion-release' version '1.21.0'
         id 'org.openjfx.javafxplugin' version '0.1.0'
+        id 'com.google.devtools.ksp' version '2.3.6'
     }
 }
 

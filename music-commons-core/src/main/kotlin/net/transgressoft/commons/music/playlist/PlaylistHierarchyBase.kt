@@ -25,8 +25,10 @@ import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
 import net.transgressoft.lirp.event.LirpEventSubscriber
+import net.transgressoft.lirp.persistence.Aggregate
 import net.transgressoft.lirp.persistence.Repository
 import net.transgressoft.lirp.persistence.VolatileRepository
+import net.transgressoft.lirp.persistence.aggregateList
 import com.google.common.collect.Multimap
 import com.google.common.collect.MultimapBuilder
 import mu.KotlinLogging
@@ -39,6 +41,9 @@ import java.util.concurrent.atomic.AtomicInteger
  * Maintains a multimap to track parent-child relationships between playlists and provides
  * reactive change notifications for all playlist modifications. Automatically synchronizes
  * with audio item deletion events to remove deleted items from all playlists.
+ *
+ * Audio item IDs are stored in [MutablePlaylistBase.audioItemIds] for use by concrete subclasses
+ * that declare an [@Aggregate][net.transgressoft.lirp.persistence.Aggregate] delegate for lazy resolution.
  */
 abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPlaylist<I, P>>(
     protected val repository: Repository<Int, P> = VolatileRepository("PlaylistHierarchy"),
@@ -237,16 +242,34 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
      * Implemented as an inner class to access the enclosing [PlaylistHierarchyBase] instance's
      * hierarchy tracking methods, enabling playlists to update their parent relationships
      * when nested playlists are added or removed without requiring explicit parent references.
+     *
+     * [audioItemIds] stores referenced audio item IDs for lazy cross-registry resolution via
+     * the [@Aggregate][Aggregate] + [aggregateList] delegate that concrete subclasses must declare.
+     * Concrete subclasses should expose an aggregate delegate property for ID-based resolution:
+     * ```
+     * val audioItemsAggregate by aggregateList<Int, ConcreteAudioItem> { audioItemIds }
+     * ```
+     *
+     * Due to a KSP limitation with generic inner classes, the [@Aggregate][Aggregate] annotation
+     * and [aggregateList] delegate must be declared in concrete (non-generic) inner subclasses.
+     * The `_LirpRefAccessor` for the concrete class must be provided manually.
      */
     protected abstract inner class MutablePlaylistBase(
         override val id: Int,
         isDirectory: Boolean,
         name: String,
         audioItems: List<I> = listOf(),
-        playlists: Set<P> = setOf()
+        playlists: Set<P> = setOf(),
+        initialAudioItemIds: List<Int> = audioItems.map { it.id }
     ): ReactiveEntityBase<Int, P>(), ReactiveAudioPlaylist<I, P> {
 
         private val logger = KotlinLogging.logger {}
+
+        /**
+         * Referenced audio item IDs used by the [@Aggregate][Aggregate] + [aggregateList] delegate
+         * declared in concrete subclasses for lazy resolution from [net.transgressoft.lirp.persistence.LirpContext].
+         */
+        var audioItemIds: List<Int> = initialAudioItemIds
 
         override val audioItems: MutableList<I> = ArrayList(audioItems)
         override val playlists: MutableSet<P> = HashSet(playlists)
