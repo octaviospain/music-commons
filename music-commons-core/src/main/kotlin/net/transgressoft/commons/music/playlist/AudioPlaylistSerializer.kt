@@ -17,25 +17,10 @@
 
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.music.audio.Album
-import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.Genre
-import net.transgressoft.commons.music.audio.ImmutableAlbum
-import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
-import net.transgressoft.lirp.event.LirpEventPublisher
-import net.transgressoft.lirp.event.LirpEventSubscription
-import net.transgressoft.lirp.event.MutationEvent
+import net.transgressoft.lirp.entity.toIds
 import net.transgressoft.lirp.persistence.json.LirpEntityPolymorphicSerializer
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.time.Duration
-import java.time.LocalDateTime
-import java.util.concurrent.Flow
-import java.util.function.Consumer
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.MapSerializer
@@ -64,23 +49,25 @@ val AudioPlaylistMapSerializer: KSerializer<Map<Int, MutableAudioPlaylist>> = Ma
 /**
  * Kotlinx serialization serializer for [MutableAudioPlaylist] instances.
  *
- * Serializes playlists by storing audio items and nested playlist IDs rather than full objects
- * to minimize storage size. Creates dummy placeholder instances during deserialization that
- * are later resolved to actual entities by [DefaultPlaylistHierarchy].
+ * Serializes playlists by storing audio item and nested playlist IDs rather than full objects.
+ * During deserialization, returns an [ImmutablePlaylist] carrying the ID lists; the enclosing
+ * [DefaultPlaylistHierarchy] init block replaces these placeholders with real [MutableAudioPlaylist]
+ * instances whose audio item references are resolved lazily via the [net.transgressoft.lirp.persistence.Aggregate]
+ * delegate on [PlaylistHierarchyBase.MutablePlaylistBase].
  */
 internal object MutableAudioPlaylistSerializer : AudioPlaylistSerializerBase<AudioItem, MutableAudioPlaylist>() {
     @Suppress("UNCHECKED_CAST")
     override fun createInstance(propertiesList: List<Any?>): MutableAudioPlaylist =
-        DummyPlaylist(
-            propertiesList[0] as Int,
-            propertiesList[1] as Boolean,
-            propertiesList[2] as String,
-            propertiesList[3] as List<AudioItem>,
-            propertiesList[4] as Set<MutableAudioPlaylist>
+        ImmutablePlaylist(
+            id = propertiesList[0] as Int,
+            isDirectory = propertiesList[1] as Boolean,
+            name = propertiesList[2] as String,
+            audioItemIds = propertiesList[3] as List<Int>,
+            playlistIds = propertiesList[4] as Set<Int>
         )
 }
 
-abstract class AudioPlaylistSerializerBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPlaylist<I, P>>: LirpEntityPolymorphicSerializer<P> {
+abstract class AudioPlaylistSerializerBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>> : LirpEntityPolymorphicSerializer<P> {
 
     override val descriptor: SerialDescriptor =
         buildClassSerialDescriptor("AudioPlaylist") {
@@ -116,11 +103,35 @@ abstract class AudioPlaylistSerializerBase<I: ReactiveAudioItem<I>, P: ReactiveA
         return propertiesList
     }
 
-    @Suppress("UNCHECKED_CAST")
-    private fun mapAudioItemIds(ids: JsonArray): List<I> = ids.map { DummyAudioItem(it.jsonPrimitive.int) as I }
+    private fun mapAudioItemIds(ids: JsonArray): List<Int> = ids.map { it.jsonPrimitive.int }
 
-    @Suppress("UNCHECKED_CAST")
-    private fun mapPlaylistIds(ids: JsonArray): Set<P> = ids.map { DummyPlaylist(it.jsonPrimitive.int) as P }.toSet()
+    private fun mapPlaylistIds(ids: JsonArray): Set<Int> = ids.map { it.jsonPrimitive.int }.toSet()
+
+    /**
+     * Returns the list of audio item IDs to serialize for the given playlist value.
+     *
+     * Subclasses may override this method to resolve IDs from a stub's `audioItemIds` field
+     * rather than from the live `audioItems` collection, when the playlist is a deserialization stub
+     * that does not hold actual entity references.
+     */
+    protected open fun getAudioItemIds(value: P): List<Int> =
+        if (value is ImmutablePlaylist)
+            value.audioItemIds
+        else
+            value.audioItems.toIds()
+
+    /**
+     * Returns the list of nested playlist IDs to serialize for the given playlist value.
+     *
+     * Subclasses may override this method to resolve IDs from a stub's `playlistIds` field
+     * rather than from the live `playlists` collection, when the playlist is a deserialization stub
+     * that does not hold actual entity references.
+     */
+    protected open fun getPlaylistIds(value: P): List<Int> =
+        if (value is ImmutablePlaylist)
+            value.playlistIds.toList()
+        else
+            value.playlists.map { it.id }
 
     override fun serialize(
         encoder: Encoder,
@@ -135,162 +146,17 @@ abstract class AudioPlaylistSerializerBase<I: ReactiveAudioItem<I>, P: ReactiveA
                 put(
                     "audioItemIds",
                     buildJsonArray {
-                        value.audioItems.forEach {
-                            add(it.id)
-                        }
+                        getAudioItemIds(value).forEach { add(it) }
                     }
                 )
                 put(
                     "playlistIds",
                     buildJsonArray {
-                        value.playlists.forEach {
-                            add(it.id)
-                        }
+                        getPlaylistIds(value).forEach { add(it) }
                     }
                 )
             }
 
         jsonOutput.encodeJsonElement(jsonObject)
     }
-}
-
-internal class DummyPlaylist(
-    override val id: Int,
-    override var isDirectory: Boolean = false,
-    override var name: String = "",
-    override val audioItems: List<AudioItem> = emptyList(),
-    override val playlists: Set<MutableAudioPlaylist> = emptySet(),
-    override val lastDateModified: LocalDateTime = LocalDateTime.MIN
-) : MutableAudioPlaylist {
-    override fun addAudioItems(audioItems: Collection<AudioItem>): Boolean =
-        throw IllegalStateException("DummyPlaylist does not support addAudioItems")
-
-    override fun removeAudioItems(audioItems: Collection<AudioItem>): Boolean =
-        throw IllegalStateException("DummyPlaylist does not support removeAudioItems")
-
-    @Suppress("INAPPLICABLE_JVM_NAME")
-    @JvmName("removeAudioItemIds")
-    override fun removeAudioItems(audioItemIds: Collection<Int>): Boolean =
-        throw IllegalStateException("DummyPlaylist does not support removeAudioItems by id")
-
-    @Suppress("INAPPLICABLE_JVM_NAME")
-    @JvmName("removePlaylistIds")
-    override fun removePlaylists(playlistIds: Collection<Int>): Boolean =
-        throw IllegalStateException("DummyPlaylist does not support removePlaylists by id")
-
-    override fun clearAudioItems() = throw IllegalStateException("DummyPlaylist does not support clearAudioItems")
-
-    override fun clearPlaylists() = throw IllegalStateException("DummyPlaylist does not support clearPlaylists")
-
-    override fun subscribe(p0: Flow.Subscriber<in MutationEvent<Int, MutableAudioPlaylist>>?) =
-        throw IllegalStateException("DummyPlaylist does not support Flow subscription")
-
-    override fun removePlaylists(playlists: Collection<MutableAudioPlaylist>): Boolean =
-        throw IllegalStateException("DummyPlaylist does not support removePlaylists")
-
-    override fun addPlaylists(playlists: Collection<MutableAudioPlaylist>): Boolean =
-        throw IllegalStateException("DummyPlaylist does not support addPlaylists")
-
-    private var closed: Boolean = false
-    override val isClosed: Boolean
-        get() = closed
-
-    override fun close() {
-        closed = true
-    }
-
-    override fun clone(): DummyPlaylist = DummyPlaylist(id)
-
-    override val changes: SharedFlow<MutationEvent<Int, MutableAudioPlaylist>>
-        get() = throw IllegalStateException("DummyPlaylist does not support changes")
-
-    override fun emitAsync(event: MutationEvent<Int, MutableAudioPlaylist>): Unit =
-        throw IllegalStateException("DummyPlaylist does not support emitAsync")
-
-    override fun subscribe(action: suspend (MutationEvent<Int, MutableAudioPlaylist>) -> Unit):
-        LirpEventSubscription<in MutableAudioPlaylist, MutationEvent.Type, MutationEvent<Int, MutableAudioPlaylist>> =
-        FakeSubscription
-
-    override fun subscribe(action: Consumer<in MutationEvent<Int, MutableAudioPlaylist>>):
-        LirpEventSubscription<in MutableAudioPlaylist, MutationEvent.Type, MutationEvent<Int, MutableAudioPlaylist>> =
-        FakeSubscription
-
-    override fun subscribe(vararg eventTypes: MutationEvent.Type, action: Consumer<in MutationEvent<Int, MutableAudioPlaylist>>):
-        LirpEventSubscription<in MutableAudioPlaylist, MutationEvent.Type, MutationEvent<Int, MutableAudioPlaylist>> =
-        FakeSubscription
-}
-
-object FakeSubscription : LirpEventSubscription<MutableAudioPlaylist, MutationEvent.Type, MutationEvent<Int, MutableAudioPlaylist>> {
-    override val source: LirpEventPublisher<MutationEvent.Type, MutationEvent<Int, MutableAudioPlaylist>>
-        get() = throw IllegalStateException("FakeSubscription has no source publisher")
-
-    override fun request(n: Long): Unit = throw IllegalStateException("FakeSubscription does not support request")
-
-    override fun cancel() {
-        // No-op
-    }
-}
-
-internal class DummyAudioItem(
-    override val id: Int
-) : AudioItem {
-    override val path: Path = Paths.get("")
-    override var title: String = ""
-    override val duration: Duration = Duration.ZERO
-    override val bitRate: Int = 0
-    override var artist: Artist = ImmutableArtist.UNKNOWN
-    override var album: Album = ImmutableAlbum.UNKNOWN
-    override var genre: Genre = Genre.UNDEFINED
-    override var comments: String? = null
-    override var trackNumber: Short? = null
-    override var discNumber: Short? = null
-    override var bpm: Float? = null
-    override val encoder: String? = null
-    override val encoding: String? = null
-    override val dateOfCreation: LocalDateTime = LocalDateTime.MIN
-    override val lastDateModified: LocalDateTime = LocalDateTime.MIN
-    override val changes: SharedFlow<MutationEvent<Int, AudioItem>>
-        get() = throw IllegalStateException("DummyAudioItem does not support changes")
-
-    override fun emitAsync(event: MutationEvent<Int, AudioItem>): Unit =
-        throw IllegalStateException("DummyAudioItem does not support emitAsync")
-
-    override fun subscribe(action: suspend (MutationEvent<Int, AudioItem>) -> Unit):
-        LirpEventSubscription<in AudioItem, MutationEvent.Type, MutationEvent<Int, AudioItem>> =
-        throw IllegalStateException("DummyAudioItem does not support suspend subscription")
-
-    override fun subscribe(action: Consumer<in MutationEvent<Int, AudioItem>>):
-        LirpEventSubscription<in AudioItem, MutationEvent.Type, MutationEvent<Int, AudioItem>> =
-        throw IllegalStateException("DummyAudioItem does not support Consumer subscription")
-
-    override fun subscribe(
-        vararg eventTypes: MutationEvent.Type,
-        action: Consumer<in MutationEvent<Int, AudioItem>>
-    ): LirpEventSubscription<in AudioItem, MutationEvent.Type, MutationEvent<Int, AudioItem>> =
-        throw IllegalStateException("DummyAudioItem does not support typed subscription")
-
-    override val uniqueId: String = ""
-    override val fileName: String = ""
-    override val extension: String = ""
-    override val artistsInvolved: Set<Artist> = emptySet()
-    override val length: Long = 0
-    override var coverImageBytes: ByteArray? = null
-    override val playCount: Short = 0
-
-    override fun writeMetadata(): Job = throw IllegalStateException("DummyAudioItem does not support writeMetadata")
-
-    override fun subscribe(p0: Flow.Subscriber<in MutationEvent<Int, AudioItem>>?) =
-        throw IllegalStateException("DummyAudioItem does not support Flow subscription")
-
-    override fun compareTo(other: AudioItem): Int = throw IllegalStateException("DummyAudioItem does not support compareTo")
-
-    private var closed: Boolean = false
-    override val isClosed: Boolean
-        get() = closed
-
-    override fun close() {
-        closed = true
-    }
-
-    override fun clone(): DummyAudioItem = DummyAudioItem(id)
 }

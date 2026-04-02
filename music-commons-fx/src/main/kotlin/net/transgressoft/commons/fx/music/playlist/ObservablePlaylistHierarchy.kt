@@ -18,15 +18,14 @@
 package net.transgressoft.commons.fx.music.playlist
 
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
-import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
 import net.transgressoft.commons.music.audio.AudioItemManipulationException
 import net.transgressoft.commons.music.playlist.AudioPlaylist
 import net.transgressoft.commons.music.playlist.PlaylistHierarchyBase
 import net.transgressoft.commons.music.playlist.event.AudioPlaylistEventSubscriber
-import net.transgressoft.lirp.entity.toIds
 import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
+import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.Repository
 import net.transgressoft.lirp.persistence.VolatileRepository
 import com.google.common.base.Objects
@@ -56,13 +55,16 @@ import kotlinx.serialization.modules.polymorphic
  * with repository changes. Enables JavaFX UI components to bind directly to the playlist
  * collection and receive automatic updates when playlists are created, modified, or removed.
  * All modifications are executed on the JavaFX Application Thread for thread safety.
+ *
+ * Registers its repository in [net.transgressoft.lirp.persistence.LirpContext] on construction
+ * so that audio item references serialized as IDs are resolved via the context when an audio
+ * library has been previously registered. The audio library must be constructed before this
+ * hierarchy when loading from a non-empty repository.
  */
 class ObservablePlaylistHierarchy
     @JvmOverloads
     constructor(
-        repository: Repository<Int, ObservablePlaylist> = VolatileRepository("ObservablePlaylistHierarchy"),
-        // Only needed when the provided repository is not empty
-        audioLibrary: ObservableAudioLibrary? = null
+        repository: Repository<Int, ObservablePlaylist> = VolatileRepository("ObservablePlaylistHierarchy")
     ): PlaylistHierarchyBase<ObservableAudioItem, ObservablePlaylist>(repository) {
 
         private val logger = KotlinLogging.logger {}
@@ -87,22 +89,33 @@ class ObservablePlaylistHierarchy
             }
 
         init {
-            require(repository.isEmpty || (repository.isEmpty.not() && audioLibrary != null)) {
-                "AudioLibrary is required when loading a non empty playlistHierarchy"
-            }
+            deregisterExistingRegistration()
+            RegistryBase.registerRepository(ObservablePlaylist::class.java, repository)
 
-            disableEvents(CREATE, UPDATE, DELETE) // disable events until the initial load from the file is completed
-            forEach {
-                val playlistWithAudioItems = FXPlaylist(it.id, it.isDirectory, it.name, mapAudioItemsFromIds(it.audioItems.toIds(), audioLibrary!!))
-                repository.findById(it.id).ifPresent { old -> repository.remove(old) }
-                repository.add(playlistWithAudioItems)
+            disableEvents(CREATE, UPDATE, DELETE)
+            val stubs = toList()
+            val audioItemRepository = findAudioItemRepository()
+            stubs.forEach { stub ->
+                val audioItemIds = if (stub is ImmutableObservablePlaylist) stub.audioItemIds else stub.audioItems.map { it.id }
+                val resolvedAudioItems =
+                    audioItemIds.mapNotNull { id ->
+                        @Suppress("UNCHECKED_CAST")
+                        (audioItemRepository as? Repository<Int, ObservableAudioItem>)?.findById(id)?.orElse(null)
+                    }
+                val realPlaylist = FXPlaylist(stub.id, stub.isDirectory, stub.name, resolvedAudioItems)
+                repository.findById(stub.id).ifPresent { old -> repository.remove(old) }
+                repository.add(realPlaylist)
             }
-            forEach {
-                val playlistMissingPlaylists =
-                    repository.findById(it.id)
-                        .orElseThrow { IllegalStateException("Playlist ID ${it.id} not found after initial processing") }
-                val foundPlaylists = findDeserializedPlaylistsFromIds(it.playlists.toIds(), repository)
-                playlistMissingPlaylists.addPlaylists(foundPlaylists)
+            toList().forEach { playlist ->
+                val stubPlaylistIds =
+                    stubs.find { stub -> stub.id == playlist.id }
+                        ?.let { stub ->
+                            if (stub is ImmutableObservablePlaylist) stub.playlistIds
+                            else stub.playlists.map { p -> p.id }.toSet()
+                        }
+                        ?: emptySet()
+                val foundPlaylists = findDeserializedPlaylistsFromIds(stubPlaylistIds, repository)
+                playlist.addPlaylists(foundPlaylists)
             }
             repository.forEach {
                 Platform.runLater { observablePlaylistsSet.add(it) }
@@ -113,13 +126,18 @@ class ObservablePlaylistHierarchy
             subscribe(playlistChangesSubscriber)
         }
 
-        private fun mapAudioItemsFromIds(
-            audioItemIds: List<Int>,
-            audioLibrary: ObservableAudioLibrary
-        ) = audioItemIds.map {
-            audioLibrary.findById(it)
-                .orElseThrow { AudioItemManipulationException("AudioItem with id $it not found during deserialization") }
-        }.toList()
+        private fun findAudioItemRepository(): Any? {
+            return try {
+                val context = getContext(repository) ?: return null
+                val registryForMethod =
+                    context.javaClass.methods
+                        .firstOrNull { it.name.startsWith("registryFor") && it.parameterCount == 1 && it.parameterTypes[0] == Class::class.java }
+                        ?: return null
+                registryForMethod.invoke(context, ObservableAudioItem::class.java)
+            } catch (_: Exception) {
+                null
+            }
+        }
 
         private fun findDeserializedPlaylistsFromIds(
             playlists: Set<Int>,
@@ -157,14 +175,67 @@ class ObservablePlaylistHierarchy
         }
 
         /**
-         * Cancels the base class subscriptions and the internal playlist changes subscriber.
+         * Cancels the base class subscriptions and the internal playlist changes subscriber,
+         * then deregisters the playlist repository from LirpContext.
          */
         override fun close() {
             super.close()
             playlistChangesSubscriber.cancelSubscription()
+            deregisterFromLirpContext(repository)
         }
 
         override fun toString() = "observablePlaylistHierarchy(playlistsCount=${size()})"
+
+        private fun deregisterExistingRegistration() {
+            try {
+                val context = getContext(repository) ?: return
+                val registryForMethod =
+                    context.javaClass.methods
+                        .firstOrNull { it.name.startsWith("registryFor") && it.parameterCount == 1 && it.parameterTypes[0] == Class::class.java }
+                        ?: return
+                val existing = registryForMethod.invoke(context, ObservablePlaylist::class.java) ?: return
+                if (existing !== repository) {
+                    val registryInterface = Class.forName("net.transgressoft.lirp.persistence.Registry")
+                    val deregisterMethod =
+                        context.javaClass.methods
+                            .firstOrNull {
+                                it.name.startsWith("deregister") &&
+                                    it.parameterCount == 1 &&
+                                    registryInterface.isAssignableFrom(it.parameterTypes[0])
+                            }
+                            ?: return
+                    deregisterMethod.invoke(context, existing)
+                }
+            } catch (_: Exception) {
+                // Best-effort; failure is non-critical since registerRepository will detect conflicts
+            }
+        }
+
+        private fun deregisterFromLirpContext(repo: Any) {
+            try {
+                val context = getContext(repo) ?: return
+                val registryInterface = Class.forName("net.transgressoft.lirp.persistence.Registry")
+                val deregisterMethod =
+                    context.javaClass.methods
+                        .firstOrNull { it.name.startsWith("deregister") && it.parameterCount == 1 && registryInterface.isAssignableFrom(it.parameterTypes[0]) }
+                        ?: return
+                deregisterMethod.invoke(context, repo)
+            } catch (_: Exception) {
+                // Deregistration is best-effort; failure does not impact lifecycle semantics
+            }
+        }
+
+        private fun getContext(repo: Any): Any? {
+            return try {
+                val getContextMethod =
+                    repo.javaClass.methods
+                        .firstOrNull { it.name.startsWith("getContext") && it.parameterCount == 0 }
+                        ?: return null
+                getContextMethod.invoke(repo)
+            } catch (_: Exception) {
+                null
+            }
+        }
 
         /**
          * JavaFX playlist implementation with bidirectional observable property bindings.
@@ -293,9 +364,11 @@ class ObservablePlaylistHierarchy
                 val itemsToAdd = audioItems.toList()
                 val currentItems = synchronized(_audioItemsProperty) { _audioItemsProperty.toList() }
                 val result = currentItems.any { it !in itemsToAdd }
-                Platform.runLater {
-                    synchronized(_audioItemsProperty) {
-                        _audioItemsProperty.addAll(itemsToAdd)
+                mutateAndPublish {
+                    Platform.runLater {
+                        synchronized(_audioItemsProperty) {
+                            _audioItemsProperty.addAll(itemsToAdd)
+                        }
                     }
                 }
                 logger.debug { "Added $itemsToAdd to playlist $uniqueId" }

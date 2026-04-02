@@ -271,7 +271,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         reopenedAudioLibrary.size() shouldBe originalSize
 
         val reopenedPlaylistRepository = JsonFileRepository(playlistsFile, AudioPlaylistMapSerializer)
-        val reopenedPlaylistHierarchy = DefaultPlaylistHierarchy(reopenedPlaylistRepository, reopenedAudioLibrary)
+        val reopenedPlaylistHierarchy = DefaultPlaylistHierarchy(reopenedPlaylistRepository)
 
         testDispatcher.scheduler.advanceUntilIdle()
 

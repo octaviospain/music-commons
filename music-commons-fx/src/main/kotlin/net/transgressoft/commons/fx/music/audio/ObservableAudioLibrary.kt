@@ -25,6 +25,8 @@ import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
 import net.transgressoft.lirp.event.StandardCrudEvent.Update
+import net.transgressoft.lirp.persistence.LirpRepository
+import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.Repository
 import javafx.application.Platform
 import javafx.beans.property.ReadOnlyBooleanProperty
@@ -49,7 +51,12 @@ import java.nio.file.Path
  * that automatically update when the library changes. Provides JavaFX properties for direct
  * binding to UI components, enabling reactive table views, list views, and other JavaFX
  * controls without manual synchronization.
+ *
+ * Registers its backing repository in [net.transgressoft.lirp.persistence.LirpContext] on construction
+ * via [RegistryBase.registerRepository], enabling playlist hierarchies to resolve audio item references
+ * lazily through the context. Deregisters on [close] to support repeated construction within the same JVM.
  */
+@LirpRepository
 class ObservableAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
 : AudioLibraryBase<ObservableAudioItem, ObservableArtistCatalog>(
     repository,
@@ -140,6 +147,9 @@ class ObservableAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
     val albumCountProperty: ReadOnlyIntegerProperty = _albumCountProperty
 
     init {
+        deregisterExistingObservableAudioItemRegistration()
+        RegistryBase.registerRepository(ObservableAudioItem::class.java, repository)
+
         // Add all existing audio items to the observable collections on initialization
         forEach {
             observableAudioItemMap[it.id] = it
@@ -178,12 +188,60 @@ class ObservableAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
 
     /**
      * Cancels all event subscriptions managed by this library, including those from the base class
-     * and the FX-specific internal and catalog subscriptions.
+     * and the FX-specific internal and catalog subscriptions, then deregisters the repository from LirpContext.
      */
     override fun close() {
         super.close()
         internalSubscription.cancel()
         catalogSubscription.cancel()
+        deregisterFromLirpContext(repository)
+    }
+
+    private fun deregisterExistingObservableAudioItemRegistration() {
+        try {
+            val context = getContext(repository) ?: return
+            val registryForMethod =
+                context.javaClass.methods
+                    .firstOrNull { it.name.startsWith("registryFor") && it.parameterCount == 1 && it.parameterTypes[0] == Class::class.java }
+                    ?: return
+            val existing = registryForMethod.invoke(context, ObservableAudioItem::class.java) ?: return
+            if (existing !== repository) {
+                val registryInterface = Class.forName("net.transgressoft.lirp.persistence.Registry")
+                val deregisterMethod =
+                    context.javaClass.methods
+                        .firstOrNull { it.name.startsWith("deregister") && it.parameterCount == 1 && registryInterface.isAssignableFrom(it.parameterTypes[0]) }
+                        ?: return
+                deregisterMethod.invoke(context, existing)
+            }
+        } catch (_: Exception) {
+            // Best-effort; failure is non-critical since registerRepository will detect conflicts
+        }
+    }
+
+    private fun deregisterFromLirpContext(repo: Any) {
+        try {
+            val context = getContext(repo) ?: return
+            val registryInterface = Class.forName("net.transgressoft.lirp.persistence.Registry")
+            val deregisterMethod =
+                context.javaClass.methods
+                    .firstOrNull { it.name.startsWith("deregister") && it.parameterCount == 1 && registryInterface.isAssignableFrom(it.parameterTypes[0]) }
+                    ?: return
+            deregisterMethod.invoke(context, repo)
+        } catch (_: Exception) {
+            // Deregistration is best-effort; failure does not impact lifecycle semantics
+        }
+    }
+
+    private fun getContext(repo: Any): Any? {
+        return try {
+            val getContextMethod =
+                repo.javaClass.methods
+                    .firstOrNull { it.name.startsWith("getContext") && it.parameterCount == 0 }
+                    ?: return null
+            getContextMethod.invoke(repo)
+        } catch (_: Exception) {
+            null
+        }
     }
 
     override fun clear() {

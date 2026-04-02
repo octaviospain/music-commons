@@ -36,6 +36,8 @@ internal class MutablePlaylistTest : StringSpec({
     }
 
     afterEach {
+        playlistHierarchy.close()
+        jsonFileRepository.close()
     }
 
     "Returns expected attributes" {

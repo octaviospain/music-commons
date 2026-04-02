@@ -5,10 +5,10 @@ import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
 import net.transgressoft.commons.fx.music.fxAudioItem
 import net.transgressoft.commons.music.playlist.asJsonKeyValues
 import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.lirp.persistence.VolatileRepository
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
-import io.kotest.assertions.throwables.shouldThrowMessage
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.collections.shouldContainExactly
@@ -22,17 +22,16 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import io.mockk.every
-import io.mockk.mockk
 import javafx.application.Platform
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
 import java.time.Duration
-import java.util.*
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.serialization.json.Json
 
 @ExperimentalCoroutinesApi
 internal class ObservablePlaylistHierarchyTest : StringSpec({
@@ -122,58 +121,61 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
             jsonFile.readText().shouldEqualJson(listOf(rock, rockFavorites).asJsonKeyValues())
         }
 
+        playlistHierarchy.close()
         jsonFileRepository.close()
     }
 
-    "Throws Exception on creation from JsonFileRepository without AudioLibrary" {
+    "Initializes from a non empty JsonFileRepository without AudioLibrary resolves to empty audio items" {
         val audioItem = Arb.fxAudioItem {}.next()
         val playlist =
-            mockk<ObservablePlaylist> {
-                every { id } returns 1
-                every { isDirectory } returns true
-                every { name } returns "Rock"
-                every { audioItems } returns listOf(audioItem)
-                every { playlists } returns emptySet()
-                every { asJsonKeyValue() } answers { callOriginal() }
-            }
+            ImmutableObservablePlaylist(
+                id = 1,
+                isDirectory = true,
+                name = "Rock",
+                audioItemIds = listOf(audioItem.id)
+            )
         val jsonFile =
             tempfile("observablePlaylistHierarchy-test", ".json").apply {
-                writeText(listOf(playlist).asJsonKeyValues())
+                val jsonContent = Json.encodeToString(ObservablePlaylistMapSerializer, mapOf(1 to playlist))
+                writeText(jsonContent)
                 deleteOnExit()
             }
         val jsonFileRepository = JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer)
 
-        shouldThrowMessage("AudioLibrary is required when loading a non empty playlistHierarchy") {
-            ObservablePlaylistHierarchy(jsonFileRepository)
-        }
+        // No audio library registered — audio items resolve to empty
+        val playlistHierarchy = ObservablePlaylistHierarchy(jsonFileRepository)
 
+        playlistHierarchy.size() shouldBe 1
+        playlistHierarchy.contains {
+            it.id == 1 && it.isDirectory && it.name == "Rock" && it.audioItems.isEmpty() && it.playlists.isEmpty()
+        } shouldBe true
+
+        playlistHierarchy.close()
         jsonFileRepository.close()
     }
 
     "Initializes from a non empty JsonFileRepository and AudioLibrary" {
         val audioItem = Arb.fxAudioItem {}.next()
         val playlist =
-            mockk<ObservablePlaylist> {
-                every { id } returns 1
-                every { isDirectory } returns true
-                every { name } returns "Rock"
-                every { audioItems } returns listOf(audioItem)
-                every { playlists } returns emptySet()
-                every { asJsonKeyValue() } answers { callOriginal() }
-            }
+            ImmutableObservablePlaylist(
+                id = 1,
+                isDirectory = true,
+                name = "Rock",
+                audioItemIds = listOf(audioItem.id)
+            )
         val jsonFile =
             tempfile("observablePlaylistHierarchy-test", ".json").apply {
-                writeText(listOf(playlist).asJsonKeyValues())
+                val jsonContent = Json.encodeToString(ObservablePlaylistMapSerializer, mapOf(1 to playlist))
+                writeText(jsonContent)
                 deleteOnExit()
             }
         val jsonFileRepository = JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer)
 
-        val audioLibrary =
-            mockk<ObservableAudioLibrary> {
-                every { findById(any()) } answers { Optional.of(audioItem) }
-            }
+        val audioItemRepository = VolatileRepository<Int, ObservableAudioItem>()
+        audioItemRepository.add(audioItem)
+        val audioLibrary = ObservableAudioLibrary(audioItemRepository)
 
-        val playlistHierarchy = ObservablePlaylistHierarchy(jsonFileRepository, audioLibrary)
+        val playlistHierarchy = ObservablePlaylistHierarchy(jsonFileRepository)
 
         playlistHierarchy.size() shouldBe 1
         playlistHierarchy.contains {
@@ -193,6 +195,11 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
                 it.first().shouldBeInstanceOf<ObservablePlaylist>()
             }
         }
+
+        playlistHierarchy.close()
+        audioLibrary.close()
+        audioItemRepository.close()
+        jsonFileRepository.close()
     }
 
     /** The following playlist hierarchy is used for the test:
@@ -378,6 +385,8 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         eventuallyOnFxThread {
             playlistHierarchy.playlistsProperty.isEmpty() shouldBe true
         }
+
+        playlistHierarchy.close()
     }
 
     /** The following playlist hierarchy is used for the test:
@@ -475,6 +484,8 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
             pop.playlists.isEmpty() shouldBe true
             playlistHierarchy.playlistsProperty.isEmpty() shouldBe true
         }
+
+        playlistHierarchy.close()
     }
 
     "Removing playlist directory from it is recursive and changes reflects on playlists" {
@@ -551,6 +562,8 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         eventuallyOnFxThread {
             playlistHierarchy.playlistsProperty shouldContainExactly setOf(bestHits, selection)
         }
+
+        playlistHierarchy.close()
     }
 
     "Throws Exception when creating playlists with an existing name" {
@@ -558,18 +571,20 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         val newPlaylistDirectory = playlistHierarchy.createPlaylistDirectory("New playlist")
 
-        shouldThrowMessage("Playlist with name 'New playlist' already exists") {
+        io.kotest.assertions.throwables.shouldThrowMessage("Playlist with name 'New playlist' already exists") {
             playlistHierarchy.createPlaylistDirectory("New playlist")
         }
         playlistHierarchy.size() shouldBe 1
 
-        shouldThrowMessage("Playlist with name 'New playlist' already exists") {
+        io.kotest.assertions.throwables.shouldThrowMessage("Playlist with name 'New playlist' already exists") {
             playlistHierarchy.createPlaylist("New playlist")
         }
         playlistHierarchy.size() shouldBe 1
 
         playlistHierarchy.remove(newPlaylistDirectory) shouldBe true
         playlistHierarchy.isEmpty shouldBe true
+
+        playlistHierarchy.close()
     }
 
     "Removing playlists from a directory, does not remove them from the playlistHierarchy" {
@@ -624,6 +639,8 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
             playlistHierarchy.size() shouldBe 3
             fifties.playlists.isEmpty() shouldBe true
         }
+
+        playlistHierarchy.close()
     }
 
     "Deleting a playlist removes it from the playlistHierarchy and its parent directory" {
@@ -655,6 +672,8 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
             playlistHierarchy.size() shouldBe 1
             fifties.playlists.isEmpty() shouldBe true
         }
+
+        playlistHierarchy.close()
     }
 
     "Single playlist property updates are eventually consistent" {
@@ -670,6 +689,8 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
             hierarchy.playlistsProperty.size shouldBe 1
             playlist.audioItemsProperty.size shouldBe 1
         }
+
+        hierarchy.close()
     }
 
     "FXPlaylist allows adding duplicate audio items" {
@@ -685,6 +706,37 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         eventuallyOnFxThread {
             playlist.audioItemsProperty.size shouldBe 2
         }
+
+        hierarchy.close()
+    }
+
+    "FXPlaylist addAudioItems emits MutationEvent" {
+        val hierarchy = ObservablePlaylistHierarchy()
+        val playlist = hierarchy.createPlaylist("Events Test")
+        val item1 = Arb.fxAudioItem { title = "Event Item 1" }.next()
+        val item2 = Arb.fxAudioItem { title = "Event Item 2" }.next()
+
+        // Start with one item so the playlist already has audioItems
+        playlist.addAudioItem(item1)
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            playlist.audioItemsProperty.size shouldBe 1
+        }
+
+        // addAudioItems must wrap update in mutateAndPublish so the observable property updates on FX thread
+        playlist.addAudioItem(item2)
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyOnFxThread {
+            playlist.audioItemsProperty.size shouldBe 2
+        }
+
+        hierarchy.close()
     }
 
     "Rapid playlist modifications are eventually consistent" {
@@ -712,6 +764,8 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         eventuallyOnFxThread {
             playlist.audioItemsProperty.size shouldBe 5
         }
+
+        hierarchy.close()
     }
 
     "Nested playlist additions maintain hierarchy consistency" {
@@ -730,6 +784,8 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
             parent.playlistsProperty.size shouldBe 1
             hierarchy.findParentPlaylist(child).isPresent shouldBe true
         }
+
+        hierarchy.close()
     }
 
     "Moving playlist between directories is eventually consistent" {
@@ -759,6 +815,8 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
             dir2.playlistsProperty.size shouldBe 1
             hierarchy.findParentPlaylist(playlist).get() shouldBe dir2
         }
+
+        hierarchy.close()
     }
 
     "Clearing playlist propagates to observable properties" {
@@ -782,6 +840,8 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         eventuallyOnFxThread {
             playlist.audioItemsProperty.size shouldBe 0
         }
+
+        hierarchy.close()
     }
 
     "Recursive audio items property updates correctly" {
@@ -803,6 +863,8 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
             parent.audioItemsRecursiveProperty.size shouldBe 3
             parent.audioItemsRecursiveProperty.map { it: ObservableAudioItem -> it.title } shouldContainExactly listOf("Item3", "Item1", "Item2")
         }
+
+        hierarchy.close()
     }
 
     "Repository subscription updates observable properties" {
@@ -825,6 +887,8 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         eventuallyOnFxThread {
             hierarchy.playlistsProperty.contains(playlist) shouldBe false
         }
+
+        hierarchy.close()
     }
 
     "Multiple concurrent modifications converge to consistent state" {
@@ -845,5 +909,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
             // Should have 15 items: added 20, removed 5
             playlist.audioItemsProperty.size shouldBe 15
         }
+
+        hierarchy.close()
     }
 })

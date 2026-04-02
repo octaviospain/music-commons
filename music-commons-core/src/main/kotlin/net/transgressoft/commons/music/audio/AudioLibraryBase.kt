@@ -49,7 +49,7 @@ import java.util.concurrent.atomic.AtomicInteger
 abstract class AudioLibraryBase<I, AC>(
     protected val repository: Repository<Int, I>,
     protected val observableArtistCatalogRegistry: ArtistCatalogRegistryBase<I, AC>
-) : AudioLibrary<I, AC>, Repository<Int, I> by repository, AutoCloseable
+) : AudioLibrary<I, AC>, Repository<Int, I> by repository
     where I : ReactiveAudioItem<I>,
           I : Comparable<I>,
           AC : ReactiveArtistCatalog<AC, I>,

@@ -22,6 +22,11 @@ import net.transgressoft.commons.music.playlist.AudioPlaylistSerializerBase
 import net.transgressoft.lirp.event.LirpEventPublisher
 import net.transgressoft.lirp.event.LirpEventSubscription
 import net.transgressoft.lirp.event.MutationEvent
+import javafx.beans.property.ReadOnlyBooleanProperty
+import javafx.beans.property.ReadOnlyListProperty
+import javafx.beans.property.ReadOnlyObjectProperty
+import javafx.beans.property.ReadOnlySetProperty
+import javafx.beans.property.ReadOnlyStringProperty
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleListProperty
 import javafx.beans.property.SimpleObjectProperty
@@ -32,7 +37,9 @@ import java.time.LocalDateTime
 import java.util.Optional
 import java.util.concurrent.Flow
 import java.util.function.Consumer
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 
@@ -43,101 +50,107 @@ val ObservablePlaylistMapSerializer = MapSerializer(Int.serializer(), Observable
  * Kotlinx serialization serializer for [ObservablePlaylist] instances.
  *
  * Serializes JavaFX playlists to JSON by storing audio item and nested playlist IDs.
- * Creates dummy placeholder instances during deserialization that are later resolved
- * to actual playlist instances by [ObservablePlaylistHierarchy] during initialization.
+ * Creates [ImmutableObservablePlaylist] placeholder instances during deserialization that are later
+ * replaced by real [ObservablePlaylist] instances during [ObservablePlaylistHierarchy] initialization.
+ * Audio item references are resolved from [net.transgressoft.lirp.persistence.LirpContext] once the
+ * audio library has registered its repository.
  */
 object ObservablePlaylistSerializer : AudioPlaylistSerializerBase<ObservableAudioItem, ObservablePlaylist>() {
     @Suppress("UNCHECKED_CAST")
     override fun createInstance(propertiesList: List<Any?>): ObservablePlaylist =
-        DummyPlaylist(
-            propertiesList[0] as Int,
-            propertiesList[1] as Boolean,
-            propertiesList[2] as String,
-            propertiesList[3] as List<ObservableAudioItem>,
-            propertiesList[4] as Set<ObservablePlaylist>
+        ImmutableObservablePlaylist(
+            id = propertiesList[0] as Int,
+            isDirectory = propertiesList[1] as Boolean,
+            name = propertiesList[2] as String,
+            audioItemIds = propertiesList[3] as List<Int>,
+            playlistIds = propertiesList[4] as Set<Int>
         )
+
+    override fun getAudioItemIds(value: ObservablePlaylist): List<Int> =
+        if (value is ImmutableObservablePlaylist) value.audioItemIds else value.audioItems.map { it.id }
+
+    override fun getPlaylistIds(value: ObservablePlaylist): List<Int> =
+        if (value is ImmutableObservablePlaylist) value.playlistIds.toList() else value.playlists.map { it.id }
 }
 
-internal class DummyPlaylist(
+/**
+ * Immutable stub implementation of [ObservablePlaylist] used as a transient deserialization placeholder.
+ *
+ * Created by [ObservablePlaylistSerializer] when reading JSON. The [audioItemIds] and [playlistIds]
+ * fields carry referenced entity IDs that [ObservablePlaylistHierarchy] uses to resolve real
+ * [ObservablePlaylist] instances via [net.transgressoft.lirp.persistence.LirpContext].
+ * All reactive and JavaFX operations are no-ops since this stub is replaced during initialization.
+ */
+internal class ImmutableObservablePlaylist(
     override val id: Int,
     override var isDirectory: Boolean = false,
     override var name: String = "",
     override val audioItems: List<ObservableAudioItem> = emptyList(),
     override val playlists: Set<ObservablePlaylist> = emptySet(),
-    override val lastDateModified: LocalDateTime = LocalDateTime.MIN
+    override val lastDateModified: LocalDateTime = LocalDateTime.MIN,
+    val audioItemIds: List<Int> = audioItems.map { it.id },
+    val playlistIds: Set<Int> = playlists.map { it.id }.toSet()
 ) : ObservablePlaylist {
-    override val nameProperty = SimpleStringProperty()
-    override val isDirectoryProperty = SimpleBooleanProperty()
-    override val audioItemsProperty = SimpleListProperty<ObservableAudioItem>()
-    override val audioItemsRecursiveProperty = SimpleListProperty<ObservableAudioItem>()
-    override val playlistsProperty = SimpleSetProperty<ObservablePlaylist>()
-    override val coverImageProperty = SimpleObjectProperty<Optional<Image>>()
+    override val nameProperty: ReadOnlyStringProperty = SimpleStringProperty()
+    override val isDirectoryProperty: ReadOnlyBooleanProperty = SimpleBooleanProperty()
+    override val audioItemsProperty: ReadOnlyListProperty<ObservableAudioItem> = SimpleListProperty()
+    override val audioItemsRecursiveProperty: ReadOnlyListProperty<ObservableAudioItem> = SimpleListProperty()
+    override val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist> = SimpleSetProperty()
+    override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>> = SimpleObjectProperty()
 
-    override fun addAudioItems(audioItems: Collection<ObservableAudioItem>): Boolean =
-        throw IllegalStateException("DummyPlaylist does not support addAudioItems")
+    private val _changes = MutableSharedFlow<MutationEvent<Int, ObservablePlaylist>>(extraBufferCapacity = 1)
+    override val changes: SharedFlow<MutationEvent<Int, ObservablePlaylist>> = _changes.asSharedFlow()
 
-    override fun removeAudioItems(audioItems: Collection<ObservableAudioItem>): Boolean =
-        throw IllegalStateException("DummyPlaylist does not support removeAudioItems")
+    override val isClosed: Boolean = false
+
+    override fun addAudioItems(audioItems: Collection<ObservableAudioItem>): Boolean = false
+
+    override fun removeAudioItems(audioItems: Collection<ObservableAudioItem>): Boolean = false
 
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removeAudioItemIds")
-    override fun removeAudioItems(audioItemIds: Collection<Int>): Boolean =
-        throw IllegalStateException("DummyPlaylist does not support removeAudioItems by id")
+    override fun removeAudioItems(audioItemIds: Collection<Int>): Boolean = false
 
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removePlaylistIds")
-    override fun removePlaylists(playlistIds: Collection<Int>): Boolean =
-        throw IllegalStateException("DummyPlaylist does not support removePlaylists by id")
+    override fun removePlaylists(playlistIds: Collection<Int>): Boolean = false
 
-    override fun clearAudioItems() = throw IllegalStateException("DummyPlaylist does not support clearAudioItems")
+    override fun clearAudioItems() {}
 
-    override fun clearPlaylists() = throw IllegalStateException("DummyPlaylist does not support clearPlaylists")
+    override fun clearPlaylists() {}
 
-    override fun subscribe(p0: Flow.Subscriber<in MutationEvent<Int, ObservablePlaylist>>?) =
-        throw IllegalStateException("DummyPlaylist does not support Flow subscription")
+    override fun subscribe(p0: Flow.Subscriber<in MutationEvent<Int, ObservablePlaylist>>?) {}
 
-    override fun removePlaylists(playlists: Collection<ObservablePlaylist>): Boolean =
-        throw IllegalStateException("DummyPlaylist does not support removePlaylists")
+    override fun removePlaylists(playlists: Collection<ObservablePlaylist>): Boolean = false
 
-    override fun addPlaylists(playlists: Collection<ObservablePlaylist>): Boolean =
-        throw IllegalStateException("DummyPlaylist does not support addPlaylists")
+    override fun addPlaylists(playlists: Collection<ObservablePlaylist>): Boolean = false
 
-    private var closed: Boolean = false
-    override val isClosed: Boolean
-        get() = closed
+    override fun close() {}
 
-    override fun close() {
-        closed = true
-    }
+    override fun clone(): ImmutableObservablePlaylist =
+        ImmutableObservablePlaylist(id, isDirectory, name, audioItems, playlists, lastDateModified, audioItemIds, playlistIds)
 
-    override fun clone(): DummyPlaylist = DummyPlaylist(id)
-
-    override val changes: SharedFlow<MutationEvent<Int, ObservablePlaylist>>
-        get() = throw IllegalStateException("DummyPlaylist does not support changes")
-
-    override fun emitAsync(event: MutationEvent<Int, ObservablePlaylist>): Unit =
-        throw IllegalStateException("DummyPlaylist does not support emitAsync")
+    override fun emitAsync(event: MutationEvent<Int, ObservablePlaylist>) {}
 
     override fun subscribe(action: suspend (MutationEvent<Int, ObservablePlaylist>) -> Unit):
         LirpEventSubscription<in ObservablePlaylist, MutationEvent.Type, MutationEvent<Int, ObservablePlaylist>> =
-        FakeSubscription
+        NoOpObservablePlaylistSubscription
 
     override fun subscribe(action: Consumer<in MutationEvent<Int, ObservablePlaylist>>):
         LirpEventSubscription<in ObservablePlaylist, MutationEvent.Type, MutationEvent<Int, ObservablePlaylist>> =
-        FakeSubscription
+        NoOpObservablePlaylistSubscription
 
     override fun subscribe(vararg eventTypes: MutationEvent.Type, action: Consumer<in MutationEvent<Int, ObservablePlaylist>>):
         LirpEventSubscription<in ObservablePlaylist, MutationEvent.Type, MutationEvent<Int, ObservablePlaylist>> =
-        FakeSubscription
+        NoOpObservablePlaylistSubscription
 }
 
-object FakeSubscription : LirpEventSubscription<ObservablePlaylist, MutationEvent.Type, MutationEvent<Int, ObservablePlaylist>> {
+private object NoOpObservablePlaylistSubscription :
+    LirpEventSubscription<ObservablePlaylist, MutationEvent.Type, MutationEvent<Int, ObservablePlaylist>> {
     override val source: LirpEventPublisher<MutationEvent.Type, MutationEvent<Int, ObservablePlaylist>>
-        get() = throw IllegalStateException("FakeSubscription has no source publisher")
+        get() = throw UnsupportedOperationException("NoOpObservablePlaylistSubscription has no source publisher")
 
-    override fun request(n: Long): Unit = throw IllegalStateException("FakeSubscription does not support request")
+    override fun request(n: Long) {}
 
-    override fun cancel() {
-        // No-op
-    }
+    override fun cancel() {}
 }
