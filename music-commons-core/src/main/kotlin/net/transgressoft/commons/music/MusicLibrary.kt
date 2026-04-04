@@ -24,6 +24,7 @@ import net.transgressoft.commons.music.audio.AudioItemMapSerializer
 import net.transgressoft.commons.music.audio.AudioLibrary
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
+import net.transgressoft.commons.music.playlist.AudioPlaylistMapSerializer
 import net.transgressoft.commons.music.playlist.DefaultPlaylistHierarchy
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
 import net.transgressoft.commons.music.playlist.PlaylistHierarchy
@@ -271,10 +272,11 @@ class MusicLibrary private constructor(
         @Suppress("UNCHECKED_CAST")
         private fun createPlaylistHierarchy(): DefaultPlaylistHierarchy =
             when (val config = playlistHierarchyStorage) {
-                is VolatileStorage -> DefaultPlaylistHierarchy.createAndBind(VolatileRepository("PlaylistHierarchy"))
-                is JsonFileStorage -> DefaultPlaylistHierarchy.createAndBind(config.file)
+                is VolatileStorage -> DefaultPlaylistHierarchy(VolatileRepository("PlaylistHierarchy"))
+                is JsonFileStorage ->
+                    DefaultPlaylistHierarchy(JsonFileRepository(config.file, AudioPlaylistMapSerializer))
                 is SqlStorage<*> ->
-                    DefaultPlaylistHierarchy.createAndBind(
+                    DefaultPlaylistHierarchy(
                         SqlRepository(
                             (config as SqlStorage<MutableAudioPlaylist>).dataSource,
                             config.tableDef

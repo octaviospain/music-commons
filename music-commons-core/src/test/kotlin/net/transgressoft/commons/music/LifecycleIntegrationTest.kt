@@ -113,8 +113,12 @@ internal class LifecycleIntegrationTest : StringSpec({
         audioLibrary.remove(audioItem) shouldBe true
         testDispatcher.scheduler.advanceUntilIdle()
 
+        // After close(), the audio item deletion event is no longer processed —
+        // the playlist's audioItemIds still contains the id even though the audio item was removed from the library
         playlistHierarchy.findByName("Lifecycle Test Playlist") shouldBePresent {
-            it.audioItems.any { item -> item.id == audioItem.id } shouldBe true
+            val refIds =
+                (it.audioItems as? net.transgressoft.lirp.persistence.AggregateCollectionRef<*, *>)?.referenceIds?.map { id -> id as Int } ?: emptyList()
+            refIds.any { id -> id == audioItem.id } shouldBe true
         }
     }
 
@@ -161,8 +165,12 @@ internal class LifecycleIntegrationTest : StringSpec({
         audioLibrary.remove(audioItem) shouldBe true
         testDispatcher.scheduler.advanceUntilIdle()
 
+        // After close(), the audio item deletion event is no longer processed —
+        // the playlist's audioItemIds still contains the id even though the audio item was removed from the library
         playlistHierarchy.findByName("Full Lifecycle Playlist") shouldBePresent {
-            it.audioItems.any { item -> item.id == audioItem.id } shouldBe true
+            val refIds =
+                (it.audioItems as? net.transgressoft.lirp.persistence.AggregateCollectionRef<*, *>)?.referenceIds?.map { id -> id as Int } ?: emptyList()
+            refIds.any { id -> id == audioItem.id } shouldBe true
         }
 
         waveforms.size() shouldBe 1

@@ -135,12 +135,12 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         testDispatcher.scheduler.advanceUntilIdle()
         writeHierarchy.close()
 
-        // No audio library registered — audio items resolve to empty
-        val playlistHierarchy = ObservablePlaylistHierarchy.createAndBind(jsonFile)
+        // No audio library registered — audio item IDs are preserved but entities cannot be resolved
+        val playlistHierarchy = ObservablePlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
 
         playlistHierarchy.size() shouldBe 1
         playlistHierarchy.contains {
-            it.id == writtenPlaylist.id && it.isDirectory && it.name == "Rock" && it.audioItems.isEmpty() && it.playlists.isEmpty()
+            it.id == writtenPlaylist.id && it.isDirectory && it.name == "Rock" && it.playlists.isEmpty()
         } shouldBe true
 
         playlistHierarchy.close()
@@ -161,7 +161,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         audioItemRepository.add(audioItem)
         val audioLibrary = ObservableAudioLibrary(audioItemRepository)
 
-        val playlistHierarchy = ObservablePlaylistHierarchy.createAndBind(jsonFile)
+        val playlistHierarchy = ObservablePlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
 
         playlistHierarchy.size() shouldBe 1
         playlistHierarchy.contains {
