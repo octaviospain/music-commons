@@ -19,21 +19,108 @@ package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
+import net.transgressoft.lirp.entity.IdentifiableEntity
+import net.transgressoft.lirp.entity.LirpEntity
 import net.transgressoft.lirp.entity.ReactiveEntityBase
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
 import net.transgressoft.lirp.event.LirpEventSubscriber
+import net.transgressoft.lirp.event.LirpEventSubscription
 import net.transgressoft.lirp.persistence.Aggregate
+import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.Repository
-import net.transgressoft.lirp.persistence.VolatileRepository
 import net.transgressoft.lirp.persistence.aggregateList
 import com.google.common.collect.Multimap
 import com.google.common.collect.MultimapBuilder
 import mu.KotlinLogging
 import java.util.*
+import java.util.concurrent.Flow
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.Consumer
+import java.util.function.Predicate
+import java.util.stream.Stream
+import kotlinx.coroutines.flow.SharedFlow
+
+/**
+ * A mutable delegate wrapper for [Repository] that allows the backing repository to be
+ * replaced at runtime via [switchTo].
+ *
+ * Used by [PlaylistHierarchyBase] to support two-phase construction: a volatile repository
+ * is set as the initial backing store, then swapped to a JSON-backed repository after
+ * deserialization completes. All [Repository] operations are forwarded to [backing].
+ */
+class RepositoryDelegate<K : Comparable<K>, T : IdentifiableEntity<K>>(
+    initial: Repository<K, T>
+) : Repository<K, T> {
+
+    internal var backing: Repository<K, T> = initial
+
+    internal fun switchTo(newRepo: Repository<K, T>) {
+        backing = newRepo
+    }
+
+    override fun add(entity: T) = backing.add(entity)
+
+    override fun remove(entity: T) = backing.remove(entity)
+
+    override fun removeAll(entities: Collection<T>) = backing.removeAll(entities)
+
+    override fun clear() = backing.clear()
+
+    override fun contains(id: K) = backing.contains(id)
+
+    override fun contains(predicate: Predicate<in T>) = backing.contains(predicate)
+
+    override fun lazySearch(predicate: Predicate<in T>): Sequence<T> = backing.lazySearch(predicate)
+
+    override fun searchStream(predicate: Predicate<in T>): Stream<T> = backing.searchStream(predicate)
+
+    override fun search(predicate: Predicate<in T>) = backing.search(predicate)
+
+    override fun search(size: Int, predicate: Predicate<in T>) = backing.search(size, predicate)
+
+    override fun findFirst(predicate: Predicate<in T>) = backing.findFirst(predicate)
+
+    override fun findById(id: K) = backing.findById(id)
+
+    override fun findByUniqueId(uniqueId: String) = backing.findByUniqueId(uniqueId)
+
+    override fun findByIndex(indexName: String, value: Any) = backing.findByIndex(indexName, value)
+
+    override fun findFirstByIndex(indexName: String, value: Any) = backing.findFirstByIndex(indexName, value)
+
+    override fun size() = backing.size()
+
+    override val isEmpty get() = backing.isEmpty
+
+    override fun iterator() = backing.iterator()
+
+    override val changes: SharedFlow<CrudEvent<K, T>> get() = backing.changes
+    override val isClosed get() = backing.isClosed
+    override val subscriberCount get() = backing.subscriberCount
+
+    override fun emitAsync(event: CrudEvent<K, T>) = backing.emitAsync(event)
+
+    override fun subscribe(action: suspend (CrudEvent<K, T>) -> Unit): LirpEventSubscription<in LirpEntity, CrudEvent.Type, CrudEvent<K, T>> =
+        backing.subscribe(action)
+
+    override fun subscribe(action: Consumer<in CrudEvent<K, T>>): LirpEventSubscription<in LirpEntity, CrudEvent.Type, CrudEvent<K, T>> =
+        backing.subscribe(action)
+
+    override fun subscribe(vararg eventTypes: CrudEvent.Type, action: suspend (CrudEvent<K, T>) -> Unit):
+        LirpEventSubscription<in LirpEntity, CrudEvent.Type, CrudEvent<K, T>> =
+        backing.subscribe(*eventTypes, action = action)
+
+    override fun subscribe(p0: Flow.Subscriber<in CrudEvent<K, T>>?) = backing.subscribe(p0)
+
+    override fun activateEvents(vararg types: CrudEvent.Type) = backing.activateEvents(*types)
+
+    override fun disableEvents(vararg types: CrudEvent.Type) = backing.disableEvents(*types)
+
+    override fun close() = backing.close()
+}
 
 /**
  * Base implementation for [PlaylistHierarchy] managing hierarchical playlist structures.
@@ -46,14 +133,14 @@ import java.util.concurrent.atomic.AtomicInteger
  * that declare an [@Aggregate][net.transgressoft.lirp.persistence.Aggregate] delegate for lazy resolution.
  */
 abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPlaylist<I, P>>(
-    protected val repository: Repository<Int, P> = VolatileRepository("PlaylistHierarchy"),
+    protected val repositoryDelegate: RepositoryDelegate<Int, P>,
     private val audioItemEventSubscriber: AudioItemEventSubscriber<I> = AudioItemEventSubscriber("PlaylistHierarchySubscriber")
 ): PlaylistHierarchy<I, P>,
-    Repository<Int, P> by repository,
+    Repository<Int, P> by repositoryDelegate,
     LirpEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>> by audioItemEventSubscriber {
 
     init {
-        repository.disableEvents(CREATE, UPDATE, DELETE)
+        repositoryDelegate.disableEvents(CREATE, UPDATE, DELETE)
         activateEvents(CREATE, UPDATE, DELETE)
         addOnNextEventAction(DELETE) { event ->
             forEach {
@@ -79,7 +166,7 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
     override fun add(entity: P): Boolean = addInternal(entity)
 
     private fun addInternal(playlist: P): Boolean {
-        var added = repository.add(playlist)
+        var added = repositoryDelegate.add(playlist)
         for (p in playlist.playlists) {
             playlistsHierarchyMultiMap.put(playlist.uniqueId, p)
             added = added or addInternal(p)
@@ -88,7 +175,7 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
     }
 
     override fun remove(entity: P): Boolean =
-        repository.remove(entity).also { removed ->
+        repositoryDelegate.remove(entity).also { removed ->
             if (removed) {
                 removeFromPlaylistsHierarchy(entity)
             }
@@ -104,7 +191,7 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
     }
 
     override fun removeAll(entities: Collection<P>): Boolean =
-        repository.removeAll(entities).also { removed ->
+        repositoryDelegate.removeAll(entities).also { removed ->
             if (removed) {
                 entities.forEach(::removeFromPlaylistsHierarchy)
             }
@@ -217,9 +304,32 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
             }
         }
 
-    override fun numberOfPlaylists() = repository.search { it.isDirectory.not() }.count()
+    override fun numberOfPlaylists() = search { it.isDirectory.not() }.count()
 
-    override fun numberOfPlaylistDirectories() = repository.search { it.isDirectory }.count()
+    override fun numberOfPlaylistDirectories() = search { it.isDirectory }.count()
+
+    // Looks up the repository registered for [entityClass] in the default LirpContext via reflection,
+    // since LirpContext.registryFor() is internal to the lirp module.
+    // The method is mangled to registryFor$lirp_core by the Kotlin compiler's internal visibility rules.
+    private fun findRegisteredRepositoryFor(entityClass: Class<*>): Any? =
+        try {
+            val contextCompanion =
+                Class.forName("net.transgressoft.lirp.persistence.LirpContext")
+                    .getDeclaredField("Companion")
+                    .apply { isAccessible = true }
+                    .get(null)
+            val defaultContextGetter =
+                contextCompanion.javaClass
+                    .getDeclaredMethod("getDefault")
+                    .apply { isAccessible = true }
+            val context = defaultContextGetter.invoke(contextCompanion)
+            context?.javaClass
+                ?.getDeclaredMethod("registryFor\$lirp_core", Class::class.java)
+                ?.apply { isAccessible = true }
+                ?.invoke(context, entityClass)
+        } catch (_: Exception) {
+            null
+        }
 
     /**
      * Cancels the audio item event subscription used to synchronize playlists with audio item deletions.
@@ -235,6 +345,108 @@ abstract class PlaylistHierarchyBase<I: ReactiveAudioItem<I>, P: ReactiveAudioPl
     protected fun removePlaylistFromHierarchy(parentPlaylistUniqueId: String, playlist: P) {
         playlistsHierarchyMultiMap.remove(parentPlaylistUniqueId, playlist)
     }
+
+    /**
+     * Creates a playlist instance from deserialized properties.
+     *
+     * Concrete subclasses override this to delegate construction to their inner playlist class,
+     * enabling companion-serializer-based deserialization without requiring public constructors.
+     */
+    protected abstract fun createPlaylistFromProperties(
+        id: Int,
+        isDirectory: Boolean,
+        name: String,
+        initialAudioItemIds: List<Int>
+    ): P
+
+    /**
+     * Registers the current backing store in LirpContext and resolves any deserialized playlist data.
+     *
+     * This variant uses [repositoryDelegate.backing] as both the LirpContext registration target
+     * and the source of playlists to resolve, which is the correct form for use in `init` blocks
+     * where the hierarchy is constructed directly with its intended repository.
+     */
+    protected fun bindInitialRepository(playlistEntityClass: Class<P>, audioItemEntityClass: Class<*>) {
+        bindRepository(repositoryDelegate.backing, playlistEntityClass, audioItemEntityClass, switchBacking = false)
+    }
+
+    /**
+     * Registers [repo] in LirpContext and resolves deserialized audio item IDs and nested playlist IDs
+     * into live object references by iterating [repo] directly.
+     *
+     * Deregisters any previously registered repository for [playlistEntityClass] before registering [repo].
+     * If [switchBacking] is true, the [RepositoryDelegate]'s backing is also replaced with [repo] so
+     * subsequent operations target [repo] rather than the original backing store.
+     */
+    protected open fun bindRepository(
+        repo: Repository<Int, P>,
+        playlistEntityClass: Class<P>,
+        audioItemEntityClass: Class<*>,
+        switchBacking: Boolean = false
+    ) {
+        RegistryBase.deregisterRepository(playlistEntityClass)
+        RegistryBase.registerRepository(playlistEntityClass, repo)
+
+        disableEvents(CREATE, UPDATE, DELETE)
+
+        val audioItemRepo = findRegisteredRepositoryFor(audioItemEntityClass)
+        repo.toList().forEach { playlist ->
+            val audioItemIds = getPlaylistAudioItemIds(playlist)
+            if (audioItemIds.isNotEmpty() && audioItemRepo != null) {
+                @Suppress("UNCHECKED_CAST")
+                val typedRepo = audioItemRepo as? Repository<Int, I>
+                val resolvedItems =
+                    audioItemIds.mapNotNull { id ->
+                        typedRepo?.findById(id)?.orElse(null)
+                    }
+                playlist.addAudioItems(resolvedItems)
+            }
+        }
+
+        val allPlaylists = repo.toList()
+        allPlaylists.forEach { playlist ->
+            val nestedPlaylistIds = getPlaylistNestedIds(playlist)
+            if (nestedPlaylistIds.isNotEmpty()) {
+                val foundPlaylists = nestedPlaylistIds.mapNotNull { id -> repo.findById(id).orElse(null) }
+                playlist.addPlaylists(foundPlaylists)
+            }
+        }
+
+        if (switchBacking) {
+            repositoryDelegate.switchTo(repo)
+        }
+
+        activateEvents(CREATE, UPDATE, DELETE)
+    }
+
+    /**
+     * Resolves deserialized playlists from [newRepo], then switches the [RepositoryDelegate]'s
+     * backing store to [newRepo] so all subsequent CRUD operations target it.
+     *
+     * This enables two-phase construction: create the hierarchy with a volatile repository (which
+     * sets [DefaultPlaylistHierarchy.Companion.instance] for deserialization), then call this method
+     * to bind the loaded persistent repository and make it the active backing store.
+     */
+    protected fun switchToRepository(
+        newRepo: Repository<Int, P>,
+        playlistEntityClass: Class<P>,
+        audioItemEntityClass: Class<*>
+    ) {
+        bindRepository(newRepo, playlistEntityClass, audioItemEntityClass, switchBacking = true)
+    }
+
+    /**
+     * Extracts the audio item IDs from [playlist] for use during post-deserialization resolution.
+     */
+    protected open fun getPlaylistAudioItemIds(playlist: P): List<Int> {
+        val mutableBase = playlist as? PlaylistHierarchyBase<I, P>.MutablePlaylistBase
+        return mutableBase?.audioItemIds ?: playlist.audioItems.map { it.id }
+    }
+
+    /**
+     * Extracts the nested playlist IDs from [playlist] for use during post-deserialization resolution.
+     */
+    protected open fun getPlaylistNestedIds(playlist: P): Set<Int> = playlist.playlists.map { it.id }.toSet()
 
     /**
      * Base reactive playlist implementation providing change notification and hierarchy management.

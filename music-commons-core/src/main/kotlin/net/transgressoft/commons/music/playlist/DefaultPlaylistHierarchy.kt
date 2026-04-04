@@ -18,17 +18,11 @@
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.AudioItemManipulationException
-import net.transgressoft.lirp.entity.toIds
-import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
-import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
-import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
 import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.Repository
 import net.transgressoft.lirp.persistence.VolatileRepository
-import net.transgressoft.lirp.persistence.aggregateList
+import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import mu.KotlinLogging
-import kotlinx.serialization.Transient
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
@@ -36,75 +30,45 @@ import kotlinx.serialization.modules.subclass
 /**
  * Default implementation of [PlaylistHierarchy] for managing [MutableAudioPlaylist] instances.
  *
- * Registers the underlying repository in [net.transgressoft.lirp.persistence.LirpContext.default]
- * so that nested playlist references and audio item IDs stored in serialized playlists are resolved
- * lazily via the [@Aggregate][net.transgressoft.lirp.persistence.Aggregate] delegate.
+ * Playlist deserialization is handled by the companion object, which extends [AudioPlaylistSerializerBase]
+ * and constructs real [MutableAudioPlaylist] instances directly during JSON deserialization via
+ * [createPlaylistFromProperties]. Use [Companion.createAndBind] to create a hierarchy with
+ * correct initialization order: the companion sets [Companion.instance] before constructing
+ * any repository that uses [AudioPlaylistMapSerializer], so deserialized playlists are immediately
+ * wired to this hierarchy's inner class factory.
  *
- * Audio item references are resolved from the audio library registered in [net.transgressoft.lirp.persistence.LirpContext.default].
- * The audio library must be constructed and registered before this hierarchy is instantiated.
+ * For JSON-backed persistence, prefer [Companion.createAndBind] with a [java.io.File] argument
+ * over constructing a [JsonFileRepository] manually, since that overload handles two-phase
+ * construction automatically.
+ *
+ * Audio item references are resolved from the audio library registered in
+ * [net.transgressoft.lirp.persistence.LirpContext.default]. The audio library must be constructed
+ * and registered before [Companion.createAndBind] is called.
  */
-class DefaultPlaylistHierarchy(
-    repository: Repository<Int, MutableAudioPlaylist> = VolatileRepository()
-): PlaylistHierarchyBase<AudioItem, MutableAudioPlaylist>(repository) {
+internal class DefaultPlaylistHierarchy private constructor(
+    delegate: RepositoryDelegate<Int, MutableAudioPlaylist>
+) : PlaylistHierarchyBase<AudioItem, MutableAudioPlaylist>(delegate) {
+
     private val logger = KotlinLogging.logger {}
 
+    constructor(repository: Repository<Int, MutableAudioPlaylist> = VolatileRepository()) :
+        this(RepositoryDelegate(repository))
+
     init {
-        deregisterExistingRegistration()
-        RegistryBase.registerRepository(MutableAudioPlaylist::class.java, repository)
-
-        disableEvents(CREATE, UPDATE, DELETE)
-        // Replace deserialized ImmutablePlaylist stubs with real MutablePlaylist instances
-        val stubs = toList()
-        val audioItemRepository = findAudioItemRepository()
-        stubs.forEach { stub ->
-            val audioItemIds = if (stub is ImmutablePlaylist) stub.audioItemIds else stub.audioItems.toIds()
-            val realPlaylist = MutablePlaylist(stub.id, stub.isDirectory, stub.name, initialAudioItemIds = audioItemIds)
-            remove(stub)
-            add(realPlaylist)
-            // Resolve audio items directly from the registered AudioItem repository.
-            // resolveAll() on audioItemsAggregate is not used here because RegistryBase caches
-            // discoverRefs() results per repository instance, and the cache was already populated
-            // with empty entries when ImmutablePlaylist stubs were loaded before init runs.
-            audioItemRepository?.let { repo ->
-                audioItemIds.mapNotNull { id ->
-                    @Suppress("UNCHECKED_CAST")
-                    (repo as? net.transgressoft.lirp.persistence.Repository<Int, AudioItem>)?.findById(id)?.orElse(null)
-                }.forEach { realPlaylist.audioItems.add(it) }
-            }
+        if (Companion.instance == null) {
+            // Direct construction path: self-register immediately so that any
+            // JsonFileRepository created after this point can deserialize playlists.
+            Companion.instance = this
         }
-        // Resolve nested playlists within the same repository (D-04: no @Aggregate needed)
-        toList().forEach { playlist ->
-            val stubPlaylistIds =
-                stubs.find { it.id == playlist.id }
-                    ?.let { stub -> if (stub is ImmutablePlaylist) stub.playlistIds else stub.playlists.toIds().toSet() }
-                    ?: emptySet()
-            val foundPlaylists = findDeserializedPlaylistsFromIds(stubPlaylistIds, repository)
-            playlist.addPlaylists(foundPlaylists)
-        }
-        activateEvents(CREATE, UPDATE, DELETE)
+        bindInitialRepository(MutableAudioPlaylist::class.java, AudioItem::class.java)
     }
 
-    private fun findAudioItemRepository(): Any? {
-        return try {
-            val context = getContext(repository) ?: return null
-            val registryForMethod =
-                context.javaClass.methods
-                    .firstOrNull { it.name.startsWith("registryFor") && it.parameterCount == 1 && it.parameterTypes[0] == Class::class.java }
-                    ?: return null
-            registryForMethod.invoke(context, AudioItem::class.java)
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    private fun findDeserializedPlaylistsFromIds(
-        playlists: Set<Int>,
-        repository: Repository<Int, MutableAudioPlaylist>
-    ): List<MutableAudioPlaylist> =
-        playlists.stream().map {
-            repository.findById(it)
-                .orElseThrow { AudioItemManipulationException("AudioPlaylist with id $it not found during deserialization") }
-        }.toList()
+    override fun createPlaylistFromProperties(
+        id: Int,
+        isDirectory: Boolean,
+        name: String,
+        initialAudioItemIds: List<Int>
+    ): MutableAudioPlaylist = MutablePlaylist(id, isDirectory, name, initialAudioItemIds = initialAudioItemIds)
 
     override fun createPlaylist(name: String): MutableAudioPlaylist = createPlaylist(name, emptyList())
 
@@ -134,57 +98,8 @@ class DefaultPlaylistHierarchy(
 
     override fun close() {
         super.close()
-        // Deregister the repository from LirpContext so subsequent DefaultPlaylistHierarchy
-        // instances can register without conflict. Accessed via reflection since LirpContext
-        // internals are not public API.
-        deregisterFromLirpContext(repository)
-    }
-
-    private fun deregisterFromLirpContext(repo: Any) {
-        try {
-            val context = getContext(repo) ?: return
-            val registryInterface = Class.forName("net.transgressoft.lirp.persistence.Registry")
-            val deregisterMethod =
-                context.javaClass.methods
-                    .firstOrNull { it.name.startsWith("deregister") && it.parameterCount == 1 && registryInterface.isAssignableFrom(it.parameterTypes[0]) }
-                    ?: return
-            deregisterMethod.invoke(context, repo)
-        } catch (_: Exception) {
-            // Deregistration is best-effort; failure does not impact lifecycle semantics
-        }
-    }
-
-    private fun deregisterExistingRegistration() {
-        try {
-            val context = getContext(repository) ?: return
-            val registryForMethod =
-                context.javaClass.methods
-                    .firstOrNull { it.name.startsWith("registryFor") && it.parameterCount == 1 && it.parameterTypes[0] == Class::class.java }
-                    ?: return
-            val existing = registryForMethod.invoke(context, MutableAudioPlaylist::class.java) ?: return
-            if (existing !== repository) {
-                val registryInterface = Class.forName("net.transgressoft.lirp.persistence.Registry")
-                val deregisterMethod =
-                    context.javaClass.methods
-                        .firstOrNull { it.name.startsWith("deregister") && it.parameterCount == 1 && registryInterface.isAssignableFrom(it.parameterTypes[0]) }
-                        ?: return
-                deregisterMethod.invoke(context, existing)
-            }
-        } catch (_: Exception) {
-            // Best-effort; failure is non-critical since registerRepository will detect conflicts
-        }
-    }
-
-    private fun getContext(repo: Any): Any? {
-        return try {
-            val getContextMethod =
-                repo.javaClass.methods
-                    .firstOrNull { it.name.startsWith("getContext") && it.parameterCount == 0 }
-                    ?: return null
-            getContextMethod.invoke(repo)
-        } catch (_: Exception) {
-            null
-        }
+        RegistryBase.deregisterRepository(MutableAudioPlaylist::class.java)
+        if (Companion.instance === this) Companion.instance = null
     }
 
     override fun toString() = "PlaylistRepository(playlistsCount=${size()})"
@@ -196,10 +111,8 @@ class DefaultPlaylistHierarchy(
      * [MutablePlaylistBase] while accessing the enclosing [DefaultPlaylistHierarchy]
      * instance for playlist lookup operations during hierarchy updates.
      *
-     * Audio item IDs stored in [audioItemIds] are resolved lazily from [net.transgressoft.lirp.persistence.LirpContext]
-     * via the [audioItemsAggregate] delegate when this playlist is added to the repository.
-     * See [DefaultPlaylistHierarchyLirpRefAccessor] for the manually-written aggregate reference
-     * accessor that enables resolution without KSP-generated code.
+     * Audio item IDs stored in [audioItemIds] are resolved during [bindRepository]
+     * initialization by looking up registered audio item repositories in LirpContext.
      */
     private inner class MutablePlaylist(
         id: Int,
@@ -208,16 +121,89 @@ class DefaultPlaylistHierarchy(
         audioItems: List<AudioItem> = listOf(),
         playlists: Set<MutableAudioPlaylist> = setOf(),
         initialAudioItemIds: List<Int> = audioItems.map { it.id }
-    ): MutablePlaylistBase(id, isDirectory, name, audioItems, playlists, initialAudioItemIds), MutableAudioPlaylist {
+    ) : MutablePlaylistBase(id, isDirectory, name, audioItems, playlists, initialAudioItemIds), MutableAudioPlaylist {
 
-        // Aggregate delegate for lazy resolution of audio item IDs from LirpContext.
-        // The @Aggregate annotation is omitted to prevent KSP from generating a public accessor
-        // that would fail due to the internal visibility of this class.
-        // The resolution is wired via DefaultPlaylistHierarchyLirpRefAccessor instead.
-        @Transient
-        val audioItemsAggregate by aggregateList<Int, AudioItem> { audioItemIds }
+        override fun clone(): MutablePlaylist =
+            MutablePlaylist(id, isDirectory, name, audioItems.toList(), playlists.toSet(), audioItemIds.toList())
+    }
 
-        override fun clone(): MutablePlaylist = MutablePlaylist(id, isDirectory, name, audioItems.toList(), playlists.toSet(), audioItemIds.toList())
+    /**
+     * Companion object serializer for [DefaultPlaylistHierarchy].
+     *
+     * Extends [AudioPlaylistSerializerBase] so it can be used directly as a
+     * [kotlinx.serialization.KSerializer] for [MutableAudioPlaylist]. When [instance] is set,
+     * [createInstance] calls [createPlaylistFromProperties] to construct real [MutablePlaylist]
+     * objects directly. If [instance] is null when deserialization is attempted, an error is thrown —
+     * the hierarchy must be set before any repository backed by [AudioPlaylistMapSerializer] is created.
+     *
+     * Use [createAndBind] as the preferred factory when loading a persisted hierarchy:
+     * the overload accepting a [java.io.File] sets [instance] before constructing a
+     * [JsonFileRepository], enabling direct deserialization into real [MutablePlaylist] instances.
+     */
+    companion object : AudioPlaylistSerializerBase<AudioItem, MutableAudioPlaylist>() {
+
+        /**
+         * The active [DefaultPlaylistHierarchy] instance used by [createInstance] during deserialization.
+         *
+         * Set automatically by [DefaultPlaylistHierarchy] constructors and cleared in [DefaultPlaylistHierarchy.close].
+         * Must be non-null before any [AudioPlaylistMapSerializer]-backed repository is created.
+         */
+        internal var instance: DefaultPlaylistHierarchy? = null
+
+        /**
+         * Creates a [DefaultPlaylistHierarchy] bound to [repository], registering it in LirpContext
+         * and resolving any pre-loaded playlists in [repository].
+         *
+         * Assumes [repository] was constructed after [instance] was already set (i.e., the caller
+         * managed the initialization order). Use [createAndBind] with a [java.io.File] for JSON
+         * persistence to handle the initialization order automatically.
+         *
+         * @param repository the repository to bind and register in LirpContext
+         * @return the fully initialized [DefaultPlaylistHierarchy]
+         */
+        fun createAndBind(repository: Repository<Int, MutableAudioPlaylist>): DefaultPlaylistHierarchy {
+            val hierarchy = DefaultPlaylistHierarchy(repository)
+            instance = hierarchy
+            return hierarchy
+        }
+
+        /**
+         * Creates a [DefaultPlaylistHierarchy] backed by a [JsonFileRepository] at [file], handling
+         * two-phase construction to avoid initialization order issues.
+         *
+         * Sets [instance] before constructing the [JsonFileRepository] so that deserialized playlists
+         * are created as inner class instances of this hierarchy. After loading, switches the backing
+         * store to the JSON repository so all subsequent CRUD operations persist to [file].
+         *
+         * The audio library must be registered in LirpContext before calling this method so that
+         * audio item references can be resolved during initialization.
+         *
+         * @param file the JSON file to load from and persist to
+         * @return the fully initialized [DefaultPlaylistHierarchy]
+         */
+        fun createAndBind(file: java.io.File): DefaultPlaylistHierarchy {
+            // Phase 1: Create hierarchy with volatile repo — sets instance for deserialization
+            val hierarchy = DefaultPlaylistHierarchy()
+            // Phase 2: Construct JsonFileRepository — createInstance() uses instance (hierarchy)
+            val jsonRepo = JsonFileRepository(file, AudioPlaylistMapSerializer)
+            // Phase 3: Switch backing to jsonRepo and resolve audio items / nested playlists
+            hierarchy.switchToRepository(jsonRepo, MutableAudioPlaylist::class.java, AudioItem::class.java)
+            return hierarchy
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        override fun createInstance(propertiesList: List<Any?>): MutableAudioPlaylist {
+            val hierarchy = instance
+            check(hierarchy != null) {
+                "DefaultPlaylistHierarchy.instance must be set before deserialization. Use createAndBind() or set instance manually."
+            }
+            return hierarchy.createPlaylistFromProperties(
+                id = propertiesList[0] as Int,
+                isDirectory = propertiesList[1] as Boolean,
+                name = propertiesList[2] as String,
+                initialAudioItemIds = propertiesList[3] as List<Int>
+            )
+        }
     }
 }
 
@@ -226,6 +212,6 @@ class DefaultPlaylistHierarchy(
 internal val playlistSerializerModule =
     SerializersModule {
         polymorphic(ReactiveAudioPlaylist::class) {
-            subclass(MutableAudioPlaylistSerializer)
+            subclass(DefaultPlaylistHierarchy)
         }
     }

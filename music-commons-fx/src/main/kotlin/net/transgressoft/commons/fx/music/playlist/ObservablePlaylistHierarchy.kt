@@ -18,9 +18,10 @@
 package net.transgressoft.commons.fx.music.playlist
 
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
-import net.transgressoft.commons.music.audio.AudioItemManipulationException
 import net.transgressoft.commons.music.playlist.AudioPlaylist
+import net.transgressoft.commons.music.playlist.AudioPlaylistSerializerBase
 import net.transgressoft.commons.music.playlist.PlaylistHierarchyBase
+import net.transgressoft.commons.music.playlist.RepositoryDelegate
 import net.transgressoft.commons.music.playlist.event.AudioPlaylistEventSubscriber
 import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
@@ -56,472 +57,454 @@ import kotlinx.serialization.modules.polymorphic
  * collection and receive automatic updates when playlists are created, modified, or removed.
  * All modifications are executed on the JavaFX Application Thread for thread safety.
  *
- * Registers its repository in [net.transgressoft.lirp.persistence.LirpContext] on construction
- * so that audio item references serialized as IDs are resolved via the context when an audio
- * library has been previously registered. The audio library must be constructed before this
- * hierarchy when loading from a non-empty repository.
+ * Playlist deserialization is handled by the companion object, which extends [AudioPlaylistSerializerBase]
+ * and constructs real [FXPlaylist] instances directly during JSON deserialization via
+ * [createPlaylistFromProperties]. The companion [instance] must be set before any repository that uses
+ * [ObservablePlaylistMapSerializer] is created for zero-stub deserialization.
  */
-class ObservablePlaylistHierarchy
+internal class ObservablePlaylistHierarchy private constructor(
+    delegate: RepositoryDelegate<Int, ObservablePlaylist>
+) : PlaylistHierarchyBase<ObservableAudioItem, ObservablePlaylist>(delegate) {
+
     @JvmOverloads
     constructor(
         repository: Repository<Int, ObservablePlaylist> = VolatileRepository("ObservablePlaylistHierarchy")
-    ): PlaylistHierarchyBase<ObservableAudioItem, ObservablePlaylist>(repository) {
+    ) : this(RepositoryDelegate(repository))
 
-        private val logger = KotlinLogging.logger {}
+    private val logger = KotlinLogging.logger {}
 
-        private val observablePlaylistsSet: ObservableSet<ObservablePlaylist> = FXCollections.observableSet()
+    private val observablePlaylistsSet: ObservableSet<ObservablePlaylist> = FXCollections.observableSet()
 
-        val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist> =
-            SimpleSetProperty(this, "playlists", FXCollections.observableSet(observablePlaylistsSet))
+    val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist> =
+        SimpleSetProperty(this, "playlists", FXCollections.observableSet(observablePlaylistsSet))
 
-        private val playlistChangesSubscriber =
-            AudioPlaylistEventSubscriber<ObservablePlaylist, ObservableAudioItem>("InternalAudioPlaylistSubscriber").apply {
-                addOnNextEventAction(CREATE, UPDATE) { event ->
-                    synchronized(playlistsProperty) {
-                        Platform.runLater { observablePlaylistsSet.addAll(event.entities.values) }
-                    }
-                }
-                addOnNextEventAction(DELETE) { event ->
-                    synchronized(playlistsProperty) {
-                        Platform.runLater { observablePlaylistsSet.removeAll(event.entities.values.toSet()) }
-                    }
+    private val playlistChangesSubscriber =
+        AudioPlaylistEventSubscriber<ObservablePlaylist, ObservableAudioItem>("InternalAudioPlaylistSubscriber").apply {
+            addOnNextEventAction(CREATE, UPDATE) { event ->
+                synchronized(playlistsProperty) {
+                    Platform.runLater { observablePlaylistsSet.addAll(event.entities.values) }
                 }
             }
-
-        init {
-            deregisterExistingRegistration()
-            RegistryBase.registerRepository(ObservablePlaylist::class.java, repository)
-
-            disableEvents(CREATE, UPDATE, DELETE)
-            val stubs = toList()
-            val audioItemRepository = findAudioItemRepository()
-            stubs.forEach { stub ->
-                val audioItemIds = if (stub is ImmutableObservablePlaylist) stub.audioItemIds else stub.audioItems.map { it.id }
-                val resolvedAudioItems =
-                    audioItemIds.mapNotNull { id ->
-                        @Suppress("UNCHECKED_CAST")
-                        (audioItemRepository as? Repository<Int, ObservableAudioItem>)?.findById(id)?.orElse(null)
-                    }
-                val realPlaylist = FXPlaylist(stub.id, stub.isDirectory, stub.name, resolvedAudioItems)
-                repository.findById(stub.id).ifPresent { old -> repository.remove(old) }
-                repository.add(realPlaylist)
-            }
-            toList().forEach { playlist ->
-                val stubPlaylistIds =
-                    stubs.find { stub -> stub.id == playlist.id }
-                        ?.let { stub ->
-                            if (stub is ImmutableObservablePlaylist) stub.playlistIds
-                            else stub.playlists.map { p -> p.id }.toSet()
-                        }
-                        ?: emptySet()
-                val foundPlaylists = findDeserializedPlaylistsFromIds(stubPlaylistIds, repository)
-                playlist.addPlaylists(foundPlaylists)
-            }
-            repository.forEach {
-                Platform.runLater { observablePlaylistsSet.add(it) }
-            }
-
-            activateEvents(CREATE, UPDATE, DELETE)
-
-            subscribe(playlistChangesSubscriber)
-        }
-
-        private fun findAudioItemRepository(): Any? {
-            return try {
-                val context = getContext(repository) ?: return null
-                val registryForMethod =
-                    context.javaClass.methods
-                        .firstOrNull { it.name.startsWith("registryFor") && it.parameterCount == 1 && it.parameterTypes[0] == Class::class.java }
-                        ?: return null
-                registryForMethod.invoke(context, ObservableAudioItem::class.java)
-            } catch (_: Exception) {
-                null
+            addOnNextEventAction(DELETE) { event ->
+                synchronized(playlistsProperty) {
+                    Platform.runLater { observablePlaylistsSet.removeAll(event.entities.values.toSet()) }
+                }
             }
         }
 
-        private fun findDeserializedPlaylistsFromIds(
-            playlists: Set<Int>,
-            repository: Repository<Int, ObservablePlaylist>
-        ): List<ObservablePlaylist> =
-            playlists.stream().map {
-                repository.findById(it)
-                    .orElseThrow { AudioItemManipulationException("AudioPlaylist with id $it not found during deserialization") }
-            }.toList()
+    init {
+        if (Companion.instance == null) {
+            Companion.instance = this
+        }
+        bindInitialRepository(ObservablePlaylist::class.java, ObservableAudioItem::class.java)
 
-        override fun createPlaylist(name: String): ObservablePlaylist = createPlaylist(name, emptyList())
-
-        override fun createPlaylist(
-            name: String,
-            audioItems: List<ObservableAudioItem>
-        ): ObservablePlaylist {
-            require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
-            return FXPlaylist(newId(), false, name, audioItems).also {
-                logger.debug { "Created playlist $it" }
-                add(it)
-            }
+        forEach {
+            Platform.runLater { observablePlaylistsSet.add(it) }
         }
 
-        override fun createPlaylistDirectory(name: String): ObservablePlaylist = createPlaylistDirectory(name, emptyList())
+        subscribe(playlistChangesSubscriber)
+    }
 
-        override fun createPlaylistDirectory(
-            name: String,
-            audioItems: List<ObservableAudioItem>
-        ): ObservablePlaylist {
-            require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
-            return FXPlaylist(newId(), true, name, audioItems).also {
-                logger.debug { "Created playlist directory $it" }
-                add(it)
-            }
-        }
+    override fun createPlaylistFromProperties(
+        id: Int,
+        isDirectory: Boolean,
+        name: String,
+        initialAudioItemIds: List<Int>
+    ): ObservablePlaylist = FXPlaylist(id, isDirectory, name, initialAudioItemIds = initialAudioItemIds)
 
-        /**
-         * Cancels the base class subscriptions and the internal playlist changes subscriber,
-         * then deregisters the playlist repository from LirpContext.
-         */
-        override fun close() {
-            super.close()
-            playlistChangesSubscriber.cancelSubscription()
-            deregisterFromLirpContext(repository)
-        }
+    override fun createPlaylist(name: String): ObservablePlaylist = createPlaylist(name, emptyList())
 
-        override fun toString() = "observablePlaylistHierarchy(playlistsCount=${size()})"
-
-        private fun deregisterExistingRegistration() {
-            try {
-                val context = getContext(repository) ?: return
-                val registryForMethod =
-                    context.javaClass.methods
-                        .firstOrNull { it.name.startsWith("registryFor") && it.parameterCount == 1 && it.parameterTypes[0] == Class::class.java }
-                        ?: return
-                val existing = registryForMethod.invoke(context, ObservablePlaylist::class.java) ?: return
-                if (existing !== repository) {
-                    val registryInterface = Class.forName("net.transgressoft.lirp.persistence.Registry")
-                    val deregisterMethod =
-                        context.javaClass.methods
-                            .firstOrNull {
-                                it.name.startsWith("deregister") &&
-                                    it.parameterCount == 1 &&
-                                    registryInterface.isAssignableFrom(it.parameterTypes[0])
-                            }
-                            ?: return
-                    deregisterMethod.invoke(context, existing)
-                }
-            } catch (_: Exception) {
-                // Best-effort; failure is non-critical since registerRepository will detect conflicts
-            }
-        }
-
-        private fun deregisterFromLirpContext(repo: Any) {
-            try {
-                val context = getContext(repo) ?: return
-                val registryInterface = Class.forName("net.transgressoft.lirp.persistence.Registry")
-                val deregisterMethod =
-                    context.javaClass.methods
-                        .firstOrNull { it.name.startsWith("deregister") && it.parameterCount == 1 && registryInterface.isAssignableFrom(it.parameterTypes[0]) }
-                        ?: return
-                deregisterMethod.invoke(context, repo)
-            } catch (_: Exception) {
-                // Deregistration is best-effort; failure does not impact lifecycle semantics
-            }
-        }
-
-        private fun getContext(repo: Any): Any? {
-            return try {
-                val getContextMethod =
-                    repo.javaClass.methods
-                        .firstOrNull { it.name.startsWith("getContext") && it.parameterCount == 0 }
-                        ?: return null
-                getContextMethod.invoke(repo)
-            } catch (_: Exception) {
-                null
-            }
-        }
-
-        /**
-         * JavaFX playlist implementation with bidirectional observable property bindings.
-         *
-         * Implemented as an inner class to access the enclosing hierarchy's parent tracking.
-         * All property modifications execute on the JavaFX Application Thread, and changes to
-         * nested playlists or audio items automatically update the recursive audio items property.
-         */
-        private inner class FXPlaylist(
-            id: Int,
-            isDirectory: Boolean,
-            name: String,
-            audioItems: List<ObservableAudioItem> = listOf(),
-            playlists: Set<ObservablePlaylist> = setOf()
-        ): MutablePlaylistBase(id, isDirectory, name, audioItems, playlists), ObservablePlaylist {
-            private val logger = KotlinLogging.logger {}
-
-            private val _nameProperty = SimpleStringProperty(this, "name", name)
-
-            override val nameProperty: ReadOnlyStringProperty = _nameProperty
-
-            override var name: String
-                get() = _nameProperty.get()
-                set(value) {
-                    if (value != _nameProperty.get()) {
-                        mutateAndPublish {
-                            _nameProperty.set(value)
-                        }
-                    }
-                }
-
-            private val _isDirectoryProperty = SimpleBooleanProperty(this, "isDirectory", isDirectory)
-
-            override val isDirectoryProperty: ReadOnlyBooleanProperty = _isDirectoryProperty
-
-            override var isDirectory: Boolean
-                get() = _isDirectoryProperty.get()
-                set(value) {
-                    if (value != _isDirectoryProperty.get()) {
-                        mutateAndPublish {
-                            _isDirectoryProperty.set(value)
-                        }
-                    }
-                }
-
-            private val _audioItemsProperty =
-                SimpleListProperty(this, "audioItems", FXCollections.observableArrayList(ArrayList(audioItems))).apply {
-                    addListener { _, _, _ ->
-                        replaceRecursiveAudioItems()
-                        changePlaylistCover()
-                    }
-                }
-
-            private fun replaceRecursiveAudioItems() {
-                val currentPlaylists = _playlistsProperty.toList()
-                val currentAudioItems = _audioItemsProperty.toList()
-
-                Platform.runLater {
-                    _audioItemsRecursiveProperty.clear()
-                    _audioItemsRecursiveProperty.addAll(
-                        buildList<ObservableAudioItem> {
-                            addAll(currentAudioItems)
-                            addAll(currentPlaylists.flatMap { it.audioItemsRecursive })
-                        }
-                    )
-                }
-            }
-
-            private fun changePlaylistCover() {
-                val newCover =
-                    audioItems.stream()
-                        .map { it.coverImageProperty.get() }
-                        .filter { it.isPresent }
-                        .findAny()
-
-                Platform.runLater {
-                    if (newCover.isPresent) {
-                        _coverImageProperty.set(newCover.get())
-                    } else {
-                        _coverImageProperty.set(Optional.empty())
-                    }
-                }
-            }
-
-            override val audioItemsProperty: ReadOnlyListProperty<ObservableAudioItem> = _audioItemsProperty
-
-            override val audioItems: MutableList<ObservableAudioItem>
-                get() = audioItemsProperty
-
-            private val _playlistsProperty = SimpleSetProperty(this, "playlists", FXCollections.observableSet(HashSet(playlists)))
-
-            override val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist> = _playlistsProperty
-
-            override val playlists: MutableSet<ObservablePlaylist>
-                get() = playlistsProperty
-
-            private val _audioItemsRecursiveProperty =
-                SimpleListProperty(
-                    this,
-                    "audioItemsRecursive",
-                    FXCollections.observableArrayList(
-                        buildList {
-                            addAll(audioItems)
-                            addAll(playlists.stream().flatMap { it.audioItemsRecursive.stream() }.toList())
-                        }
-                    )
-                )
-
-            override val audioItemsRecursiveProperty: ReadOnlyListProperty<ObservableAudioItem> = _audioItemsRecursiveProperty
-
-            override val audioItemsRecursive: List<ObservableAudioItem>
-                get() = audioItemsRecursiveProperty.get()
-
-            private val _coverImageProperty =
-                SimpleObjectProperty(
-                    this,
-                    "coverImage",
-                    this.audioItems.stream().filter {
-                        it.coverImageProperty.get().isPresent
-                    }.findFirst().map { it.coverImageProperty.get().get() }
-                )
-
-            override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>> = _coverImageProperty
-
-            override fun addAudioItems(audioItems: Collection<ObservableAudioItem>): Boolean {
-                val itemsToAdd = audioItems.toList()
-                val currentItems = synchronized(_audioItemsProperty) { _audioItemsProperty.toList() }
-                val result = currentItems.any { it !in itemsToAdd }
-                mutateAndPublish {
-                    Platform.runLater {
-                        synchronized(_audioItemsProperty) {
-                            _audioItemsProperty.addAll(itemsToAdd)
-                        }
-                    }
-                }
-                logger.debug { "Added $itemsToAdd to playlist $uniqueId" }
-                return result
-            }
-
-            override fun removeAudioItems(audioItems: Collection<ObservableAudioItem>): Boolean {
-                val itemsToRemove = audioItems.toSet()
-                val currentItems = synchronized(_audioItemsProperty) { _audioItemsProperty.toSet() }
-                val hasItems = itemsToRemove.any { it in currentItems }
-                Platform.runLater {
-                    synchronized(_audioItemsProperty) {
-                        _audioItemsProperty.removeAll(itemsToRemove)
-                    }
-                }
-                if (hasItems) {
-                    logger.debug { "Removed $itemsToRemove from playlist $uniqueId" }
-                }
-                return hasItems
-            }
-
-            @Suppress("INAPPLICABLE_JVM_NAME")
-            @JvmName("removeAudioItemIds")
-            override fun removeAudioItems(audioItemIds: Collection<Int>): Boolean {
-                val idsToRemove = audioItemIds.toSet()
-                val currentItems = synchronized(_audioItemsProperty) { _audioItemsProperty.toList() }
-                val hasItems = currentItems.any { it.id in idsToRemove }
-                Platform.runLater {
-                    synchronized(_audioItemsProperty) {
-                        _audioItemsProperty.removeAll { it.id in idsToRemove }
-                    }
-                }
-                if (hasItems) {
-                    logger.debug { "Removed audio items with ids $idsToRemove from playlist $uniqueId" }
-                }
-                return hasItems
-            }
-
-            override fun addPlaylists(playlists: Collection<ObservablePlaylist>): Boolean {
-                playlists.forEach {
-                    findParentPlaylist(it).ifPresent { parentPlaylist: ObservablePlaylist ->
-                        parentPlaylist.removePlaylist(it)
-                        logger.debug { "Playlist '${it.name}' removed from '$parentPlaylist'" }
-                    }
-                }
-                val hasNew = playlists.any { it !in _playlistsProperty }
-                if (hasNew) {
-                    val newPlaylists = playlists.filter { it !in _playlistsProperty }
-
-                    mutateAndPublish {
-                        Platform.runLater {
-                            _playlistsProperty.addAll(newPlaylists)
-                            replaceRecursiveAudioItems()
-                        }
-                        repeat(playlists.size) {
-                            putAllPlaylistInHierarchy(uniqueId, playlists)
-                        }
-                        logger.debug { "Added $playlists to playlist $uniqueId" }
-                    }
-                }
-                return hasNew
-            }
-
-            override fun removePlaylists(playlists: Collection<ObservablePlaylist>): Boolean {
-                val containsPlaylists = playlists.any { it in _playlistsProperty }
-                if (containsPlaylists) {
-                    mutateAndPublish {
-                        Platform.runLater {
-                            _playlistsProperty.removeAll(playlists.toSet())
-                        }
-                        playlists.forEach { playlist ->
-                            removePlaylistFromHierarchy(uniqueId, playlist)
-                        }
-                        logger.debug { "Removed $playlists from playlist $uniqueId" }
-                    }
-                }
-                return containsPlaylists
-            }
-
-            @Suppress("INAPPLICABLE_JVM_NAME")
-            @JvmName("removePlaylistIds")
-            override fun removePlaylists(playlistIds: Collection<Int>): Boolean {
-                val result = _playlistsProperty.stream().anyMatch(playlists::contains)
-                mutateAndPublish {
-                    _playlistsProperty.removeAll { playlistIds.contains(it.id) }
-                    playlistIds.forEach { playlistId ->
-                        findById(playlistId).ifPresent { playlist ->
-                            removePlaylistFromHierarchy(uniqueId, playlist)
-                        }
-                    }
-                    logger.debug { "Removed playlists with ids $playlistIds from playlist $uniqueId" }
-                }
-                return result
-            }
-
-            override fun clearAudioItems() {
-                Platform.runLater { _audioItemsProperty.clear() }
-                logger.debug { "Cleared audio items from playlist $uniqueId" }
-            }
-
-            override fun clearPlaylists() {
-                if (_playlistsProperty.isNotEmpty()) {
-                    val playlistsBeforeClear = _playlistsProperty.toSet()
-                    mutateAndPublish {
-                        _playlistsProperty.clear()
-                        playlistsBeforeClear.forEach { playlist ->
-                            removePlaylistFromHierarchy(uniqueId, playlist)
-                        }
-                        logger.debug { "Cleared playlists from playlist $uniqueId" }
-                    }
-                }
-            }
-
-            override fun compareTo(other: AudioPlaylist<ObservableAudioItem>): Int =
-                if (nameProperty.get() == other.name) {
-                    val size = playlists.size + audioItemsRecursive.size
-                    val objectSize = other.playlists.size + other.audioItemsRecursive.size
-                    size - objectSize
-                } else {
-                    nameProperty.get().compareTo(other.name)
-                }
-
-            override fun equals(other: Any?): Boolean {
-                if (this === other) return true
-                if (other == null || javaClass != other.javaClass) return false
-                val that = other as FXPlaylist
-                return id == that.id &&
-                    isDirectory == that.isDirectory &&
-                    name == that.name &&
-                    audioItems == that.audioItems &&
-                    playlists == that.playlists
-            }
-
-            override fun hashCode() = Objects.hashCode(id, isDirectory, name, audioItems, playlists)
-
-            override fun clone(): FXPlaylist = FXPlaylist(id, isDirectory, name, audioItems.toList(), playlists.toSet())
-
-            private fun <T> formatCollectionWithIndentation(collection: Collection<T>): String {
-                if (collection.isEmpty()) return "[]"
-                return collection.joinToString(separator = ",\n\t", prefix = "[\n\t", postfix = "\n]") { item ->
-                    item.toString().split("\n").joinToString("\n\t")
-                }
-            }
-
-            override fun toString(): String {
-                val formattedAudioItems = formatCollectionWithIndentation(audioItems)
-                val formattedPlaylists = formatCollectionWithIndentation(playlists)
-                return "FXPlaylist(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$formattedAudioItems, playlists=$formattedPlaylists)"
-            }
+    override fun createPlaylist(
+        name: String,
+        audioItems: List<ObservableAudioItem>
+    ): ObservablePlaylist {
+        require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
+        return FXPlaylist(newId(), false, name, audioItems).also {
+            logger.debug { "Created playlist $it" }
+            add(it)
         }
     }
 
-val observablePlaylistSerializersModule =
+    override fun createPlaylistDirectory(name: String): ObservablePlaylist = createPlaylistDirectory(name, emptyList())
+
+    override fun createPlaylistDirectory(
+        name: String,
+        audioItems: List<ObservableAudioItem>
+    ): ObservablePlaylist {
+        require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
+        return FXPlaylist(newId(), true, name, audioItems).also {
+            logger.debug { "Created playlist directory $it" }
+            add(it)
+        }
+    }
+
+    /**
+     * Cancels the base class subscriptions and the internal playlist changes subscriber,
+     * then deregisters the playlist repository from LirpContext.
+     */
+    override fun close() {
+        super.close()
+        playlistChangesSubscriber.cancelSubscription()
+        RegistryBase.deregisterRepository(ObservablePlaylist::class.java)
+        if (Companion.instance === this) Companion.instance = null
+    }
+
+    override fun toString() = "observablePlaylistHierarchy(playlistsCount=${size()})"
+
+    /**
+     * JavaFX playlist implementation with bidirectional observable property bindings.
+     *
+     * Implemented as an inner class to access the enclosing hierarchy's parent tracking.
+     * All property modifications execute on the JavaFX Application Thread, and changes to
+     * nested playlists or audio items automatically update the recursive audio items property.
+     */
+    private inner class FXPlaylist(
+        id: Int,
+        isDirectory: Boolean,
+        name: String,
+        audioItems: List<ObservableAudioItem> = listOf(),
+        playlists: Set<ObservablePlaylist> = setOf(),
+        initialAudioItemIds: List<Int> = audioItems.map { it.id }
+    ): MutablePlaylistBase(id, isDirectory, name, audioItems, playlists, initialAudioItemIds), ObservablePlaylist {
+        private val logger = KotlinLogging.logger {}
+
+        private val _nameProperty = SimpleStringProperty(this, "name", name)
+
+        override val nameProperty: ReadOnlyStringProperty = _nameProperty
+
+        override var name: String
+            get() = _nameProperty.get()
+            set(value) {
+                if (value != _nameProperty.get()) {
+                    mutateAndPublish {
+                        _nameProperty.set(value)
+                    }
+                }
+            }
+
+        private val _isDirectoryProperty = SimpleBooleanProperty(this, "isDirectory", isDirectory)
+
+        override val isDirectoryProperty: ReadOnlyBooleanProperty = _isDirectoryProperty
+
+        override var isDirectory: Boolean
+            get() = _isDirectoryProperty.get()
+            set(value) {
+                if (value != _isDirectoryProperty.get()) {
+                    mutateAndPublish {
+                        _isDirectoryProperty.set(value)
+                    }
+                }
+            }
+
+        private val _audioItemsProperty =
+            SimpleListProperty(this, "audioItems", FXCollections.observableArrayList(ArrayList(audioItems))).apply {
+                addListener { _, _, _ ->
+                    replaceRecursiveAudioItems()
+                    changePlaylistCover()
+                }
+            }
+
+        private fun replaceRecursiveAudioItems() {
+            val currentPlaylists = _playlistsProperty.toList()
+            val currentAudioItems = _audioItemsProperty.toList()
+
+            Platform.runLater {
+                _audioItemsRecursiveProperty.clear()
+                _audioItemsRecursiveProperty.addAll(
+                    buildList<ObservableAudioItem> {
+                        addAll(currentAudioItems)
+                        addAll(currentPlaylists.flatMap { it.audioItemsRecursive })
+                    }
+                )
+            }
+        }
+
+        private fun changePlaylistCover() {
+            val newCover =
+                audioItems.stream()
+                    .map { it.coverImageProperty.get() }
+                    .filter { it.isPresent }
+                    .findAny()
+
+            Platform.runLater {
+                if (newCover.isPresent) {
+                    _coverImageProperty.set(newCover.get())
+                } else {
+                    _coverImageProperty.set(Optional.empty())
+                }
+            }
+        }
+
+        override val audioItemsProperty: ReadOnlyListProperty<ObservableAudioItem> = _audioItemsProperty
+
+        override val audioItems: MutableList<ObservableAudioItem>
+            get() = audioItemsProperty
+
+        private val _playlistsProperty = SimpleSetProperty(this, "playlists", FXCollections.observableSet(HashSet(playlists)))
+
+        override val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist> = _playlistsProperty
+
+        override val playlists: MutableSet<ObservablePlaylist>
+            get() = playlistsProperty
+
+        private val _audioItemsRecursiveProperty =
+            SimpleListProperty(
+                this,
+                "audioItemsRecursive",
+                FXCollections.observableArrayList(
+                    buildList {
+                        addAll(audioItems)
+                        addAll(playlists.stream().flatMap { it.audioItemsRecursive.stream() }.toList())
+                    }
+                )
+            )
+
+        override val audioItemsRecursiveProperty: ReadOnlyListProperty<ObservableAudioItem> = _audioItemsRecursiveProperty
+
+        override val audioItemsRecursive: List<ObservableAudioItem>
+            get() = audioItemsRecursiveProperty.get()
+
+        private val _coverImageProperty =
+            SimpleObjectProperty(
+                this,
+                "coverImage",
+                this.audioItems.stream().filter {
+                    it.coverImageProperty.get().isPresent
+                }.findFirst().map { it.coverImageProperty.get().get() }
+            )
+
+        override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>> = _coverImageProperty
+
+        override fun addAudioItems(audioItems: Collection<ObservableAudioItem>): Boolean {
+            val itemsToAdd = audioItems.toList()
+            val currentItems = synchronized(_audioItemsProperty) { _audioItemsProperty.toList() }
+            val result = currentItems.any { it !in itemsToAdd }
+            mutateAndPublish {
+                Platform.runLater {
+                    synchronized(_audioItemsProperty) {
+                        _audioItemsProperty.addAll(itemsToAdd)
+                    }
+                }
+            }
+            logger.debug { "Added $itemsToAdd to playlist $uniqueId" }
+            return result
+        }
+
+        override fun removeAudioItems(audioItems: Collection<ObservableAudioItem>): Boolean {
+            val itemsToRemove = audioItems.toSet()
+            val currentItems = synchronized(_audioItemsProperty) { _audioItemsProperty.toSet() }
+            val hasItems = itemsToRemove.any { it in currentItems }
+            Platform.runLater {
+                synchronized(_audioItemsProperty) {
+                    _audioItemsProperty.removeAll(itemsToRemove)
+                }
+            }
+            if (hasItems) {
+                logger.debug { "Removed $itemsToRemove from playlist $uniqueId" }
+            }
+            return hasItems
+        }
+
+        @Suppress("INAPPLICABLE_JVM_NAME")
+        @JvmName("removeAudioItemIds")
+        override fun removeAudioItems(audioItemIds: Collection<Int>): Boolean {
+            val idsToRemove = audioItemIds.toSet()
+            val currentItems = synchronized(_audioItemsProperty) { _audioItemsProperty.toList() }
+            val hasItems = currentItems.any { it.id in idsToRemove }
+            Platform.runLater {
+                synchronized(_audioItemsProperty) {
+                    _audioItemsProperty.removeAll { it.id in idsToRemove }
+                }
+            }
+            if (hasItems) {
+                logger.debug { "Removed audio items with ids $idsToRemove from playlist $uniqueId" }
+            }
+            return hasItems
+        }
+
+        override fun addPlaylists(playlists: Collection<ObservablePlaylist>): Boolean {
+            playlists.forEach {
+                findParentPlaylist(it).ifPresent { parentPlaylist: ObservablePlaylist ->
+                    parentPlaylist.removePlaylist(it)
+                    logger.debug { "Playlist '${it.name}' removed from '$parentPlaylist'" }
+                }
+            }
+            val hasNew = playlists.any { it !in _playlistsProperty }
+            if (hasNew) {
+                val newPlaylists = playlists.filter { it !in _playlistsProperty }
+
+                mutateAndPublish {
+                    Platform.runLater {
+                        _playlistsProperty.addAll(newPlaylists)
+                        replaceRecursiveAudioItems()
+                    }
+                    repeat(playlists.size) {
+                        putAllPlaylistInHierarchy(uniqueId, playlists)
+                    }
+                    logger.debug { "Added $playlists to playlist $uniqueId" }
+                }
+            }
+            return hasNew
+        }
+
+        override fun removePlaylists(playlists: Collection<ObservablePlaylist>): Boolean {
+            val containsPlaylists = playlists.any { it in _playlistsProperty }
+            if (containsPlaylists) {
+                mutateAndPublish {
+                    Platform.runLater {
+                        _playlistsProperty.removeAll(playlists.toSet())
+                    }
+                    playlists.forEach { playlist ->
+                        removePlaylistFromHierarchy(uniqueId, playlist)
+                    }
+                    logger.debug { "Removed $playlists from playlist $uniqueId" }
+                }
+            }
+            return containsPlaylists
+        }
+
+        @Suppress("INAPPLICABLE_JVM_NAME")
+        @JvmName("removePlaylistIds")
+        override fun removePlaylists(playlistIds: Collection<Int>): Boolean {
+            val result = _playlistsProperty.stream().anyMatch(playlists::contains)
+            mutateAndPublish {
+                _playlistsProperty.removeAll { playlistIds.contains(it.id) }
+                playlistIds.forEach { playlistId ->
+                    findById(playlistId).ifPresent { playlist ->
+                        removePlaylistFromHierarchy(uniqueId, playlist)
+                    }
+                }
+                logger.debug { "Removed playlists with ids $playlistIds from playlist $uniqueId" }
+            }
+            return result
+        }
+
+        override fun clearAudioItems() {
+            Platform.runLater { _audioItemsProperty.clear() }
+            logger.debug { "Cleared audio items from playlist $uniqueId" }
+        }
+
+        override fun clearPlaylists() {
+            if (_playlistsProperty.isNotEmpty()) {
+                val playlistsBeforeClear = _playlistsProperty.toSet()
+                mutateAndPublish {
+                    _playlistsProperty.clear()
+                    playlistsBeforeClear.forEach { playlist ->
+                        removePlaylistFromHierarchy(uniqueId, playlist)
+                    }
+                    logger.debug { "Cleared playlists from playlist $uniqueId" }
+                }
+            }
+        }
+
+        override fun compareTo(other: AudioPlaylist<ObservableAudioItem>): Int =
+            if (nameProperty.get() == other.name) {
+                val size = playlists.size + audioItemsRecursive.size
+                val objectSize = other.playlists.size + other.audioItemsRecursive.size
+                size - objectSize
+            } else {
+                nameProperty.get().compareTo(other.name)
+            }
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other == null || javaClass != other.javaClass) return false
+            val that = other as FXPlaylist
+            val thisAudioItems = synchronized(_audioItemsProperty) { _audioItemsProperty.toList() }
+            val thatAudioItems = synchronized(that._audioItemsProperty) { that._audioItemsProperty.toList() }
+            return id == that.id &&
+                isDirectory == that.isDirectory &&
+                name == that.name &&
+                thisAudioItems == thatAudioItems &&
+                playlists == that.playlists
+        }
+
+        override fun hashCode() = Objects.hashCode(id, isDirectory, name, synchronized(_audioItemsProperty) { _audioItemsProperty.toList() }, playlists)
+
+        override fun clone(): FXPlaylist = FXPlaylist(id, isDirectory, name, audioItems.toList(), playlists.toSet())
+
+        private fun <T> formatCollectionWithIndentation(collection: Collection<T>): String {
+            if (collection.isEmpty()) return "[]"
+            return collection.joinToString(separator = ",\n\t", prefix = "[\n\t", postfix = "\n]") { item ->
+                item.toString().split("\n").joinToString("\n\t")
+            }
+        }
+
+        override fun toString(): String {
+            val formattedAudioItems = formatCollectionWithIndentation(audioItems)
+            val formattedPlaylists = formatCollectionWithIndentation(playlists)
+            return "FXPlaylist(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$formattedAudioItems, playlists=$formattedPlaylists)"
+        }
+    }
+
+    /**
+     * Companion object serializer for [ObservablePlaylistHierarchy].
+     *
+     * Extends [AudioPlaylistSerializerBase] so it can be used directly as a
+     * [kotlinx.serialization.KSerializer] for [ObservablePlaylist]. When [instance] is set,
+     * [createInstance] calls [createPlaylistFromProperties] to construct real [FXPlaylist]
+     * objects directly. When [instance] is null, construction fails with an error.
+     */
+    companion object : AudioPlaylistSerializerBase<ObservableAudioItem, ObservablePlaylist>() {
+
+        /**
+         * The active [ObservablePlaylistHierarchy] instance used by [createInstance] during deserialization.
+         *
+         * Set during [ObservablePlaylistHierarchy] initialization and cleared in [close].
+         */
+        internal var instance: ObservablePlaylistHierarchy? = null
+
+        /**
+         * Creates a fully initialized [ObservablePlaylistHierarchy] bound to the given [repository].
+         *
+         * The factory method controls the creation order required for companion-based deserialization:
+         * hierarchy created first (empty), companion [instance] set, then repository bound
+         * (triggering deserialization with real [FXPlaylist] instances).
+         *
+         * @param repository the repository to bind and register in LirpContext
+         * @return the fully initialized [ObservablePlaylistHierarchy]
+         */
+        fun createAndBind(repository: Repository<Int, ObservablePlaylist>): ObservablePlaylistHierarchy {
+            val hierarchy = ObservablePlaylistHierarchy(repository)
+            instance = hierarchy
+            return hierarchy
+        }
+
+        /**
+         * Creates an [ObservablePlaylistHierarchy] backed by a [JsonFileRepository] at [file],
+         * handling two-phase construction to avoid initialization order issues.
+         *
+         * Sets [instance] before constructing the [JsonFileRepository] so that deserialized playlists
+         * are created as [FXPlaylist] instances. After loading, switches the backing store to the JSON
+         * repository so all subsequent CRUD operations persist to [file].
+         *
+         * @param file the JSON file to load from and persist to
+         * @return the fully initialized [ObservablePlaylistHierarchy]
+         */
+        fun createAndBind(file: java.io.File): ObservablePlaylistHierarchy {
+            val hierarchy = ObservablePlaylistHierarchy()
+            val jsonRepo = net.transgressoft.lirp.persistence.json.JsonFileRepository(file, ObservablePlaylistMapSerializer)
+            hierarchy.switchToRepository(jsonRepo, ObservablePlaylist::class.java, ObservableAudioItem::class.java)
+            return hierarchy
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        override fun createInstance(propertiesList: List<Any?>): ObservablePlaylist {
+            val hierarchy = instance
+            check(hierarchy != null) {
+                "ObservablePlaylistHierarchy.instance must be set before deserialization. Use createAndBind() or set instance manually."
+            }
+            return hierarchy.createPlaylistFromProperties(
+                id = propertiesList[0] as Int,
+                isDirectory = propertiesList[1] as Boolean,
+                name = propertiesList[2] as String,
+                initialAudioItemIds = propertiesList[3] as List<Int>
+            )
+        }
+    }
+}
+
+internal val observablePlaylistSerializersModule =
     SerializersModule {
-        polymorphic(ObservablePlaylist::class, ObservablePlaylistSerializer)
+        polymorphic(ObservablePlaylist::class, ObservablePlaylistHierarchy)
     }

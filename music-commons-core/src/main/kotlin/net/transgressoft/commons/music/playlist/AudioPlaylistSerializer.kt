@@ -17,9 +17,7 @@
 
 package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
-import net.transgressoft.lirp.entity.toIds
 import net.transgressoft.lirp.persistence.json.LirpEntityPolymorphicSerializer
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
@@ -43,31 +41,27 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
+/**
+ * Serializer map for [MutableAudioPlaylist] instances keyed by [Int] ID.
+ *
+ * Uses [DefaultPlaylistHierarchy] companion object as the element serializer. Deserialization
+ * requires an active [DefaultPlaylistHierarchy] instance set via [DefaultPlaylistHierarchy.Companion.createAndBind]
+ * before decoding, so that [MutableAudioPlaylist] instances are constructed directly in the hierarchy.
+ */
 @get:JvmName("AudioPlaylistMapSerializer")
-val AudioPlaylistMapSerializer: KSerializer<Map<Int, MutableAudioPlaylist>> = MapSerializer(Int.serializer(), MutableAudioPlaylistSerializer)
+internal val AudioPlaylistMapSerializer: KSerializer<Map<Int, MutableAudioPlaylist>> =
+    MapSerializer(Int.serializer(), DefaultPlaylistHierarchy)
 
 /**
- * Kotlinx serialization serializer for [MutableAudioPlaylist] instances.
+ * Abstract kotlinx serialization serializer for [ReactiveAudioPlaylist] implementations.
  *
- * Serializes playlists by storing audio item and nested playlist IDs rather than full objects.
- * During deserialization, returns an [ImmutablePlaylist] carrying the ID lists; the enclosing
- * [DefaultPlaylistHierarchy] init block replaces these placeholders with real [MutableAudioPlaylist]
- * instances whose audio item references are resolved lazily via the [net.transgressoft.lirp.persistence.Aggregate]
- * delegate on [PlaylistHierarchyBase.MutablePlaylistBase].
+ * Serializes playlists by storing audio item IDs and nested playlist IDs rather than full objects.
+ * Concrete subclasses provide [createInstance] to construct the appropriate playlist type from
+ * the deserialized properties list. The [DefaultPlaylistHierarchy] companion object is the primary
+ * implementation, constructing real [MutableAudioPlaylist] instances during deserialization.
  */
-internal object MutableAudioPlaylistSerializer : AudioPlaylistSerializerBase<AudioItem, MutableAudioPlaylist>() {
-    @Suppress("UNCHECKED_CAST")
-    override fun createInstance(propertiesList: List<Any?>): MutableAudioPlaylist =
-        ImmutablePlaylist(
-            id = propertiesList[0] as Int,
-            isDirectory = propertiesList[1] as Boolean,
-            name = propertiesList[2] as String,
-            audioItemIds = propertiesList[3] as List<Int>,
-            playlistIds = propertiesList[4] as Set<Int>
-        )
-}
-
-abstract class AudioPlaylistSerializerBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>> : LirpEntityPolymorphicSerializer<P> {
+abstract class AudioPlaylistSerializerBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>> :
+    LirpEntityPolymorphicSerializer<P> {
 
     override val descriptor: SerialDescriptor =
         buildClassSerialDescriptor("AudioPlaylist") {
@@ -107,32 +101,6 @@ abstract class AudioPlaylistSerializerBase<I : ReactiveAudioItem<I>, P : Reactiv
 
     private fun mapPlaylistIds(ids: JsonArray): Set<Int> = ids.map { it.jsonPrimitive.int }.toSet()
 
-    /**
-     * Returns the list of audio item IDs to serialize for the given playlist value.
-     *
-     * Subclasses may override this method to resolve IDs from a stub's `audioItemIds` field
-     * rather than from the live `audioItems` collection, when the playlist is a deserialization stub
-     * that does not hold actual entity references.
-     */
-    protected open fun getAudioItemIds(value: P): List<Int> =
-        if (value is ImmutablePlaylist)
-            value.audioItemIds
-        else
-            value.audioItems.toIds()
-
-    /**
-     * Returns the list of nested playlist IDs to serialize for the given playlist value.
-     *
-     * Subclasses may override this method to resolve IDs from a stub's `playlistIds` field
-     * rather than from the live `playlists` collection, when the playlist is a deserialization stub
-     * that does not hold actual entity references.
-     */
-    protected open fun getPlaylistIds(value: P): List<Int> =
-        if (value is ImmutablePlaylist)
-            value.playlistIds.toList()
-        else
-            value.playlists.map { it.id }
-
     override fun serialize(
         encoder: Encoder,
         value: P
@@ -146,13 +114,13 @@ abstract class AudioPlaylistSerializerBase<I : ReactiveAudioItem<I>, P : Reactiv
                 put(
                     "audioItemIds",
                     buildJsonArray {
-                        getAudioItemIds(value).forEach { add(it) }
+                        value.audioItems.forEach { add(it.id) }
                     }
                 )
                 put(
                     "playlistIds",
                     buildJsonArray {
-                        getPlaylistIds(value).forEach { add(it) }
+                        value.playlists.forEach { add(it.id) }
                     }
                 )
             }

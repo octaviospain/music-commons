@@ -1,0 +1,121 @@
+package net.transgressoft.commons.fx.music
+
+import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.lirp.event.ReactiveScope
+import io.kotest.assertions.nondeterministic.eventually
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.optional.shouldBePresent
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+import io.kotest.property.Arb
+import io.kotest.property.arbitrary.next
+import javafx.application.Platform
+import org.testfx.api.FxToolkit
+import org.testfx.util.WaitForAsyncUtils
+import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+
+/**
+ * Tests for [FXMusicLibrary] verifying builder construction, JavaFX property exposure, and lifecycle.
+ */
+@ExperimentalCoroutinesApi
+internal class FXMusicLibraryTest : StringSpec({
+
+    val testDispatcher = UnconfinedTestDispatcher()
+    val testScope = CoroutineScope(testDispatcher)
+
+    beforeSpec {
+        ReactiveScope.flowScope = testScope
+        ReactiveScope.ioScope = testScope
+        FxToolkit.registerPrimaryStage()
+    }
+
+    afterSpec {
+        ReactiveScope.resetDefaultFlowScope()
+        ReactiveScope.resetDefaultIoScope()
+    }
+
+    suspend fun eventuallyOnFxThread(assertion: () -> Unit) {
+        eventually(500.milliseconds) {
+            Platform.runLater { assertion() }
+        }
+    }
+
+    "FXMusicLibrary builder creates volatile library by default" {
+        val library = FXMusicLibrary.builder().build()
+
+        library.audioLibrary().shouldNotBeNull()
+        library.playlistHierarchy().shouldNotBeNull()
+        library.waveformRepository().shouldNotBeNull()
+        library.audioItemsProperty.shouldNotBeNull()
+        library.playlistsProperty.shouldNotBeNull()
+
+        library.close()
+    }
+
+    "FXMusicLibrary exposes JavaFX properties" {
+        val library = FXMusicLibrary.builder().build()
+
+        library.audioItemsProperty.shouldNotBeNull()
+        library.emptyLibraryProperty.shouldNotBeNull()
+        library.artistsProperty.shouldNotBeNull()
+        library.artistCatalogsProperty.shouldNotBeNull()
+        library.albumsProperty.shouldNotBeNull()
+        library.albumCountProperty.shouldNotBeNull()
+        library.playlistsProperty.shouldNotBeNull()
+
+        library.emptyLibraryProperty.get() shouldBe true
+        library.audioItemsProperty.isEmpty() shouldBe true
+        library.playlistsProperty.isEmpty() shouldBe true
+
+        library.close()
+    }
+
+    "FXMusicLibrary curated methods work for audio items and playlists" {
+        val library = FXMusicLibrary.builder().build()
+
+        val audioPath = Arb.virtualAudioFile().next()
+        val audioItem = library.audioItemFromFile(audioPath)
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        audioItem.shouldNotBeNull()
+        audioItem.id shouldNotBe 0
+        library.audioLibrary().size() shouldBe 1
+
+        eventuallyOnFxThread {
+            library.audioItemsProperty.isEmpty() shouldBe false
+        }
+
+        val playlist = library.createPlaylist("My Playlist")
+        playlist.addAudioItem(audioItem)
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        library.findPlaylistByName("My Playlist") shouldBePresent {
+            it.name shouldBe "My Playlist"
+        }
+
+        library.close()
+    }
+
+    "FXMusicLibrary close releases all resources" {
+        val library = FXMusicLibrary.builder().build()
+
+        val audioItem = library.audioItemFromFile(Arb.virtualAudioFile().next())
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        library.audioLibrary().size() shouldBe 1
+
+        library.close()
+
+        // After close, new items are no longer tracked by the closed library
+        library.audioLibrary().size() shouldBe 1
+    }
+})

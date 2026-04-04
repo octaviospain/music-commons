@@ -46,8 +46,8 @@ dependencies {
 The core module depends on [lirp](https://github.com/octaviospain/lirp):
 
 ```kotlin
-implementation("net.transgressoft:lirp-api:2.1.0")
-implementation("net.transgressoft:lirp-core:2.1.0")
+implementation("net.transgressoft:lirp-api:2.2.0")
+implementation("net.transgressoft:lirp-core:2.2.0")
 ```
 
 ## Key Features
@@ -80,6 +80,7 @@ implementation("net.transgressoft:lirp-core:2.1.0")
 ### Persistence
 
 - **JSON file storage**: Powered by [lirp](https://github.com/octaviospain/lirp)'s `JsonFileRepository` with debounced file I/O
+- **SQL storage**: Powered by [lirp-sql](https://github.com/octaviospain/lirp)'s `SqlRepository` with HikariCP connection pooling and JetBrains Exposed
 - **Automatic serialization**: Built-in kotlinx-serialization serializers for all entities
 - **Transparent persistence**: Entity changes are persisted without manual save operations
 
@@ -106,93 +107,102 @@ Defines contracts and interfaces for the audio management domain.
 
 Concrete implementations with JSON file persistence via [lirp](https://github.com/octaviospain/lirp) and reactive event subscriptions.
 
-- `DefaultAudioLibrary` -- Full audio library with artist catalog indexing
-- `DefaultPlaylistHierarchy` -- Hierarchical playlist management with automatic sync
-- `DefaultAudioWaveformRepository` -- Waveform generation and caching
+- `MusicLibrary` -- Unified facade for headless audio management (builder-based entry point)
+- Internal implementations: `DefaultAudioLibrary`, `DefaultPlaylistHierarchy`, `DefaultAudioWaveformRepository`
 - Event subscribers for reactive synchronization between components
 
 ### music-commons-fx
 
 Bridges core module with JavaFX's property binding system.
 
-- `ObservableAudioLibrary` -- Observable collections for TableView/ListView binding
-- `ObservablePlaylistHierarchy` -- Observable playlist sets with property bindings
+- `FXMusicLibrary` -- Unified facade for JavaFX audio management with observable properties (builder-based entry point)
+- Internal implementations: `ObservableAudioLibrary`, `ObservablePlaylistHierarchy`
 - `JavaFxPlayer` -- Native JavaFX MediaPlayer wrapper with reactive events
 - `WaveformPane` -- Custom Canvas component for waveform visualization
 
 ## Usage Examples
 
-### Creating an Audio Library
+### Core module (headless)
+
+Use `MusicLibrary.builder()` as the single entry point for headless audio management:
 
 ```kotlin
-import net.transgressoft.commons.music.audio.DefaultAudioLibrary
-import net.transgressoft.lirp.persistence.json.JsonFileRepository
+import net.transgressoft.commons.music.MusicLibrary
 
-// Create a repository backed by a JSON file
-val repository = JsonFileRepository(
-    File("audio-library.json"),
-    AudioItemMapSerializer
-)
+// In-memory (volatile) storage -- no files needed
+val library = MusicLibrary.builder().build()
 
-// Initialize the library
-val audioLibrary = DefaultAudioLibrary(repository)
+// JSON file persistence
+val library = MusicLibrary.builder()
+    .audioLibraryJsonFile(File("audio-library.json"))
+    .playlistHierarchyJsonFile(File("playlists.json"))
+    .waveformRepositoryJsonFile(File("waveforms.json"))
+    .build()
 
-// Add a single audio file
-val audioItem = audioLibrary.createFromFile(Paths.get("/path/to/song.mp3"))
+// SQL persistence (requires KSP-generated SqlTableDef for each entity)
+val library = MusicLibrary.builder()
+    .audioLibrarySql(dataSource, audioItemTableDef)
+    .playlistHierarchySql(dataSource, playlistTableDef)
+    .waveformRepositorySql(dataSource, waveformTableDef)
+    .build()
+
+// Add audio files
+val audioItem = library.audioItemFromFile(Path.of("/path/to/song.mp3"))
 
 // Batch import (returns CompletableFuture)
-val audioItems = audioLibrary.createFromFileBatchAsync(listOfPaths).get()
-```
+val audioItems = library.audioLibrary().createFromFileBatchAsync(listOfPaths).get()
 
-### Working with Playlists
+// Create and manage playlists
+val playlist = library.createPlaylist("Favorites")
+library.playlistHierarchy().addAudioItemsToPlaylist(listOf(audioItem), "Favorites")
 
-```kotlin
-import net.transgressoft.commons.music.playlist.DefaultPlaylistHierarchy
-
-// Audio library must be constructed first so it registers in LirpContext
-val audioLibrary = DefaultAudioLibrary(audioRepository)
-val hierarchy = DefaultPlaylistHierarchy(playlistRepository)
-
-// Create playlists
-val playlist = hierarchy.createPlaylist("Favorites")
-val folder = hierarchy.createPlaylistDirectory("By Genre")
-
-// Add items and organize
-hierarchy.addAudioItemToPlaylist(audioItem, "Favorites")
-hierarchy.addPlaylistToDirectory(playlist, "By Genre")
-
-// Export to M3U
-playlist.exportToM3uFile(Paths.get("favorites.m3u"))
-```
-
-### Generating Waveforms
-
-```kotlin
-import net.transgressoft.commons.music.waveform.DefaultAudioWaveformRepository
-
-val waveformRepo = DefaultAudioWaveformRepository(repository, audioItemEventSubscriber)
-
-// Generate waveform asynchronously (width and height are Short)
-val waveform = waveformRepo
-    .getOrCreateWaveformAsync(audioItem, 800.toShort(), 300.toShort(), Dispatchers.IO)
+// Generate waveforms
+val waveform = library
+    .getOrCreateWaveformAsync(audioItem, 800.toShort(), 300.toShort())
     .get()
 
-// Create a waveform image file
-runBlocking {
-    waveform.createImage(File("waveform.png"), Color.CYAN, Color.BLACK, 800, 300)
-}
+// Export playlist to M3U
+playlist.exportToM3uFile(Path.of("favorites.m3u"))
+
+// Lifecycle
+library.close()
 ```
 
 ### JavaFX Integration
 
+Use `FXMusicLibrary.builder()` for JavaFX applications with observable property bindings:
+
 ```kotlin
-import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
+import net.transgressoft.commons.fx.music.FXMusicLibrary
 
-// Create observable library
-val observableLibrary = ObservableAudioLibrary(repository)
+val fxLibrary = FXMusicLibrary.builder()
+    .audioLibraryJsonFile(File("audio-library.json"))
+    .playlistHierarchyJsonFile(File("playlists.json"))
+    .waveformRepositoryJsonFile(File("waveforms.json"))
+    .build()
 
-// Bind to TableView -- changes automatically update the table
-tableView.itemsProperty().bind(observableLibrary.audioItemsProperty)
+// SQL persistence
+val fxLibrary = FXMusicLibrary.builder()
+    .audioLibrarySql(dataSource, observableAudioItemTableDef)
+    .playlistHierarchySql(dataSource, observablePlaylistTableDef)
+    .waveformRepositorySql(dataSource, waveformTableDef)
+    .build()
+
+// Bind directly to JavaFX UI components
+tableView.itemsProperty().bind(fxLibrary.audioItemsProperty)
+label.textProperty().bind(fxLibrary.albumCountProperty.asString())
+
+// Reactive playlist updates
+fxLibrary.playlistsProperty.addListener { _, _, _ -> /* refresh UI */ }
+
+// Create playlists
+val playlist = fxLibrary.createPlaylist("Favorites")
+
+// Add audio items
+fxLibrary.audioItemFromFile(Path.of("/path/to/song.mp3"))
+
+// Lifecycle
+fxLibrary.close()
 ```
 
 ### Audio Playback

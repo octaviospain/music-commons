@@ -56,6 +56,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
     }
 
     afterEach {
+        (audioRepository as? AutoCloseable)?.close()
         jsonFileRepository.close()
     }
 

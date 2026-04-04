@@ -12,7 +12,14 @@ import net.transgressoft.lirp.persistence.VolatileRepository
  */
 internal class TestPlaylistHierarchy(
     repository: Repository<Int, MutableAudioPlaylist> = VolatileRepository("TestPlaylistHierarchy")
-) : PlaylistHierarchyBase<AudioItem, MutableAudioPlaylist>(repository) {
+) : PlaylistHierarchyBase<AudioItem, MutableAudioPlaylist>(RepositoryDelegate(repository)) {
+
+    override fun createPlaylistFromProperties(
+        id: Int,
+        isDirectory: Boolean,
+        name: String,
+        initialAudioItemIds: List<Int>
+    ): MutableAudioPlaylist = TestMutablePlaylist(id, isDirectory, name)
 
     override fun createPlaylist(name: String): MutableAudioPlaylist {
         require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
