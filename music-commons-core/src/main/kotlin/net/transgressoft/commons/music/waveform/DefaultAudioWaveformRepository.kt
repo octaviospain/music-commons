@@ -36,7 +36,7 @@ import kotlinx.coroutines.future.future
  * Creates waveforms on-demand from audio items and caches them for reuse. Automatically
  * removes waveforms when their corresponding audio items are deleted to maintain consistency.
  */
-class DefaultAudioWaveformRepository<I: ReactiveAudioItem<I>>(
+internal class DefaultAudioWaveformRepository<I: ReactiveAudioItem<I>>(
     private val repository: Repository<Int, AudioWaveform> = VolatileRepository("AudioWaveformRepository"),
     private val audioItemEventSubscriber: AudioItemEventSubscriber<I> = AudioItemEventSubscriber("AudioWaveformRepositorySubscriber")
 ): AudioWaveformRepository<AudioWaveform, I>,
@@ -85,3 +85,13 @@ class DefaultAudioWaveformRepository<I: ReactiveAudioItem<I>>(
 
     override fun toString() = "WaveformRepository(waveformsCount=${size()})"
 }
+
+/**
+ * Creates an [AudioWaveformRepository] backed by [repository].
+ *
+ * Use this factory to construct a waveform repository without direct access to
+ * the internal [DefaultAudioWaveformRepository] implementation class.
+ */
+fun <I : ReactiveAudioItem<I>> audioWaveformRepository(
+    repository: Repository<Int, AudioWaveform> = VolatileRepository("AudioWaveformRepository")
+): AudioWaveformRepository<AudioWaveform, I> = DefaultAudioWaveformRepository(repository)

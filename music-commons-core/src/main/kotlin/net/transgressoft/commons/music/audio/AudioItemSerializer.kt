@@ -45,7 +45,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
 
 @get:JvmName("AudioItemMapSerializer")
-val AudioItemMapSerializer: KSerializer<Map<Int, AudioItem>> = MapSerializer(Int.serializer(), AudioItemSerializer)
+internal val AudioItemMapSerializer: KSerializer<Map<Int, AudioItem>> = MapSerializer(Int.serializer(), AudioItemSerializer)
 
 /**
  * Kotlinx serialization serializer for [AudioItem] instances.

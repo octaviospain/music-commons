@@ -18,8 +18,8 @@
 package net.transgressoft.commons.fx.music
 
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
-import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
 import net.transgressoft.commons.music.audio.Artist
+import net.transgressoft.commons.music.audio.AudioLibrary
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
@@ -27,15 +27,15 @@ import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 
 /**
- * Creates audio items for multiple artists in an [ObservableAudioLibrary] and returns them grouped by artist.
+ * Creates audio items for multiple artists in an [AudioLibrary] and returns them grouped by artist.
  *
  * Each artist gets a default album named "{artistName} Album". All items are added to the library
- * via [ObservableAudioLibrary.createFromFile].
+ * via [AudioLibrary.createFromFile].
  *
  * @param artistConfigs Map of artist name to number of items to create for that artist
  * @return Map of [Artist] to list of created [ObservableAudioItem] instances
  */
-fun ObservableAudioLibrary.createItemsByArtist(
+fun AudioLibrary<ObservableAudioItem, *>.createItemsByArtist(
     artistConfigs: Map<String, Int>
 ): Map<Artist, List<ObservableAudioItem>> =
     artistConfigs.flatMap { (artistName, itemCount) ->
@@ -52,13 +52,13 @@ fun ObservableAudioLibrary.createItemsByArtist(
     }.groupBy({ it.first }, { it.second })
 
 /**
- * Creates audio items for one artist across multiple albums in an [ObservableAudioLibrary].
+ * Creates audio items for one artist across multiple albums in an [AudioLibrary].
  *
  * @param artistName The artist name
  * @param albumItemCounts Map of album name to number of items to create per album
  * @return List of all created [ObservableAudioItem] instances
  */
-fun ObservableAudioLibrary.createItemsWithMultipleAlbums(
+fun AudioLibrary<ObservableAudioItem, *>.createItemsWithMultipleAlbums(
     artistName: String,
     albumItemCounts: Map<String, Int>
 ): List<ObservableAudioItem> {

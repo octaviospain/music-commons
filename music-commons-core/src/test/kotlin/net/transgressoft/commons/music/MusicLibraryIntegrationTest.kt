@@ -3,24 +3,16 @@ package net.transgressoft.commons.music
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.ArtistCatalog
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.AudioItemMapSerializer
 import net.transgressoft.commons.music.audio.AudioLibrary
-import net.transgressoft.commons.music.audio.DefaultAudioLibrary
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
-import net.transgressoft.commons.music.playlist.AudioPlaylistMapSerializer
-import net.transgressoft.commons.music.playlist.DefaultPlaylistHierarchy
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
 import net.transgressoft.commons.music.playlist.PlaylistHierarchy
 import net.transgressoft.commons.music.playlist.asJsonKeyValues
 import net.transgressoft.commons.music.waveform.AudioWaveform
-import net.transgressoft.commons.music.waveform.AudioWaveformMapSerializer
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
-import net.transgressoft.commons.music.waveform.DefaultAudioWaveformRepository
 import net.transgressoft.lirp.event.ReactiveScope
-import net.transgressoft.lirp.persistence.json.JsonFileRepository
-import net.transgressoft.lirp.persistence.json.JsonRepository
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
@@ -47,9 +39,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     lateinit var playlistsFile: File
     lateinit var waveformsFile: File
 
-    lateinit var audioLibraryRepository: JsonRepository<Int, AudioItem>
-    lateinit var playlistHierarchyRepository: JsonRepository<Int, MutableAudioPlaylist>
-    lateinit var waveformsRepository: JsonRepository<Int, AudioWaveform>
+    lateinit var musicLibrary: MusicLibrary
 
     lateinit var audioLibrary: AudioLibrary<AudioItem, ArtistCatalog<AudioItem>>
     lateinit var waveforms: AudioWaveformRepository<AudioWaveform, AudioItem>
@@ -65,19 +55,19 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         playlistsFile = tempfile("playlistHierarchy-test", ".json").apply { deleteOnExit() }
         waveformsFile = tempfile("waveformRepository-test", ".json").apply { deleteOnExit() }
 
-        audioLibraryRepository = JsonFileRepository(audioFile, AudioItemMapSerializer)
-        waveformsRepository = JsonFileRepository(waveformsFile, AudioWaveformMapSerializer)
-        playlistHierarchyRepository = JsonFileRepository(playlistsFile, AudioPlaylistMapSerializer)
-
-        audioLibrary = DefaultAudioLibrary(audioLibraryRepository)
-        waveforms = DefaultAudioWaveformRepository(waveformsRepository)
-        playlistHierarchy = DefaultPlaylistHierarchy(playlistHierarchyRepository)
+        musicLibrary =
+            MusicLibrary.builder()
+                .audioLibraryJsonFile(audioFile)
+                .playlistHierarchyJsonFile(playlistsFile)
+                .waveformRepositoryJsonFile(waveformsFile)
+                .build()
+        audioLibrary = musicLibrary.audioLibrary()
+        playlistHierarchy = musicLibrary.playlistHierarchy()
+        waveforms = musicLibrary.waveformRepository()
     }
 
     afterEach {
-        audioLibraryRepository.close()
-        waveformsRepository.close()
-        playlistHierarchyRepository.close()
+        musicLibrary.close()
     }
 
     afterSpec {
@@ -86,9 +76,6 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     }
 
     "Operations on audio items impact subscribed repositories" {
-        audioLibrary.subscribe(waveforms)
-        audioLibrary.subscribe(playlistHierarchy)
-
         val audioItem = audioLibrary.createFromFile(Arb.realAudioFile().next())
 
         testDispatcher.scheduler.advanceUntilIdle()
@@ -188,8 +175,6 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     }
 
     "Playlist multi-item lifecycle — multiple playlists sharing items, remove item, verify removal from all playlists" {
-        audioLibrary.subscribe(playlistHierarchy)
-
         val item1 = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
         val item2 = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
 
@@ -216,9 +201,6 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     }
 
     "Lifecycle close integration — subscribe, close library, verify no further events propagate" {
-        audioLibrary.subscribe(playlistHierarchy)
-        audioLibrary.subscribe(waveforms)
-
         val audioItem = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -242,8 +224,6 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     }
 
     "Persistence round-trip — create items, close repositories, reopen from same JSON files, verify full state restoration" {
-        audioLibrary.subscribe(playlistHierarchy)
-
         val item1 = audioLibrary.createFromFile(Arb.realAudioFile().next())
         val item2 = audioLibrary.createFromFile(Arb.realAudioFile().next())
 
@@ -259,31 +239,24 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         val item1Id = item1.id
         val item2Id = item2.id
 
-        audioLibraryRepository.close()
-        playlistHierarchyRepository.close()
-        waveformsRepository.close()
+        musicLibrary.close()
 
-        val reopenedAudioRepository = JsonFileRepository(audioFile, AudioItemMapSerializer)
-        val reopenedAudioLibrary = DefaultAudioLibrary(reopenedAudioRepository)
-
+        val restoredLibrary =
+            MusicLibrary.builder()
+                .audioLibraryJsonFile(audioFile)
+                .playlistHierarchyJsonFile(playlistsFile)
+                .waveformRepositoryJsonFile(waveformsFile)
+                .build()
         testDispatcher.scheduler.advanceUntilIdle()
 
-        reopenedAudioLibrary.size() shouldBe originalSize
+        restoredLibrary.audioLibrary().size() shouldBe originalSize
 
-        val reopenedPlaylistRepository = JsonFileRepository(playlistsFile, AudioPlaylistMapSerializer)
-        val reopenedPlaylistHierarchy = DefaultPlaylistHierarchy(reopenedPlaylistRepository)
-
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        reopenedPlaylistHierarchy.findByName("Persisted Playlist") shouldBePresent { restoredPlaylist ->
+        restoredLibrary.playlistHierarchy().findByName("Persisted Playlist") shouldBePresent { restoredPlaylist ->
             restoredPlaylist.id shouldBe originalPlaylistId
             restoredPlaylist.audioItems.any { it.id == item1Id } shouldBe true
             restoredPlaylist.audioItems.any { it.id == item2Id } shouldBe true
         }
 
-        reopenedAudioLibrary.close()
-        reopenedPlaylistHierarchy.close()
-        reopenedAudioRepository.close()
-        reopenedPlaylistRepository.close()
+        restoredLibrary.close()
     }
 })

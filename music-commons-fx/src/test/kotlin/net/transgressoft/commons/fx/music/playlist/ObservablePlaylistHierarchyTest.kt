@@ -31,7 +31,6 @@ import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.serialization.json.Json
 
 @ExperimentalCoroutinesApi
 internal class ObservablePlaylistHierarchyTest : StringSpec({
@@ -126,60 +125,47 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
     }
 
     "Initializes from a non empty JsonFileRepository without AudioLibrary resolves to empty audio items" {
+        // Create a hierarchy to write a playlist with a reference audio item id to a JSON file
         val audioItem = Arb.fxAudioItem {}.next()
-        val playlist =
-            ImmutableObservablePlaylist(
-                id = 1,
-                isDirectory = true,
-                name = "Rock",
-                audioItemIds = listOf(audioItem.id)
-            )
         val jsonFile =
-            tempfile("observablePlaylistHierarchy-test", ".json").apply {
-                val jsonContent = Json.encodeToString(ObservablePlaylistMapSerializer, mapOf(1 to playlist))
-                writeText(jsonContent)
-                deleteOnExit()
-            }
-        val jsonFileRepository = JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer)
+            tempfile("observablePlaylistHierarchy-test", ".json").apply { deleteOnExit() }
+        val writeHierarchy = ObservablePlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
+        val writtenPlaylist = writeHierarchy.createPlaylistDirectory("Rock")
+        writtenPlaylist.addAudioItem(audioItem)
+        testDispatcher.scheduler.advanceUntilIdle()
+        writeHierarchy.close()
 
         // No audio library registered — audio items resolve to empty
-        val playlistHierarchy = ObservablePlaylistHierarchy(jsonFileRepository)
+        val playlistHierarchy = ObservablePlaylistHierarchy.createAndBind(jsonFile)
 
         playlistHierarchy.size() shouldBe 1
         playlistHierarchy.contains {
-            it.id == 1 && it.isDirectory && it.name == "Rock" && it.audioItems.isEmpty() && it.playlists.isEmpty()
+            it.id == writtenPlaylist.id && it.isDirectory && it.name == "Rock" && it.audioItems.isEmpty() && it.playlists.isEmpty()
         } shouldBe true
 
         playlistHierarchy.close()
-        jsonFileRepository.close()
     }
 
     "Initializes from a non empty JsonFileRepository and AudioLibrary" {
         val audioItem = Arb.fxAudioItem {}.next()
-        val playlist =
-            ImmutableObservablePlaylist(
-                id = 1,
-                isDirectory = true,
-                name = "Rock",
-                audioItemIds = listOf(audioItem.id)
-            )
+        // Create a hierarchy to write a playlist with a reference audio item id to a JSON file
         val jsonFile =
-            tempfile("observablePlaylistHierarchy-test", ".json").apply {
-                val jsonContent = Json.encodeToString(ObservablePlaylistMapSerializer, mapOf(1 to playlist))
-                writeText(jsonContent)
-                deleteOnExit()
-            }
-        val jsonFileRepository = JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer)
+            tempfile("observablePlaylistHierarchy-test", ".json").apply { deleteOnExit() }
+        val writeHierarchy = ObservablePlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
+        val writtenPlaylist = writeHierarchy.createPlaylistDirectory("Rock")
+        writtenPlaylist.addAudioItem(audioItem)
+        testDispatcher.scheduler.advanceUntilIdle()
+        writeHierarchy.close()
 
         val audioItemRepository = VolatileRepository<Int, ObservableAudioItem>()
         audioItemRepository.add(audioItem)
         val audioLibrary = ObservableAudioLibrary(audioItemRepository)
 
-        val playlistHierarchy = ObservablePlaylistHierarchy(jsonFileRepository)
+        val playlistHierarchy = ObservablePlaylistHierarchy.createAndBind(jsonFile)
 
         playlistHierarchy.size() shouldBe 1
         playlistHierarchy.contains {
-            it.id == 1 && it.isDirectory && it.name == "Rock" && it.audioItems == listOf(audioItem) && it.playlists.isEmpty()
+            it.id == writtenPlaylist.id && it.isDirectory && it.name == "Rock" && it.audioItems == listOf(audioItem) && it.playlists.isEmpty()
         } shouldBe true
 
         WaitForAsyncUtils.waitForFxEvents()
@@ -187,7 +173,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         eventuallyOnFxThread {
             playlistHierarchy.playlistsProperty should {
                 it.size shouldBe 1
-                it.first().id shouldBe 1
+                it.first().id shouldBe writtenPlaylist.id
                 it.first().isDirectory shouldBe true
                 it.first().name shouldBe "Rock"
                 it.first().audioItems shouldContainExactly listOf(audioItem)
@@ -199,7 +185,6 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         playlistHierarchy.close()
         audioLibrary.close()
         audioItemRepository.close()
-        jsonFileRepository.close()
     }
 
     /** The following playlist hierarchy is used for the test:

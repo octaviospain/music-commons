@@ -23,7 +23,6 @@ import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.serialization.json.Json
 
 @ExperimentalCoroutinesApi
 internal class DefaultPlaylistHierarchyTest : StringSpec({
@@ -76,21 +75,19 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         val audioItem = Arb.audioItem { id = 453374921 }.next()
         val jsonFile =
             tempfile("playlistRepository-test", ".json").apply {
-                val jsonContent =
-                    Json.encodeToString(
-                        AudioPlaylistMapSerializer,
-                        mapOf(1 to ImmutablePlaylist(id = 1, isDirectory = true, name = "Rock", audioItemIds = listOf(453374921)))
-                    )
-                writeText(jsonContent)
+                writeText(
+                    """{"1":{"id":1,"isDirectory":true,"name":"Rock","audioItemIds":[453374921],"playlistIds":[]}}"""
+                )
                 deleteOnExit()
             }
-        val jsonFileRepository = JsonFileRepository(jsonFile, AudioPlaylistMapSerializer)
 
         val audioLibraryRepository = VolatileRepository<Int, AudioItem>()
         val audioLibrary = DefaultAudioLibrary(audioLibraryRepository)
         audioLibrary.add(audioItem)
 
-        val playlistHierarchy = DefaultPlaylistHierarchy(jsonFileRepository)
+        // Use createAndBind(file) so that the hierarchy instance is set before the
+        // JsonFileRepository deserializes, enabling direct creation of MutablePlaylist instances.
+        val playlistHierarchy = DefaultPlaylistHierarchy.createAndBind(jsonFile)
 
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -102,7 +99,6 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         playlistHierarchy.close()
         audioLibrary.close()
         audioLibraryRepository.close()
-        jsonFileRepository.close()
     }
 
     /** The following playlist hierarchy is used for the test:

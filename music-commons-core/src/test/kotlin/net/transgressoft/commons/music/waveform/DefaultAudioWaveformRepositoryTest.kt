@@ -1,11 +1,9 @@
 package net.transgressoft.commons.music.waveform
 
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
-import net.transgressoft.commons.music.audio.ArtistCatalog
 import net.transgressoft.commons.music.audio.AudioFileTagType.WAV
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemMapSerializer
-import net.transgressoft.commons.music.audio.AudioLibrary
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.commons.music.audio.audioItem
@@ -110,7 +108,7 @@ internal class DefaultAudioWaveformRepositoryTest : StringSpec({
     "DefaultAudioWaveformRepository does not react to DELETE events after close()" {
         val audioLibraryFile = tempfile("audioLibrary-test", ".json").also { it.deleteOnExit() }
         val audioLibraryRepository: JsonRepository<Int, AudioItem> = JsonFileRepository(audioLibraryFile, AudioItemMapSerializer)
-        val audioLibrary: AudioLibrary<AudioItem, ArtistCatalog<AudioItem>> = DefaultAudioLibrary(audioLibraryRepository)
+        val audioLibrary = DefaultAudioLibrary(audioLibraryRepository)
 
         audioLibrary.subscribe(audioWaveformRepository)
 
@@ -129,6 +127,7 @@ internal class DefaultAudioWaveformRepositoryTest : StringSpec({
         audioWaveformRepository.size() shouldBe 1
         audioWaveformRepository.findById(audioItem.id) shouldBePresent { it shouldBe waveform }
 
+        audioLibrary.close()
         audioLibraryRepository.close()
     }
 })

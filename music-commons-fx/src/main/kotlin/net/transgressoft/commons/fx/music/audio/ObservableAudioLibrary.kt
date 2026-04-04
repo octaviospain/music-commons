@@ -57,7 +57,7 @@ import java.nio.file.Path
  * lazily through the context. Deregisters on [close] to support repeated construction within the same JVM.
  */
 @LirpRepository
-class ObservableAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
+internal class ObservableAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
 : AudioLibraryBase<ObservableAudioItem, ObservableArtistCatalog>(
     repository,
     FXArtistCatalogRegistry()
@@ -147,7 +147,7 @@ class ObservableAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
     val albumCountProperty: ReadOnlyIntegerProperty = _albumCountProperty
 
     init {
-        deregisterExistingObservableAudioItemRegistration()
+        RegistryBase.deregisterRepository(ObservableAudioItem::class.java)
         RegistryBase.registerRepository(ObservableAudioItem::class.java, repository)
 
         // Add all existing audio items to the observable collections on initialization
@@ -194,54 +194,7 @@ class ObservableAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
         super.close()
         internalSubscription.cancel()
         catalogSubscription.cancel()
-        deregisterFromLirpContext(repository)
-    }
-
-    private fun deregisterExistingObservableAudioItemRegistration() {
-        try {
-            val context = getContext(repository) ?: return
-            val registryForMethod =
-                context.javaClass.methods
-                    .firstOrNull { it.name.startsWith("registryFor") && it.parameterCount == 1 && it.parameterTypes[0] == Class::class.java }
-                    ?: return
-            val existing = registryForMethod.invoke(context, ObservableAudioItem::class.java) ?: return
-            if (existing !== repository) {
-                val registryInterface = Class.forName("net.transgressoft.lirp.persistence.Registry")
-                val deregisterMethod =
-                    context.javaClass.methods
-                        .firstOrNull { it.name.startsWith("deregister") && it.parameterCount == 1 && registryInterface.isAssignableFrom(it.parameterTypes[0]) }
-                        ?: return
-                deregisterMethod.invoke(context, existing)
-            }
-        } catch (_: Exception) {
-            // Best-effort; failure is non-critical since registerRepository will detect conflicts
-        }
-    }
-
-    private fun deregisterFromLirpContext(repo: Any) {
-        try {
-            val context = getContext(repo) ?: return
-            val registryInterface = Class.forName("net.transgressoft.lirp.persistence.Registry")
-            val deregisterMethod =
-                context.javaClass.methods
-                    .firstOrNull { it.name.startsWith("deregister") && it.parameterCount == 1 && registryInterface.isAssignableFrom(it.parameterTypes[0]) }
-                    ?: return
-            deregisterMethod.invoke(context, repo)
-        } catch (_: Exception) {
-            // Deregistration is best-effort; failure does not impact lifecycle semantics
-        }
-    }
-
-    private fun getContext(repo: Any): Any? {
-        return try {
-            val getContextMethod =
-                repo.javaClass.methods
-                    .firstOrNull { it.name.startsWith("getContext") && it.parameterCount == 0 }
-                    ?: return null
-            getContextMethod.invoke(repo)
-        } catch (_: Exception) {
-            null
-        }
+        RegistryBase.deregisterRepository(ObservableAudioItem::class.java)
     }
 
     override fun clear() {

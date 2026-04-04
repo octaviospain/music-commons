@@ -11,10 +11,7 @@ import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldContainOnly
-import io.kotest.matchers.comparables.shouldBeEqualComparingTo
-import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.list
 import io.kotest.property.arbitrary.next
@@ -76,16 +73,11 @@ internal class MutablePlaylistTest : StringSpec({
         playlist1.audioItems.size shouldBe 1
         playlist1.audioItemsAllMatch { it.title == "Song title" } shouldBe true
 
-        val playlist2 = ImmutablePlaylist(8, false, "Modified playlist1", listOf(customAudioItem))
-        playlist1.uniqueId shouldBe playlist2.uniqueId
-        playlist1 should {
-            it.id shouldNotBe playlist2.id
-            it.uniqueId shouldBe playlist2.uniqueId
-            it.isDirectory shouldBe playlist2.isDirectory
-            it.name shouldBe playlist2.name
-            it.audioItems shouldBe playlist2.audioItems
-        }
-        playlist1 shouldBeEqualComparingTo playlist2
+        // Verify playlist1 uniqueId is based on name and that its attributes match the expected values
+        playlist1.uniqueId shouldBe "Modified playlist1"
+        playlist1.isDirectory shouldBe false
+        playlist1.name shouldBe "Modified playlist1"
+        playlist1.audioItems shouldBe listOf(customAudioItem)
 
         playlist1.clearAudioItems()
         playlist1.audioItems.isEmpty() shouldBe true

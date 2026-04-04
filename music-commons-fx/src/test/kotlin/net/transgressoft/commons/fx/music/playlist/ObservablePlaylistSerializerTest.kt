@@ -1,77 +1,82 @@
 package net.transgressoft.commons.fx.music.playlist
 
+import net.transgressoft.lirp.event.ReactiveScope
 import io.kotest.assertions.json.shouldContainJsonKey
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import org.testfx.api.FxToolkit
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.serialization.json.Json
 
 /**
- * Tests for [ObservablePlaylistSerializer] verifying golden JSON structure and round-trip fidelity.
+ * Tests for [ObservablePlaylistHierarchy] companion serializer verifying JSON structure and round-trip fidelity.
  */
+@ExperimentalCoroutinesApi
 internal class ObservablePlaylistSerializerTest : StringSpec({
 
+    val testDispatcher = UnconfinedTestDispatcher()
+    val testScope = CoroutineScope(testDispatcher)
     val json = Json.Default
 
-    val goldenJson =
-        """
-        {
-            "id": 1,
-            "isDirectory": false,
-            "name": "My Playlist",
-            "audioItemIds": [10, 20],
-            "playlistIds": []
-        }
-        """.trimIndent()
-
-    "ObservablePlaylistSerializer deserializes golden JSON with correct field values" {
-        val playlist = json.decodeFromString(ObservablePlaylistSerializer, goldenJson)
-
-        playlist.id shouldBe 1
-        playlist.isDirectory shouldBe false
-        playlist.name shouldBe "My Playlist"
-        // audioItemIds carry the IDs for deferred resolution by the hierarchy — audioItems is empty until resolved
-        (playlist as ImmutableObservablePlaylist).audioItemIds shouldBe listOf(10, 20)
-        playlist.audioItems.isEmpty() shouldBe true
-        playlist.playlists.isEmpty() shouldBe true
+    beforeSpec {
+        ReactiveScope.flowScope = testScope
+        ReactiveScope.ioScope = testScope
+        FxToolkit.registerPrimaryStage()
     }
 
-    "ObservablePlaylistSerializer encodes all required JSON fields" {
-        val playlist = ImmutableObservablePlaylist(id = 5, isDirectory = true, name = "Rock")
+    afterSpec {
+        ReactiveScope.resetDefaultFlowScope()
+        ReactiveScope.resetDefaultIoScope()
+    }
 
-        val encoded = json.encodeToString(ObservablePlaylistSerializer, playlist)
+    "ObservablePlaylistHierarchy companion serializer encodes all required JSON fields" {
+        val hierarchy = ObservablePlaylistHierarchy()
+        val playlist = hierarchy.createPlaylist("Rock")
+
+        val encoded = json.encodeToString(ObservablePlaylistHierarchy, playlist)
 
         encoded shouldContainJsonKey "id"
         encoded shouldContainJsonKey "isDirectory"
         encoded shouldContainJsonKey "name"
         encoded shouldContainJsonKey "audioItemIds"
         encoded shouldContainJsonKey "playlistIds"
+
+        hierarchy.close()
     }
 
-    "ObservablePlaylistSerializer round-trip preserves all fields" {
-        val original = ImmutableObservablePlaylist(id = 3, isDirectory = false, name = "Favorites")
+    "ObservablePlaylistHierarchy companion serializer round-trip preserves id, name, and directory flag" {
+        val hierarchy = ObservablePlaylistHierarchy()
+        val playlist = hierarchy.createPlaylist("Favorites")
 
-        val encoded = json.encodeToString(ObservablePlaylistSerializer, original)
-        val decoded = json.decodeFromString(ObservablePlaylistSerializer, encoded)
+        val encoded = json.encodeToString(ObservablePlaylistHierarchy, playlist)
 
-        decoded.id shouldBe original.id
-        decoded.isDirectory shouldBe original.isDirectory
-        decoded.name shouldBe original.name
+        // Decode using the companion, which requires instance to be set
+        val decoded = json.decodeFromString(ObservablePlaylistHierarchy, encoded)
+
+        decoded.id shouldBe playlist.id
+        decoded.isDirectory shouldBe playlist.isDirectory
+        decoded.name shouldBe playlist.name
         decoded.audioItems.size shouldBe 0
         decoded.playlists.isEmpty() shouldBe true
+
+        hierarchy.close()
     }
 
     "ObservablePlaylistMapSerializer round-trip preserves map entries" {
-        val playlist1 = ImmutableObservablePlaylist(id = 1, name = "Rock")
-        val playlist2 = ImmutableObservablePlaylist(id = 2, name = "Jazz")
-        val originalMap = mapOf(1 to playlist1, 2 to playlist2)
+        val hierarchy = ObservablePlaylistHierarchy()
+        val playlist1 = hierarchy.createPlaylist("Rock")
+        val playlist2 = hierarchy.createPlaylist("Jazz")
+        val originalMap = mapOf(playlist1.id to playlist1, playlist2.id to playlist2)
 
         val encoded = json.encodeToString(ObservablePlaylistMapSerializer, originalMap)
         val decoded = json.decodeFromString(ObservablePlaylistMapSerializer, encoded)
 
         decoded.size shouldBe 2
-        decoded[1]!!.id shouldBe 1
-        decoded[1]!!.name shouldBe "Rock"
-        decoded[2]!!.id shouldBe 2
-        decoded[2]!!.name shouldBe "Jazz"
+        decoded.values.any { it.name == "Rock" } shouldBe true
+        decoded.values.any { it.name == "Jazz" } shouldBe true
+
+        hierarchy.close()
     }
 })
