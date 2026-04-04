@@ -140,10 +140,10 @@ interface AudioPlaylist<I : ReactiveAudioItem<I>> : IdentifiableEntity<Int>, Com
         return """
             "$id": {
                 "id": $id,
+                "audioItems": $audioItemsString
+                "playlists": $playlistIds,
                 "isDirectory": $isDirectory,
-                "name": "$name",
-                "audioItemIds": $audioItemsString
-                "playlistIds": $playlistIds
+                "name": "$name"
             }"""
     }
 

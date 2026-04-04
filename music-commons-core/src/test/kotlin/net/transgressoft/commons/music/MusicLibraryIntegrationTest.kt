@@ -191,12 +191,17 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         testDispatcher.scheduler.advanceUntilIdle()
 
         playlistHierarchy.findByName("Playlist A") shouldBePresent { playlist ->
-            playlist.audioItems.none { it.id == item1.id } shouldBe true
-            playlist.audioItems.any { it.id == item2.id } shouldBe true
+            // item1 is no longer in the registry — use referenceIds to avoid NoSuchElementException
+            val refIds =
+                (playlist.audioItems as? net.transgressoft.lirp.persistence.AggregateCollectionRef<*, *>)?.referenceIds?.map { it as Int } ?: emptyList()
+            refIds.none { it == item1.id } shouldBe true
+            refIds.any { it == item2.id } shouldBe true
         }
         playlistHierarchy.findByName("Playlist B") shouldBePresent { playlist ->
-            playlist.audioItems.none { it.id == item1.id } shouldBe true
-            playlist.audioItems.any { it.id == item2.id } shouldBe true
+            val refIds =
+                (playlist.audioItems as? net.transgressoft.lirp.persistence.AggregateCollectionRef<*, *>)?.referenceIds?.map { it as Int } ?: emptyList()
+            refIds.none { it == item1.id } shouldBe true
+            refIds.any { it == item2.id } shouldBe true
         }
     }
 

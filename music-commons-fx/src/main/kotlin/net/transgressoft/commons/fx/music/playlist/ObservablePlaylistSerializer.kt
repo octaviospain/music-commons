@@ -17,8 +17,12 @@
 
 package net.transgressoft.commons.fx.music.playlist
 
+import net.transgressoft.lirp.persistence.json.lirpSerializer
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 
 @get:JvmName("ObservablePlaylistMapSerializer")
-internal val ObservablePlaylistMapSerializer = MapSerializer(Int.serializer(), ObservablePlaylistHierarchy)
+@Suppress("UNCHECKED_CAST")
+internal val ObservablePlaylistMapSerializer: KSerializer<Map<Int, ObservablePlaylist>> =
+    MapSerializer(Int.serializer(), lirpSerializer(FXPlaylist(0, "", false))) as KSerializer<Map<Int, ObservablePlaylist>>

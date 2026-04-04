@@ -1,8 +1,12 @@
 package net.transgressoft.commons.music.playlist
 
+import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.TestAudioLibrary
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.lirp.persistence.AggregateCollectionRef
+import net.transgressoft.lirp.persistence.RegistryBase.Companion.deregisterRepository
+import net.transgressoft.lirp.persistence.RegistryBase.Companion.registerRepository
 import net.transgressoft.lirp.persistence.VolatileRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
@@ -59,7 +63,9 @@ internal class PlaylistHierarchyBaseTest : StringSpec({
     }
 
     "PlaylistHierarchyBase syncs audio item deletion across playlists" {
-        val audioLibraryRepository = VolatileRepository<Int, net.transgressoft.commons.music.audio.AudioItem>("SyncTest")
+        val audioLibraryRepository = VolatileRepository<Int, AudioItem>("SyncTest")
+        deregisterRepository(AudioItem::class.java)
+        registerRepository(AudioItem::class.java, audioLibraryRepository)
         val audioLibrary = TestAudioLibrary(audioLibraryRepository)
         audioLibrary.subscribe(playlistHierarchy)
 
@@ -76,8 +82,13 @@ internal class PlaylistHierarchyBaseTest : StringSpec({
         testDispatcher.scheduler.advanceUntilIdle()
 
         playlistHierarchy.findByName("Sync Test Playlist") shouldBePresent { found ->
-            found.audioItems.none { it.id == audioItem.id } shouldBe true
+            // Use referenceIds instead of iterating the proxy: the audio item was removed from
+            // the registry so iterating would throw NoSuchElementException.
+            val refIds = (found.audioItems as? AggregateCollectionRef<*, *>)?.referenceIds?.map { it as Int } ?: emptyList()
+            refIds.none { it == audioItem.id } shouldBe true
         }
+        audioLibrary.close()
+        deregisterRepository(AudioItem::class.java)
     }
 
     "PlaylistHierarchyBase movePlaylist relocates between directories" {
@@ -101,7 +112,9 @@ internal class PlaylistHierarchyBaseTest : StringSpec({
     }
 
     "PlaylistHierarchyBase close() cancels audio item event subscription" {
-        val audioLibraryRepository = VolatileRepository<Int, net.transgressoft.commons.music.audio.AudioItem>("CloseTest")
+        val audioLibraryRepository = VolatileRepository<Int, AudioItem>("CloseTest")
+        deregisterRepository(AudioItem::class.java)
+        registerRepository(AudioItem::class.java, audioLibraryRepository)
         val audioLibrary = TestAudioLibrary(audioLibraryRepository)
         audioLibrary.subscribe(playlistHierarchy)
 
@@ -117,10 +130,14 @@ internal class PlaylistHierarchyBaseTest : StringSpec({
         audioLibrary.remove(audioItem) shouldBe true
         testDispatcher.scheduler.advanceUntilIdle()
 
-        // After close(), the audio item deletion event is no longer processed
+        // After close(), the audio item deletion event is no longer processed —
+        // the playlist's audioItemIds still contains the id even though the audio item was removed from the library
         playlistHierarchy.findByName("Close Test Playlist") shouldBePresent { found ->
-            found.audioItems.any { it.id == audioItem.id } shouldBe true
+            val refIds = (found.audioItems as? net.transgressoft.lirp.persistence.AggregateCollectionRef<*, *>)?.referenceIds?.map { it as Int } ?: emptyList()
+            refIds.any { it == audioItem.id } shouldBe true
         }
+        audioLibrary.close()
+        deregisterRepository(AudioItem::class.java)
     }
 
     "PlaylistHierarchyBase duplicate playlist name throws IllegalArgumentException" {

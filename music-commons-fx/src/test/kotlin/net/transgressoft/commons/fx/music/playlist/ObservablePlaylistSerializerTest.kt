@@ -1,6 +1,7 @@
 package net.transgressoft.commons.fx.music.playlist
 
 import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.lirp.persistence.json.lirpSerializer
 import io.kotest.assertions.json.shouldContainJsonKey
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -11,7 +12,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.serialization.json.Json
 
 /**
- * Tests for [ObservablePlaylistHierarchy] companion serializer verifying JSON structure and round-trip fidelity.
+ * Tests for [FXPlaylist] serializer verifying JSON structure and round-trip fidelity using [lirpSerializer].
  */
 @ExperimentalCoroutinesApi
 internal class ObservablePlaylistSerializerTest : StringSpec({
@@ -19,6 +20,9 @@ internal class ObservablePlaylistSerializerTest : StringSpec({
     val testDispatcher = UnconfinedTestDispatcher()
     val testScope = CoroutineScope(testDispatcher)
     val json = Json.Default
+
+    @Suppress("UNCHECKED_CAST")
+    val serializer = lirpSerializer(FXPlaylist(0, "", false)) as kotlinx.serialization.KSerializer<ObservablePlaylist>
 
     beforeSpec {
         ReactiveScope.flowScope = testScope
@@ -31,29 +35,27 @@ internal class ObservablePlaylistSerializerTest : StringSpec({
         ReactiveScope.resetDefaultIoScope()
     }
 
-    "ObservablePlaylistHierarchy companion serializer encodes all required JSON fields" {
+    "FXPlaylist lirpSerializer encodes all required JSON fields" {
         val hierarchy = ObservablePlaylistHierarchy()
         val playlist = hierarchy.createPlaylist("Rock")
 
-        val encoded = json.encodeToString(ObservablePlaylistHierarchy, playlist)
+        val encoded = json.encodeToString(serializer, playlist)
 
         encoded shouldContainJsonKey "id"
         encoded shouldContainJsonKey "isDirectory"
         encoded shouldContainJsonKey "name"
-        encoded shouldContainJsonKey "audioItemIds"
-        encoded shouldContainJsonKey "playlistIds"
+        encoded shouldContainJsonKey "audioItems"
+        encoded shouldContainJsonKey "playlists"
 
         hierarchy.close()
     }
 
-    "ObservablePlaylistHierarchy companion serializer round-trip preserves id, name, and directory flag" {
+    "FXPlaylist lirpSerializer round-trip preserves id, name, and directory flag" {
         val hierarchy = ObservablePlaylistHierarchy()
         val playlist = hierarchy.createPlaylist("Favorites")
 
-        val encoded = json.encodeToString(ObservablePlaylistHierarchy, playlist)
-
-        // Decode using the companion, which requires instance to be set
-        val decoded = json.decodeFromString(ObservablePlaylistHierarchy, encoded)
+        val encoded = json.encodeToString(serializer, playlist)
+        val decoded = json.decodeFromString(serializer, encoded)
 
         decoded.id shouldBe playlist.id
         decoded.isDirectory shouldBe playlist.isDirectory

@@ -3,6 +3,8 @@ package net.transgressoft.commons.music.playlist
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.artist
 import net.transgressoft.commons.music.audio.audioItem
+import net.transgressoft.lirp.persistence.RegistryBase
+import net.transgressoft.lirp.persistence.VolatileRepository
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.json.JsonRepository
 import io.kotest.core.spec.style.StringSpec
@@ -21,13 +23,19 @@ import java.util.*
 import kotlin.io.path.exists
 
 private lateinit var playlistHierarchy: PlaylistHierarchy<AudioItem, MutableAudioPlaylist>
+private lateinit var audioItemRepository: VolatileRepository<Int, AudioItem>
 
 internal class MutablePlaylistTest : StringSpec({
 
     lateinit var jsonFileRepository: JsonRepository<Int, MutableAudioPlaylist>
 
     beforeEach {
+        audioItemRepository = VolatileRepository("MutablePlaylistTestAudioItems")
+        RegistryBase.deregisterRepository(AudioItem::class.java)
+        RegistryBase.registerRepository(AudioItem::class.java, audioItemRepository)
+
         val jsonFile = tempfile("mutablePlaylist-test", ".json").also { it.deleteOnExit() }
+
         jsonFileRepository = JsonFileRepository(jsonFile, AudioPlaylistMapSerializer)
         playlistHierarchy = DefaultPlaylistHierarchy(jsonFileRepository)
     }
@@ -35,6 +43,8 @@ internal class MutablePlaylistTest : StringSpec({
     afterEach {
         playlistHierarchy.close()
         jsonFileRepository.close()
+        RegistryBase.deregisterRepository(AudioItem::class.java)
+        audioItemRepository.close()
     }
 
     "Returns expected attributes" {
@@ -53,8 +63,9 @@ internal class MutablePlaylistTest : StringSpec({
         playlist1.uniqueId shouldBe "Modified playlist1"
 
         val audioItems =
-            Arb.list(Arb.audioItem(), 4..4).next().also {
-                playlist1.addAudioItems(it)
+            Arb.list(Arb.audioItem(), 4..4).next().also { items ->
+                items.forEach { audioItemRepository.add(it) }
+                playlist1.addAudioItems(items)
             }
 
         playlist1.audioItems.size shouldBe 4
@@ -62,6 +73,7 @@ internal class MutablePlaylistTest : StringSpec({
 
         val customAudioItem =
             Arb.audioItem { title = "Song title" }.next().also {
+                audioItemRepository.add(it)
                 playlist1.addAudioItems(listOf(it))
             }
 
@@ -91,10 +103,10 @@ internal class MutablePlaylistTest : StringSpec({
         directory1.audioItems.isEmpty() shouldBe true
         directory1.toString() shouldBe "MutablePlaylist(id=1, isDirectory=true, name='Directory1', audioItems=[], playlists=[])"
 
-        val audioItems = Arb.list(Arb.audioItem(), 5..5).next()
+        val audioItems = Arb.list(Arb.audioItem(), 5..5).next().also { items -> items.forEach { audioItemRepository.add(it) } }
         val p1 = playlistHierarchy.createPlaylistDirectory("p1", audioItems = audioItems)
         val p2 = playlistHierarchy.createPlaylistDirectory("p2")
-        val d1AudioItem = Arb.audioItem { title = "One" }.next()
+        val d1AudioItem = Arb.audioItem { title = "One" }.next().also { audioItemRepository.add(it) }
         val d1 = playlistHierarchy.createPlaylistDirectory("d1", audioItems = listOf(d1AudioItem))
 
         directory1.addPlaylists(listOf(p1, p2, d1))
@@ -161,14 +173,15 @@ internal fun randomQueenAudioItems(tempDirectory: Path, albumName: String = "", 
                 val song = "Song $i - $albumName"
                 val artistName = "Queen"
                 val songDuration = Duration.ofSeconds((60 + i).toLong())
-                add(
+                val item =
                     Arb.audioItem {
                         title = song
                         artist = Arb.artist(givenName = artistName).next()
                         path = tempDirectory.resolve("$title.mp3")
                         duration = songDuration
                     }.next()
-                )
+                audioItemRepository.add(item)
+                add(item)
             }
         }
     )

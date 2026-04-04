@@ -232,7 +232,7 @@ class FXMusicLibrary private constructor(
             val waveformRepository = audioWaveformRepository<ObservableAudioItem>(waveformRepo)
 
             val playlistRepo = createPlaylistRepository()
-            val playlistHierarchy = ObservablePlaylistHierarchy.createAndBind(playlistRepo)
+            val playlistHierarchy = ObservablePlaylistHierarchy(playlistRepo)
 
             audioLibrary.subscribe(waveformRepository)
             audioLibrary.subscribe(playlistHierarchy)
