@@ -35,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Base implementation for [PlaylistHierarchy] managing hierarchical playlist structures.
+ * Base implementation for [ReactivePlaylistHierarchy] managing hierarchical playlist structures.
  *
  * Accepts a plain [Repository] as its backing store.
  * Maintains a multimap to track parent-child relationships between playlists and provides
@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicInteger
 abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>>(
     private val repository: Repository<Int, P>,
     private val audioItemEventSubscriber: AudioItemEventSubscriber<I> = AudioItemEventSubscriber("PlaylistHierarchySubscriber")
-) : PlaylistHierarchy<I, P>,
+) : ReactivePlaylistHierarchy<I, P>,
     Repository<Int, P> by repository,
     LirpEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>> by audioItemEventSubscriber {
 

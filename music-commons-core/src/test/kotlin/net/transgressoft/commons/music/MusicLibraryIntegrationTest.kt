@@ -1,13 +1,11 @@
 package net.transgressoft.commons.music
 
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
-import net.transgressoft.commons.music.audio.ArtistCatalog
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioLibrary
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
-import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
 import net.transgressoft.commons.music.playlist.PlaylistHierarchy
 import net.transgressoft.commons.music.playlist.asJsonKeyValues
 import net.transgressoft.commons.music.waveform.AudioWaveform
@@ -41,9 +39,9 @@ internal class MusicLibraryIntegrationTest : StringSpec({
 
     lateinit var musicLibrary: MusicLibrary
 
-    lateinit var audioLibrary: AudioLibrary<AudioItem, ArtistCatalog<AudioItem>>
+    lateinit var audioLibrary: AudioLibrary
     lateinit var waveforms: AudioWaveformRepository<AudioWaveform, AudioItem>
-    lateinit var playlistHierarchy: PlaylistHierarchy<AudioItem, MutableAudioPlaylist>
+    lateinit var playlistHierarchy: PlaylistHierarchy
 
     beforeSpec {
         ReactiveScope.flowScope = testScope

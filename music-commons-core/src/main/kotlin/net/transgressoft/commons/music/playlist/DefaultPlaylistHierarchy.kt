@@ -35,7 +35,7 @@ import mu.KotlinLogging
  */
 internal class DefaultPlaylistHierarchy(
     repository: Repository<Int, MutableAudioPlaylist> = VolatileRepository()
-) : PlaylistHierarchyBase<AudioItem, MutableAudioPlaylist>(repository) {
+) : PlaylistHierarchyBase<AudioItem, MutableAudioPlaylist>(repository), PlaylistHierarchy {
 
     private val logger = KotlinLogging.logger {}
 

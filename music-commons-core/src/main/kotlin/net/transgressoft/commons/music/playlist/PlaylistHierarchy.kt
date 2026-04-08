@@ -15,23 +15,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.fx.music.playlist
+package net.transgressoft.commons.music.playlist
 
-import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
-import net.transgressoft.commons.music.playlist.ReactivePlaylistHierarchy
-import javafx.beans.property.ReadOnlySetProperty
+import net.transgressoft.commons.music.audio.AudioItem
 
 /**
- * JavaFX-compatible playlist hierarchy interface exposing playlists as an observable collection.
+ * Narrowed playlist hierarchy interface for [AudioItem] and [MutableAudioPlaylist] types.
  *
- * Extends [ReactivePlaylistHierarchy] with concrete JavaFX-observable type parameters and adds
- * a JavaFX property for direct binding to UI components. All playlist changes are reflected
- * in [playlistsProperty] automatically on the JavaFX Application Thread.
+ * Provides a clean, non-generic entry point for consumers that work with the core domain types.
+ * Extends [ReactivePlaylistHierarchy] with concrete type parameters, removing the need to specify
+ * generics at call sites.
  */
-interface ObservablePlaylistHierarchy : ReactivePlaylistHierarchy<ObservableAudioItem, ObservablePlaylist> {
-
-    /**
-     * Observable set of all playlists in the hierarchy, suitable for direct JavaFX binding.
-     */
-    val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist>
-}
+interface PlaylistHierarchy : ReactivePlaylistHierarchy<AudioItem, MutableAudioPlaylist>

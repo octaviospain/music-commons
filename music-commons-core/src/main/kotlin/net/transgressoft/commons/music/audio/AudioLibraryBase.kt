@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Base implementation for [AudioLibrary] providing artist catalog management.
+ * Base implementation for [ReactiveAudioLibrary] providing artist catalog management.
  *
  * Maintains an [DefaultArtistCatalogRegistry] that automatically synchronizes with repository
  * changes to provide efficient artist-based queries. Delegates repository operations
@@ -49,7 +49,7 @@ import java.util.concurrent.atomic.AtomicInteger
 abstract class AudioLibraryBase<I, AC>(
     protected val repository: Repository<Int, I>,
     protected val observableArtistCatalogRegistry: ArtistCatalogRegistryBase<I, AC>
-) : AudioLibrary<I, AC>, Repository<Int, I> by repository
+) : ReactiveAudioLibrary<I, AC>, Repository<Int, I> by repository
     where I : ReactiveAudioItem<I>,
           I : Comparable<I>,
           AC : ReactiveArtistCatalog<AC, I>,

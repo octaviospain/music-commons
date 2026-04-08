@@ -41,7 +41,8 @@ import kotlinx.serialization.modules.subclass
  */
 @LirpRepository
 internal class DefaultAudioLibrary(repository: Repository<Int, AudioItem>) :
-    AudioLibraryBase<AudioItem, ArtistCatalog<AudioItem>>(repository, DefaultArtistCatalogRegistry()) {
+    AudioLibraryBase<AudioItem, ArtistCatalog<AudioItem>>(repository, DefaultArtistCatalogRegistry()),
+    AudioLibrary {
     private val logger = KotlinLogging.logger {}
 
     init {

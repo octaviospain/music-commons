@@ -39,3 +39,7 @@ replay_pid*
 .planning
 CLAUDE.md
 .mcp.json
+.graphifyignore
+**/graphify-out/**
+.graphify_semantic_new.json
+.graphify_uncached.txt

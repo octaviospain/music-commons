@@ -35,16 +35,18 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.future.future
 
 /**
- * Represents a library of audio items with repository capabilities and reactive event publishing.
+ * Generic library of audio items with repository capabilities and reactive event publishing.
  *
  * This interface extends [Repository] for CRUD operations and [Flow.Publisher] to publish
  * events when audio items are created, updated, or deleted. It also provides artist-centric
  * views through catalogs that organize items by artist and album.
  *
+ * Narrowed versions for concrete item types are available in the core and FX modules.
+ *
  * @param I The type of audio items stored in this library
  * @param AC The type of artist catalog exposed by this library
  */
-interface AudioLibrary<I: ReactiveAudioItem<I>, AC: ReactiveArtistCatalog<AC, I>>: Repository<Int, I>, Flow.Publisher<CrudEvent<Int, I>> {
+interface ReactiveAudioLibrary<I: ReactiveAudioItem<I>, AC: ReactiveArtistCatalog<AC, I>>: Repository<Int, I>, Flow.Publisher<CrudEvent<Int, I>> {
 
     /**
      * Subscriber for receiving player events such as when audio items are played.
