@@ -74,9 +74,6 @@ internal class MutableAudioItem(
     @Transient
     private val logger = KotlinLogging.logger {}
 
-    @Transient
-    private var suppressEvents = false
-
     private val ioScope =
         CoroutineScope(
             Dispatchers.IO + SupervisorJob() +
@@ -106,7 +103,7 @@ internal class MutableAudioItem(
         lastDateModified: LocalDateTime,
         playCount: Short
     ) : this(path, id) {
-        suppressEvents = true
+        disableEvents()
         this.title = title
         this._duration = duration
         this.artist = artist
@@ -122,7 +119,7 @@ internal class MutableAudioItem(
         this._dateOfCreation = dateOfCreation
         this.lastDateModified = lastDateModified
         this._playCount = playCount
-        suppressEvents = false
+        enableEvents()
     }
 
     init {
@@ -160,10 +157,7 @@ internal class MutableAudioItem(
     @Serializable
     override var lastDateModified: LocalDateTime = _dateOfCreation
 
-    private var _playCount: Short = 0
-        set(value) {
-            if (!suppressEvents) mutateAndPublish { field = value } else field = value
-        }
+    private var _playCount: Short by reactiveProperty(0.toShort())
 
     @Serializable
     override val playCount: Short
@@ -196,58 +190,31 @@ internal class MutableAudioItem(
     /** Mutable properties */
 
     @Serializable
-    override var title: String = metadata.title
-        set(value) {
-            if (!suppressEvents) mutateAndPublish { field = value } else field = value
-        }
+    override var title: String by reactiveProperty(metadata.title)
 
     @Serializable
-    override var artist: Artist = metadata.artist
-        set(value) {
-            if (!suppressEvents) mutateAndPublish { field = value } else field = value
-        }
+    override var artist: Artist by reactiveProperty(metadata.artist)
 
     @Serializable
-    override var genre: Genre = metadata.genre
-        set(value) {
-            if (!suppressEvents) mutateAndPublish { field = value } else field = value
-        }
+    override var genre: Genre by reactiveProperty(metadata.genre)
 
     @Serializable
-    override var comments: String? = metadata.comments
-        set(value) {
-            if (!suppressEvents) mutateAndPublish { field = value } else field = value
-        }
+    override var comments: String? by reactiveProperty(metadata.comments)
 
     @Serializable
-    override var trackNumber: Short? = metadata.trackNumber
-        set(value) {
-            if (!suppressEvents) mutateAndPublish { field = value } else field = value
-        }
+    override var trackNumber: Short? by reactiveProperty(metadata.trackNumber)
 
     @Serializable
-    override var discNumber: Short? = metadata.discNumber
-        set(value) {
-            if (!suppressEvents) mutateAndPublish { field = value } else field = value
-        }
+    override var discNumber: Short? by reactiveProperty(metadata.discNumber)
 
     @Serializable
-    override var bpm: Float? = metadata.bpm
-        set(value) {
-            if (!suppressEvents) mutateAndPublish { field = value } else field = value
-        }
+    override var bpm: Float? by reactiveProperty(metadata.bpm)
 
     @Serializable
-    override var album: Album = metadata.album
-        set(value) {
-            if (!suppressEvents) mutateAndPublish { field = value } else field = value
-        }
+    override var album: Album by reactiveProperty(metadata.album)
 
     @Transient
-    override var coverImageBytes: ByteArray? = metadata.coverBytes
-        set(value) {
-            if (!suppressEvents) mutateAndPublish { field = value } else field = value
-        }
+    override var coverImageBytes: ByteArray? by reactiveProperty(metadata.coverBytes)
 
     /**
      * Asynchronously writes the current metadata back to the audio file.

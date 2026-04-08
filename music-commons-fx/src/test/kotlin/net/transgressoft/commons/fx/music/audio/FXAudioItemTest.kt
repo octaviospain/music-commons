@@ -86,41 +86,41 @@ internal class FXAudioItemTest : StringSpec({
 
         lastDateUpdated = fxAudioItem.lastDateModified
         val newGenre = fxAudioItem.genre.randomDifferent()
-        fxAudioItem.genreProperty.set(newGenre)
+        fxAudioItem.genre = newGenre
         eventually(100.milliseconds) {
-            fxAudioItem.genre shouldBe newGenre
+            fxAudioItem.genreProperty.value shouldBe newGenre
             fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
             fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
         }
 
         lastDateUpdated = fxAudioItem.lastDateModified
-        fxAudioItem.commentsProperty.set("New comments")
+        fxAudioItem.comments = "New comments"
         eventually(100.seconds) {
-            fxAudioItem.comments shouldBe "New comments"
+            fxAudioItem.commentsProperty.value shouldBe "New comments"
             fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
             fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
         }
 
         lastDateUpdated = fxAudioItem.lastDateModified
-        fxAudioItem.trackNumberProperty.set(5)
+        fxAudioItem.trackNumber = 5
         eventually(100.milliseconds) {
-            fxAudioItem.trackNumber shouldBe 5
+            fxAudioItem.trackNumberProperty.value shouldBe 5
             fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
             fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
         }
 
         lastDateUpdated = fxAudioItem.lastDateModified
-        fxAudioItem.discNumberProperty.set(2)
+        fxAudioItem.discNumber = 2
         eventually(100.milliseconds) {
-            fxAudioItem.discNumber shouldBe 2
+            fxAudioItem.discNumberProperty.value shouldBe 2
             fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
             fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
         }
 
         lastDateUpdated = fxAudioItem.lastDateModified
-        fxAudioItem.bpmProperty.set(130f)
+        fxAudioItem.bpm = 130f
         eventually(100.milliseconds) {
-            fxAudioItem.bpm shouldBe 130f
+            fxAudioItem.bpmProperty.value shouldBe 130f
             fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
             fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
         }
