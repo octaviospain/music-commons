@@ -36,7 +36,7 @@ internal class ObservablePlaylistSerializerTest : StringSpec({
     }
 
     "FXPlaylist lirpSerializer encodes all required JSON fields" {
-        val hierarchy = ObservablePlaylistHierarchy()
+        val hierarchy = FXPlaylistHierarchy()
         val playlist = hierarchy.createPlaylist("Rock")
 
         val encoded = json.encodeToString(serializer, playlist)
@@ -51,7 +51,7 @@ internal class ObservablePlaylistSerializerTest : StringSpec({
     }
 
     "FXPlaylist lirpSerializer round-trip preserves id, name, and directory flag" {
-        val hierarchy = ObservablePlaylistHierarchy()
+        val hierarchy = FXPlaylistHierarchy()
         val playlist = hierarchy.createPlaylist("Favorites")
 
         val encoded = json.encodeToString(serializer, playlist)
@@ -67,7 +67,7 @@ internal class ObservablePlaylistSerializerTest : StringSpec({
     }
 
     "ObservablePlaylistMapSerializer round-trip preserves map entries" {
-        val hierarchy = ObservablePlaylistHierarchy()
+        val hierarchy = FXPlaylistHierarchy()
         val playlist1 = hierarchy.createPlaylist("Rock")
         val playlist2 = hierarchy.createPlaylist("Jazz")
         val originalMap = mapOf(playlist1.id to playlist1, playlist2.id to playlist2)

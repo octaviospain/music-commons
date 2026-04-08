@@ -22,7 +22,7 @@ import java.time.Duration
 import java.util.*
 import kotlin.io.path.exists
 
-private lateinit var playlistHierarchy: PlaylistHierarchy<AudioItem, MutableAudioPlaylist>
+private lateinit var playlistHierarchy: PlaylistHierarchy
 private lateinit var audioItemRepository: VolatileRepository<Int, AudioItem>
 
 internal class MutablePlaylistTest : StringSpec({

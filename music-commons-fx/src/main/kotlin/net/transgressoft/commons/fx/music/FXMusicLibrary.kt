@@ -17,17 +17,17 @@
 
 package net.transgressoft.commons.fx.music
 
+import net.transgressoft.commons.fx.music.audio.FXAudioLibrary
 import net.transgressoft.commons.fx.music.audio.ObservableArtistCatalog
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItemMapSerializer
 import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
+import net.transgressoft.commons.fx.music.playlist.FXPlaylistHierarchy
 import net.transgressoft.commons.fx.music.playlist.ObservablePlaylist
 import net.transgressoft.commons.fx.music.playlist.ObservablePlaylistHierarchy
 import net.transgressoft.commons.fx.music.playlist.ObservablePlaylistMapSerializer
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
-import net.transgressoft.commons.music.audio.AudioLibrary
-import net.transgressoft.commons.music.playlist.PlaylistHierarchy
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import net.transgressoft.commons.music.waveform.AudioWaveformMapSerializer
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
@@ -65,16 +65,16 @@ import javax.sql.DataSource
  * ```
  */
 class FXMusicLibrary private constructor(
-    private val _audioLibrary: ObservableAudioLibrary,
-    private val _playlistHierarchy: ObservablePlaylistHierarchy,
+    private val _audioLibrary: FXAudioLibrary,
+    private val _playlistHierarchy: FXPlaylistHierarchy,
     private val _waveformRepository: AudioWaveformRepository<AudioWaveform, ObservableAudioItem>
 ) : AutoCloseable {
 
-    /** Returns the underlying [ObservableAudioLibrary] for advanced operations. */
-    fun audioLibrary(): AudioLibrary<ObservableAudioItem, ObservableArtistCatalog> = _audioLibrary
+    /** Returns the underlying observable audio library for advanced operations. */
+    fun audioLibrary(): ObservableAudioLibrary = _audioLibrary
 
-    /** Returns the underlying [ObservablePlaylistHierarchy] for advanced operations. */
-    fun playlistHierarchy(): PlaylistHierarchy<ObservableAudioItem, ObservablePlaylist> = _playlistHierarchy
+    /** Returns the underlying observable playlist hierarchy for advanced operations. */
+    fun playlistHierarchy(): ObservablePlaylistHierarchy = _playlistHierarchy
 
     /** Returns the underlying waveform repository for advanced operations. */
     fun waveformRepository(): AudioWaveformRepository<AudioWaveform, ObservableAudioItem> = _waveformRepository
@@ -226,13 +226,13 @@ class FXMusicLibrary private constructor(
         /** Builds the [FXMusicLibrary], wiring all event subscriptions between components. */
         fun build(): FXMusicLibrary {
             val audioRepo = createAudioRepository()
-            val audioLibrary = ObservableAudioLibrary(audioRepo)
+            val audioLibrary = FXAudioLibrary(audioRepo)
 
             val waveformRepo = createWaveformRepository()
             val waveformRepository = audioWaveformRepository<ObservableAudioItem>(waveformRepo)
 
             val playlistRepo = createPlaylistRepository()
-            val playlistHierarchy = ObservablePlaylistHierarchy(playlistRepo)
+            val playlistHierarchy = FXPlaylistHierarchy(playlistRepo)
 
             audioLibrary.subscribe(waveformRepository)
             audioLibrary.subscribe(playlistHierarchy)

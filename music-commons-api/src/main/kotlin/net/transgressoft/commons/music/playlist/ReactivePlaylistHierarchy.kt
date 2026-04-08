@@ -25,12 +25,14 @@ import java.util.*
 import java.util.concurrent.Flow
 
 /**
- * Manages a hierarchical structure of playlists with repository capabilities and event publishing.
+ * Generic hierarchical structure of playlists with repository capabilities and event publishing.
  *
  * Supports creating, organizing, and moving playlists and playlist directories, as well as
  * adding and removing audio items from playlists within the hierarchy.
+ *
+ * Narrowed versions for concrete item types are available in the core and FX modules.
  */
-interface PlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPlaylist<I, P>>
+interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPlaylist<I, P>>
 : Repository<Int, P>,
     LirpEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>>,
     Flow.Publisher<CrudEvent<Int, P>> {

@@ -98,8 +98,8 @@ Defines contracts and interfaces for the audio management domain.
 
 **Key Interfaces:**
 - `ReactiveAudioItem<I>` -- Audio file representation with metadata
-- `AudioLibrary<I, AC>` -- CRUD repository with reactive event publishing
-- `AudioPlaylist<I>` / `PlaylistHierarchy<I, P>` -- Playlist management with M3U export
+- `ReactiveAudioLibrary<I, AC>` -- Generic CRUD repository with reactive event publishing
+- `ReactiveAudioPlaylist<I, P>` / `ReactivePlaylistHierarchy<I, P>` -- Generic playlist management with M3U export
 - `AudioWaveform` / `AudioWaveformRepository` -- Waveform data and generation
 - `AudioItemPlayer` -- Playback controls with status monitoring
 
@@ -108,6 +108,8 @@ Defines contracts and interfaces for the audio management domain.
 Concrete implementations with JSON file persistence via [lirp](https://github.com/octaviospain/lirp) and reactive event subscriptions.
 
 - `MusicLibrary` -- Unified facade for headless audio management (builder-based entry point)
+- `AudioLibrary` -- Narrowed `ReactiveAudioLibrary` for `AudioItem` and `ArtistCatalog` types
+- `PlaylistHierarchy` -- Narrowed `ReactivePlaylistHierarchy` for `AudioItem` and `MutableAudioPlaylist` types
 - Internal implementations: `DefaultAudioLibrary`, `DefaultPlaylistHierarchy`, `DefaultAudioWaveformRepository`
 - Event subscribers for reactive synchronization between components
 
@@ -116,7 +118,8 @@ Concrete implementations with JSON file persistence via [lirp](https://github.co
 Bridges core module with JavaFX's property binding system.
 
 - `FXMusicLibrary` -- Unified facade for JavaFX audio management with observable properties (builder-based entry point)
-- Internal implementations: `ObservableAudioLibrary`, `ObservablePlaylistHierarchy`
+- `ObservableAudioLibrary` -- Narrowed `ReactiveAudioLibrary` with JavaFX observable properties for UI binding
+- `ObservablePlaylistHierarchy` -- Narrowed `ReactivePlaylistHierarchy` with a JavaFX observable playlists collection
 - `JavaFxPlayer` -- Native JavaFX MediaPlayer wrapper with reactive events
 - `WaveformPane` -- Custom Canvas component for waveform visualization
 

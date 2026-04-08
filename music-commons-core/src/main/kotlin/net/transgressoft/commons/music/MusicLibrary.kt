@@ -77,20 +77,20 @@ internal data class SqlStorage<E : IdentifiableEntity<*>>(
  * ```
  */
 class MusicLibrary private constructor(
-    private val _audioLibrary: AudioLibrary<AudioItem, ArtistCatalog<AudioItem>>,
-    private val _playlistHierarchy: PlaylistHierarchy<AudioItem, MutableAudioPlaylist>,
+    private val _audioLibrary: AudioLibrary,
+    private val _playlistHierarchy: PlaylistHierarchy,
     private val _waveformRepository: AudioWaveformRepository<AudioWaveform, AudioItem>
 ) : AutoCloseable {
 
     /**
      * Returns the underlying audio library for direct access to audio item management.
      */
-    fun audioLibrary(): AudioLibrary<AudioItem, ArtistCatalog<AudioItem>> = _audioLibrary
+    fun audioLibrary(): AudioLibrary = _audioLibrary
 
     /**
      * Returns the underlying playlist hierarchy for direct access to playlist management.
      */
-    fun playlistHierarchy(): PlaylistHierarchy<AudioItem, MutableAudioPlaylist> = _playlistHierarchy
+    fun playlistHierarchy(): PlaylistHierarchy = _playlistHierarchy
 
     /**
      * Returns the underlying waveform repository for direct access to waveform management.

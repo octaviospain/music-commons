@@ -42,7 +42,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
     val testScope = CoroutineScope(testDispatcher)
     lateinit var jsonFile: File
     lateinit var jsonFileRepository: JsonRepository<Int, AudioItem>
-    lateinit var audioRepository: AudioLibrary<AudioItem, ArtistCatalog<AudioItem>>
+    lateinit var audioRepository: AudioLibrary
 
     beforeSpec {
         ReactiveScope.flowScope = testScope

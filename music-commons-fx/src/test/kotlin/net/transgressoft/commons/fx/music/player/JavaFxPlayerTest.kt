@@ -1,9 +1,9 @@
 package net.transgressoft.commons.fx.music.player
 
 import net.transgressoft.commons.fx.music.audio.FXAudioItem
+import net.transgressoft.commons.fx.music.audio.FXAudioLibrary
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItemMapSerializer
-import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.AudioFileTagType.ID3_V_24
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
@@ -49,7 +49,7 @@ internal class JavaFxPlayerTest : StringSpec({
     lateinit var player: AudioItemPlayer
     lateinit var jsonFile: File
     lateinit var jsonFileRepository: JsonRepository<Int, ObservableAudioItem>
-    lateinit var observableAudioItemRepository: ObservableAudioLibrary
+    lateinit var observableAudioItemRepository: FXAudioLibrary
     lateinit var audioItem: FXAudioItem
 
     beforeSpec {
@@ -62,7 +62,7 @@ internal class JavaFxPlayerTest : StringSpec({
         player = JavaFxPlayer()
         jsonFile = Files.createTempFile("observableAudioLibrary-test", ".json").toFile().apply { deleteOnExit() }
         jsonFileRepository = JsonFileRepository(jsonFile, ObservableAudioItemMapSerializer)
-        observableAudioItemRepository = ObservableAudioLibrary(jsonFileRepository)
+        observableAudioItemRepository = FXAudioLibrary(jsonFileRepository)
         audioItem = observableAudioItemRepository.createFromFile(Arb.realAudioFile(ID3_V_24).next())
     }
 

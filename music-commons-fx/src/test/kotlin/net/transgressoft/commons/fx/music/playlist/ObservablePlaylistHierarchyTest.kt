@@ -1,7 +1,7 @@
 package net.transgressoft.commons.fx.music.playlist
 
+import net.transgressoft.commons.fx.music.audio.FXAudioLibrary
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
-import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
 import net.transgressoft.commons.fx.music.fxAudioItem
 import net.transgressoft.commons.music.playlist.asJsonKeyValues
 import net.transgressoft.lirp.event.ReactiveScope
@@ -63,7 +63,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
     "Reflects changes on a JsonFileRepository" {
         val jsonFile = tempfile("observablePlaylistHierarchy-test", ".json").apply { deleteOnExit() }
         val jsonFileRepository = JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer)
-        val playlistHierarchy = ObservablePlaylistHierarchy(jsonFileRepository)
+        val playlistHierarchy = FXPlaylistHierarchy(jsonFileRepository)
 
         val rockAudioItem = Arb.fxAudioItem { title = "50s Rock hit 1" }.next()
         val rockAudioItems = listOf(rockAudioItem)
@@ -129,14 +129,14 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         val audioItem = Arb.fxAudioItem {}.next()
         val jsonFile =
             tempfile("observablePlaylistHierarchy-test", ".json").apply { deleteOnExit() }
-        val writeHierarchy = ObservablePlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
+        val writeHierarchy = FXPlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
         val writtenPlaylist = writeHierarchy.createPlaylistDirectory("Rock")
         writtenPlaylist.addAudioItem(audioItem)
         testDispatcher.scheduler.advanceUntilIdle()
         writeHierarchy.close()
 
         // No audio library registered — audio item IDs are preserved but entities cannot be resolved
-        val playlistHierarchy = ObservablePlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
+        val playlistHierarchy = FXPlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
 
         playlistHierarchy.size() shouldBe 1
         playlistHierarchy.contains {
@@ -151,7 +151,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         // Create a hierarchy to write a playlist with a reference audio item id to a JSON file
         val jsonFile =
             tempfile("observablePlaylistHierarchy-test", ".json").apply { deleteOnExit() }
-        val writeHierarchy = ObservablePlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
+        val writeHierarchy = FXPlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
         val writtenPlaylist = writeHierarchy.createPlaylistDirectory("Rock")
         writtenPlaylist.addAudioItem(audioItem)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -159,9 +159,9 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         val audioItemRepository = VolatileRepository<Int, ObservableAudioItem>()
         audioItemRepository.add(audioItem)
-        val audioLibrary = ObservableAudioLibrary(audioItemRepository)
+        val audioLibrary = FXAudioLibrary(audioItemRepository)
 
-        val playlistHierarchy = ObservablePlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
+        val playlistHierarchy = FXPlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
 
         playlistHierarchy.size() shouldBe 1
         playlistHierarchy.contains {
@@ -201,7 +201,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
      └──This weeks' favorites songs
      */
     "Creates and finds playlists and audio items" {
-        val playlistHierarchy = ObservablePlaylistHierarchy()
+        val playlistHierarchy = FXPlaylistHierarchy()
 
         val rockAudioItems =
             listOf(
@@ -383,7 +383,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
      └──Selection of playlists
      */
     "Moves playlists from/to playlist directories" {
-        val playlistHierarchy = ObservablePlaylistHierarchy()
+        val playlistHierarchy = FXPlaylistHierarchy()
 
         val rock = playlistHierarchy.createPlaylist("Rock")
         playlistHierarchy.findByName(rock.name) shouldBePresent { it shouldBe rock }
@@ -474,7 +474,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
     }
 
     "Removing playlist directory from it is recursive and changes reflects on playlists" {
-        val playlistHierarchy = ObservablePlaylistHierarchy()
+        val playlistHierarchy = FXPlaylistHierarchy()
 
         val pop = playlistHierarchy.createPlaylist("Pop")
         val fifties = playlistHierarchy.createPlaylistDirectory("50s").also { it.addPlaylist(pop) }
@@ -552,7 +552,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
     }
 
     "Throws Exception when creating playlists with an existing name" {
-        val playlistHierarchy = ObservablePlaylistHierarchy()
+        val playlistHierarchy = FXPlaylistHierarchy()
 
         val newPlaylistDirectory = playlistHierarchy.createPlaylistDirectory("New playlist")
 
@@ -573,7 +573,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
     }
 
     "Removing playlists from a directory, does not remove them from the playlistHierarchy" {
-        val playlistHierarchy = ObservablePlaylistHierarchy()
+        val playlistHierarchy = FXPlaylistHierarchy()
 
         val fifties = playlistHierarchy.createPlaylistDirectory("50s")
         val rock = playlistHierarchy.createPlaylistDirectory("Rock")
@@ -629,7 +629,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
     }
 
     "Deleting a playlist removes it from the playlistHierarchy and its parent directory" {
-        val playlistHierarchy = ObservablePlaylistHierarchy()
+        val playlistHierarchy = FXPlaylistHierarchy()
 
         val rock = playlistHierarchy.createPlaylist("Rock")
         val fifties = playlistHierarchy.createPlaylistDirectory("50s")
@@ -662,7 +662,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
     }
 
     "Single playlist property updates are eventually consistent" {
-        val hierarchy = ObservablePlaylistHierarchy()
+        val hierarchy = FXPlaylistHierarchy()
         val audioItem = Arb.fxAudioItem().next()
 
         val playlist = hierarchy.createPlaylist("Test Playlist", listOf(audioItem))
@@ -679,7 +679,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
     }
 
     "FXPlaylist allows adding duplicate audio items" {
-        val hierarchy = ObservablePlaylistHierarchy()
+        val hierarchy = FXPlaylistHierarchy()
         val item = Arb.fxAudioItem { title = "Duplicate Me" }.next()
         val playlist = hierarchy.createPlaylist("Dupes", listOf(item))
 
@@ -696,7 +696,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
     }
 
     "FXPlaylist addAudioItems emits MutationEvent" {
-        val hierarchy = ObservablePlaylistHierarchy()
+        val hierarchy = FXPlaylistHierarchy()
         val playlist = hierarchy.createPlaylist("Events Test")
         val item1 = Arb.fxAudioItem { title = "Event Item 1" }.next()
         val item2 = Arb.fxAudioItem { title = "Event Item 2" }.next()
@@ -725,7 +725,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
     }
 
     "Rapid playlist modifications are eventually consistent" {
-        val hierarchy = ObservablePlaylistHierarchy()
+        val hierarchy = FXPlaylistHierarchy()
         val audioItems = List(10) { Arb.fxAudioItem { title = "Item-$it" }.next() }
 
         val playlist = hierarchy.createPlaylist("Test")
@@ -754,7 +754,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
     }
 
     "Nested playlist additions maintain hierarchy consistency" {
-        val hierarchy = ObservablePlaylistHierarchy()
+        val hierarchy = FXPlaylistHierarchy()
 
         val child = hierarchy.createPlaylist("Child")
         val parent = hierarchy.createPlaylistDirectory("Parent")
@@ -774,7 +774,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
     }
 
     "Moving playlist between directories is eventually consistent" {
-        val hierarchy = ObservablePlaylistHierarchy()
+        val hierarchy = FXPlaylistHierarchy()
 
         val playlist = hierarchy.createPlaylist("Movable")
         val dir1 = hierarchy.createPlaylistDirectory("Directory 1")
@@ -805,7 +805,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
     }
 
     "Clearing playlist propagates to observable properties" {
-        val hierarchy = ObservablePlaylistHierarchy()
+        val hierarchy = FXPlaylistHierarchy()
         val audioItems = List(5) { Arb.fxAudioItem().next() }
 
         val playlist = hierarchy.createPlaylist("To Clear", audioItems)
@@ -830,7 +830,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
     }
 
     "Recursive audio items property updates correctly" {
-        val hierarchy = ObservablePlaylistHierarchy()
+        val hierarchy = FXPlaylistHierarchy()
 
         val item1 = Arb.fxAudioItem { title = "Item1" }.next()
         val item2 = Arb.fxAudioItem { title = "Item2" }.next()
@@ -853,7 +853,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
     }
 
     "Repository subscription updates observable properties" {
-        val hierarchy = ObservablePlaylistHierarchy()
+        val hierarchy = FXPlaylistHierarchy()
 
         val playlist = hierarchy.createPlaylist("Test")
 
@@ -877,7 +877,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
     }
 
     "Multiple concurrent modifications converge to consistent state" {
-        val hierarchy = ObservablePlaylistHierarchy()
+        val hierarchy = FXPlaylistHierarchy()
         val audioItems = List(20) { Arb.fxAudioItem { title = "Item-$it" }.next() }
 
         val playlist = hierarchy.createPlaylist("Concurrent Test")

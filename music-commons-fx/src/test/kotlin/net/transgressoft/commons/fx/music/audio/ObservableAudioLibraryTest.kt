@@ -38,7 +38,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
     val testScope = CoroutineScope(testDispatcher)
     lateinit var jsonFile: File
     lateinit var jsonFileRepository: JsonRepository<Int, ObservableAudioItem>
-    lateinit var repository: ObservableAudioLibrary
+    lateinit var repository: FXAudioLibrary
 
     beforeSpec {
         ReactiveScope.flowScope = testScope
@@ -49,7 +49,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
     beforeEach {
         jsonFile = tempfile("observableAudioLibrary-test", ".json").also { it.deleteOnExit() }
         jsonFileRepository = JsonFileRepository(jsonFile, ObservableAudioItemMapSerializer)
-        repository = ObservableAudioLibrary(jsonFileRepository)
+        repository = FXAudioLibrary(jsonFileRepository)
     }
 
     afterEach {
@@ -111,7 +111,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
         val expectedArtists = createdItems.flatMap { it.artistsInvolved }.toSet()
 
         // Recreate the library from the same JsonRepository
-        repository = ObservableAudioLibrary(jsonFileRepository)
+        repository = FXAudioLibrary(jsonFileRepository)
 
         testDispatcher.scheduler.advanceUntilIdle()
         WaitForAsyncUtils.waitForFxEvents()
