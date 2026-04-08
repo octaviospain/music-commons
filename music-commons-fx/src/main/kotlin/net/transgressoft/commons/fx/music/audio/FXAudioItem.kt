@@ -75,9 +75,6 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         @Transient
         private val logger = KotlinLogging.logger {}
 
-        @Transient
-        private var suppressEvents = false
-
         private val ioScope =
             CoroutineScope(
                 Dispatchers.IO + SupervisorJob() +
@@ -106,7 +103,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
             lastDateModified: LocalDateTime,
             playCount: Short
         ): this(path, id) {
-            suppressEvents = true
+            disableEvents()
             this.title = title
             this._duration = duration
             this.artist = artist
@@ -122,7 +119,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
             this._dateOfCreation = dateOfCreation
             this.lastDateModified = lastDateModified
             _playCountProperty.set(playCount.toInt())
-            suppressEvents = false
+            enableEvents()
         }
 
         init {
@@ -187,18 +184,14 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         override var title: String = metadata.title
             set(value) {
-                if (!suppressEvents) {
-                    mutateAndPublish {
-                        field = value
-                        artistsInvolvedProperty.clear()
-                        artistsInvolvedProperty.addAll(
-                            getArtistsNamesInvolved(
-                                value, artistProperty.value.name, albumProperty.value.albumArtist.name
-                            ).map { ImmutableArtist.of(it) }.toSet()
-                        )
-                    }
-                } else {
+                mutateAndPublish {
                     field = value
+                    artistsInvolvedProperty.clear()
+                    artistsInvolvedProperty.addAll(
+                        getArtistsNamesInvolved(
+                            value, artistProperty.value.name, albumProperty.value.albumArtist.name
+                        ).map { ImmutableArtist.of(it) }.toSet()
+                    )
                 }
             }
 
@@ -212,18 +205,14 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         override var artist: Artist = metadata.artist
             set(value) {
-                if (!suppressEvents) {
-                    mutateAndPublish {
-                        field = value
-                        artistsInvolvedProperty.clear()
-                        artistsInvolvedProperty.addAll(
-                            getArtistsNamesInvolved(
-                                titleProperty.value, value.name, albumProperty.value.albumArtist.name
-                            ).map { ImmutableArtist.of(it) }.toSet()
-                        )
-                    }
-                } else {
+                mutateAndPublish {
                     field = value
+                    artistsInvolvedProperty.clear()
+                    artistsInvolvedProperty.addAll(
+                        getArtistsNamesInvolved(
+                            titleProperty.value, value.name, albumProperty.value.albumArtist.name
+                        ).map { ImmutableArtist.of(it) }.toSet()
+                    )
                 }
             }
 
@@ -237,18 +226,14 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         override var album: Album = metadata.album
             set(value) {
-                if (!suppressEvents) {
-                    mutateAndPublish {
-                        field = value
-                        artistsInvolvedProperty.clear()
-                        artistsInvolvedProperty.addAll(
-                            getArtistsNamesInvolved(
-                                titleProperty.value, artistProperty.value.name, value.albumArtist.name
-                            ).map { ImmutableArtist.of(it) }.toSet()
-                        )
-                    }
-                } else {
+                mutateAndPublish {
                     field = value
+                    artistsInvolvedProperty.clear()
+                    artistsInvolvedProperty.addAll(
+                        getArtistsNamesInvolved(
+                            titleProperty.value, artistProperty.value.name, value.albumArtist.name
+                        ).map { ImmutableArtist.of(it) }.toSet()
+                    )
                 }
             }
 
@@ -260,76 +245,45 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                 }
             }
 
-        override var genre: Genre = metadata.genre
-            set(value) {
-                if (!suppressEvents) mutateAndPublish { field = value } else field = value
-            }
+        @Transient
+        override val genreProperty = SimpleObjectProperty(this, "genre", metadata.genre)
+
+        override var genre: Genre by reactiveProperty({ genreProperty.value }, { genreProperty.set(it) })
 
         @Transient
-        override val genreProperty =
-            SimpleObjectProperty(this, "genre", genre).apply {
-                addListener { _, _, newGenre ->
-                    genre = newGenre
-                }
-            }
+        override val commentsProperty = SimpleStringProperty(this, "comments", metadata.comments ?: "")
 
-        override var comments: String? = metadata.comments
-            set(value) {
-                if (!suppressEvents) mutateAndPublish { field = value } else field = value
-            }
+        override var comments: String? by reactiveProperty({ commentsProperty.value }, { commentsProperty.set(it) })
 
         @Transient
-        override val commentsProperty =
-            SimpleStringProperty(this, "comments", comments ?: "").apply {
-                addListener { _, _, newComments ->
-                    comments = newComments
-                }
-            }
+        override val trackNumberProperty = SimpleIntegerProperty(this, "track number", metadata.trackNumber?.toInt() ?: -1)
 
-        override var trackNumber: Short? = metadata.trackNumber
-            set(value) {
-                if (!suppressEvents) mutateAndPublish { field = value } else field = value
-            }
+        override var trackNumber: Short? by reactiveProperty(
+            { trackNumberProperty.get().toShort().takeIf { it >= 0 } },
+            { trackNumberProperty.set(it?.toInt() ?: -1) }
+        )
 
         @Transient
-        override val trackNumberProperty =
-            SimpleIntegerProperty(this, "track number", trackNumber?.toInt() ?: -1).apply {
-                addListener { _, _, newTrackNumber ->
-                    trackNumber = newTrackNumber.toShort()
-                }
-            }
+        override val discNumberProperty = SimpleIntegerProperty(this, "disc number", metadata.discNumber?.toInt() ?: -1)
 
-        override var discNumber: Short? = metadata.discNumber
-            set(value) {
-                if (!suppressEvents) mutateAndPublish { field = value } else field = value
-            }
+        override var discNumber: Short? by reactiveProperty(
+            { discNumberProperty.get().toShort().takeIf { it >= 0 } },
+            { discNumberProperty.set(it?.toInt() ?: -1) }
+        )
 
         @Transient
-        override val discNumberProperty =
-            SimpleIntegerProperty(this, "disc number", discNumber?.toInt() ?: -1).apply {
-                addListener { _, _, newDiscNumber ->
-                    discNumber = newDiscNumber.toShort()
-                }
-            }
+        override val bpmProperty = SimpleFloatProperty(this, "bpm", metadata.bpm ?: -1f)
 
-        override var bpm: Float? = metadata.bpm
-            set(value) {
-                if (!suppressEvents) mutateAndPublish { field = value } else field = value
-            }
-
-        @Transient
-        override val bpmProperty =
-            SimpleFloatProperty(this, "bpm", bpm ?: -1f).apply {
-                addListener { _, _, newBpm ->
-                    bpm = newBpm.takeUnless { it == -1f }?.toFloat()
-                }
-            }
+        override var bpm: Float? by reactiveProperty(
+            { bpmProperty.get().takeUnless { it == -1f } },
+            { bpmProperty.set(it ?: -1f) }
+        )
 
         @Serializable
         override var lastDateModified: LocalDateTime = dateOfCreation
             set(value) {
                 field = value
-                if (!suppressEvents) _lastDateModifiedProperty.set(value)
+                _lastDateModifiedProperty.set(value)
             }
 
         private val _lastDateModifiedProperty = SimpleObjectProperty(this, "date of last modification", lastDateModified)
@@ -339,13 +293,9 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         override var coverImageBytes: ByteArray? = metadata.coverBytes
             set(value) {
-                if (!suppressEvents) {
-                    mutateAndPublish {
-                        field = value
-                        _coverImageProperty.set(Optional.ofNullable(value).map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) })
-                    }
-                } else {
+                mutateAndPublish {
                     field = value
+                    _coverImageProperty.set(Optional.ofNullable(value).map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) })
                 }
             }
 
