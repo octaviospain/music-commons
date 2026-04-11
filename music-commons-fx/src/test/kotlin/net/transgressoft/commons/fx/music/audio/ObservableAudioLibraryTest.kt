@@ -35,7 +35,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 internal class ObservableAudioLibraryTest : StringSpec({
 
     val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher)
+    val testScope = CoroutineScope(testDispatcher + kotlinx.coroutines.SupervisorJob())
     lateinit var jsonFile: File
     lateinit var jsonFileRepository: JsonRepository<Int, ObservableAudioItem>
     lateinit var repository: FXAudioLibrary
@@ -53,6 +53,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
     }
 
     afterEach {
+        repository.close()
         jsonFileRepository.close()
     }
 

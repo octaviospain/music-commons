@@ -22,6 +22,8 @@ internal class TestPlaylistHierarchy(
     repository: Repository<Int, MutableAudioPlaylist> = VolatileRepository("TestPlaylistHierarchy")
 ) : PlaylistHierarchyBase<AudioItem, MutableAudioPlaylist>(repository) {
 
+    override val playlistElementType = MutableAudioPlaylist::class
+
     init {
         RegistryBase.deregisterRepository(MutableAudioPlaylist::class.java)
         RegistryBase.registerRepository(MutableAudioPlaylist::class.java, repository)

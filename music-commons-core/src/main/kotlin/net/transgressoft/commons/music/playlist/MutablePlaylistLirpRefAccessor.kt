@@ -40,7 +40,8 @@ import net.transgressoft.lirp.persistence.RefEntry
  * delegates for lazy resolution from [net.transgressoft.lirp.persistence.LirpContext].
  */
 @Suppress("ClassName")
-internal class `MutablePlaylist_LirpRefAccessor` : LirpRefAccessor<MutableAudioPlaylist> {
+@SuppressWarnings("kotlin:S101")
+internal class MutablePlaylist_LirpRefAccessor : LirpRefAccessor<MutableAudioPlaylist> {
 
     override val entries: List<RefEntry<*, MutableAudioPlaylist>> = emptyList()
 

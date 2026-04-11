@@ -87,7 +87,7 @@ implementation("net.transgressoft:lirp-core:2.2.0")
 ### JavaFX Integration
 
 - **Observable properties**: Direct binding to JavaFX TableView, ListView, and other controls
-- **Thread safety**: All property modifications routed through `Platform.runLater`
+- **Thread safety**: Audio item and artist catalog collections use `FxAggregateList` and `FxProjectionMap` delegates that auto-dispatch listener notifications to the JavaFX Application Thread, eliminating manual `Platform.runLater` overhead
 - **Custom controls**: `WaveformPane` component for waveform visualization
 
 ## Module Details

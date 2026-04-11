@@ -39,6 +39,8 @@ internal class DefaultPlaylistHierarchy(
 
     private val logger = KotlinLogging.logger {}
 
+    override val playlistElementType = MutableAudioPlaylist::class
+
     init {
         RegistryBase.deregisterRepository(MutableAudioPlaylist::class.java)
         RegistryBase.registerRepository(MutableAudioPlaylist::class.java, repository)
