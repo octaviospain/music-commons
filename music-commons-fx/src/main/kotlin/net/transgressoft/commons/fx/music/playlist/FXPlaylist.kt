@@ -20,10 +20,9 @@ package net.transgressoft.commons.fx.music.playlist
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.music.playlist.AudioPlaylist
 import net.transgressoft.commons.music.playlist.MutablePlaylistBase
-import net.transgressoft.lirp.persistence.mutableAggregateList
-import net.transgressoft.lirp.persistence.mutableAggregateSet
+import net.transgressoft.lirp.persistence.fx.fxAggregateList
+import net.transgressoft.lirp.persistence.fx.fxAggregateSet
 import com.google.common.base.Objects
-import javafx.application.Platform
 import javafx.beans.property.ReadOnlyBooleanProperty
 import javafx.beans.property.ReadOnlyListProperty
 import javafx.beans.property.ReadOnlyObjectProperty
@@ -35,19 +34,22 @@ import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleSetProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.collections.FXCollections
+import javafx.collections.ListChangeListener
+import javafx.collections.ObservableList
+import javafx.collections.ObservableSet
 import javafx.scene.image.Image
 import mu.KotlinLogging
 import java.util.Optional
+import java.util.function.Predicate
 
 /**
- * JavaFX playlist implementation with bidirectional observable property bindings.
+ * JavaFX playlist implementation backed by lirp-fx aggregate collection delegates.
  *
- * All property modifications execute on the JavaFX Application Thread, and changes to
- * nested playlists or audio items automatically update the recursive audio items property.
- *
- * Audio item and nested playlist references are tracked as lirp mutable aggregate delegates
- * ([_audioItems], [_playlists]) for ID persistence and lazy entity resolution, while the
- * observable [audioItemsProperty] and [playlistsProperty] serve as the FX-visible counterpart.
+ * Audio items and nested playlists are tracked via [fxAggregateList] and [fxAggregateSet]
+ * delegates that serve as both the lirp ID-tracking aggregate and the [ObservableList]/[ObservableSet]
+ * exposed through [ObservablePlaylist]. The delegates auto-dispatch listener notifications to
+ * the JavaFX Application Thread and auto-sync with the lirp registry, eliminating the need
+ * for manual [javafx.application.Platform.runLater] calls and separate backing properties.
  *
  * The manual [FXPlaylist_LirpRefAccessor] registers the aggregate delegates with lirp so
  * that registry binding and mutation event wiring work correctly at runtime.
@@ -63,117 +65,47 @@ internal class FXPlaylist(
 
     private val logger = KotlinLogging.logger {}
 
-    // lirp aggregate delegates for ID tracking and serialization.
     // @Aggregate is intentionally omitted — a manual FXPlaylist_LirpRefAccessor is provided
     // because KSP cannot process internal classes.
-    override val audioItems by mutableAggregateList<Int, ObservableAudioItem>(initialAudioItemIds)
+    // Only audioItems/playlists use by-delegation so delegateRegistry discovers them for serialization.
+    // The backing aggregates use = assignment to avoid duplicate entries in delegateRegistry.
+    internal val audioItemsAggregate = fxAggregateList<Int, ObservableAudioItem>(initialAudioItemIds)
 
-    override val playlists by mutableAggregateSet<Int, ObservablePlaylist>(initialPlaylistIds)
+    override val audioItems by audioItemsAggregate
 
-    /**
-     * Populates [_audioItemsProperty] and [_playlistsProperty] from the resolved aggregate
-     * delegates. Called after the entity registries are bound so that deserialized playlists
-     * loaded from a persistent store reflect live entity references in their JavaFX properties.
-     *
-     * Updates are applied on the calling thread and also dispatched to the JavaFX Application
-     * Thread via [Platform.runLater] to keep FX bindings consistent.
-     */
-    fun syncObservablePropertiesFromAggregates() {
-        // Aggregate proxies may not be bound if the referenced entity registry is missing
-        // (e.g. no AudioLibrary registered). Resolve gracefully: unbound proxies yield empty.
-        val resolvedItems =
-            try {
-                audioItems.toList()
-            } catch (_: NoSuchElementException) {
-                emptyList()
-            }
-        val resolvedPlaylists =
-            try {
-                playlists.toList()
-            } catch (_: NoSuchElementException) {
-                emptyList()
-            }
-        // Populate synchronously so non-FX-thread callers see the resolved state immediately
-        synchronized(_audioItemsProperty) {
-            if (_audioItemsProperty.isEmpty() && resolvedItems.isNotEmpty()) {
-                _audioItemsProperty.clear()
-                _audioItemsProperty.addAll(resolvedItems)
-            }
-        }
-        if (_playlistsProperty.isEmpty() && resolvedPlaylists.isNotEmpty()) {
-            _playlistsProperty.addAll(resolvedPlaylists)
-        }
-        // Also schedule on the FX thread to ensure bound UI components refresh
-        Platform.runLater {
-            synchronized(_audioItemsProperty) {
-                if (_audioItemsProperty.size != resolvedItems.size) {
-                    _audioItemsProperty.clear()
-                    _audioItemsProperty.addAll(resolvedItems)
-                }
-            }
-            if (_playlistsProperty.size != resolvedPlaylists.size) {
-                _playlistsProperty.clear()
-                _playlistsProperty.addAll(resolvedPlaylists)
-            }
-        }
-    }
+    override val audioItemsProperty: ReadOnlyListProperty<ObservableAudioItem> = SimpleListProperty(this, "audioItems", audioItemsAggregate)
+
+    internal val playlistsAggregate = fxAggregateSet<Int, ObservablePlaylist>(initialPlaylistIds)
+
+    override val playlists by playlistsAggregate
+
+    override val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist> = SimpleSetProperty(this, "playlists", playlistsAggregate)
 
     private val _nameProperty = SimpleStringProperty(this, "name", name)
 
     override val nameProperty: ReadOnlyStringProperty = _nameProperty
 
-    override var name: String by reactiveProperty({ _nameProperty.get() }, { _nameProperty.set(it) })
+    override var name: String
+        get() = _nameProperty.value
+        set(value) {
+            mutateAndPublish {
+                _nameProperty.set(value)
+                value
+            }
+        }
 
     private val _isDirectoryProperty = SimpleBooleanProperty(this, "isDirectory", isDirectory)
 
     override val isDirectoryProperty: ReadOnlyBooleanProperty = _isDirectoryProperty
 
-    override var isDirectory: Boolean by reactiveProperty({ _isDirectoryProperty.get() }, { _isDirectoryProperty.set(it) })
-
-    private val _audioItemsProperty =
-        SimpleListProperty(this, "audioItems", FXCollections.observableArrayList<ObservableAudioItem>()).apply {
-            addListener { _, _, _ ->
-                replaceRecursiveAudioItems()
-                changePlaylistCover()
+    override var isDirectory: Boolean
+        get() = _isDirectoryProperty.value
+        set(value) {
+            mutateAndPublish {
+                _isDirectoryProperty.set(value)
+                value
             }
         }
-
-    private fun replaceRecursiveAudioItems() {
-        val currentPlaylists = _playlistsProperty.toList()
-        val currentAudioItems = _audioItemsProperty.toList()
-
-        Platform.runLater {
-            _audioItemsRecursiveProperty.clear()
-            _audioItemsRecursiveProperty.addAll(
-                buildList<ObservableAudioItem> {
-                    addAll(currentAudioItems)
-                    addAll(currentPlaylists.flatMap { it.audioItemsRecursive })
-                }
-            )
-        }
-    }
-
-    private fun changePlaylistCover() {
-        val newCover =
-            _audioItemsProperty.stream()
-                .map { it.coverImageProperty.get() }
-                .filter { it.isPresent }
-                .findAny()
-
-        Platform.runLater {
-            if (newCover.isPresent) {
-                _coverImageProperty.set(newCover.get())
-            } else {
-                _coverImageProperty.set(Optional.empty())
-            }
-        }
-    }
-
-    override val audioItemsProperty: ReadOnlyListProperty<ObservableAudioItem> = _audioItemsProperty
-
-    private val _playlistsProperty = SimpleSetProperty(this, "playlists", FXCollections.observableSet<ObservablePlaylist>())
-
-    override val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist> = _playlistsProperty
 
     private val _audioItemsRecursiveProperty =
         SimpleListProperty(
@@ -196,38 +128,61 @@ internal class FXPlaylist(
 
     override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>> = _coverImageProperty
 
-    override fun audioItemsAllMatch(predicate: java.util.function.Predicate<ObservableAudioItem>): Boolean =
-        synchronized(_audioItemsProperty) { _audioItemsProperty.toList() }.stream().allMatch { predicate.test(it) }
+    init {
+        audioItemsAggregate.addListener(
+            ListChangeListener {
+                replaceRecursiveAudioItems()
+                changePlaylistCover()
+            }
+        )
+    }
 
-    override fun audioItemsAnyMatch(predicate: java.util.function.Predicate<ObservableAudioItem>): Boolean =
-        synchronized(_audioItemsProperty) { _audioItemsProperty.toList() }.stream().anyMatch { predicate.test(it) }
+    private fun replaceRecursiveAudioItems() {
+        val currentAudioItems = audioItemsAggregate.toList()
+        val currentPlaylists = playlistsAggregate.toList()
+        _audioItemsRecursiveProperty.clear()
+        _audioItemsRecursiveProperty.addAll(
+            buildList<ObservableAudioItem> {
+                addAll(currentAudioItems)
+                addAll(currentPlaylists.flatMap { it.audioItemsRecursive })
+            }
+        )
+    }
+
+    private fun changePlaylistCover() {
+        val newCover =
+            audioItemsAggregate.stream()
+                .map { it.coverImageProperty.get() }
+                .filter { it.isPresent }
+                .findAny()
+
+        if (newCover.isPresent) {
+            _coverImageProperty.set(newCover.get())
+        } else {
+            _coverImageProperty.set(Optional.empty())
+        }
+    }
+
+    override fun audioItemsAllMatch(predicate: Predicate<ObservableAudioItem>): Boolean =
+        audioItemsAggregate.toList().stream().allMatch { predicate.test(it) }
+
+    override fun audioItemsAnyMatch(predicate: Predicate<ObservableAudioItem>): Boolean =
+        audioItemsAggregate.toList().stream().anyMatch { predicate.test(it) }
 
     override fun addAudioItems(audioItems: Collection<ObservableAudioItem>): Boolean {
-        val currentIds: Set<Int> = synchronized(_audioItemsProperty) { _audioItemsProperty.toList().map { it.id }.toSet() }
+        val currentIds = audioItemsAggregate.map { it.id }.toSet()
         val itemsToAdd = audioItems.filter { it.id !in currentIds }
         if (itemsToAdd.isEmpty()) return false
-        this.audioItems.addAll(itemsToAdd)
-        Platform.runLater {
-            synchronized(_audioItemsProperty) {
-                _audioItemsProperty.addAll(itemsToAdd)
-            }
-        }
+        audioItemsAggregate.addAll(itemsToAdd)
         logger.debug { "Added $itemsToAdd to playlist $uniqueId" }
         return true
     }
 
     override fun removeAudioItems(audioItems: Collection<ObservableAudioItem>): Boolean {
-        val itemsToRemove = audioItems.toSet()
-        val currentItems = synchronized(_audioItemsProperty) { _audioItemsProperty.toSet() }
-        val hasItems = itemsToRemove.any { it in currentItems }
-        this.audioItems.removeAll(audioItems.toSet())
-        Platform.runLater {
-            synchronized(_audioItemsProperty) {
-                _audioItemsProperty.removeAll(itemsToRemove)
-            }
-        }
+        val hasItems = audioItems.any { it in audioItemsAggregate }
         if (hasItems) {
-            logger.debug { "Removed $itemsToRemove from playlist $uniqueId" }
+            audioItemsAggregate.removeAll(audioItems.toSet())
+            logger.debug { "Removed $audioItems from playlist $uniqueId" }
         }
         return hasItems
     }
@@ -236,42 +191,26 @@ internal class FXPlaylist(
     @JvmName("removeAudioItemIds")
     override fun removeAudioItems(audioItemIds: Collection<Int>): Boolean {
         val idsToRemove = audioItemIds.toSet()
-        val currentItems = synchronized(_audioItemsProperty) { _audioItemsProperty.toList() }
-        val toRemove = currentItems.filter { it.id in idsToRemove }
-        if (toRemove.isEmpty())
-            return false
-
-        this.audioItems.removeAll(toRemove.toSet())
-        Platform.runLater {
-            synchronized(_audioItemsProperty) {
-                _audioItemsProperty.removeAll { it.id in idsToRemove }
-            }
-        }
+        val toRemove = audioItemsAggregate.filter { it.id in idsToRemove }
+        if (toRemove.isEmpty()) return false
+        audioItemsAggregate.removeAll(toRemove.toSet())
         logger.debug { "Removed audio items with ids $idsToRemove from playlist $uniqueId" }
         return true
     }
 
     override fun addPlaylists(playlists: Collection<ObservablePlaylist>): Boolean {
-        val newPlaylists = playlists.filter { it !in _playlistsProperty }
-        if (newPlaylists.isEmpty())
-            return false
-
-        this.playlists.addAll(newPlaylists)
-        Platform.runLater {
-            _playlistsProperty.addAll(newPlaylists)
-            replaceRecursiveAudioItems()
-        }
+        val newPlaylists = playlists.filter { it !in playlistsAggregate }
+        if (newPlaylists.isEmpty()) return false
+        playlistsAggregate.addAll(newPlaylists)
+        replaceRecursiveAudioItems()
         logger.debug { "Added $playlists to playlist $uniqueId" }
         return true
     }
 
     override fun removePlaylists(playlists: Collection<ObservablePlaylist>): Boolean {
-        val containsPlaylists = playlists.any { it in _playlistsProperty }
+        val containsPlaylists = playlists.any { it in playlistsAggregate }
         if (containsPlaylists) {
-            this.playlists.removeAll(playlists.toSet())
-            Platform.runLater {
-                _playlistsProperty.removeAll(playlists.toSet())
-            }
+            playlistsAggregate.removeAll(playlists.toSet())
             logger.debug { "Removed $playlists from playlist $uniqueId" }
         }
         return containsPlaylists
@@ -281,39 +220,32 @@ internal class FXPlaylist(
     @JvmName("removePlaylistIds")
     override fun removePlaylists(playlistIds: Collection<Int>): Boolean {
         val idsToRemove = playlistIds.toSet()
-        val toRemove = _playlistsProperty.filter { it.id in idsToRemove }
+        val toRemove = playlistsAggregate.filter { it.id in idsToRemove }
         if (toRemove.isEmpty()) return false
-        this.playlists.removeAll(toRemove.toSet())
-        Platform.runLater {
-            _playlistsProperty.removeAll { it.id in idsToRemove }
-        }
+        playlistsAggregate.removeAll(toRemove.toSet())
         logger.debug { "Removed playlists with ids $playlistIds from playlist $uniqueId" }
         return true
     }
 
     override fun clearAudioItems() {
-        if (synchronized(_audioItemsProperty) { _audioItemsProperty.isNotEmpty() }) {
-            val size = synchronized(_audioItemsProperty) { _audioItemsProperty.size }
-            this.audioItems.clear()
-            Platform.runLater { synchronized(_audioItemsProperty) { _audioItemsProperty.clear() } }
+        if (audioItemsAggregate.isNotEmpty()) {
+            val size = audioItemsAggregate.size
+            audioItemsAggregate.clear()
             logger.debug { "Cleared $size audio items from playlist $uniqueId" }
         }
     }
 
     override fun clearPlaylists() {
-        if (_playlistsProperty.isNotEmpty()) {
-            val size = _playlistsProperty.size
-            this.playlists.clear()
-            Platform.runLater {
-                _playlistsProperty.clear()
-            }
+        if (playlistsAggregate.isNotEmpty()) {
+            val size = playlistsAggregate.size
+            playlistsAggregate.clear()
             logger.debug { "Cleared $size playlists from playlist $uniqueId" }
         }
     }
 
     override fun compareTo(other: AudioPlaylist<ObservableAudioItem>): Int =
         if (nameProperty.get() == other.name) {
-            val size = _playlistsProperty.size + audioItemsRecursive.size
+            val size = playlistsAggregate.size + audioItemsRecursive.size
             val objectSize = other.playlists.size + other.audioItemsRecursive.size
             size - objectSize
         } else {
@@ -324,25 +256,26 @@ internal class FXPlaylist(
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false
         val that = other as FXPlaylist
-        val thisAudioItems = synchronized(_audioItemsProperty) { _audioItemsProperty.toList() }
-        val thatAudioItems = synchronized(that._audioItemsProperty) { that._audioItemsProperty.toList() }
         return id == that.id &&
             isDirectory == that.isDirectory &&
             name == that.name &&
-            thisAudioItems == thatAudioItems &&
-            _playlistsProperty == that._playlistsProperty
+            audioItemsAggregate.toList() == that.audioItemsAggregate.toList() &&
+            playlistsAggregate == that.playlistsAggregate
     }
 
     override fun hashCode() =
         Objects.hashCode(
             id, isDirectory, name,
-            synchronized(_audioItemsProperty) {
-                _audioItemsProperty.toList()
-            },
-            _playlistsProperty.toSet()
+            audioItemsAggregate.toList(),
+            playlistsAggregate.toSet()
         )
 
-    override fun clone(): FXPlaylist = FXPlaylist(id, name, isDirectory, audioItems.referenceIds.toList(), LinkedHashSet(playlists.referenceIds))
+    override fun clone(): FXPlaylist =
+        FXPlaylist(
+            id, name, isDirectory,
+            audioItemsAggregate.referenceIds.toList(),
+            LinkedHashSet(playlistsAggregate.referenceIds)
+        )
 
     private fun <T> formatCollectionWithIndentation(collection: Collection<T>): String {
         if (collection.isEmpty()) return "[]"
@@ -352,16 +285,15 @@ internal class FXPlaylist(
     }
 
     override fun toString(): String {
-        val items = synchronized(_audioItemsProperty) { _audioItemsProperty.toList() }
-        val formattedAudioItems = formatCollectionWithIndentation(items)
-        val formattedPlaylists = formatCollectionWithIndentation(_playlistsProperty.toList())
+        val formattedAudioItems = formatCollectionWithIndentation(audioItemsAggregate.toList())
+        val formattedPlaylists = formatCollectionWithIndentation(playlistsAggregate.toList())
         return "FXPlaylist(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$formattedAudioItems, playlists=$formattedPlaylists)"
     }
 
     @Suppress("UNCHECKED_CAST")
     override fun asJsonKeyValue(): String {
-        val audioItemRefIds = audioItems.referenceIds
-        val playlistRefIds = playlists.referenceIds
+        val audioItemRefIds = audioItemsAggregate.referenceIds
+        val playlistRefIds = playlistsAggregate.referenceIds
         val audioItemsString =
             buildString {
                 append("[")

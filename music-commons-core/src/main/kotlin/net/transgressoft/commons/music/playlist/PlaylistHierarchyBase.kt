@@ -19,13 +19,13 @@ package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
+import net.transgressoft.lirp.entity.subscribeToCollectionChanges
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
 import net.transgressoft.lirp.event.LirpEventSubscriber
 import net.transgressoft.lirp.event.LirpEventSubscription
-import net.transgressoft.lirp.event.ReactiveMutationEvent
 import net.transgressoft.lirp.persistence.Repository
 import com.google.common.collect.Multimap
 import com.google.common.collect.MultimapBuilder
@@ -33,6 +33,7 @@ import mu.KotlinLogging
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.reflect.KClass
 
 /**
  * Base implementation for [ReactivePlaylistHierarchy] managing hierarchical playlist structures.
@@ -51,6 +52,11 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
 ) : ReactivePlaylistHierarchy<I, P>,
     Repository<Int, P> by repository,
     LirpEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>> by audioItemEventSubscriber {
+
+    /**
+     * The runtime type of playlist elements in this hierarchy, used for typed collection change subscriptions.
+     */
+    protected abstract val playlistElementType: KClass<P>
 
     init {
         repository.disableEvents(CREATE, UPDATE, DELETE)
@@ -97,47 +103,24 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
     }
 
     /**
-     * Subscribes to mutation events on [playlist] to keep [playlistsHierarchyMultiMap] in sync
+     * Subscribes to collection change events on [playlist] to keep [playlistsHierarchyMultiMap] in sync
      * when nested playlists are added or removed directly on the playlist instance.
      */
-    @Suppress("UNCHECKED_CAST")
     private fun subscribeToPlaylistMutations(playlist: P) {
         if (playlistMutationSubscriptions.containsKey(playlist.id)) return
         val subscription =
-            playlist.subscribe { event ->
-                if (event is ReactiveMutationEvent<*, *>) {
-                    val before = event.oldEntity as? MutablePlaylistBase<*, *> ?: return@subscribe
-                    val after = event.newEntity as? MutablePlaylistBase<*, *> ?: return@subscribe
-                    // Use referenceIds from the aggregate proxy — the clone's delegates are unbound
-                    // (not in any repository), so resolving via playlists would always return empty,
-                    // but referenceIds still returns the correct snapshot from the backing set.
-                    val beforePlaylistRefIds =
-                        (before.playlists as? net.transgressoft.lirp.persistence.AggregateCollectionRef<*, *>)
-                            ?.referenceIds?.map { it as Int }?.toSet() ?: emptySet()
-                    val afterPlaylistRefIds =
-                        (after.playlists as? net.transgressoft.lirp.persistence.AggregateCollectionRef<*, *>)
-                            ?.referenceIds?.map { it as Int }?.toSet() ?: emptySet()
-                    val addedPlaylistIds = afterPlaylistRefIds - beforePlaylistRefIds
-                    val removedPlaylistIds = beforePlaylistRefIds - afterPlaylistRefIds
-
-                    for (addedId in addedPlaylistIds) {
-                        findById(addedId).ifPresent { addedPlaylist ->
-                            // Remove from old parent if present
-                            findParentPlaylist(addedPlaylist).ifPresent { oldParent ->
-                                if (oldParent.id != after.id) {
-                                    playlistsHierarchyMultiMap.remove(oldParent.uniqueId, addedPlaylist)
-                                    // Remove from old parent's in-memory playlists set
-                                    oldParent.removePlaylists(listOf(addedPlaylist))
-                                }
-                            }
-                            playlistsHierarchyMultiMap.put(after.uniqueId, addedPlaylist)
+            playlist.subscribeToCollectionChanges(playlistElementType, "playlists") { event ->
+                for (added in event.added) {
+                    findParentPlaylist(added).ifPresent { oldParent ->
+                        if (oldParent.id != playlist.id) {
+                            playlistsHierarchyMultiMap.remove(oldParent.uniqueId, added)
+                            oldParent.removePlaylists(listOf(added))
                         }
                     }
-                    for (removedId in removedPlaylistIds) {
-                        findById(removedId).ifPresent { removedPlaylist ->
-                            playlistsHierarchyMultiMap.remove(after.uniqueId, removedPlaylist)
-                        }
-                    }
+                    playlistsHierarchyMultiMap.put(playlist.uniqueId, added)
+                }
+                for (removed in event.removed) {
+                    playlistsHierarchyMultiMap.remove(playlist.uniqueId, removed)
                 }
             }
         playlistMutationSubscriptions[playlist.id] = subscription

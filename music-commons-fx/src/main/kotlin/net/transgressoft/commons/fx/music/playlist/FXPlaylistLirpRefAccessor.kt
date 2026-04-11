@@ -40,6 +40,7 @@ import net.transgressoft.lirp.persistence.RefEntry
  * delegates for lazy resolution from [net.transgressoft.lirp.persistence.LirpContext].
  */
 @Suppress("ClassName")
+@SuppressWarnings("kotlin:S101")
 internal class FXPlaylist_LirpRefAccessor : LirpRefAccessor<ObservablePlaylist> {
 
     override val entries: List<RefEntry<*, ObservablePlaylist>> = emptyList()
@@ -50,10 +51,10 @@ internal class FXPlaylist_LirpRefAccessor : LirpRefAccessor<ObservablePlaylist> 
             CollectionRefEntry(
                 refName = "audioItems",
                 idsGetter = { playlist ->
-                    (playlist.audioItems as AggregateCollectionRef<*, *>).referenceIds
+                    (playlist as FXPlaylist).audioItemsAggregate.referenceIds
                 },
                 delegateGetter = { playlist ->
-                    playlist.audioItems as AggregateCollectionRef<*, *>
+                    (playlist as FXPlaylist).audioItemsAggregate as AggregateCollectionRef<*, *>
                 },
                 referencedClass = ObservableAudioItem::class.java,
                 cascadeAction = CascadeAction.NONE,
@@ -62,10 +63,10 @@ internal class FXPlaylist_LirpRefAccessor : LirpRefAccessor<ObservablePlaylist> 
             CollectionRefEntry(
                 refName = "playlists",
                 idsGetter = { playlist ->
-                    (playlist.playlists as AggregateCollectionRef<*, *>).referenceIds
+                    (playlist as FXPlaylist).playlistsAggregate.referenceIds
                 },
                 delegateGetter = { playlist ->
-                    playlist.playlists as AggregateCollectionRef<*, *>
+                    (playlist as FXPlaylist).playlistsAggregate as AggregateCollectionRef<*, *>
                 },
                 referencedClass = ObservablePlaylist::class.java,
                 cascadeAction = CascadeAction.NONE,

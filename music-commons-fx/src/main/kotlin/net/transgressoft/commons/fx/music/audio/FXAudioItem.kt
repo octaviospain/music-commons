@@ -27,15 +27,19 @@ import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.UNASSIGNED_ID
 import net.transgressoft.lirp.entity.ReactiveEntityBase
+import net.transgressoft.lirp.persistence.fx.fxFloat
+import net.transgressoft.lirp.persistence.fx.fxInteger
+import net.transgressoft.lirp.persistence.fx.fxObject
+import net.transgressoft.lirp.persistence.fx.fxString
+import javafx.beans.property.FloatProperty
+import javafx.beans.property.IntegerProperty
 import javafx.beans.property.ObjectProperty
 import javafx.beans.property.ReadOnlyIntegerProperty
 import javafx.beans.property.ReadOnlyObjectProperty
 import javafx.beans.property.ReadOnlySetProperty
-import javafx.beans.property.SimpleFloatProperty
 import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleSetProperty
-import javafx.beans.property.SimpleStringProperty
 import javafx.beans.property.StringProperty
 import javafx.collections.FXCollections
 import javafx.scene.image.Image
@@ -60,12 +64,19 @@ import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 
 /**
- * JavaFX implementation of [ObservableAudioItem] with bidirectional property binding.
+ * JavaFX implementation of [ObservableAudioItem] with lirp-fx scalar properties.
  *
- * Provides JavaFX properties that automatically sync with the underlying metadata values.
- * Changes to JavaFX properties trigger reactive change events, while direct property
- * modifications update the corresponding JavaFX properties. Includes special handling for
- * cover images converted to JavaFX [Image] instances for UI display.
+ * Each mutable metadata field is exposed as a lirp-fx property ([fxString], [fxObject],
+ * [fxInteger], [fxFloat]) that serves as the single source of truth for its JavaFX value.
+ * Reactive mutation events are published via [mutateAndPublish] so [lastDateModified] is
+ * updated and subscribers are notified on every state change, both when properties are set
+ * directly and when they are mutated through the lirp-fx JavaFX property.
+ *
+ * Side-effect logic (updating [artistsInvolvedProperty]) is registered as change listeners on
+ * [titleProperty], [artistProperty], and [albumProperty] via [syncArtistsInvolved].
+ *
+ * [lastDateModifiedProperty] is updated automatically by [ReactiveEntityBase] after each
+ * successful mutation.
  */
 @Suppress("SERIALIZER_TYPE_INCOMPATIBLE")
 @Serializable(with = ObservableAudioItemSerializer::class)
@@ -118,6 +129,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
             this._encoding = encoding
             this._dateOfCreation = dateOfCreation
             this.lastDateModified = lastDateModified
+            this.coverImageBytes = metadata.coverBytes
             _playCountProperty.set(playCount.toInt())
             enableEvents()
         }
@@ -180,104 +192,97 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                     append("-$bitRate")
                 }
 
-        /** Mutable properties */
+        /** Mutable properties — lirp-fx properties are the JavaFX source of truth.
+         *  Change listeners on each lirp-fx property sync the domain setter, which publishes
+         *  mutation events and updates lastDateModified. This pattern works both with and without
+         *  a RegistryBase-managed repository. */
+
+        @Transient
+        override val titleProperty: StringProperty = fxString(metadata.title)
 
         override var title: String = metadata.title
             set(value) {
                 mutateAndPublish {
                     field = value
-                    artistsInvolvedProperty.clear()
-                    artistsInvolvedProperty.addAll(
-                        getArtistsNamesInvolved(
-                            value, artistProperty.value.name, albumProperty.value.albumArtist.name
-                        ).map { ImmutableArtist.of(it) }.toSet()
-                    )
+                    syncArtistsInvolved()
                 }
+                titleProperty.set(value)
             }
 
+        // LirpObjectProperty<T> extends SimpleObjectProperty<T?>, so it is ObjectProperty<T?> in
+        // Kotlin's type system. The cast to ObjectProperty<T> (non-nullable) is safe at runtime
+        // because JavaFX generics erase to raw types on the JVM.
         @Transient
-        override val titleProperty: StringProperty =
-            SimpleStringProperty(this, "title", title).apply {
-                addListener { _, _, newTitle ->
-                    title = newTitle
-                }
-            }
+        @Suppress("UNCHECKED_CAST")
+        override val artistProperty: ObjectProperty<Artist> = fxObject(metadata.artist) as ObjectProperty<Artist>
 
         override var artist: Artist = metadata.artist
             set(value) {
                 mutateAndPublish {
                     field = value
-                    artistsInvolvedProperty.clear()
-                    artistsInvolvedProperty.addAll(
-                        getArtistsNamesInvolved(
-                            titleProperty.value, value.name, albumProperty.value.albumArtist.name
-                        ).map { ImmutableArtist.of(it) }.toSet()
-                    )
+                    syncArtistsInvolved()
                 }
+                artistProperty.set(value)
             }
 
         @Transient
-        override val artistProperty: ObjectProperty<Artist> =
-            SimpleObjectProperty(this, "artist", artist).apply {
-                addListener { _, _, newArtist ->
-                    artist = newArtist
-                }
-            }
+        @Suppress("UNCHECKED_CAST")
+        override val albumProperty: ObjectProperty<Album> = fxObject(metadata.album) as ObjectProperty<Album>
 
         override var album: Album = metadata.album
             set(value) {
                 mutateAndPublish {
                     field = value
-                    artistsInvolvedProperty.clear()
-                    artistsInvolvedProperty.addAll(
-                        getArtistsNamesInvolved(
-                            titleProperty.value, artistProperty.value.name, value.albumArtist.name
-                        ).map { ImmutableArtist.of(it) }.toSet()
-                    )
+                    syncArtistsInvolved()
                 }
+                albumProperty.set(value)
             }
 
         @Transient
-        override val albumProperty: ObjectProperty<Album> =
-            SimpleObjectProperty(this, "album", album).apply {
-                addListener { _, _, newAlbum ->
-                    album = newAlbum
-                }
+        @Suppress("UNCHECKED_CAST")
+        override val genreProperty: ObjectProperty<Genre> = fxObject(metadata.genre) as ObjectProperty<Genre>
+
+        override var genre: Genre = metadata.genre
+            set(value) {
+                mutateAndPublish { field = value }
+                genreProperty.set(value)
             }
 
         @Transient
-        override val genreProperty = SimpleObjectProperty(this, "genre", metadata.genre)
+        override val commentsProperty: StringProperty by fxString(metadata.comments ?: "")
 
-        override var genre: Genre by reactiveProperty({ genreProperty.value }, { genreProperty.set(it) })
-
-        @Transient
-        override val commentsProperty = SimpleStringProperty(this, "comments", metadata.comments ?: "")
-
-        override var comments: String? by reactiveProperty({ commentsProperty.value }, { commentsProperty.set(it) })
-
-        @Transient
-        override val trackNumberProperty = SimpleIntegerProperty(this, "track number", metadata.trackNumber?.toInt() ?: -1)
-
-        override var trackNumber: Short? by reactiveProperty(
-            { trackNumberProperty.get().toShort().takeIf { it >= 0 } },
-            { trackNumberProperty.set(it?.toInt() ?: -1) }
-        )
+        override var comments: String? = metadata.comments
+            set(value) {
+                mutateAndPublish { field = value }
+                commentsProperty.set(value ?: "")
+            }
 
         @Transient
-        override val discNumberProperty = SimpleIntegerProperty(this, "disc number", metadata.discNumber?.toInt() ?: -1)
+        override val trackNumberProperty: IntegerProperty by fxInteger(metadata.trackNumber?.toInt() ?: -1)
 
-        override var discNumber: Short? by reactiveProperty(
-            { discNumberProperty.get().toShort().takeIf { it >= 0 } },
-            { discNumberProperty.set(it?.toInt() ?: -1) }
-        )
+        override var trackNumber: Short? = metadata.trackNumber
+            set(value) {
+                mutateAndPublish { field = value }
+                trackNumberProperty.set(value?.toInt() ?: -1)
+            }
 
         @Transient
-        override val bpmProperty = SimpleFloatProperty(this, "bpm", metadata.bpm ?: -1f)
+        override val discNumberProperty: IntegerProperty by fxInteger(metadata.discNumber?.toInt() ?: -1)
 
-        override var bpm: Float? by reactiveProperty(
-            { bpmProperty.get().takeUnless { it == -1f } },
-            { bpmProperty.set(it ?: -1f) }
-        )
+        override var discNumber: Short? = metadata.discNumber
+            set(value) {
+                mutateAndPublish { field = value }
+                discNumberProperty.set(value?.toInt() ?: -1)
+            }
+
+        @Transient
+        override val bpmProperty: FloatProperty by fxFloat(metadata.bpm ?: -1f)
+
+        override var bpm: Float? = metadata.bpm
+            set(value) {
+                mutateAndPublish { field = value }
+                bpmProperty.set(value ?: -1f)
+            }
 
         @Serializable
         override var lastDateModified: LocalDateTime = dateOfCreation
@@ -332,6 +337,46 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         @Transient
         override val playCountProperty: ReadOnlyIntegerProperty = _playCountProperty
+
+        init {
+            titleProperty.addListener { _, _, newTitle ->
+                if (title != newTitle) title = newTitle
+            }
+            artistProperty.addListener { _, _, newArtist ->
+                if (newArtist != null && artist != newArtist) artist = newArtist
+            }
+            albumProperty.addListener { _, _, newAlbum ->
+                if (newAlbum != null && album != newAlbum) album = newAlbum
+            }
+            genreProperty.addListener { _, _, newGenre ->
+                if (newGenre != null && genre != newGenre) genre = newGenre
+            }
+            commentsProperty.addListener { _, _, newComments ->
+                val newValue = newComments.takeIf { it.isNotEmpty() }
+                if (comments != newValue) comments = newValue
+            }
+            trackNumberProperty.addListener { _, _, newTrack ->
+                val newValue = newTrack.toShort().takeIf { it >= 0 }
+                if (trackNumber != newValue) trackNumber = newValue
+            }
+            discNumberProperty.addListener { _, _, newDisc ->
+                val newValue = newDisc.toShort().takeIf { it >= 0 }
+                if (discNumber != newValue) discNumber = newValue
+            }
+            bpmProperty.addListener { _, _, newBpm ->
+                val newValue = newBpm.toFloat().takeUnless { it == -1f }
+                if (bpm != newValue) bpm = newValue
+            }
+        }
+
+        private fun syncArtistsInvolved() {
+            val involved =
+                getArtistsNamesInvolved(
+                    titleProperty.value, artistProperty.value.name, albumProperty.value.albumArtist.name
+                ).map { ImmutableArtist.of(it) }.toSet()
+            artistsInvolvedProperty.clear()
+            artistsInvolvedProperty.addAll(involved)
+        }
 
         override fun writeMetadata(): Job =
             ioScope.launch {

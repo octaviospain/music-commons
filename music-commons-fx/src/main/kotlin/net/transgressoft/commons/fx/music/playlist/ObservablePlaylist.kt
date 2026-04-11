@@ -31,8 +31,9 @@ import java.util.Optional
  * JavaFX-compatible playlist interface exposing playlist data as observable properties.
  *
  * Extends [ReactiveAudioPlaylist] with JavaFX property bindings for automatic UI synchronization.
- * Provides observable collections of audio items and nested playlists, plus a derived cover
- * image property extracted from the first audio item with cover art.
+ * Provides observable collections of audio items and nested playlists backed directly by
+ * lirp-fx aggregate delegates, plus a derived cover image property extracted from the first
+ * audio item with cover art.
  */
 interface ObservablePlaylist : ReactiveAudioPlaylist<ObservableAudioItem, ObservablePlaylist> {
 

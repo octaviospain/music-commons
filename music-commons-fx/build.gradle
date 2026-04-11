@@ -29,7 +29,8 @@ test {
             '-Dglass.platform=Monocle',
             '-Dmonocle.platform=Headless',
             '-Djdk.gtk.version=2',
-            '-Dprism.verbose=true'
+            '-Dprism.verbose=true',
+            '-Xmx1g'
     ]
 
     systemProperty 'testfx.setup.timeout', '60000'
@@ -54,6 +55,7 @@ dependencies {
     implementation libs.guava.get()
     implementation libs.jaudiotagger.get()
     implementation libs.lirp.core.get()
+    implementation libs.lirp.fx.get()
     implementation libs.lirp.sql.get()
     implementation libs.javafx.controls.get()
 

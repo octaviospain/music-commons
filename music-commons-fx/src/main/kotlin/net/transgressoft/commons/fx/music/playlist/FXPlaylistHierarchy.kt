@@ -50,6 +50,8 @@ internal class FXPlaylistHierarchy(
 
     private val logger = KotlinLogging.logger {}
 
+    override val playlistElementType = ObservablePlaylist::class
+
     private val observablePlaylistsSet: ObservableSet<ObservablePlaylist> = FXCollections.observableSet()
 
     override val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist> =
@@ -73,12 +75,7 @@ internal class FXPlaylistHierarchy(
         RegistryBase.deregisterRepository(ObservablePlaylist::class.java)
         RegistryBase.registerRepository(ObservablePlaylist::class.java, repository)
 
-        // After registry binding, resolve aggregate delegates into JavaFX observable properties
-        // for any playlists already loaded from a persistent store (e.g. JSON deserialization).
         forEach { playlist ->
-            if (playlist is FXPlaylist) {
-                playlist.syncObservablePropertiesFromAggregates()
-            }
             Platform.runLater { observablePlaylistsSet.add(playlist) }
         }
 
@@ -106,7 +103,7 @@ internal class FXPlaylistHierarchy(
     ): ObservablePlaylist {
         require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
         return FXPlaylist(newId(), name, true, audioItems.map { it.id }).also {
-            logger.debug { "Created playlist directory $it" }
+            logger.debug { "Created playlist $it" }
             add(it)
         }
     }
