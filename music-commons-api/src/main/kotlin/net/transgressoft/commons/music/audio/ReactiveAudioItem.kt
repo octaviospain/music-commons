@@ -102,6 +102,7 @@ fun ReactiveAudioItem<*>.toJsonObject(): JsonObject =
                     "albumArtist",
                     buildJsonObject {
                         put("name", album.albumArtist.name)
+                        put("countryCode", album.albumArtist.countryCode.name)
                     }
                 )
                 put("isCompilation", album.isCompilation)

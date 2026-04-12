@@ -2,15 +2,19 @@ package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import com.neovisionaries.i18n.CountryCode
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 
 /**
  * Tests for [AudioItemSerializer] covering JSON encoding structure and round-trip
@@ -90,6 +94,7 @@ internal class AudioItemSerializerTest : StringSpec({
         decodedItem.artist.countryCode shouldBe originalItem.artist.countryCode
         decodedItem.album.name shouldBe originalItem.album.name
         decodedItem.album.albumArtist.name shouldBe originalItem.album.albumArtist.name
+        decodedItem.album.albumArtist.countryCode shouldBe originalItem.album.albumArtist.countryCode
         decodedItem.album.isCompilation shouldBe originalItem.album.isCompilation
         decodedItem.album.year shouldBe originalItem.album.year
         decodedItem.album.label.name shouldBe originalItem.album.label.name
@@ -118,5 +123,75 @@ internal class AudioItemSerializerTest : StringSpec({
 
         jsonElement["artist"]!!.jsonObject["name"]!!.jsonPrimitive.content shouldBe "Solo Artist"
         jsonElement["artist"]!!.jsonObject["countryCode"]!!.jsonPrimitive.content shouldBe "DE"
+    }
+
+    "AudioItemSerializer throws SerializationException with field name for missing required field" {
+        val path =
+            Arb.virtualAudioFile {
+                this.title = "Test Song"
+            }.next()
+
+        val originalItem: AudioItem = MutableAudioItemTestBridge.createAudioItem(path, 77)
+        val encoded = json.encodeToString(AudioItemMapSerializer, mapOf(77 to originalItem))
+
+        // Remove the "title" field from the JSON object to simulate a missing required field
+        val jsonTree = Json.parseToJsonElement(encoded).jsonObject
+        val itemObject = jsonTree["77"]!!.jsonObject
+        val itemWithoutTitle =
+            buildJsonObject {
+                for ((k, v) in itemObject) {
+                    if (k != "title") put(k, v)
+                }
+            }
+        val modifiedJson =
+            buildJsonObject {
+                put("77", itemWithoutTitle)
+            }.toString()
+
+        val exception =
+            shouldThrow<SerializationException> {
+                json.decodeFromString(AudioItemMapSerializer, modifiedJson)
+            }
+        exception.message shouldContain "Missing required field 'title'"
+    }
+
+    "AudioItemSerializer deserializes mutable nullable fields as null when absent from JSON" {
+        // comments, trackNumber, discNumber, bpm are mutable (var) — the deserializer can set them to null.
+        // encoder/encoding are immutable (val) initialized from audio file metadata, so they always
+        // reflect the file, not the JSON. Only the mutable fields are tested here.
+        val path =
+            Arb.virtualAudioFile {
+                this.title = "Nullable Test"
+                this.comments = "some comment"
+                this.trackNumber = 5
+                this.discNumber = 1
+                this.bpm = 130.0f
+            }.next()
+
+        val originalItem: AudioItem = MutableAudioItemTestBridge.createAudioItem(path, 55)
+        val encoded = json.encodeToString(AudioItemMapSerializer, mapOf(55 to originalItem))
+
+        // Strip only the mutable nullable fields from the JSON; keep encoder/encoding since
+        // MutableAudioItem always re-reads those from the audio file during construction.
+        val mutableNullableKeys = setOf("comments", "trackNumber", "discNumber", "bpm")
+        val jsonTree = Json.parseToJsonElement(encoded).jsonObject
+        val itemObject = jsonTree["55"]!!.jsonObject
+        val filteredEntries =
+            itemObject.entries
+                .filterNot { it.key in mutableNullableKeys }
+                .associate { it.key to it.value }
+        val modifiedJson =
+            kotlinx.serialization.json.JsonObject(
+                mapOf("55" to kotlinx.serialization.json.JsonObject(filteredEntries))
+            ).toString()
+
+        val decoded = json.decodeFromString(AudioItemMapSerializer, modifiedJson)
+        val decodedItem = decoded.getValue(55)
+
+        decodedItem.comments shouldBe null
+        decodedItem.trackNumber shouldBe null
+        decodedItem.discNumber shouldBe null
+        decodedItem.bpm shouldBe null
+        decodedItem.playCount shouldBe 0
     }
 })
