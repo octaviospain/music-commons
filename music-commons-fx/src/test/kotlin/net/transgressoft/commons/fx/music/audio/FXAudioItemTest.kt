@@ -205,6 +205,26 @@ internal class FXAudioItemTest : StringSpec({
             it.height shouldBe Image(ByteArrayInputStream(decodedAudioItem.coverImageBytes)).height
         }
     }
+
+    "FXAudioItem getter returns defensive copy — mutating returned array does not affect internal state" {
+        val fxAudioItem = FXAudioItem(Arb.realAudioFile().next())
+        fxAudioItem.coverImageBytes = testCoverBytes
+
+        val returned = fxAudioItem.coverImageBytes!!
+        val originalContent = returned.copyOf()
+        returned[0] = 0x00.toByte()
+
+        fxAudioItem.coverImageBytes!! shouldBe originalContent
+    }
+
+    "FXAudioItem setter stores defensive copy — mutating source array after set does not affect internal state" {
+        val fxAudioItem = FXAudioItem(Arb.realAudioFile().next())
+        val source = byteArrayOf(1, 2, 3, 4, 5)
+        fxAudioItem.coverImageBytes = source
+        source[0] = 99.toByte()
+
+        fxAudioItem.coverImageBytes!![0] shouldBe 1.toByte()
+    }
 })
 
 fun Genre.randomDifferent(): Genre {

@@ -296,11 +296,13 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         @Transient
         override val lastDateModifiedProperty: ReadOnlyObjectProperty<LocalDateTime> = _lastDateModifiedProperty
 
-        override var coverImageBytes: ByteArray? = metadata.coverBytes
+        override var coverImageBytes: ByteArray? = metadata.coverBytes?.copyOf()
+            get() = field?.copyOf()
             set(value) {
+                val copy = value?.copyOf()
                 mutateAndPublish {
-                    field = value
-                    _coverImageProperty.set(Optional.ofNullable(value).map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) })
+                    field = copy
+                    _coverImageProperty.set(Optional.ofNullable(copy).map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) })
                 }
             }
 
