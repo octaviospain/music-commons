@@ -356,11 +356,13 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                 if (comments != newValue) comments = newValue
             }
             trackNumberProperty.addListener { _, _, newTrack ->
-                val newValue = newTrack.toShort().takeIf { it >= 0 }
+                val intVal = newTrack.toInt()
+                val newValue = if (intVal in 0..Short.MAX_VALUE.toInt()) intVal.toShort() else null
                 if (trackNumber != newValue) trackNumber = newValue
             }
             discNumberProperty.addListener { _, _, newDisc ->
-                val newValue = newDisc.toShort().takeIf { it >= 0 }
+                val intVal = newDisc.toInt()
+                val newValue = if (intVal in 0..Short.MAX_VALUE.toInt()) intVal.toShort() else null
                 if (discNumber != newValue) discNumber = newValue
             }
             bpmProperty.addListener { _, _, newBpm ->
@@ -372,7 +374,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         private fun syncArtistsInvolved() {
             val involved =
                 getArtistsNamesInvolved(
-                    titleProperty.value, artistProperty.value.name, albumProperty.value.albumArtist.name
+                    title, artist.name, album.albumArtist.name
                 ).map { ImmutableArtist.of(it) }.toSet()
             artistsInvolvedProperty.clear()
             artistsInvolvedProperty.addAll(involved)

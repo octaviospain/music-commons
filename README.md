@@ -46,8 +46,8 @@ dependencies {
 The core module depends on [lirp](https://github.com/octaviospain/lirp):
 
 ```kotlin
-implementation("net.transgressoft:lirp-api:2.2.0")
-implementation("net.transgressoft:lirp-core:2.2.0")
+implementation("net.transgressoft:lirp-api:2.3.0")
+implementation("net.transgressoft:lirp-core:2.3.0")
 ```
 
 ## Key Features
@@ -87,7 +87,7 @@ implementation("net.transgressoft:lirp-core:2.2.0")
 ### JavaFX Integration
 
 - **Observable properties**: Direct binding to JavaFX TableView, ListView, and other controls
-- **Thread safety**: Audio item and artist catalog collections use `FxAggregateList` and `FxProjectionMap` delegates that auto-dispatch listener notifications to the JavaFX Application Thread, eliminating manual `Platform.runLater` overhead
+- **Thread safety**: Audio item collections use `FxAggregateList` delegates that auto-dispatch listener notifications to the JavaFX Application Thread; artist catalog and album properties are updated via `Platform.runLater` from CRUD subscriptions
 - **Custom controls**: `WaveformPane` component for waveform visualization
 
 ## Module Details

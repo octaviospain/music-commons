@@ -247,18 +247,26 @@ class MusicLibrary private constructor(
             val audioRepo = createAudioRepository()
             val audioLibrary = DefaultAudioLibrary(audioRepo)
 
-            // 2. Waveform repository
-            val waveformRepo = createWaveformRepository()
-            val waveformRepository = DefaultAudioWaveformRepository<AudioItem>(waveformRepo)
+            var waveformRepository: DefaultAudioWaveformRepository<AudioItem>? = null
+            val playlistHierarchy: DefaultPlaylistHierarchy
+            try {
+                // 2. Waveform repository
+                val waveformRepo = createWaveformRepository()
+                waveformRepository = DefaultAudioWaveformRepository(waveformRepo)
 
-            // 3. Playlist hierarchy last — needs AudioItem already registered in LirpContext
-            val playlistHierarchy = createPlaylistHierarchy()
+                // 3. Playlist hierarchy last — needs AudioItem already registered in LirpContext
+                playlistHierarchy = createPlaylistHierarchy()
+            } catch (ex: Exception) {
+                waveformRepository?.close()
+                audioLibrary.close()
+                throw ex
+            }
 
             // 4. Wire subscriptions so audio library events propagate to subscribers
-            audioLibrary.subscribe(waveformRepository)
+            audioLibrary.subscribe(waveformRepository!!)
             audioLibrary.subscribe(playlistHierarchy)
 
-            return MusicLibrary(audioLibrary, playlistHierarchy, waveformRepository)
+            return MusicLibrary(audioLibrary, playlistHierarchy, waveformRepository!!)
         }
 
         @Suppress("UNCHECKED_CAST")

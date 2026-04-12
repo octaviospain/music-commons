@@ -24,7 +24,6 @@ import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PL
 import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
-import net.transgressoft.lirp.event.StandardCrudEvent.Update
 import net.transgressoft.lirp.persistence.LirpRepository
 import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.Repository
@@ -50,8 +49,8 @@ import java.util.concurrent.CopyOnWriteArraySet
  * Maintains an [FxAggregateList] as the primary observable items collection. The [audioItemsProperty]
  * wraps this delegate directly. The [artistsProperty] tracks all artists from
  * each item's [ObservableAudioItem.artistsInvolved] set and is updated inline in the CRUD subscription.
- * The [artistCatalogsProperty] is backed by an [ObservableSet] updated directly from the catalog
- * subscription (synchronously, without [Platform.runLater]), and album-level derived properties
+ * The [artistCatalogsProperty] is backed by an [ObservableSet] updated from the catalog
+ * subscription via [Platform.runLater], and album-level derived properties
  * ([albumsProperty], [albumCountProperty]) update via [Platform.runLater] from the same subscription.
  *
  * Registers its backing repository in [net.transgressoft.lirp.persistence.LirpContext] on construction
@@ -109,20 +108,30 @@ internal class FXAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
                 audioItems.removeAll(
                     audioItems.filter { it.id in idsToRemove }
                 )
-                // Remove artists no longer represented in the remaining items
-                event.entities.values.forEach { removed ->
-                    removed.artistsInvolved.forEach { artist ->
-                        if (audioItems.none { item -> artist in item.artistsInvolved }) {
-                            artistsProperty.remove(artist)
+                Platform.runLater {
+                    event.entities.values.forEach { removed ->
+                        removed.artistsInvolved.forEach { artist ->
+                            if (audioItems.none { item -> artist in item.artistsInvolved }) {
+                                artistsProperty.remove(artist)
+                            }
                         }
                     }
                 }
-            } else {
+            } else if (event.isCreate()) {
                 event.entities.values.forEach { item ->
                     if (audioItems.none { it.id == item.id }) {
                         audioItems.add(item)
                     }
-                    artistsProperty.addAll(item.artistsInvolved)
+                    Platform.runLater {
+                        artistsProperty.addAll(item.artistsInvolved)
+                    }
+                }
+            } else {
+                // UPDATE — recompute the full artist set so removed artists are pruned
+                Platform.runLater {
+                    val allArtists = audioItems.flatMap { it.artistsInvolved }.toSet()
+                    artistsProperty.retainAll(allArtists)
+                    artistsProperty.addAll(allArtists)
                 }
             }
         }
@@ -134,10 +143,12 @@ internal class FXAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
             } else {
                 artistCatalogBacking.addAll(event.entities.values)
             }
-            // Synchronously update artistCatalogsProperty from backing set
-            observableArtistCatalogSet.apply {
-                clear()
-                addAll(artistCatalogBacking)
+            // Update artistCatalogsProperty on the FX thread from backing set
+            Platform.runLater {
+                observableArtistCatalogSet.apply {
+                    clear()
+                    addAll(artistCatalogBacking)
+                }
             }
             // Auto-derive albums and album count from current catalog state
             val allAlbums =
@@ -160,12 +171,18 @@ internal class FXAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
         // Populate fxAggregateList and artistsProperty from existing items
         forEach { item ->
             audioItems.add(item)
-            artistsProperty.addAll(item.artistsInvolved)
+        }
+        Platform.runLater {
+            forEach { item ->
+                artistsProperty.addAll(item.artistsInvolved)
+            }
         }
 
         // Populate catalog backing from registries created during AudioLibraryBase init
         observableArtistCatalogRegistry.forEach { artistCatalogBacking.add(it) }
-        observableArtistCatalogSet.addAll(artistCatalogBacking)
+        Platform.runLater {
+            observableArtistCatalogSet.addAll(artistCatalogBacking)
+        }
         // Auto-derive initial albums/albumCount
         val allAlbums =
             artistCatalogBacking.flatMap { catalog ->
@@ -180,9 +197,7 @@ internal class FXAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
         playerSubscriber.addOnNextEventAction(PLAYED) { event ->
             val audioItem = event.audioItem
             if (audioItem is FXAudioItem) {
-                val audioItemClone = audioItem.clone()
                 audioItem.incrementPlayCount()
-                repository.emitAsync(Update(audioItem, audioItemClone))
                 logger.debug { "Play count of audio item with id ${audioItem.id} increased to ${audioItem.playCount}" }
             }
         }
@@ -203,9 +218,11 @@ internal class FXAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
         super.clear()
         audioItems.clear()
         artistCatalogBacking.clear()
-        observableArtistCatalogSet.clear()
-        _albumsProperty.clear()
-        _albumCountProperty.set(0)
+        Platform.runLater {
+            observableArtistCatalogSet.clear()
+            _albumsProperty.clear()
+            _albumCountProperty.set(0)
+        }
     }
 
     override fun createFromFile(audioItemPath: Path): FXAudioItem =
@@ -215,5 +232,5 @@ internal class FXAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
                 logger.debug { "New ObservableAudioItem was created from file $audioItemPath with id ${fxAudioItem.id}" }
             }
 
-    override fun toString() = "ObservableAudioItemJsonRepository(audioItemsCount=${size()})"
+    override fun toString() = "FXAudioLibrary(audioItemsCount=${size()})"
 }

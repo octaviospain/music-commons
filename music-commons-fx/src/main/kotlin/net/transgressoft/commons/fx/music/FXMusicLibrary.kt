@@ -228,16 +228,24 @@ class FXMusicLibrary private constructor(
             val audioRepo = createAudioRepository()
             val audioLibrary = FXAudioLibrary(audioRepo)
 
-            val waveformRepo = createWaveformRepository()
-            val waveformRepository = audioWaveformRepository<ObservableAudioItem>(waveformRepo)
+            var waveformRepository: AudioWaveformRepository<AudioWaveform, ObservableAudioItem>? = null
+            val playlistHierarchy: FXPlaylistHierarchy
+            try {
+                val waveformRepo = createWaveformRepository()
+                waveformRepository = audioWaveformRepository(waveformRepo)
 
-            val playlistRepo = createPlaylistRepository()
-            val playlistHierarchy = FXPlaylistHierarchy(playlistRepo)
+                val playlistRepo = createPlaylistRepository()
+                playlistHierarchy = FXPlaylistHierarchy(playlistRepo)
+            } catch (ex: Exception) {
+                waveformRepository?.close()
+                audioLibrary.close()
+                throw ex
+            }
 
-            audioLibrary.subscribe(waveformRepository)
+            audioLibrary.subscribe(waveformRepository!!)
             audioLibrary.subscribe(playlistHierarchy)
 
-            return FXMusicLibrary(audioLibrary, playlistHierarchy, waveformRepository)
+            return FXMusicLibrary(audioLibrary, playlistHierarchy, waveformRepository!!)
         }
 
         @Suppress("UNCHECKED_CAST")

@@ -22,7 +22,6 @@ import net.transgressoft.commons.music.playlist.AudioPlaylist
 import net.transgressoft.commons.music.playlist.MutablePlaylistBase
 import net.transgressoft.lirp.persistence.fx.fxAggregateList
 import net.transgressoft.lirp.persistence.fx.fxAggregateSet
-import com.google.common.base.Objects
 import javafx.beans.property.ReadOnlyBooleanProperty
 import javafx.beans.property.ReadOnlyListProperty
 import javafx.beans.property.ReadOnlyObjectProperty
@@ -37,6 +36,7 @@ import javafx.collections.FXCollections
 import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
 import javafx.collections.ObservableSet
+import javafx.collections.SetChangeListener
 import javafx.scene.image.Image
 import mu.KotlinLogging
 import java.util.Optional
@@ -135,6 +135,10 @@ internal class FXPlaylist(
                 changePlaylistCover()
             }
         )
+        playlistsAggregate.addListener { _: SetChangeListener.Change<out ObservablePlaylist> ->
+            replaceRecursiveAudioItems()
+            changePlaylistCover()
+        }
     }
 
     private fun replaceRecursiveAudioItems() {
@@ -154,7 +158,7 @@ internal class FXPlaylist(
             audioItemsAggregate.stream()
                 .map { it.coverImageProperty.get() }
                 .filter { it.isPresent }
-                .findAny()
+                .findFirst()
 
         if (newCover.isPresent) {
             _coverImageProperty.set(newCover.get())
@@ -202,7 +206,6 @@ internal class FXPlaylist(
         val newPlaylists = playlists.filter { it !in playlistsAggregate }
         if (newPlaylists.isEmpty()) return false
         playlistsAggregate.addAll(newPlaylists)
-        replaceRecursiveAudioItems()
         logger.debug { "Added $playlists to playlist $uniqueId" }
         return true
     }
@@ -263,12 +266,12 @@ internal class FXPlaylist(
             playlistsAggregate == that.playlistsAggregate
     }
 
-    override fun hashCode() =
-        Objects.hashCode(
-            id, isDirectory, name,
-            audioItemsAggregate.toList(),
-            playlistsAggregate.toSet()
-        )
+    override fun hashCode(): Int {
+        var result = id.hashCode()
+        result = 31 * result + isDirectory.hashCode()
+        result = 31 * result + name.hashCode()
+        return result
+    }
 
     override fun clone(): FXPlaylist =
         FXPlaylist(
@@ -301,7 +304,7 @@ internal class FXPlaylist(
                     append(id)
                     if (index < audioItemRefIds.size - 1) append(",")
                 }
-                append("],")
+                append("]")
             }
         val playlistIdsStr =
             buildString {
@@ -312,13 +315,14 @@ internal class FXPlaylist(
                 }
                 append("]")
             }
+        val escapedName = kotlinx.serialization.json.JsonPrimitive(name)
         return """
             "$id": {
                 "id": $id,
-                "audioItems": $audioItemsString
+                "audioItems": $audioItemsString,
                 "playlists": $playlistIdsStr,
                 "isDirectory": $isDirectory,
-                "name": "$name"
+                "name": $escapedName
             }"""
     }
 }
