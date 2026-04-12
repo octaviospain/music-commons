@@ -211,7 +211,7 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
     }
 
     private fun isDescendant(parent: P, candidate: P): Boolean {
-        val children = playlistsHierarchyMultiMap[parent.uniqueId]
+        val children = playlistsHierarchyMultiMap[parent.uniqueId].toList()
         return candidate in children || children.any { isDescendant(it, candidate) }
     }
 

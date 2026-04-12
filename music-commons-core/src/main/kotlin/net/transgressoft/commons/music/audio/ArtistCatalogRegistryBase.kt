@@ -108,12 +108,14 @@ abstract class ArtistCatalogRegistryBase<I, AC>(
                     .filter { audioItem -> entitiesById.any { it.value.containsItem(audioItem) }.not() }
                     .map { audioItem ->
                         val newCatalog = createCatalog(audioItem.artist).apply { addItem(audioItem) }
-                        entitiesById.merge(audioItem.artist, newCatalog) { artistCatalog, _ ->
-                            val catalogBeforeUpdate = artistCatalog.cloneCatalog()
-                            artistCatalog.addItem(audioItem)
-                            catalogsBeforeUpdate.add(catalogBeforeUpdate)
-                            artistCatalog
-                        }!!
+                        checkNotNull(
+                            entitiesById.merge(audioItem.artist, newCatalog) { artistCatalog, _ ->
+                                val catalogBeforeUpdate = artistCatalog.cloneCatalog()
+                                artistCatalog.addItem(audioItem)
+                                catalogsBeforeUpdate.add(catalogBeforeUpdate)
+                                artistCatalog
+                            }
+                        ) { "merge() returned null for artist '${audioItem.artist}' — remapping function must not return null" }
                     }.collect(partitioningBy { it.size == 1 })
 
             addedOrReplacedCatalogs[true]?.let { createdCatalogs ->

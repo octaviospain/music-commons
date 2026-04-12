@@ -263,10 +263,11 @@ class MusicLibrary private constructor(
             }
 
             // 4. Wire subscriptions so audio library events propagate to subscribers
-            audioLibrary.subscribe(waveformRepository!!)
+            val waveforms = checkNotNull(waveformRepository) { "waveformRepository must be initialized before wiring subscriptions" }
+            audioLibrary.subscribe(waveforms)
             audioLibrary.subscribe(playlistHierarchy)
 
-            return MusicLibrary(audioLibrary, playlistHierarchy, waveformRepository!!)
+            return MusicLibrary(audioLibrary, playlistHierarchy, waveforms)
         }
 
         @Suppress("UNCHECKED_CAST")

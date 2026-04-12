@@ -57,8 +57,12 @@ object AudioWaveformSerializer : KSerializer<AudioWaveform> {
     override fun deserialize(decoder: Decoder): AudioWaveform {
         val jsonInput = decoder as? JsonDecoder ?: throw SerializationException("This class can be saved only by Json")
         val jsonObject = jsonInput.decodeJsonElement().jsonObject
-        val id = jsonObject["id"]!!.jsonPrimitive.int
-        val audioFilePathString = jsonObject["audioFilePath"]!!.jsonPrimitive.content
+        val id =
+            (jsonObject["id"] ?: throw SerializationException("Missing required field 'id' in AudioWaveform JSON"))
+                .jsonPrimitive.int
+        val audioFilePathString =
+            (jsonObject["audioFilePath"] ?: throw SerializationException("Missing required field 'audioFilePath' in AudioWaveform JSON"))
+                .jsonPrimitive.content
         return ScalableAudioWaveform(id, Paths.get(audioFilePathString))
     }
 
