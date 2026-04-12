@@ -112,9 +112,10 @@ class JavaFxPlayer(
             mediaPlayer?.statusProperty()?.removeListener(statusPropertyListener)
             mediaPlayer?.currentTimeProperty()?.removeListener(currentTimePropertyListener)
 
-            mediaPlayer = MediaPlayer(media)
-            mediaPlayer!!.volumeProperty().bind(_volumeProperty)
-            mediaPlayer!!.statusProperty().addListener(statusPropertyListener)
+            val player = MediaPlayer(media)
+            mediaPlayer = player
+            player.volumeProperty().bind(_volumeProperty)
+            player.statusProperty().addListener(statusPropertyListener)
 
             currentTimePropertyListener =
                 ChangeListener<Duration> { _: ObservableValue<*>, _: Duration, newValue: Duration ->
@@ -124,8 +125,8 @@ class JavaFxPlayer(
                         playCountIncreased = true
                     }
                 }
-            mediaPlayer!!.currentTimeProperty().addListener(currentTimePropertyListener)
-            mediaPlayer!!.play()
+            player.currentTimeProperty().addListener(currentTimePropertyListener)
+            player.play()
         } catch (exception: MediaException) {
             throw UnsupportedAudioPlaybackException("Cannot play audio item '${audioItem.fileName}': ${exception.message}", exception)
         }

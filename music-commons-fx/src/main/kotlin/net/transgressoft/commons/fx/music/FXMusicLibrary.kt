@@ -242,10 +242,11 @@ class FXMusicLibrary private constructor(
                 throw ex
             }
 
-            audioLibrary.subscribe(waveformRepository!!)
+            val waveforms = checkNotNull(waveformRepository) { "waveformRepository must be initialized before wiring subscriptions" }
+            audioLibrary.subscribe(waveforms)
             audioLibrary.subscribe(playlistHierarchy)
 
-            return FXMusicLibrary(audioLibrary, playlistHierarchy, waveformRepository!!)
+            return FXMusicLibrary(audioLibrary, playlistHierarchy, waveforms)
         }
 
         @Suppress("UNCHECKED_CAST")
