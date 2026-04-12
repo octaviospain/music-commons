@@ -26,7 +26,6 @@ import java.io.ByteArrayInputStream
 import java.util.Optional
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.serialization.json.Json
 
 internal class FXAudioItemTest : StringSpec({
@@ -95,7 +94,7 @@ internal class FXAudioItemTest : StringSpec({
 
         lastDateUpdated = fxAudioItem.lastDateModified
         fxAudioItem.comments = "New comments"
-        eventually(100.seconds) {
+        eventually(100.milliseconds) {
             fxAudioItem.commentsProperty.value shouldBe "New comments"
             fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
             fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated

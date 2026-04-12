@@ -10,7 +10,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
-import javafx.application.Platform
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
 import kotlin.time.Duration.Companion.milliseconds
@@ -36,11 +35,13 @@ internal class FXMusicLibraryTest : StringSpec({
     afterSpec {
         ReactiveScope.resetDefaultFlowScope()
         ReactiveScope.resetDefaultIoScope()
+        FxToolkit.cleanupStages()
     }
 
-    suspend fun eventuallyOnFxThread(assertion: () -> Unit) {
+    suspend fun eventuallyAfterFxEvents(assertion: () -> Unit) {
         eventually(500.milliseconds) {
-            Platform.runLater { assertion() }
+            WaitForAsyncUtils.waitForFxEvents()
+            assertion()
         }
     }
 
@@ -87,7 +88,7 @@ internal class FXMusicLibraryTest : StringSpec({
         audioItem.id shouldNotBe 0
         library.audioLibrary().size() shouldBe 1
 
-        eventuallyOnFxThread {
+        eventuallyAfterFxEvents {
             library.audioItemsProperty.isEmpty() shouldBe false
         }
 
@@ -112,10 +113,17 @@ internal class FXMusicLibraryTest : StringSpec({
         testDispatcher.scheduler.advanceUntilIdle()
 
         library.audioLibrary().size() shouldBe 1
+        WaitForAsyncUtils.waitForFxEvents()
+        val sizeBeforeClose = library.audioItemsProperty.size
 
         library.close()
 
-        // After close, new items are no longer tracked by the closed library
+        // After close, the library retains already-added items but does not track new ones
         library.audioLibrary().size() shouldBe 1
+        library.audioLibrary().add(library.audioItemFromFile(Arb.virtualAudioFile().next()))
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        library.audioItemsProperty.size shouldBe sizeBeforeClose
     }
 })

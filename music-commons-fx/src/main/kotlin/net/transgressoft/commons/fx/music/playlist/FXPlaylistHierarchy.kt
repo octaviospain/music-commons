@@ -55,7 +55,7 @@ internal class FXPlaylistHierarchy(
     private val observablePlaylistsSet: ObservableSet<ObservablePlaylist> = FXCollections.observableSet()
 
     override val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist> =
-        SimpleSetProperty(this, "playlists", FXCollections.observableSet(observablePlaylistsSet))
+        SimpleSetProperty(this, "playlists", observablePlaylistsSet)
 
     private val playlistChangesSubscriber =
         AudioPlaylistEventSubscriber<ObservablePlaylist, ObservableAudioItem>("InternalAudioPlaylistSubscriber").apply {

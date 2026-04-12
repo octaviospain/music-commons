@@ -86,7 +86,7 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
     }
 
     override fun add(entity: P): Boolean {
-        require(findByName(entity.name).isEmpty || findByName(entity.name).get() === entity) {
+        require(findByName(entity.name).isEmpty || findByName(entity.name).get().id == entity.id) {
             "Playlist with name '${entity.name}' already exists"
         }
         return addInternal(entity)
@@ -111,6 +111,10 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
         val subscription =
             playlist.subscribeToCollectionChanges(playlistElementType, "playlists") { event ->
                 for (added in event.added) {
+                    require(added.id != playlist.id) { "Cannot add playlist to itself" }
+                    require(!isDescendant(added, playlist)) {
+                        "Cannot add ancestor playlist '${added.name}' as child — would create a cycle"
+                    }
                     findParentPlaylist(added).ifPresent { oldParent ->
                         if (oldParent.id != playlist.id) {
                             playlistsHierarchyMultiMap.remove(oldParent.uniqueId, added)
@@ -118,6 +122,9 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
                         }
                     }
                     playlistsHierarchyMultiMap.put(playlist.uniqueId, added)
+                    if (!contains(added.id)) {
+                        addInternal(added)
+                    }
                 }
                 for (removed in event.removed) {
                     playlistsHierarchyMultiMap.remove(playlist.uniqueId, removed)
@@ -141,7 +148,7 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
     private fun removeFromPlaylistsHierarchy(playlist: P) {
         findParentPlaylist(playlist).ifPresent { parentPlaylist ->
             parentPlaylist.removePlaylist(playlist)
-            playlistsHierarchyMultiMap.remove(parentPlaylist, playlist)
+            playlistsHierarchyMultiMap.remove(parentPlaylist.uniqueId, playlist)
         }
         playlistsHierarchyMultiMap.removeAll(playlist.uniqueId)
         // Use referenceIds to collect nested playlist IDs without iterating the proxy.
@@ -175,7 +182,9 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
         if (playlistsHierarchyMultiMap.containsValue(playlist)) {
             playlistsHierarchyMultiMap.entries().stream()
                 .filter { playlist == it.value }
-                .map { findByUniqueId(it.key).get() }
+                .map { findByUniqueId(it.key) }
+                .filter { it.isPresent }
+                .map { it.get() }
                 .findFirst()
         } else {
             Optional.empty()
@@ -187,6 +196,10 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
 
         require(playlistToMove.isPresent) { "Playlist '$playlistNameToMove' does not exist" }
         require(destinationPlaylist.isPresent) { "Playlist '$destinationPlaylistName' does not exist" }
+        require(playlistNameToMove != destinationPlaylistName) { "Cannot move playlist into itself" }
+        require(!isDescendant(playlistToMove.get(), destinationPlaylist.get())) {
+            "Cannot move playlist '$playlistNameToMove' into its own descendant '$destinationPlaylistName'"
+        }
 
         findParentPlaylist(playlistToMove.get()).ifPresent { parentPlaylist: P ->
             parentPlaylist.removePlaylist(playlistToMove.get())
@@ -195,6 +208,11 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
 
         destinationPlaylist.get().addPlaylist(playlistToMove.get())
         logger.debug { "Playlist '$playlistNameToMove' moved to '$destinationPlaylistName'" }
+    }
+
+    private fun isDescendant(parent: P, candidate: P): Boolean {
+        val children = playlistsHierarchyMultiMap[parent.uniqueId]
+        return candidate in children || children.any { isDescendant(it, candidate) }
     }
 
     override fun addAudioItemsToPlaylist(audioItems: Collection<I>, playlistName: String): Boolean =
@@ -246,38 +264,46 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
             }
         }
 
-    override fun removePlaylistsFromDirectory(playlistsToRemove: Set<P>, directoryName: String): Boolean =
-        findByName(directoryName).let {
-            require(it.isPresent) { "Directory '$directoryName' does not exist" }
-            it.get().removePlaylists(playlistsToRemove).also { removed ->
-                if (removed) {
-                    removeAll(playlistsToRemove)
-                    playlistsToRemove.forEach { playlist ->
-                        playlistsHierarchyMultiMap.remove(it.get().uniqueId, playlist)
-                    }
+    override fun removePlaylistsFromDirectory(playlistsToRemove: Set<P>, directoryName: String): Boolean {
+        val directory = findByName(directoryName)
+        require(directory.isPresent) { "Directory '$directoryName' does not exist" }
+        val actualChildren =
+            playlistsToRemove.filterTo(LinkedHashSet()) { playlist ->
+                playlist in directory.get().playlists
+            }
+        return directory.get().removePlaylists(actualChildren).also { removed ->
+            if (removed) {
+                removeAll(actualChildren)
+                actualChildren.forEach { playlist ->
+                    playlistsHierarchyMultiMap.remove(directory.get().uniqueId, playlist)
                 }
             }
         }
+    }
 
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removePlaylistNamesFromDirectory")
-    override fun removePlaylistsFromDirectory(playlistsNamesToRemove: Set<String>, directoryName: String): Boolean =
-        findByName(directoryName).let {
-            require(it.isPresent) { "Directory '$directoryName' does not exist" }
+    override fun removePlaylistsFromDirectory(playlistsNamesToRemove: Set<String>, directoryName: String): Boolean {
+        val directory = findByName(directoryName)
+        require(directory.isPresent) { "Directory '$directoryName' does not exist" }
+        val resolved =
             playlistsNamesToRemove.stream().map { playlistName ->
                 findByName(playlistName)
                     .orElseThrow { IllegalArgumentException("Playlist '$playlistName' does not exist") }
-            }.toList().let { playlistsToRemove ->
-                it.get().removePlaylists(playlistsToRemove).also { removed ->
-                    if (removed) {
-                        removeAll(playlistsToRemove.toSet())
-                        playlistsToRemove.forEach { playlist ->
-                            playlistsHierarchyMultiMap.remove(it.get().uniqueId, playlist)
-                        }
-                    }
+            }.toList()
+        val actualChildren =
+            resolved.filterTo(LinkedHashSet()) { playlist ->
+                playlist in directory.get().playlists
+            }
+        return directory.get().removePlaylists(actualChildren).also { removed ->
+            if (removed) {
+                removeAll(actualChildren)
+                actualChildren.forEach { playlist ->
+                    playlistsHierarchyMultiMap.remove(directory.get().uniqueId, playlist)
                 }
             }
         }
+    }
 
     override fun numberOfPlaylists() = search { it.isDirectory.not() }.count()
 
