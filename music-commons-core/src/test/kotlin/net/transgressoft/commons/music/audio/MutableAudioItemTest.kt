@@ -171,6 +171,27 @@ internal class MutableAudioItemTest : FunSpec({
         }
     }
 
+    context("MutableAudioItem coverImageBytes defensive copy") {
+        test("MutableAudioItem getter returns defensive copy — mutating returned array does not affect internal state") {
+            val audioItem = createAudioItem(Arb.realAudioFile(ID3_V_24).next())
+            audioItem.coverImageBytes = testCoverBytes
+            val returned = audioItem.coverImageBytes!!
+            val originalContent = returned.copyOf()
+            returned[0] = 0x00.toByte()
+
+            audioItem.coverImageBytes!! shouldBe originalContent
+        }
+
+        test("MutableAudioItem setter stores defensive copy — mutating source array after set does not affect internal state") {
+            val audioItem = createAudioItem(Arb.realAudioFile(ID3_V_24).next())
+            val source = byteArrayOf(1, 2, 3, 4, 5)
+            audioItem.coverImageBytes = source
+            source[0] = 99.toByte()
+
+            audioItem.coverImageBytes!![0] shouldBe 1.toByte()
+        }
+    }
+
     test("AudioItemManipulationException has proper message and cause") {
         val testMessage = "Test error message"
         val testCause = RuntimeException("Test cause")

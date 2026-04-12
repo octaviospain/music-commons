@@ -53,6 +53,15 @@ interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I>, Co
     val encoder: String?
     val encoding: String?
     val length: Long
+
+    /**
+     * The cover image bytes for this audio item, or `null` if no cover image is present.
+     *
+     * Implementations return a defensive copy of the internal array, so mutating the
+     * returned array does not affect internal state. Likewise, the setter stores a
+     * defensive copy of the provided array. All state changes go through the setter
+     * to ensure reactive change notifications are published.
+     */
     var coverImageBytes: ByteArray?
     val dateOfCreation: LocalDateTime
     val playCount: Short

@@ -214,7 +214,14 @@ internal class MutableAudioItem(
     override var album: Album by reactiveProperty(metadata.album)
 
     @Transient
-    override var coverImageBytes: ByteArray? by reactiveProperty(metadata.coverBytes)
+    private var _coverImageBytes: ByteArray? = metadata.coverBytes?.copyOf()
+
+    @Transient
+    override var coverImageBytes: ByteArray?
+        by reactiveProperty(
+            getter = { _coverImageBytes?.copyOf() },
+            setter = { _coverImageBytes = it?.copyOf() }
+        )
 
     /**
      * Asynchronously writes the current metadata back to the audio file.
