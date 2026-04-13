@@ -123,7 +123,7 @@ object AudioItemMetadataUtils {
      * @param logger caller's logger for artwork error reporting
      * @param fileName caller's file name for temp file naming during artwork creation
      */
-    @SuppressWarnings("kotlin:S107")
+    @SuppressWarnings("kotlin:S107") // Audio metadata requires all tag fields as parameters; splitting would obscure the mapping
     fun writeMetadataToFile(
         path: Path,
         title: String,

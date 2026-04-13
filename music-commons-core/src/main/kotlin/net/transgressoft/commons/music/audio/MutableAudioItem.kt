@@ -64,7 +64,7 @@ interface AudioItem : ReactiveAudioItem<AudioItem> {
  *
  * @see <a href=https://www.jthink.net/jaudiotagger/>JAudioTagger website</a>
  */
-@Suppress("SERIALIZER_TYPE_INCOMPATIBLE")
+@Suppress("SERIALIZER_TYPE_INCOMPATIBLE") // Serializer handles polymorphic AudioItem hierarchy; declared type intentionally broader than serializer target
 @Serializable(with = AudioItemSerializer::class)
 internal class MutableAudioItem(
     override val path: Path,

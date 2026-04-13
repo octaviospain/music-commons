@@ -89,6 +89,7 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
         playlistName: String
     ): Boolean
 
+    // @JvmName required on generic interface methods to avoid JVM signature clashes with Java callers
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removeAudioItemIdsFromPlaylist")
     fun removeAudioItemsFromPlaylist(

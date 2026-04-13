@@ -39,7 +39,7 @@ import net.transgressoft.lirp.persistence.RefEntry
  * via [Class.forName] at runtime, wiring both the `audioItems` and `playlists`
  * delegates for lazy resolution from [net.transgressoft.lirp.persistence.LirpContext].
  */
-@Suppress("ClassName")
+@Suppress("ClassName") // Underscore in class name follows lirp Class.forName() naming convention for generated accessors
 @SuppressWarnings("kotlin:S101")
 internal class FXPlaylist_LirpRefAccessor : LirpRefAccessor<ObservablePlaylist> {
 

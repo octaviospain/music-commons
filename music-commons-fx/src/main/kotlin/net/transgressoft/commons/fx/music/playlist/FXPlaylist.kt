@@ -191,6 +191,7 @@ internal class FXPlaylist(
         return hasItems
     }
 
+    // @JvmName required on generic interface methods to avoid JVM signature clashes with Java callers
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removeAudioItemIds")
     override fun removeAudioItems(audioItemIds: Collection<Int>): Boolean {
@@ -293,6 +294,7 @@ internal class FXPlaylist(
         return "FXPlaylist(id=$id, isDirectory=$isDirectory, name='$name', audioItems=$formattedAudioItems, playlists=$formattedPlaylists)"
     }
 
+    // Safe cast: generic type erased at runtime but guaranteed by the builder/serializer contract
     @Suppress("UNCHECKED_CAST")
     override fun asJsonKeyValue(): String {
         val audioItemRefIds = audioItemsAggregate.referenceIds

@@ -22,6 +22,7 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 
+// Safe cast: generic type erased at runtime but guaranteed by the builder/serializer contract
 @get:JvmName("ObservablePlaylistMapSerializer")
 @Suppress("UNCHECKED_CAST")
 internal val ObservablePlaylistMapSerializer: KSerializer<Map<Int, ObservablePlaylist>> =
