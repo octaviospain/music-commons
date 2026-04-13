@@ -11,6 +11,7 @@ import net.transgressoft.lirp.event.ReactiveScope
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.json.JsonRepository
 import io.kotest.assertions.nondeterministic.eventually
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.common.ExperimentalKotest
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
@@ -164,6 +165,36 @@ internal class DefaultAudioLibraryTest: StringSpec({
         val jsonObject = Json.parseToJsonElement(jsonFile.readText()).jsonObject
 
         result.forEach { audioItem -> jsonObject shouldContainAudioItem audioItem }
+    }
+
+    "Creates a batch of audio items asynchronously with custom batch size" {
+        val filePaths = Arb.list(Arb.virtualAudioFile(), 10..20).next()
+
+        val result: List<AudioItem> = audioRepository.createFromFileBatchAsync(filePaths, testDispatcher.asExecutor(), batchSize = 1000).get()
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        result.size shouldBe filePaths.size
+        audioRepository.size() shouldBe filePaths.size
+    }
+
+    "Batch async coerces batch size below 500 to 500" {
+        val filePaths = Arb.list(Arb.virtualAudioFile(), 10..20).next()
+
+        val result: List<AudioItem> = audioRepository.createFromFileBatchAsync(filePaths, testDispatcher.asExecutor(), batchSize = 100).get()
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        result.size shouldBe filePaths.size
+    }
+
+    "Batch async rejects non-positive batch size" {
+        shouldThrow<IllegalArgumentException> {
+            audioRepository.createFromFileBatchAsync(listOf(), testDispatcher.asExecutor(), batchSize = 0)
+        }
+        shouldThrow<IllegalArgumentException> {
+            audioRepository.createFromFileBatchAsync(listOf(), testDispatcher.asExecutor(), batchSize = -1)
+        }
     }
 
     "Artist catalog registry should be populated when loading from existing repository" {

@@ -57,7 +57,7 @@ library.subscribe(object : Flow.Subscriber<CrudEvent<Int, MyAudioItem>> {
     }
 })
 
-// Load audio files asynchronously
+// Load audio files asynchronously (default batch size: 500)
 val audioItems = library.createFromFileBatchAsync(paths).get()
 
 // Query artist catalog
