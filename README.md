@@ -152,7 +152,7 @@ val library = MusicLibrary.builder()
 // Add audio files
 val audioItem = library.audioItemFromFile(Path.of("/path/to/song.mp3"))
 
-// Batch import (returns CompletableFuture)
+// Batch import (returns CompletableFuture, default batch size: 500)
 val audioItems = library.audioLibrary().createFromFileBatchAsync(listOfPaths).get()
 
 // Create and manage playlists

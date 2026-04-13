@@ -119,24 +119,53 @@ interface ReactiveAudioLibrary<I: ReactiveAudioItem<I>, AC: ReactiveArtistCatalo
     /**
      * Creates audio items asynchronously from a batch of file paths using the specified dispatcher.
      *
-     * The files are processed in batches of 500 for optimal performance.
+     * Files are processed in parallel batches to balance memory pressure from concurrent file reads
+     * against throughput from parallelized I/O. The default batch size of 500 is tuned for typical
+     * desktop audio library imports where each file read involves metadata parsing via JAudioTagger.
+     *
+     * @param audioItemPaths collection of file paths to create audio items from
+     * @param dispatcher coroutine dispatcher controlling the parallelism
+     * @param batchSize number of files to process per batch (default: 500). Must be positive.
+     *   Values below 500 are coerced to 500 to prevent performance degradation.
+     * @return a [CompletableFuture] completing with the list of created audio items
+     * @throws IllegalArgumentException if [batchSize] is not positive
      */
-    fun createFromFileBatchAsync(audioItemPaths: Collection<Path>, dispatcher: CoroutineDispatcher): CompletableFuture<List<I>> {
-        val batchSize = 500 // TODO #4 Parameterize this magic constant for customization
+    fun createFromFileBatchAsync(audioItemPaths: Collection<Path>, dispatcher: CoroutineDispatcher, batchSize: Int = 500): CompletableFuture<List<I>> {
+        require(batchSize > 0) { "batchSize must be positive, got $batchSize" }
+        val effectiveBatchSize = batchSize.coerceAtLeast(500)
         return CoroutineScope(dispatcher).future {
-            audioItemPaths.chunked(batchSize).map { batch ->
-                async {
-                    batch.map { path ->
-                        async(dispatcher) { createFromFile(path) }
-                    }.awaitAll()
+            buildList(audioItemPaths.size) {
+                for (batch in audioItemPaths.chunked(effectiveBatchSize)) {
+                    addAll(
+                        batch.map { path ->
+                            async(dispatcher) { createFromFile(path) }
+                        }.awaitAll()
+                    )
                 }
-            }.awaitAll().flatten()
+            }
         }
     }
 
-    fun createFromFileBatchAsync(audioItemPaths: Collection<Path>, executor: Executor): CompletableFuture<List<I>> =
-        createFromFileBatchAsync(audioItemPaths, executor.asCoroutineDispatcher())
+    /**
+     * Creates audio items asynchronously from a batch of file paths using the specified executor.
+     *
+     * @param audioItemPaths collection of file paths to create audio items from
+     * @param executor executor to use for coroutine dispatching
+     * @param batchSize number of files to process per batch (default: 500)
+     * @return a [CompletableFuture] completing with the list of created audio items
+     * @see createFromFileBatchAsync
+     */
+    fun createFromFileBatchAsync(audioItemPaths: Collection<Path>, executor: Executor, batchSize: Int = 500): CompletableFuture<List<I>> =
+        createFromFileBatchAsync(audioItemPaths, executor.asCoroutineDispatcher(), batchSize)
 
-    fun createFromFileBatchAsync(audioItemPaths: Collection<Path>): CompletableFuture<List<I>> =
-        createFromFileBatchAsync(audioItemPaths, Dispatchers.IO)
+    /**
+     * Creates audio items asynchronously from a batch of file paths using [Dispatchers.IO].
+     *
+     * @param audioItemPaths collection of file paths to create audio items from
+     * @param batchSize number of files to process per batch (default: 500)
+     * @return a [CompletableFuture] completing with the list of created audio items
+     * @see createFromFileBatchAsync
+     */
+    fun createFromFileBatchAsync(audioItemPaths: Collection<Path>, batchSize: Int = 500): CompletableFuture<List<I>> =
+        createFromFileBatchAsync(audioItemPaths, Dispatchers.IO, batchSize)
 }

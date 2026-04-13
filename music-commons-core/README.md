@@ -25,8 +25,11 @@ val audioItem = audioLibrary.createFromFile(audioFilePath)
 // Query by artist and album
 audioLibrary.findAlbumAudioItems(artist, albumName)
 
-// Batch creation with async support
+// Batch creation with async support (default batch size: 500)
 audioLibrary.createFromFileBatchAsync(filePaths, executor)
+
+// With custom batch size
+audioLibrary.createFromFileBatchAsync(filePaths, executor, batchSize = 200)
 ```
 
 ### Managing Playlists
