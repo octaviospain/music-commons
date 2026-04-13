@@ -77,16 +77,6 @@ interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I>, Co
 }
 
 /**
- * Converts a collection of reactive audio items to a JSON string with items as key-value pairs.
- */
-fun <R: ReactiveAudioItem<*>> Collection<R>.asJsonKeyValues(): String =
-    buildJsonObject {
-        forEach {
-            it.asJsonKeyValue()
-        }
-    }.toString()
-
-/**
  * Converts a reactive audio item to a [JsonObject] containing all metadata.
  */
 fun ReactiveAudioItem<*>.toJsonObject(): JsonObject =
