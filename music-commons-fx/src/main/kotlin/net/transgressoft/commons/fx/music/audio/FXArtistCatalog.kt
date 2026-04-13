@@ -230,10 +230,11 @@ internal class FXArtistCatalog(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is FXArtistCatalog) return false
-        return artist == other.artist
+        if (artist != other.artist) return false
+        return audioItemsByAlbumName == other.audioItemsByAlbumName
     }
 
-    override fun hashCode(): Int = artist.hashCode()
+    override fun hashCode(): Int = 31 * artist.hashCode() + audioItemsByAlbumName.hashCode()
 
     override fun toString() = "FXArtistCatalog(artist=$artist, size=$size)"
 }
