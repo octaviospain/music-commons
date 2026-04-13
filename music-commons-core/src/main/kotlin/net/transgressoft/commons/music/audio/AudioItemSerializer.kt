@@ -42,6 +42,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
@@ -66,7 +67,7 @@ internal object AudioItemSerializer : AudioItemSerializerBase<AudioItem>() {
         bitRate: Int,
         artist: Artist,
         album: Album,
-        genre: Genre,
+        genres: Set<Genre>,
         comments: String?,
         trackNumber: Short?,
         discNumber: Short?,
@@ -78,7 +79,7 @@ internal object AudioItemSerializer : AudioItemSerializerBase<AudioItem>() {
         playCount: Short
     ): AudioItem =
         MutableAudioItem(
-            path, id, title, duration, bitRate, artist, album, genre,
+            path, id, title, duration, bitRate, artist, album, genres,
             comments, trackNumber, discNumber, bpm, encoder, encoding,
             dateOfCreation, lastDateModified, playCount
         )
@@ -104,7 +105,7 @@ abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>> : LirpEntityPol
      * @param bitRate audio bitrate in kbps
      * @param artist track artist
      * @param album track album
-     * @param genre track genre
+     * @param genres track genres
      * @param comments optional comments
      * @param trackNumber optional track number
      * @param discNumber optional disc number
@@ -124,7 +125,7 @@ abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>> : LirpEntityPol
         bitRate: Int,
         artist: Artist,
         album: Album,
-        genre: Genre,
+        genres: Set<Genre>,
         comments: String?,
         trackNumber: Short?,
         discNumber: Short?,
@@ -182,7 +183,13 @@ abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>> : LirpEntityPol
         val labelName = requireString(labelObj, "name", "album.label.name")
         val album = ImmutableAlbum(albumName, ImmutableArtist.of(albumArtistName, albumArtistCountryCode), isCompilation, year, ImmutableLabel.of(labelName))
 
-        val genre = Genre.parseGenre(requireString(json, "genre"))
+        val genres: Set<Genre> =
+            json["genres"]?.jsonArray
+                ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+                ?.flatMap { Genre.parseGenre(it) }
+                ?.toSet()
+                ?: json["genre"]?.jsonPrimitive?.contentOrNull?.let { Genre.parseGenre(it) }
+                ?: emptySet()
         val comments = json["comments"]?.jsonPrimitive?.contentOrNull
         val trackNumber = json["trackNumber"]?.jsonPrimitive?.intOrNull?.toShort()
         val discNumber = json["discNumber"]?.jsonPrimitive?.intOrNull?.toShort()
@@ -194,7 +201,7 @@ abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>> : LirpEntityPol
         val playCount = json["playCount"]?.jsonPrimitive?.intOrNull?.toShort() ?: 0.toShort()
 
         return constructEntity(
-            path, id, title, duration, bitRate, artist, album, genre,
+            path, id, title, duration, bitRate, artist, album, genres,
             comments, trackNumber, discNumber, bpm, encoder, encoding,
             dateOfCreation, lastDateModified, playCount
         )

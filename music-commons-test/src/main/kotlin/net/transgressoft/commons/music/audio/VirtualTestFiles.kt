@@ -105,7 +105,7 @@ object VirtualFiles {
         val album = attributes.album.name
         val albumArtist = attributes.album.albumArtist.name
         val title = attributes.title
-        val genre = attributes.genre.name
+        val genre = attributes.genres.joinToString(", ") { it.name }
         val year = attributes.album.year
         val trackNumber = attributes.trackNumber
         val discNumber = attributes.discNumber
@@ -142,11 +142,11 @@ object VirtualFiles {
         every { tag.hasField(FieldKey.GROUPING) } returns true
         every { tag.hasField(FieldKey.IS_COMPILATION) } returns true
         every { tag.hasField(FieldKey.COUNTRY) } returns true
-        every { tag.hasField(FieldKey.TRACK) } returns (trackNumber == null)
-        every { tag.hasField(FieldKey.DISC_NO) } returns (discNumber == null)
-        every { tag.hasField(FieldKey.BPM) } returns (bpm == null)
-        every { tag.hasField(FieldKey.COMMENT) } returns (comment == null)
-        every { tag.hasField(FieldKey.ENCODER) } returns (encoder == null)
+        every { tag.hasField(FieldKey.TRACK) } returns (trackNumber != null)
+        every { tag.hasField(FieldKey.DISC_NO) } returns (discNumber != null)
+        every { tag.hasField(FieldKey.BPM) } returns (bpm != null)
+        every { tag.hasField(FieldKey.COMMENT) } returns (comment != null)
+        every { tag.hasField(FieldKey.ENCODER) } returns (encoder != null)
 
         coverBytes?.let {
             every { tag.firstArtwork } returns

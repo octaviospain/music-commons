@@ -52,6 +52,17 @@ implementation("net.transgressoft:lirp-core:2.3.0")
 
 ## Key Features
 
+### Genre Handling
+
+`Genre` is a sealed class with ~370 predefined genre constants (data objects) and a `Custom` variant for arbitrary genre strings. Audio items carry multiple genres as a `Set<Genre>`, populated by parsing comma-separated tags from audio file metadata.
+
+```kotlin
+val genres: Set<Genre> = Genre.parseGenre("Rock, Jazz")  // setOf(Genre.Rock, Genre.Jazz)
+val custom: Set<Genre> = Genre.parseGenre("Vaporwave")   // setOf(Genre.Custom("Vaporwave"))
+```
+
+Unknown genre strings are preserved as `Genre.Custom(name)` instead of being discarded. Serialization uses a JSON array: `"genres": ["Rock", "Jazz"]`
+
 ### Audio Library Management
 
 - **Multi-format support**: MP3, M4A, WAV, and FLAC with automatic metadata extraction

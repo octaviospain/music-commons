@@ -28,10 +28,10 @@ fun <I : ReactiveAudioItem<I>> I.update(change: AudioItemChange) {
             change.year?.takeIf { year -> year > 0 } ?: album.year,
             change.label ?: album.label
         )
-    change.genre ?: genre
-    change.comments ?: comments
-    change.trackNumber?.takeIf { trackNum -> trackNum > 0 } ?: trackNumber
-    change.discNumber?.takeIf { discNum -> discNum > 0 } ?: discNumber
-    change.bpm?.takeIf { bpm -> bpm > 0 } ?: bpm
-    change.coverImageBytes ?: coverImageBytes
+    change.genres?.let { genres = it }
+    change.comments?.let { comments = it }
+    change.trackNumber?.takeIf { it > 0 }?.let { trackNumber = it }
+    change.discNumber?.takeIf { it > 0 }?.let { discNumber = it }
+    change.bpm?.takeIf { it > 0 }?.let { bpm = it }
+    change.coverImageBytes?.let { coverImageBytes = it }
 }

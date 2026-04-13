@@ -11,6 +11,7 @@ import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -39,7 +40,7 @@ internal class AudioItemSerializerTest : StringSpec({
                 this.title = "Come Together"
                 this.artist = artist
                 this.album = album
-                this.genre = Genre.ROCK
+                this.genres = setOf(Genre.Rock)
                 this.comments = "Classic track"
                 this.trackNumber = 1
                 this.discNumber = 1
@@ -58,7 +59,7 @@ internal class AudioItemSerializerTest : StringSpec({
         encoded shouldContain "The Beatles"
         encoded shouldContain "\"album\""
         encoded shouldContain "Abbey Road"
-        encoded shouldContain "\"genre\""
+        encoded shouldContain "\"genres\""
         encoded shouldContain "\"playCount\""
     }
 
@@ -72,7 +73,7 @@ internal class AudioItemSerializerTest : StringSpec({
                 this.title = "Round Trip Song"
                 this.artist = artist
                 this.album = album
-                this.genre = Genre.ROCK
+                this.genres = setOf(Genre.Rock)
                 this.comments = "Test comment"
                 this.trackNumber = 3
                 this.discNumber = 2
@@ -98,7 +99,7 @@ internal class AudioItemSerializerTest : StringSpec({
         decodedItem.album.isCompilation shouldBe originalItem.album.isCompilation
         decodedItem.album.year shouldBe originalItem.album.year
         decodedItem.album.label.name shouldBe originalItem.album.label.name
-        decodedItem.genre shouldBe originalItem.genre
+        decodedItem.genres shouldBe originalItem.genres
         decodedItem.comments shouldBe originalItem.comments
         decodedItem.trackNumber shouldBe originalItem.trackNumber
         decodedItem.discNumber shouldBe originalItem.discNumber

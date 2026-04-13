@@ -48,7 +48,7 @@ internal object ObservableAudioItemSerializer : AudioItemSerializerBase<Observab
         bitRate: Int,
         artist: Artist,
         album: Album,
-        genre: Genre,
+        genres: Set<Genre>,
         comments: String?,
         trackNumber: Short?,
         discNumber: Short?,
@@ -60,8 +60,22 @@ internal object ObservableAudioItemSerializer : AudioItemSerializerBase<Observab
         playCount: Short
     ): ObservableAudioItem =
         FXAudioItem(
-            path, id, title, duration, bitRate, artist, album, genre,
-            comments, trackNumber, discNumber, bpm, encoder, encoding,
-            dateOfCreation, lastDateModified, playCount
+            path = path,
+            id = id,
+            title = title,
+            duration = duration,
+            bitRate = bitRate,
+            artist = artist,
+            album = album,
+            genres = genres,
+            comments = comments,
+            trackNumber = trackNumber,
+            discNumber = discNumber,
+            bpm = bpm,
+            encoder = encoder,
+            encoding = encoding,
+            dateOfCreation = dateOfCreation,
+            lastDateModified = lastDateModified,
+            playCount = playCount
         )
 }

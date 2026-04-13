@@ -93,7 +93,7 @@ fun Arb.Companion.audioItem(audioItem: AudioItem, changeAction: AudioItemChange.
                     change.year?.takeIf { year -> year > 0 } ?: audioItem.album.year,
                     change.label ?: audioItem.album.label
                 )
-            every { genre } returns (change.genre ?: audioItem.genre)
+            every { genres } returns (change.genres ?: audioItem.genres)
             every { comments } returns (change.comments ?: audioItem.comments)
             every { trackNumber } returns (change.trackNumber ?: audioItem.trackNumber)
             every { discNumber } returns (change.discNumber ?: audioItem.discNumber)
@@ -137,7 +137,7 @@ fun Arb.Companion.audioItem(attributes: AudioItemTestAttributes): Arb<AudioItem>
             every { title } returns attributes.title
             every { artist } returns attributes.artist
             every { album } returns attributes.album
-            every { genre } returns attributes.genre
+            every { genres } returns attributes.genres
             every { comments } returns attributes.comments
             every { trackNumber } returns attributes.trackNumber
             every { discNumber } returns attributes.discNumber
@@ -208,7 +208,7 @@ fun Arb.Companion.audioItemChange(): Arb<AudioItemChange> =
             attributes.album.isCompilation,
             attributes.album.year,
             attributes.album.label,
-            attributes.genre,
+            attributes.genres,
             attributes.comments,
             attributes.trackNumber,
             attributes.discNumber,
@@ -216,6 +216,23 @@ fun Arb.Companion.audioItemChange(): Arb<AudioItemChange> =
             attributes.coverImageBytes,
             attributes.playCount
         )
+    }
+
+fun Arb.Companion.genre(): Arb<Genre> =
+    arbitrary {
+        val samples =
+            listOf(
+                Genre.Rock, Genre.Alternative, Genre.Jazz, Genre.Blues, Genre.Electronic,
+                Genre.HipHop, Genre.Classical, Genre.Folk, Genre.Metal, Genre.Pop
+            )
+        if (Arb.boolean().bind()) samples[Arb.int(0 until samples.size).bind()]
+        else Genre.Custom(Arb.string(1..30).bind().replace(",", "").ifEmpty { "Custom" })
+    }
+
+fun Arb.Companion.genres(): Arb<Set<Genre>> =
+    arbitrary {
+        val count = Arb.int(0..3).bind()
+        (1..count).map { Arb.genre().bind() }.toSet()
     }
 
 fun Arb.Companion.audioAttributes(
@@ -226,7 +243,7 @@ fun Arb.Companion.audioAttributes(
     bitRate: Int? = null,
     artist: Artist? = null,
     album: Album? = null,
-    genre: Genre? = null,
+    genres: Set<Genre>? = null,
     comments: String? = null,
     trackNumber: Short? = null,
     discNumber: Short? = null,
@@ -246,7 +263,7 @@ fun Arb.Companion.audioAttributes(
             bitRate ?: Arb.positiveInt().bind(),
             artist ?: artist().bind(),
             album ?: album().bind(),
-            genre ?: Arb.enum<Genre>().bind(),
+            genres ?: Arb.genres().bind(),
             comments ?: Arb.string().bind(),
             trackNumber ?: Arb.positiveShort().bind(),
             discNumber ?: Arb.positiveShort().bind(),

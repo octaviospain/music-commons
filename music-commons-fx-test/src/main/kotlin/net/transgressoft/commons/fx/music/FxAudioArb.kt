@@ -64,7 +64,7 @@ fun Arb.Companion.fxAudioItem(attributes: AudioItemTestAttributes): Arb<Observab
             every { title } returns attributes.title
             every { artist } returns attributes.artist
             every { album } returns attributes.album
-            every { genre } returns attributes.genre
+            every { genres } returns attributes.genres
             every { comments } returns attributes.comments
             every { trackNumber } returns attributes.trackNumber
             every { discNumber } returns attributes.discNumber
@@ -81,8 +81,8 @@ fun Arb.Companion.fxAudioItem(attributes: AudioItemTestAttributes): Arb<Observab
             every { this@mockk.albumProperty } answers {
                 SimpleObjectProperty(this, "album", attributes.album)
             }
-            every { this@mockk.genreProperty } answers {
-                SimpleObjectProperty(this, "genre", attributes.genre)
+            every { this@mockk.genresProperty } answers {
+                SimpleObjectProperty(this, "genres", attributes.genres)
             }
             every { this@mockk.commentsProperty } answers {
                 SimpleStringProperty(this, "comments", attributes.comments)

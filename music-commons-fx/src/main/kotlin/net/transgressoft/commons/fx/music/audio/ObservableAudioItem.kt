@@ -48,7 +48,7 @@ interface ObservableAudioItem : ReactiveAudioItem<ObservableAudioItem> {
 
     val albumProperty: ObjectProperty<Album>
 
-    val genreProperty: ObjectProperty<Genre>
+    val genresProperty: ObjectProperty<Set<Genre>>
 
     val commentsProperty: StringProperty
 

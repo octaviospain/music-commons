@@ -24,7 +24,9 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import kotlin.io.path.absolutePathString
 import kotlinx.coroutines.Job
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -45,7 +47,7 @@ interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I>, Co
     var artist: Artist
     val artistsInvolved: Set<Artist>
     var album: Album
-    var genre: Genre
+    var genres: Set<Genre>
     var comments: String?
     var trackNumber: Short?
     var discNumber: Short?
@@ -114,7 +116,7 @@ fun ReactiveAudioItem<*>.toJsonObject(): JsonObject =
                 )
             }
         )
-        put("genre", genre.name)
+        put("genres", JsonArray(genres.map { it.name }.sorted().map(::JsonPrimitive)))
         put("comments", comments)
         put("trackNumber", trackNumber)
         put("discNumber", discNumber)

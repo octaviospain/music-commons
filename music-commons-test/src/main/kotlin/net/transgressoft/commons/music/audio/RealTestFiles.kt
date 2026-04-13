@@ -60,7 +60,7 @@ object ArbitraryAudioFile : TestConfiguration() {
             this.trackNumber = attributesAction.trackNumber
             this.discNumber = attributesAction.discNumber
             this.comments = attributesAction.comments
-            this.genre = attributesAction.genre
+            this.genres = attributesAction.genres
             this.encoder = attributesAction.encoder
             this.dateOfCreation = attributesAction.dateOfCreation
             this.lastDateModified = attributesAction.lastDateModified
@@ -109,7 +109,7 @@ object ArbitraryAudioFile : TestConfiguration() {
         tag.setField(FieldKey.COUNTRY, attributes.artist.countryCode.name)
         tag.setField(FieldKey.ALBUM_ARTIST, attributes.album.albumArtist.name)
         tag.setField(FieldKey.ARTIST, attributes.artist.name)
-        tag.setField(FieldKey.GENRE, attributes.genre.name)
+        tag.setField(FieldKey.GENRE, attributes.genres.joinToString(", ") { it.name })
         attributes.comments?.let { tag.setField(FieldKey.COMMENT, it) }
         attributes.trackNumber?.let { tag.setField(FieldKey.TRACK, it.toString()) }
         attributes.discNumber?.let { tag.setField(FieldKey.DISC_NO, it.toString()) }

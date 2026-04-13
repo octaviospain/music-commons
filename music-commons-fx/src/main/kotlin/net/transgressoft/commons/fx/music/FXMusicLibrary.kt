@@ -229,24 +229,27 @@ class FXMusicLibrary private constructor(
             val audioLibrary = FXAudioLibrary(audioRepo)
 
             var waveformRepository: AudioWaveformRepository<AudioWaveform, ObservableAudioItem>? = null
-            val playlistHierarchy: FXPlaylistHierarchy
             try {
                 val waveformRepo = createWaveformRepository()
                 waveformRepository = audioWaveformRepository(waveformRepo)
 
                 val playlistRepo = createPlaylistRepository()
-                playlistHierarchy = FXPlaylistHierarchy(playlistRepo)
+                val playlistHierarchy = FXPlaylistHierarchy(playlistRepo)
+
+                try {
+                    audioLibrary.subscribe(waveformRepository)
+                    audioLibrary.subscribe(playlistHierarchy)
+                } catch (subscribeEx: Exception) {
+                    playlistHierarchy.close()
+                    throw subscribeEx
+                }
+
+                return FXMusicLibrary(audioLibrary, playlistHierarchy, waveformRepository)
             } catch (ex: Exception) {
                 waveformRepository?.close()
                 audioLibrary.close()
                 throw ex
             }
-
-            val waveforms = checkNotNull(waveformRepository) { "waveformRepository must be initialized before wiring subscriptions" }
-            audioLibrary.subscribe(waveforms)
-            audioLibrary.subscribe(playlistHierarchy)
-
-            return FXMusicLibrary(audioLibrary, playlistHierarchy, waveforms)
         }
 
         // Safe cast: generic type erased at runtime but guaranteed by the builder/serializer contract

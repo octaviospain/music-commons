@@ -31,7 +31,7 @@ data class AudioItemChange(
     var isCompilation: Boolean? = null,
     var year: Short? = null,
     var label: Label? = null,
-    var genre: Genre? = null,
+    var genres: Set<Genre>? = null,
     var comments: String? = null,
     var trackNumber: Short? = null,
     var discNumber: Short? = null,

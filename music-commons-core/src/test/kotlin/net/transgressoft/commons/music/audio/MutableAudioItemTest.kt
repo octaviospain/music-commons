@@ -48,7 +48,7 @@ internal class MutableAudioItemTest : FunSpec({
             trackNumber = 13,
             discNumber = 1,
             comments = "Best song ever!",
-            genre = Genre.ROCK,
+            genres = setOf(Genre.Rock),
             encoder = "transgressoft",
             playCount = 0
         ).next()
@@ -77,11 +77,11 @@ internal class MutableAudioItemTest : FunSpec({
                         expectedAttributes.apply {
                             // when a MutableAudioItem is created outside a repository it does not have and ID
                             id = UNASSIGNED_ID
-                            // the album artists' country code is not saved in the ID3 tag
+                            // the album artists' and label's country code is not saved in the ID3 tag
                             album =
                                 ImmutableAlbum(
                                     "Help!",
-                                    ImmutableArtist.of("The Beatles Band", CountryCode.UNDEFINED), true, 1965, ImmutableLabel.of("EMI", CountryCode.US)
+                                    ImmutableArtist.of("The Beatles Band", CountryCode.UNDEFINED), true, 1965, ImmutableLabel.of("EMI", CountryCode.UNDEFINED)
                                 )
                         }
                 }
@@ -138,7 +138,7 @@ internal class MutableAudioItemTest : FunSpec({
                 loadedAudioItem.trackNumber shouldBe audioItem.trackNumber
                 loadedAudioItem.discNumber shouldBe audioItem.discNumber
                 loadedAudioItem.comments shouldBe audioItem.comments
-                loadedAudioItem.genre shouldBe audioItem.genre
+                loadedAudioItem.genres shouldBe audioItem.genres
                 loadedAudioItem.encoding shouldBe audioItem.encoding
                 loadedAudioItem.encoder shouldBe audioItem.encoder
                 loadedAudioItem.playCount shouldBe audioItem.playCount
