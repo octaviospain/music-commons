@@ -74,13 +74,18 @@ class ImmutableArtist private constructor(override val name: String, override va
         /**
          * Returns a cached [Artist] instance for the given name and country code.
          *
-         * Uses a flyweight pattern to ensure only one instance exists per unique artist,
-         * preventing duplicate objects and reducing memory consumption.
+         * Uses a flyweight pattern with [ConcurrentHashMap.computeIfAbsent] to ensure exactly one
+         * instance exists per unique artist under concurrent access, preventing duplicate objects
+         * and reducing memory consumption.
          */
         @JvmStatic
         @JvmOverloads
-        fun of(name: String, countryCode: CountryCode = CountryCode.UNDEFINED) =
-            artistMap.getOrPut(id(name.trim(), countryCode)) { ImmutableArtist(name, countryCode) }
+        fun of(name: String, countryCode: CountryCode = CountryCode.UNDEFINED): Artist {
+            val normalizedName = name.trim()
+            return artistMap.computeIfAbsent(id(name.trim(), countryCode)) {
+                ImmutableArtist(normalizedName, countryCode)
+            }
+        }
 
         internal fun id(name: String, countryCode: CountryCode = CountryCode.UNDEFINED) =
             if (countryCode == CountryCode.UNDEFINED) {
