@@ -62,6 +62,7 @@ abstract class MutablePlaylistBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPl
         return result
     }
 
+    // @JvmName required on generic interface methods to avoid JVM signature clashes with Java callers
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removeAudioItemIds")
     override fun removeAudioItems(audioItemIds: Collection<Int>): Boolean {

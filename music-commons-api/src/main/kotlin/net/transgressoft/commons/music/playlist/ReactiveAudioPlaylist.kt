@@ -47,6 +47,7 @@ interface ReactiveAudioPlaylist<I : ReactiveAudioItem<I>, P : ReactiveAudioPlayl
 
     fun removeAudioItems(audioItems: Collection<I>): Boolean
 
+    // @JvmName required on generic interface methods to avoid JVM signature clashes with Java callers
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removeAudioItemIds")
     fun removeAudioItems(audioItemIds: Collection<Int>): Boolean

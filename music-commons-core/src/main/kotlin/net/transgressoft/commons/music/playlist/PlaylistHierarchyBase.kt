@@ -227,6 +227,7 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
             it.get().removeAudioItems(audioItems)
         }
 
+    // @JvmName required on generic interface methods to avoid JVM signature clashes with Java callers
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removeAudioItemIdsFromPlaylist")
     override fun removeAudioItemsFromPlaylist(audioItemIds: Collection<Int>, playlistName: String): Boolean =

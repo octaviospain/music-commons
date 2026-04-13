@@ -270,6 +270,7 @@ class MusicLibrary private constructor(
             return MusicLibrary(audioLibrary, playlistHierarchy, waveforms)
         }
 
+        // Safe cast: generic type erased at runtime but guaranteed by the builder/serializer contract
         @Suppress("UNCHECKED_CAST")
         private fun createAudioRepository(): Repository<Int, AudioItem> =
             when (val config = audioLibraryStorage) {

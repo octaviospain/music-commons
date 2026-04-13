@@ -115,7 +115,7 @@ abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>> : LirpEntityPol
      * @param lastDateModified last modification timestamp
      * @param playCount number of times played
      */
-    @SuppressWarnings("kotlin:S107")
+    @SuppressWarnings("kotlin:S107") // Audio metadata requires all tag fields as parameters; splitting would obscure the mapping
     protected abstract fun constructEntity(
         path: Path,
         id: Int,

@@ -78,7 +78,7 @@ import kotlinx.serialization.modules.polymorphic
  * [lastDateModifiedProperty] is updated automatically by [ReactiveEntityBase] after each
  * successful mutation.
  */
-@Suppress("SERIALIZER_TYPE_INCOMPATIBLE")
+@Suppress("SERIALIZER_TYPE_INCOMPATIBLE") // Serializer handles polymorphic AudioItem hierarchy; declared type intentionally broader than serializer target
 @Serializable(with = ObservableAudioItemSerializer::class)
 class FXAudioItem internal constructor(override val path: Path, override val id: Int = UNASSIGNED_ID): ObservableAudioItem, Comparable<ObservableAudioItem>,
     ReactiveEntityBase<Int, ObservableAudioItem>() {
@@ -212,6 +212,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         // LirpObjectProperty<T> extends SimpleObjectProperty<T?>, so it is ObjectProperty<T?> in
         // Kotlin's type system. The cast to ObjectProperty<T> (non-nullable) is safe at runtime
         // because JavaFX generics erase to raw types on the JVM.
+        // Safe cast: generic type erased at runtime but guaranteed by the builder/serializer contract
         @Transient
         @Suppress("UNCHECKED_CAST")
         override val artistProperty: ObjectProperty<Artist> = fxObject(metadata.artist) as ObjectProperty<Artist>

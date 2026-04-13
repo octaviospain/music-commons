@@ -29,6 +29,6 @@ import kotlinx.serialization.builtins.serializer
  * repeatedly constructing `lirpSerializer(MutablePlaylist(0, "", false))` at each call site.
  */
 @get:JvmName("AudioPlaylistMapSerializer")
-@Suppress("UNCHECKED_CAST")
+@Suppress("UNCHECKED_CAST") // Safe cast: generic type erased at runtime but guaranteed by the builder/serializer contract
 internal val AudioPlaylistMapSerializer: KSerializer<Map<Int, MutableAudioPlaylist>> =
     MapSerializer(Int.serializer(), lirpSerializer(MutablePlaylist(0, "", false))) as KSerializer<Map<Int, MutableAudioPlaylist>>
