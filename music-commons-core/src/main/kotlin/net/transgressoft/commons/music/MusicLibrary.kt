@@ -248,26 +248,24 @@ class MusicLibrary private constructor(
             val audioLibrary = DefaultAudioLibrary(audioRepo)
 
             var waveformRepository: DefaultAudioWaveformRepository<AudioItem>? = null
-            val playlistHierarchy: DefaultPlaylistHierarchy
             try {
                 // 2. Waveform repository
                 val waveformRepo = createWaveformRepository()
                 waveformRepository = DefaultAudioWaveformRepository(waveformRepo)
 
                 // 3. Playlist hierarchy last — needs AudioItem already registered in LirpContext
-                playlistHierarchy = createPlaylistHierarchy()
+                val playlistHierarchy = createPlaylistHierarchy()
+
+                // 4. Wire subscriptions so audio library events propagate to subscribers
+                audioLibrary.subscribe(waveformRepository)
+                audioLibrary.subscribe(playlistHierarchy)
+
+                return MusicLibrary(audioLibrary, playlistHierarchy, waveformRepository)
             } catch (ex: Exception) {
                 waveformRepository?.close()
                 audioLibrary.close()
                 throw ex
             }
-
-            // 4. Wire subscriptions so audio library events propagate to subscribers
-            val waveforms = checkNotNull(waveformRepository) { "waveformRepository must be initialized before wiring subscriptions" }
-            audioLibrary.subscribe(waveforms)
-            audioLibrary.subscribe(playlistHierarchy)
-
-            return MusicLibrary(audioLibrary, playlistHierarchy, waveforms)
         }
 
         // Safe cast: generic type erased at runtime but guaranteed by the builder/serializer contract

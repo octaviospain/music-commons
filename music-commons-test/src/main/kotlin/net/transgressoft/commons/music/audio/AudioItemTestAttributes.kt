@@ -28,7 +28,7 @@ data class AudioItemTestAttributes(
     var bitRate: Int,
     var artist: Artist,
     var album: Album,
-    var genre: Genre,
+    var genres: Set<Genre>,
     var comments: String? = null,
     var trackNumber: Short? = null,
     var discNumber: Short? = null,

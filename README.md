@@ -14,7 +14,9 @@ See the [Wiki](https://github.com/octaviospain/music-commons/wiki) for detailed 
 
 ## Overview
 
-music-commons was born from the need to separate the core audio management logic from the Musicott desktop application into a standalone, reusable library. The goal was to create a foundation that could power not just Musicott, but any project that needs to manage audio files and related operations—whether that's handling playlists, generating waveforms, managing metadata, or implementing import/export functionality. It provides reusable core components for audio file management: metadata handling, playlist organization, waveform generation, and playback control. The library offers a clean, layered architecture with reactive event-driven updates and optional JavaFX integration, enabling both headless services and desktop applications.### Built on lirp
+music-commons was born from the need to separate the core audio management logic from the Musicott desktop application into a standalone, reusable library. The goal was to create a foundation that could power not just Musicott, but any project that needs to manage audio files and related operations—whether that's handling playlists, generating waveforms, managing metadata, or implementing import/export functionality. It provides reusable core components for audio file management: metadata handling, playlist organization, waveform generation, and playback control. The library offers a clean, layered architecture with reactive event-driven updates and optional JavaFX integration, enabling both headless services and desktop applications.
+
+### Built on lirp
 
 Music Commons leverages [lirp](https://github.com/octaviospain/lirp), which provides the foundational reactive entity framework, repository pattern, automatic JSON serialization, and event-driven architecture that Music Commons builds upon.
 
@@ -51,6 +53,17 @@ implementation("net.transgressoft:lirp-core:2.3.0")
 ```
 
 ## Key Features
+
+### Genre Handling
+
+`Genre` is a sealed class with ~370 predefined genre constants (data objects) and a `Custom` variant for arbitrary genre strings. Audio items carry multiple genres as a `Set<Genre>`, populated by parsing comma-separated tags from audio file metadata.
+
+```kotlin
+val genres: Set<Genre> = Genre.parseGenre("Rock, Jazz")  // setOf(Genre.Rock, Genre.Jazz)
+val custom: Set<Genre> = Genre.parseGenre("Vaporwave")   // setOf(Genre.Custom("Vaporwave"))
+```
+
+Unknown genre strings are preserved as `Genre.Custom(name)` instead of being discarded. Serialization uses a JSON array: `"genres": ["Rock", "Jazz"]`
 
 ### Audio Library Management
 

@@ -92,7 +92,7 @@ internal class MutableAudioItem(
         bitRate: Int,
         artist: Artist,
         album: Album,
-        genre: Genre,
+        genres: Set<Genre>,
         comments: String?,
         trackNumber: Short?,
         discNumber: Short?,
@@ -107,7 +107,7 @@ internal class MutableAudioItem(
         this.title = title
         this._duration = duration
         this.artist = artist
-        this.genre = genre
+        this.genres = genres
         this.comments = comments
         this.trackNumber = trackNumber
         this.discNumber = discNumber
@@ -132,27 +132,32 @@ internal class MutableAudioItem(
     private var _bitRate: Int = metadata.bitRate
 
     @Serializable
-    override val bitRate: Int = _bitRate
+    override val bitRate: Int
+        get() = _bitRate
 
     private var _duration: Duration = metadata.duration
 
     @Serializable
-    override val duration: Duration = _duration
+    override val duration: Duration
+        get() = _duration
 
     private var _encoder: String? = metadata.encoder?.takeIf { it.isNotEmpty() }
 
     @Serializable
-    override val encoder: String? = _encoder
+    override val encoder: String?
+        get() = _encoder
 
     private var _encoding: String? = metadata.encoding?.takeIf { it.isNotEmpty() }
 
     @Serializable
-    override val encoding: String? = _encoding
+    override val encoding: String?
+        get() = _encoding
 
     private var _dateOfCreation: LocalDateTime = LocalDateTime.now()
 
     @Serializable
-    override val dateOfCreation: LocalDateTime = _dateOfCreation
+    override val dateOfCreation: LocalDateTime
+        get() = _dateOfCreation
 
     @Serializable
     override var lastDateModified: LocalDateTime = _dateOfCreation
@@ -196,10 +201,17 @@ internal class MutableAudioItem(
     override var artist: Artist by reactiveProperty(metadata.artist)
 
     @Serializable
-    override var genre: Genre by reactiveProperty(metadata.genre)
+    override var genres: Set<Genre> by reactiveProperty(metadata.genres)
+
+    @Transient
+    private var _comments: String? = metadata.comments
 
     @Serializable
-    override var comments: String? by reactiveProperty(metadata.comments)
+    override var comments: String?
+        by reactiveProperty(
+            getter = { _comments },
+            setter = { _comments = it?.takeIf { s -> s.isNotEmpty() } }
+        )
 
     @Serializable
     override var trackNumber: Short? by reactiveProperty(metadata.trackNumber)
@@ -234,7 +246,7 @@ internal class MutableAudioItem(
         ioScope.launch {
             logger.debug { "Writing metadata of $this to file '${path.toAbsolutePath()}'" }
             writeMetadataToFile(
-                path, title, album, artist, genre,
+                path, title, album, artist, genres,
                 comments, trackNumber, discNumber, bpm, encoder,
                 coverImageBytes, fileName, logger
             )
@@ -256,16 +268,16 @@ internal class MutableAudioItem(
             title == that.title &&
             artist == that.artist &&
             album == that.album &&
-            genre === that.genre &&
+            genres == that.genres &&
             comments == that.comments &&
             duration == that.duration
     }
 
-    override fun hashCode() = Objects.hash(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration)
+    override fun hashCode() = Objects.hash(path, title, artist, album, genres, comments, trackNumber, discNumber, bpm, duration)
 
     override fun clone(): MutableAudioItem =
         MutableAudioItem(
-            path, id, title, duration, bitRate, artist, album, genre,
+            path, id, title, duration, bitRate, artist, album, genres,
             comments, trackNumber, discNumber, bpm, encoder, encoding,
             dateOfCreation, lastDateModified, _playCount
         )

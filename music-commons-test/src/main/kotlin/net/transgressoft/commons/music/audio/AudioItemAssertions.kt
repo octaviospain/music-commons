@@ -33,6 +33,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -44,13 +45,13 @@ infix fun AudioItem.shouldMatch(attributes: AudioItemTestAttributes) {
         album.albumArtist.name shouldBe attributes.album.albumArtist.name
         album.albumArtist.countryCode shouldBe attributes.album.albumArtist.countryCode
         album.label.name shouldBe attributes.album.label.name
-        album.label.countryCode shouldBe album.label.countryCode
+        album.label.countryCode shouldBe attributes.album.label.countryCode
         artist shouldBe attributes.artist
         bpm shouldBe attributes.bpm
         trackNumber shouldBe attributes.trackNumber
         discNumber shouldBe attributes.discNumber
         comments shouldBe attributes.comments
-        genre shouldBe attributes.genre
+        genres shouldBe attributes.genres
         encoder shouldBe attributes.encoder
         uniqueId shouldBe
             buildString {
@@ -86,7 +87,8 @@ infix fun JsonObject.shouldContainAudioItem(audioItem: AudioItem) {
     itemJson["bpm"]?.jsonPrimitive?.floatOrNull shouldBe audioItem.bpm
     itemJson["encoder"]?.jsonPrimitive?.contentOrNull shouldBe audioItem.encoder
     itemJson["encoding"]?.jsonPrimitive?.contentOrNull shouldBe audioItem.encoding
-    itemJson["genre"]?.jsonPrimitive?.content shouldBe audioItem.genre.name
+    val genreNames = itemJson["genres"]?.jsonArray?.map { it.jsonPrimitive.content }?.toSet()
+    genreNames shouldBe audioItem.genres.map { it.name }.toSet()
     itemJson["comments"]?.jsonPrimitive?.contentOrNull shouldBe audioItem.comments
     itemJson["playCount"]?.jsonPrimitive?.int shouldBe audioItem.playCount.toInt()
 

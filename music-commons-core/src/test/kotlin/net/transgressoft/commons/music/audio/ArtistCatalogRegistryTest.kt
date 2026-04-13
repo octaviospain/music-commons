@@ -57,7 +57,7 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
                 val audioItemBeforeChange = audioItem.clone()
                 audioItem.apply {
                     title = "Natural Blues"
-                    genre = Genre.ROCK
+                    genres = setOf(Genre.Rock)
                     comments = "Comments"
                     bpm = 120f
                 }
@@ -218,7 +218,7 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
                     album = expectedAlbum
                     trackNumber = 1
                     discNumber = 1
-                    genre = Genre.UNDEFINED
+                    genres = emptySet()
                 }.next()
             val audioItem = createAudioItem(audioFilePath)
 
@@ -257,7 +257,7 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
                 receivedEvents.clear()
 
                 val audioItemBeforeChange = audioItem.clone()
-                audioItem.genre = Genre.ROCK
+                audioItem.genres = setOf(Genre.Rock)
 
                 registry.updateCatalog(audioItem, audioItemBeforeChange)
 

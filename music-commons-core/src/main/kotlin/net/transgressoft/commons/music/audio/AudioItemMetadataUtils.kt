@@ -56,7 +56,7 @@ data class AudioFileMetadata(
     val title: String,
     val artist: Artist,
     val album: Album,
-    val genre: Genre,
+    val genres: Set<Genre>,
     val comments: String?,
     val trackNumber: Short?,
     val discNumber: Short?,
@@ -95,7 +95,7 @@ object AudioItemMetadataUtils {
             title = getFieldIfExisting(tag, FieldKey.TITLE) ?: "",
             artist = parseArtist(tag),
             album = parseAlbum(tag),
-            genre = getFieldIfExisting(tag, FieldKey.GENRE)?.let { Genre.parseGenre(it) } ?: Genre.UNDEFINED,
+            genres = getFieldIfExisting(tag, FieldKey.GENRE)?.let { Genre.parseGenre(it) } ?: emptySet(),
             comments = getFieldIfExisting(tag, FieldKey.COMMENT)?.takeIf { it.isNotEmpty() },
             trackNumber = parseOptionalShort(getFieldIfExisting(tag, FieldKey.TRACK)),
             discNumber = parseOptionalShort(getFieldIfExisting(tag, FieldKey.DISC_NO)),
@@ -129,7 +129,7 @@ object AudioItemMetadataUtils {
         title: String,
         album: Album,
         artist: Artist,
-        genre: Genre,
+        genres: Set<Genre>,
         comments: String?,
         trackNumber: Short?,
         discNumber: Short?,
@@ -141,7 +141,7 @@ object AudioItemMetadataUtils {
     ) {
         val audio = AudioFileIO.read(path.toFile())
         createTag(
-            audio.audioHeader.format, title, album, artist, genre,
+            audio.audioHeader.format, title, album, artist, genres,
             comments, trackNumber, discNumber, bpm, encoder,
             coverImageBytes, fileName, logger
         ).let {
@@ -193,10 +193,10 @@ object AudioItemMetadataUtils {
     private fun parseCoverBytes(tag: Tag): ByteArray? = tag.artworkList.isNotEmpty().takeIf { it }?.let { tag.firstArtwork.binaryData }
 
     private fun parseOptionalShort(value: String?): Short? =
-        value?.takeUnless { it.isEmpty().and(it == "0") }?.toShortOrNull()?.takeIf { it > 0 }
+        value?.takeUnless { it.isEmpty() || it == "0" }?.toShortOrNull()?.takeIf { it > 0 }
 
     private fun parseOptionalBpm(value: String?): Float? =
-        value?.takeUnless { it.isEmpty().and(it == "0") }?.toFloatOrNull()?.takeIf { it > 0 }
+        value?.takeUnless { it.isEmpty() || it == "0" }?.toFloatOrNull()?.takeIf { it > 0 }
 
     @SuppressWarnings("kotlin:S107")
     private fun createTag(
@@ -204,7 +204,7 @@ object AudioItemMetadataUtils {
         title: String,
         album: Album,
         artist: Artist,
-        genre: Genre,
+        genres: Set<Genre>,
         comments: String?,
         trackNumber: Short?,
         discNumber: Short?,
@@ -246,7 +246,7 @@ object AudioItemMetadataUtils {
                 WavInfoTag()
             }
         }.also {
-            setTrackFieldsToTag(it, title, album, artist, genre, comments, trackNumber, discNumber, bpm, encoder, coverImageBytes, fileName, logger)
+            setTrackFieldsToTag(it, title, album, artist, genres, comments, trackNumber, discNumber, bpm, encoder, coverImageBytes, fileName, logger)
         }
 
     @SuppressWarnings("kotlin:S107")
@@ -255,7 +255,7 @@ object AudioItemMetadataUtils {
         title: String,
         album: Album,
         artist: Artist,
-        genre: Genre,
+        genres: Set<Genre>,
         comments: String?,
         trackNumber: Short?,
         discNumber: Short?,
@@ -269,7 +269,7 @@ object AudioItemMetadataUtils {
         tag.setField(FieldKey.ALBUM, album.name)
         tag.setField(FieldKey.ALBUM_ARTIST, album.albumArtist.name)
         tag.setField(FieldKey.ARTIST, artist.name)
-        tag.setField(FieldKey.GENRE, genre.capitalize())
+        tag.setField(FieldKey.GENRE, Genre.joinGenres(genres))
         tag.setField(FieldKey.COUNTRY, artist.countryCode.name)
         comments?.let { tag.setField(FieldKey.COMMENT, it) }
         trackNumber?.let { tag.setField(FieldKey.TRACK, it.toString()) }

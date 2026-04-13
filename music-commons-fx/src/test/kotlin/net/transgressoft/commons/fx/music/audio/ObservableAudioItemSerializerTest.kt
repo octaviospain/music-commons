@@ -1,6 +1,7 @@
 package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.AudioItemTestFactory
+import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import io.kotest.assertions.json.shouldContainJsonKey
 import io.kotest.core.spec.style.StringSpec
@@ -9,6 +10,9 @@ import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import java.time.temporal.ChronoUnit.SECONDS
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.put
 
 /**
  * Tests for [ObservableAudioItemSerializer] verifying golden JSON structure and round-trip fidelity.
@@ -33,7 +37,7 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
         encoded shouldContainJsonKey "bitRate"
         encoded shouldContainJsonKey "artist"
         encoded shouldContainJsonKey "album"
-        encoded shouldContainJsonKey "genre"
+        encoded shouldContainJsonKey "genres"
         encoded shouldContainJsonKey "dateOfCreation"
         encoded shouldContainJsonKey "lastDateModified"
         encoded shouldContainJsonKey "playCount"
@@ -53,7 +57,7 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
         decoded.bitRate shouldBe original.bitRate
         decoded.artist shouldBe original.artist
         decoded.album shouldBe original.album
-        decoded.genre shouldBe original.genre
+        decoded.genres shouldBe original.genres
         decoded.comments shouldBe original.comments
         decoded.trackNumber shouldBe original.trackNumber
         decoded.discNumber shouldBe original.discNumber
@@ -63,6 +67,29 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
         decoded.dateOfCreation.truncatedTo(SECONDS) shouldBe original.dateOfCreation.truncatedTo(SECONDS)
         decoded.lastDateModified.truncatedTo(SECONDS) shouldBe original.lastDateModified.truncatedTo(SECONDS)
         decoded.playCount shouldBe original.playCount
+    }
+
+    "ObservableAudioItemSerializer deserializes legacy single-genre field into genres set" {
+        val path =
+            Arb.virtualAudioFile {
+                this.genres = setOf(Genre.Rock)
+            }.next()
+        val original = FXAudioItem(path, AudioItemTestFactory.nextTestId())
+
+        val encoded = json.encodeToString(ObservableAudioItemSerializer, original)
+
+        // Replace "genres" array with legacy "genre" single-string field
+        val jsonTree = Json.parseToJsonElement(encoded).jsonObject
+        val legacyItem =
+            buildJsonObject {
+                for ((k, v) in jsonTree) {
+                    if (k != "genres") put(k, v)
+                }
+                put("genre", "Rock")
+            }
+
+        val decoded = json.decodeFromString(ObservableAudioItemSerializer, legacyItem.toString())
+        decoded.genres shouldBe setOf(Genre.Rock)
     }
 
     "ObservableAudioItemMapSerializer round-trip preserves the map entries" {

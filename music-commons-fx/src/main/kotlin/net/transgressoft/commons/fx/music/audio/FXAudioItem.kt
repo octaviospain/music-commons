@@ -103,7 +103,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
             bitRate: Int,
             artist: Artist,
             album: Album,
-            genre: Genre,
+            genres: Set<Genre>,
             comments: String?,
             trackNumber: Short?,
             discNumber: Short?,
@@ -118,7 +118,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
             this.title = title
             this._duration = duration
             this.artist = artist
-            this.genre = genre
+            this.genres = genres
             this.comments = comments
             this.trackNumber = trackNumber
             this.discNumber = discNumber
@@ -146,21 +146,25 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         private var _bitRate: Int = metadata.bitRate
 
         @Serializable
-        override val bitRate: Int = _bitRate
+        override val bitRate: Int
+            get() = _bitRate
 
         private var _duration: Duration = metadata.duration
 
-        override val duration: Duration = _duration
+        override val duration: Duration
+            get() = _duration
 
         private var _encoder: String? = metadata.encoder?.takeIf { it.isNotEmpty() }
 
         @Serializable
-        override val encoder: String? = _encoder
+        override val encoder: String?
+            get() = _encoder
 
         private var _encoding: String? = metadata.encoding?.takeIf { it.isNotEmpty() }
 
         @Serializable
-        override val encoding: String? = _encoding
+        override val encoding: String?
+            get() = _encoding
 
         private var _dateOfCreation: LocalDateTime = LocalDateTime.now()
 
@@ -241,12 +245,13 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
 
         @Transient
         @Suppress("UNCHECKED_CAST")
-        override val genreProperty: ObjectProperty<Genre> = fxObject(metadata.genre) as ObjectProperty<Genre>
+        override val genresProperty: ObjectProperty<Set<Genre>> = fxObject(metadata.genres.toSet()) as ObjectProperty<Set<Genre>>
 
-        override var genre: Genre = metadata.genre
+        override var genres: Set<Genre> = metadata.genres.toSet()
             set(value) {
-                mutateAndPublish { field = value }
-                genreProperty.set(value)
+                val copy = value.toSet()
+                mutateAndPublish { field = copy }
+                genresProperty.set(copy)
             }
 
         @Transient
@@ -351,8 +356,8 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
             albumProperty.addListener { _, _, newAlbum ->
                 if (newAlbum != null && album != newAlbum) album = newAlbum
             }
-            genreProperty.addListener { _, _, newGenre ->
-                if (newGenre != null && genre != newGenre) genre = newGenre
+            genresProperty.addListener { _, _, newGenres ->
+                if (newGenres != null && genres != newGenres) genres = newGenres
             }
             commentsProperty.addListener { _, _, newComments ->
                 val newValue = newComments.takeIf { it.isNotEmpty() }
@@ -387,7 +392,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
             ioScope.launch {
                 logger.debug { "Writing metadata of $this to file '${path.toAbsolutePath()}'" }
                 writeMetadataToFile(
-                    path, title, album, artist, genre,
+                    path, title, album, artist, genres,
                     comments, trackNumber, discNumber, bpm, encoder,
                     coverImageBytes, fileName, logger
                 )
@@ -413,7 +418,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                 title == that.title &&
                 artist == that.artist &&
                 album == that.album &&
-                genre === that.genre &&
+                genres == that.genres &&
                 comments == that.comments &&
                 duration == that.duration &&
                 playCount == that.playCount &&
@@ -421,11 +426,11 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
         }
 
         override fun hashCode() =
-            Objects.hash(path, title, artist, album, genre, comments, trackNumber, discNumber, bpm, duration, playCount, coverImageBytes.contentHashCode())
+            Objects.hash(path, title, artist, album, genres, comments, trackNumber, discNumber, bpm, duration, playCount, coverImageBytes.contentHashCode())
 
         override fun clone(): FXAudioItem =
             FXAudioItem(
-                path, id, title, duration, bitRate, artist, album, genre,
+                path, id, title, duration, bitRate, artist, album, genres,
                 comments, trackNumber, discNumber, bpm, encoder, encoding,
                 dateOfCreation, lastDateModified, playCount
             )

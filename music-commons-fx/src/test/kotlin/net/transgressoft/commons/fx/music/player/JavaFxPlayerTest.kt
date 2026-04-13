@@ -77,7 +77,7 @@ internal class JavaFxPlayerTest : StringSpec({
     }
 
     "Playing an audio item increases the play count and serializes the repository".config(
-        enabledIf = { System.getenv("CI") == null }
+        enabled = System.getenv("CI") == null
     ) {
         player.subscribe(observableAudioItemRepository.playerSubscriber)
         val audioItemLength = audioItem.duration.toMillis()
@@ -98,7 +98,7 @@ internal class JavaFxPlayerTest : StringSpec({
     }
 
     "Playing an audio item modifies its observable properties".config(
-        enabledIf = { System.getenv("CI") == null }
+        enabled = System.getenv("CI") == null
     ) {
         player.status() shouldBe UNKNOWN
         player.statusProperty.get() shouldBe UNKNOWN

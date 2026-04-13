@@ -24,7 +24,6 @@ import io.kotest.property.arbitrary.next
 import javafx.scene.image.Image
 import java.io.ByteArrayInputStream
 import java.util.Optional
-import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.serialization.json.Json
 
@@ -44,11 +43,11 @@ internal class FXAudioItemTest : StringSpec({
             fxAudioItem.titleProperty.value shouldBe fxAudioItem.title
             fxAudioItem.artistProperty.value shouldBe fxAudioItem.artist
             fxAudioItem.albumProperty.value shouldBe fxAudioItem.album
-            fxAudioItem.genre shouldBe fxAudioItem.genre
-            fxAudioItem.comments shouldBe fxAudioItem.comments
-            fxAudioItem.trackNumber shouldBe fxAudioItem.trackNumber
-            fxAudioItem.discNumber shouldBe fxAudioItem.discNumber
-            fxAudioItem.bpm shouldBe fxAudioItem.bpm
+            fxAudioItem.genresProperty.value shouldBe fxAudioItem.genres
+            fxAudioItem.commentsProperty.value shouldBe (fxAudioItem.comments ?: "")
+            fxAudioItem.trackNumberProperty.value shouldBe (fxAudioItem.trackNumber?.toInt() ?: -1)
+            fxAudioItem.discNumberProperty.value shouldBe (fxAudioItem.discNumber?.toInt() ?: -1)
+            fxAudioItem.bpmProperty.value shouldBe (fxAudioItem.bpm ?: 0f)
             fxAudioItem.coverImageProperty.value shouldBePresent {
                 it.height shouldBe Image(ByteArrayInputStream(fxAudioItem.coverImageBytes)).height
             }
@@ -84,10 +83,11 @@ internal class FXAudioItemTest : StringSpec({
         }
 
         lastDateUpdated = fxAudioItem.lastDateModified
-        val newGenre = fxAudioItem.genre.randomDifferent()
-        fxAudioItem.genre = newGenre
+        val newGenres = fxAudioItem.genres.randomDifferent()
+        fxAudioItem.genresProperty.set(newGenres)
         eventually(100.milliseconds) {
-            fxAudioItem.genreProperty.value shouldBe newGenre
+            fxAudioItem.genres shouldBe newGenres
+            fxAudioItem.genresProperty.value shouldBe newGenres
             fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
             fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
         }
@@ -178,11 +178,15 @@ internal class FXAudioItemTest : StringSpec({
             loadedAudioItem.album.label.countryCode shouldBe CountryCode.UNDEFINED // label country code is not updated because there is no ID3 tag for it
             loadedAudioItem.artist.name shouldBe fxAudioItem.artist.name
             loadedAudioItem.artist.countryCode shouldBe fxAudioItem.artist.countryCode // artist country code is saved into COUNTRY ID3 tag
-            loadedAudioItem.genre shouldBe fxAudioItem.genre
+            loadedAudioItem.genres shouldBe fxAudioItem.genres
             loadedAudioItem.comments shouldBe fxAudioItem.comments
             loadedAudioItem.trackNumber shouldBe fxAudioItem.trackNumber
             loadedAudioItem.discNumber shouldBe fxAudioItem.discNumber
-            loadedAudioItem.bpm shouldBe fxAudioItem.bpm
+            if (testAudioFile.toString().endsWith(".m4a")) {
+                loadedAudioItem.bpm shouldBe fxAudioItem.bpm?.toInt()?.toFloat()
+            } else {
+                loadedAudioItem.bpm shouldBe fxAudioItem.bpm
+            }
             loadedAudioItem.coverImageBytes shouldBe fxAudioItem.coverImageBytes
             loadedAudioItem.playCount shouldBe fxAudioItem.playCount
             loadedAudioItem.uniqueId shouldBe fxAudioItem.uniqueId
@@ -227,7 +231,13 @@ internal class FXAudioItemTest : StringSpec({
     }
 })
 
-fun Genre.randomDifferent(): Genre {
-    val values = enumValues<Genre>().filter { it != this }
-    return values[Random.nextInt(values.size)]
+fun Set<Genre>.randomDifferent(): Set<Genre> {
+    val knownGenres =
+        listOf(
+            Genre.Rock, Genre.Alternative, Genre.Jazz, Genre.Blues,
+            Genre.Electronic, Genre.HipHop, Genre.Classical, Genre.Folk,
+            Genre.Metal, Genre.Pop, Genre.Punk, Genre.Reggae
+        )
+    val differentGenre = knownGenres.first { it !in this }
+    return setOf(differentGenre)
 }
