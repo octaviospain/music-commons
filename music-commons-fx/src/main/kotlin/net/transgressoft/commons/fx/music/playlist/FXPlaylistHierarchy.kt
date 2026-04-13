@@ -39,7 +39,10 @@ import mu.KotlinLogging
  * Maintains an observable set of all playlists in the hierarchy that automatically syncs
  * with repository changes. Enables JavaFX UI components to bind directly to the playlist
  * collection and receive automatic updates when playlists are created, modified, or removed.
- * All modifications are executed on the JavaFX Application Thread for thread safety.
+ * All modifications are executed on the JavaFX Application Thread for thread safety. The
+ * [Platform.runLater] dispatches intentionally omit error handling because they perform only simple
+ * set mutations; any exception indicates a programming error that should surface through the default
+ * uncaught exception handler.
  *
  * Playlist deserialization is driven by `lirpSerializer(FXPlaylist(0))` passed to a
  * [net.transgressoft.lirp.persistence.json.JsonFileRepository] at construction time.

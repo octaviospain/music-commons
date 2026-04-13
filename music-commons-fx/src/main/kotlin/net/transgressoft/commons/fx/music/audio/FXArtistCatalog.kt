@@ -48,6 +48,8 @@ import java.util.concurrent.ConcurrentHashMap
  * structure of the core [net.transgressoft.commons.music.audio.MutableArtistCatalog].
  * All mutations update both the internal data structure and the JavaFX observable properties,
  * with property updates dispatched on the JavaFX Application Thread via [Platform.runLater].
+ * The dispatches intentionally omit error handling because they perform only simple property mutations;
+ * any exception indicates a programming error that should surface through the default uncaught exception handler.
  *
  * @param artist The artist this catalog represents
  */

@@ -44,7 +44,11 @@ import javafx.util.Duration
 import java.util.EnumSet
 
 /**
- * Basic player that uses the native JavaFX [MediaPlayer]
+ * Basic player that uses the native JavaFX [MediaPlayer].
+ *
+ * Uses [Platform.runLater] for volume property updates to ensure thread-safe JavaFX property access.
+ * These dispatches intentionally omit error handling because they perform only simple property mutations;
+ * any exception indicates a programming error that should surface through the default uncaught exception handler.
  */
 class JavaFxPlayer(
     private val publisher: LirpEventPublisher<AudioItemPlayerEvent.Type, AudioItemPlayerEvent> = FlowEventPublisher("JavaFxPlayer")

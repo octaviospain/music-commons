@@ -56,6 +56,10 @@ import java.util.concurrent.CopyOnWriteArraySet
  * Registers its backing repository in [net.transgressoft.lirp.persistence.LirpContext] on construction
  * via [RegistryBase.registerRepository], enabling playlist hierarchies to resolve audio item references
  * lazily through the context. Deregisters on [close] to support repeated construction within the same JVM.
+ *
+ * The [Platform.runLater] dispatches intentionally omit error handling because they perform only simple
+ * collection and property mutations; any exception indicates a programming error that should surface
+ * through the default uncaught exception handler.
  */
 @LirpRepository
 internal class FXAudioLibrary(repository: Repository<Int, ObservableAudioItem>)
