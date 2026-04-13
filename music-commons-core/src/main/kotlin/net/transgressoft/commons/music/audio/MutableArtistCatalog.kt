@@ -37,6 +37,12 @@ interface ArtistCatalog<I : ReactiveAudioItem<I>> : ReactiveArtistCatalog<Artist
  * Organizes audio items by album and maintains them sorted by disc and track numbers.
  * This structure enables efficient queries for artist discographies and album-specific
  * track listings while providing thread-safe concurrent access.
+ *
+ * Compound operations on [audioItemsByAlbumName] are guarded by `synchronized(this)`. The
+ * [equals] and [hashCode] methods intentionally omit synchronization because they are only
+ * invoked from single-threaded contexts (clone-compare in `mutateAndPublish`, collection
+ * lookups during event handling). Adding synchronization to [equals] would introduce lock
+ * ordering risks when comparing two catalogs concurrently.
  */
 internal class MutableArtistCatalog<I>(override val artist: Artist)
 : ArtistCatalog<I>, ReactiveArtistCatalog<ArtistCatalog<I>, I>, Comparable<ArtistCatalog<I>>, ReactiveEntityBase<Artist, ArtistCatalog<I>>()
