@@ -4,6 +4,8 @@ import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.lirp.event.ReactiveScope
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.engine.spec.tempfile
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
@@ -100,6 +102,34 @@ internal class FXMusicLibraryTest : StringSpec({
 
         library.findPlaylistByName("My Playlist") shouldBePresent {
             it.name shouldBe "My Playlist"
+        }
+
+        library.close()
+    }
+
+    "FXMusicLibrary resolves playlist self-references after JSON deserialization" {
+        val playlistFile = tempfile("playlist-self-ref-test", ".json").also { it.deleteOnExit() }
+        playlistFile.writeText(
+            """
+            {
+                "1": { "id": 1, "name": "ROOT", "isDirectory": true, "audioItems": [], "playlists": [2] },
+                "2": { "id": 2, "name": "CHILD", "isDirectory": false, "audioItems": [], "playlists": [] }
+            }
+            """.trimIndent()
+        )
+
+        val library =
+            FXMusicLibrary.builder()
+                .playlistHierarchyJsonFile(playlistFile)
+                .build()
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        val root = library.findPlaylistByName("ROOT")
+        root shouldBePresent {
+            it.playlists.size shouldBe 1
+            it.playlists.map { p -> p.name } shouldContain "CHILD"
         }
 
         library.close()
