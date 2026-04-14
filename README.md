@@ -82,6 +82,7 @@ Unknown genre strings are preserved as `Genre.Custom(name)` instead of being dis
 
 - **Asynchronous generation**: Non-blocking waveform creation with configurable resolution
 - **Repository caching**: Waveforms are cached and reused across requests
+- **Normalized amplitude caching**: Serialized waveforms cache normalized amplitudes with their display width — same-width requests return instantly without audio file I/O, and height-only changes apply linear scaling from cache
 - **JavaFX component**: Custom `WaveformPane` canvas with automatic redraw on resize
 
 ### Audio Playback

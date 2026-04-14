@@ -43,6 +43,8 @@ import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -51,8 +53,14 @@ import kotlinx.serialization.Transient
  * Implementation of [AudioWaveform] that generates scalable waveform data from audio files.
  *
  * Reads raw PCM data from audio files (transcoding non-WAV formats first) and computes
- * amplitude arrays at specified dimensions. The waveform data can be scaled to different
- * widths and heights and can generate visual waveform images for display purposes.
+ * amplitude arrays at specified dimensions. Normalized amplitudes (without height factor)
+ * are cached after the first computation so that subsequent requests for the same display
+ * width are served in O(n) without re-reading the audio file. Height scaling is applied
+ * at call time by multiplying cached values, allowing the same cached array to serve
+ * different heights. A width change invalidates the cache and triggers full recomputation.
+ *
+ * The waveform data can be scaled to different widths and heights and can generate visual
+ * waveform images for display purposes.
  */
 @Serializable
 class ScalableAudioWaveform(
@@ -69,6 +77,27 @@ class ScalableAudioWaveform(
      */
     @Transient private val amplitudeCoefficient = 3.9
 
+    @Transient private val cacheMutex = Mutex()
+
+    @Transient internal var normalizedAmplitudes: FloatArray? = null
+
+    internal var cachedWidth: Int = 0
+
+    /**
+     * Internal constructor for deserialization — accepts pre-computed cached state so that
+     * a deserialized waveform can serve amplitude requests for the cached width without
+     * reading or transcoding the audio file.
+     */
+    internal constructor(
+        id: Int,
+        audioFilePath: Path,
+        cachedWidth: Int,
+        normalizedAmplitudes: FloatArray
+    ) : this(id, audioFilePath) {
+        this.cachedWidth = cachedWidth
+        this.normalizedAmplitudes = normalizedAmplitudes
+    }
+
     private fun AudioFileType.Companion.supportedAudioTypes() =
         setOf(MP3.extension, M4A.extension, FLAC.extension, WAV.extension)
 
@@ -76,15 +105,15 @@ class ScalableAudioWaveform(
         check(audioFilePath.extension in AudioFileType.supportedAudioTypes()) {
             "File extension '${audioFilePath.extension}' not supported"
         }
-        check(audioFilePath.exists()) {
-            "File '$audioFilePath' does not exist"
-        }
     }
 
     @Transient private var rawAudioPcm: IntArray? = null
 
-    private fun getRawAudioPcm(audioFilePath: Path) =
-        try {
+    private fun getRawAudioPcm(audioFilePath: Path): IntArray {
+        if (!audioFilePath.exists()) {
+            throw AudioWaveformProcessingException("File '$audioFilePath' does not exist")
+        }
+        return try {
             when (audioFilePath.extension.toAudioFileType()) {
                 WAV -> getRawPulseCodeModulation(audioFilePath.toFile())
                 else -> {
@@ -95,9 +124,12 @@ class ScalableAudioWaveform(
                     }
                 }
             }
+        } catch (exception: AudioWaveformProcessingException) {
+            throw exception
         } catch (exception: Exception) {
             throw AudioWaveformProcessingException("Error processing waveform", exception)
         }
+    }
 
     private fun transcodeToWav(path: Path): File {
         val fileName = path.fileName.toString()
@@ -136,12 +168,13 @@ class ScalableAudioWaveform(
             val frameSize = numChannels * 2
             val decodedFormat = AudioFormat(encoding, sampleRate, sampleSizeInBits, numChannels, frameSize, sampleRate, false)
             val available = input.available()
-            audioPcm = IntArray(available)
+            audioPcm = IntArray(available / 2)
             AudioSystem.getAudioInputStream(decodedFormat, input).use { pcmDecodedInput ->
                 val buffer = ByteArray(available)
                 if (pcmDecodedInput.read(buffer, 0, available) > 0) {
-                    for (i in 0 until available - 1 step 2) {
-                        audioPcm[i] = buffer[i + 1].toInt() shl 8 or (buffer[i].toInt() and 0xff) shl 16
+                    for (i in 0 until available / 2) {
+                        val byteOffset = i * 2
+                        audioPcm[i] = buffer[byteOffset + 1].toInt() shl 8 or (buffer[byteOffset].toInt() and 0xff) shl 16
                         audioPcm[i] /= 32767
                     }
                 }
@@ -150,37 +183,55 @@ class ScalableAudioWaveform(
         return audioPcm
     }
 
+    /**
+     * Computes width-normalized amplitude values from the raw PCM data, without applying
+     * a height factor. The returned values use [amplitudeCoefficient] as the divisor exponent
+     * and average samples per pixel. Height scaling is deferred to the [amplitudes] caller,
+     * allowing the same normalized array to be reused across different height requests.
+     *
+     * Lazily memoizes [rawAudioPcm] on first invocation to avoid redundant audio file reads.
+     */
+    private fun computeNormalized(width: Int): FloatArray {
+        val pcm = rawAudioPcm ?: getRawAudioPcm(audioFilePath).also { rawAudioPcm = it }
+        val divisor = (Byte.SIZE_BITS * 2.0).pow(amplitudeCoefficient).toFloat()
+        return FloatArray(width) { w ->
+            val start = (w.toLong() * pcm.size / width).toInt()
+            val endExclusive = (((w + 1).toLong() * pcm.size / width).toInt()).coerceAtLeast(start + 1).coerceAtMost(pcm.size)
+            var amplitude = 0.0f
+            for (i in start until endExclusive) {
+                amplitude += abs(pcm[i]) / divisor
+            }
+            amplitude / (endExclusive - start).toFloat()
+        }
+    }
+
     @Throws(AudioWaveformProcessingException::class)
     override suspend fun amplitudes(width: Int, height: Int): FloatArray {
         check(width > 0) { "Width must be greater than 0" }
         check(height > 0) { "Height must be greater than 0" }
 
-        val scaledAudioPcm = getScaledPulseCodeModulation(height)
-
-        val waveformAmplitudes = FloatArray(width)
-        val samplesPerPixel = scaledAudioPcm.size / width
-        val divisor = (Byte.SIZE_BITS * 2.0).pow(amplitudeCoefficient).toFloat()
-        for (w in 0 until width) {
-            var amplitude = 0.0f
-            val samplesAtWidth = w * samplesPerPixel
-            for (s in 0 until samplesPerPixel) {
-                amplitude += abs(scaledAudioPcm[samplesAtWidth + s]) / divisor
-            }
-            amplitude /= samplesPerPixel.toFloat()
-            waveformAmplitudes[w] = amplitude
-        }
-        return waveformAmplitudes
-    }
-
-    @Throws(AudioWaveformProcessingException::class)
-    private fun getScaledPulseCodeModulation(height: Int): IntArray =
-        rawAudioPcm ?: getRawAudioPcm(audioFilePath).let {
-            IntArray(it.size).also { scaledRawPcm ->
-                for (i in it.indices) {
-                    scaledRawPcm[i] = it[i] * height
+        var computed: FloatArray? = null
+        val result =
+            cacheMutex.withLock {
+                val cached = normalizedAmplitudes
+                if (cached != null && cachedWidth == width) {
+                    FloatArray(cached.size) { cached[it] * height }
+                } else {
+                    computeNormalized(width).also { computed = it }.let { arr ->
+                        FloatArray(arr.size) { arr[it] * height }
+                    }
                 }
             }
+        // Apply cache mutations inside mutateAndPublish so clone-compare detects the delta.
+        // Fired outside the lock to avoid deadlock if a subscriber calls back into amplitudes().
+        computed?.let { newAmplitudes ->
+            mutateAndPublish {
+                normalizedAmplitudes = newAmplitudes
+                cachedWidth = width
+            }
         }
+        return result
+    }
 
     override suspend fun createImage(outputFile: File, waveformColor: Color, backgroundColor: Color, width: Int, height: Int, dispatcher: CoroutineDispatcher) {
         check(width > 0) { "Width must be greater than 0" }
@@ -210,19 +261,39 @@ class ScalableAudioWaveform(
         }
     }
 
+    /** Returns a snapshot of the cached normalized amplitudes safe for concurrent serialization. */
+    internal val normalizedAmplitudesSnapshot: FloatArray?
+        get() = normalizedAmplitudes?.copyOf()
+
     override val uniqueId: String
-        get() = "$id-${rawAudioPcm.contentHashCode()}"
+        get() = "$id-${audioFilePath.hashCode()}-$cachedWidth"
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false
         val that = other as ScalableAudioWaveform
-        return rawAudioPcm.contentEquals(that.rawAudioPcm)
+        return id == that.id &&
+            audioFilePath == that.audioFilePath &&
+            cachedWidth == that.cachedWidth &&
+            normalizedAmplitudes.contentEquals(that.normalizedAmplitudes)
     }
 
-    override fun hashCode() = rawAudioPcm.contentHashCode()
+    override fun hashCode(): Int {
+        var result = id.hashCode()
+        result = 31 * result + audioFilePath.hashCode()
+        result = 31 * result + cachedWidth
+        result = 31 * result + normalizedAmplitudes.contentHashCode()
+        return result
+    }
 
-    override fun clone(): ScalableAudioWaveform = ScalableAudioWaveform(id, audioFilePath)
+    override fun clone(): ScalableAudioWaveform {
+        val cached = normalizedAmplitudes
+        return if (cached != null) {
+            ScalableAudioWaveform(id, audioFilePath, cachedWidth, cached.copyOf())
+        } else {
+            ScalableAudioWaveform(id, audioFilePath)
+        }
+    }
 
     override fun toString() = "ScalableAudioWaveform(uniqueId=$uniqueId)"
 }

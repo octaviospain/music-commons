@@ -17,8 +17,10 @@
 
 package net.transgressoft.commons.music.waveform
 
+import java.nio.ByteBuffer
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.Base64
 import kotlin.io.path.absolutePathString
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
@@ -43,8 +45,12 @@ val AudioWaveformMapSerializer: KSerializer<Map<Int, AudioWaveform>> = MapSerial
 /**
  * Kotlinx serialization serializer for [AudioWaveform] instances.
  *
- * Serializes waveforms by storing the audio file path and ID, allowing waveforms to be
- * reconstructed on deserialization by re-reading the audio file.
+ * Serializes waveforms by storing the audio file path, ID, cached display width, and
+ * Base64-encoded normalized amplitudes. On deserialization, the cached values are restored
+ * so that same-width requests are served without re-reading the audio file.
+ *
+ * All four fields (`id`, `audioFilePath`, `cachedWidth`, `normalizedAmplitudes`) are required.
+ * Malformed Base64 payloads and cache size mismatches produce [kotlinx.serialization.SerializationException].
  */
 object AudioWaveformSerializer : KSerializer<AudioWaveform> {
 
@@ -52,6 +58,8 @@ object AudioWaveformSerializer : KSerializer<AudioWaveform> {
         buildClassSerialDescriptor("AudioWaveform") {
             element<String>("id")
             element<Path>("audioFilePath")
+            element<Int>("cachedWidth")
+            element<String>("normalizedAmplitudes")
         }
 
     override fun deserialize(decoder: Decoder): AudioWaveform {
@@ -63,16 +71,65 @@ object AudioWaveformSerializer : KSerializer<AudioWaveform> {
         val audioFilePathString =
             (jsonObject["audioFilePath"] ?: throw SerializationException("Missing required field 'audioFilePath' in AudioWaveform JSON"))
                 .jsonPrimitive.content
-        return ScalableAudioWaveform(id, Paths.get(audioFilePathString))
+        val cachedWidth =
+            (jsonObject["cachedWidth"] ?: throw SerializationException("Missing required field 'cachedWidth' in AudioWaveform JSON"))
+                .jsonPrimitive.int
+        val normalizedAmplitudesBase64 =
+            (jsonObject["normalizedAmplitudes"] ?: throw SerializationException("Missing required field 'normalizedAmplitudes' in AudioWaveform JSON"))
+                .jsonPrimitive.content
+
+        val decodedAmplitudes =
+            try {
+                normalizedAmplitudesBase64.toFloatArrayFromBase64()
+            } catch (e: IllegalArgumentException) {
+                throw SerializationException("Malformed Base64 in normalizedAmplitudes for AudioWaveform id=$id", e)
+            }
+
+        if (decodedAmplitudes.size != cachedWidth) {
+            throw SerializationException(
+                "Cache mismatch for AudioWaveform id=$id: cachedWidth=$cachedWidth but decoded ${decodedAmplitudes.size} amplitudes"
+            )
+        }
+
+        return ScalableAudioWaveform(
+            id,
+            Paths.get(audioFilePathString),
+            cachedWidth,
+            decodedAmplitudes
+        )
     }
 
     override fun serialize(encoder: Encoder, value: AudioWaveform) {
         val jsonOutput = encoder as? JsonEncoder ?: throw SerializationException("This class can be saved only by Json")
+        val sw = value as ScalableAudioWaveform
+        val snapshot = sw.normalizedAmplitudesSnapshot ?: FloatArray(0)
         val jsonObject =
             buildJsonObject {
                 put("id", value.id)
                 put("audioFilePath", value.audioFilePath.absolutePathString())
+                put("cachedWidth", sw.cachedWidth)
+                put("normalizedAmplitudes", snapshot.toBase64String())
             }
         jsonOutput.encodeJsonElement(jsonObject)
     }
+}
+
+/**
+ * Encodes this [FloatArray] to a Base64 string using IEEE 754 big-endian byte representation.
+ * Each float occupies 4 bytes; the resulting byte array is Base64-encoded without line breaks.
+ */
+internal fun FloatArray.toBase64String(): String {
+    val buffer = ByteBuffer.allocate(size * 4)
+    forEach { buffer.putFloat(it) }
+    return Base64.getEncoder().encodeToString(buffer.array())
+}
+
+/**
+ * Decodes a Base64 string produced by [toBase64String] back to a [FloatArray].
+ * The byte array length must be a multiple of 4.
+ */
+internal fun String.toFloatArrayFromBase64(): FloatArray {
+    val bytes = Base64.getDecoder().decode(this)
+    val buffer = ByteBuffer.wrap(bytes)
+    return FloatArray(bytes.size / 4) { buffer.getFloat() }
 }
