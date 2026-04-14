@@ -73,6 +73,8 @@ internal class DefaultAudioWaveformRepositoryTest : StringSpec({
                     buildJsonObject {
                         put("id", audioWaveform.id)
                         put("audioFilePath", audioWaveform.audioFilePath.absolutePathString())
+                        put("cachedWidth", 0)
+                        put("normalizedAmplitudes", "")
                     }
                 )
             }.toString()
