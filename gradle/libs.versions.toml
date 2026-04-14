@@ -8,6 +8,7 @@ guava = "33.5.0-jre"
 jaudiotagger = "3.0.1"
 jave = "3.5.0"
 nv-i18n = "1.29"
+ddplist = "1.29"
 kotlin-logging = "3.0.5"
 kotlinx-serialization = "1.10.0"
 logback = "1.5.20"
@@ -44,6 +45,7 @@ jaudiotagger = { module = "net.jthink:jaudiotagger", version.ref = "jaudiotagger
 jave-core = { module = "ws.schild:jave-core", version.ref = "jave" }
 jave-nativebin-linux64 = { module = "ws.schild:jave-nativebin-linux64", version.ref = "jave" }
 nv-i18n = { module = "com.neovisionaries:nv-i18n", version.ref = "nv-i18n" }
+dd-plist = { module = "com.googlecode.plist:dd-plist", version.ref = "ddplist" }
 kotlin-logging = { module = "io.github.microutils:kotlin-logging-jvm", version.ref = "kotlin-logging" }
 logback-core = { module = "ch.qos.logback:logback-core", version.ref = "logback" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
