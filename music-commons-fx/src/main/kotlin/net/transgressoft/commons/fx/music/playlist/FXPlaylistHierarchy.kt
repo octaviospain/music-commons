@@ -78,6 +78,17 @@ internal class FXPlaylistHierarchy(
         RegistryBase.deregisterRepository(ObservablePlaylist::class.java)
         RegistryBase.registerRepository(ObservablePlaylist::class.java, repository)
 
+        // Re-sync self-referencing playlist aggregates after all entities are loaded.
+        // During repository load, entities are added one at a time, so forward references
+        // (e.g. ROOT playlist referencing CHILD playlist) cannot resolve because the
+        // referenced entity isn't in the repo yet. Now that all entities are loaded,
+        // syncLocalCache resolves the backing IDs to actual entities.
+        forEach { playlist ->
+            if (playlist is FXPlaylist) {
+                playlist.playlistsAggregate.syncLocalCache()
+            }
+        }
+
         forEach { playlist ->
             Platform.runLater { observablePlaylistsSet.add(playlist) }
         }

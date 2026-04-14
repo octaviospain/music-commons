@@ -34,6 +34,8 @@ import net.transgressoft.commons.music.waveform.AudioWaveformRepository
 import net.transgressoft.commons.music.waveform.audioWaveformRepository
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.LirpEventPublisher
+import net.transgressoft.lirp.persistence.PersistentRepository
+import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.Repository
 import net.transgressoft.lirp.persistence.VolatileRepository
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
@@ -227,6 +229,7 @@ class FXMusicLibrary private constructor(
         fun build(): FXMusicLibrary {
             val audioRepo = createAudioRepository()
             val audioLibrary = FXAudioLibrary(audioRepo)
+            var playlistRepoRegistered = false
 
             var waveformRepository: AudioWaveformRepository<AudioWaveform, ObservableAudioItem>? = null
             try {
@@ -234,6 +237,11 @@ class FXMusicLibrary private constructor(
                 waveformRepository = audioWaveformRepository(waveformRepo)
 
                 val playlistRepo = createPlaylistRepository()
+                if (playlistRepo is PersistentRepository<*, *>) {
+                    RegistryBase.registerRepository(ObservablePlaylist::class.java, playlistRepo)
+                    playlistRepoRegistered = true
+                    playlistRepo.load()
+                }
                 val playlistHierarchy = FXPlaylistHierarchy(playlistRepo)
 
                 try {
@@ -246,6 +254,9 @@ class FXMusicLibrary private constructor(
 
                 return FXMusicLibrary(audioLibrary, playlistHierarchy, waveformRepository)
             } catch (ex: Exception) {
+                if (playlistRepoRegistered) {
+                    RegistryBase.deregisterRepository(ObservablePlaylist::class.java)
+                }
                 waveformRepository?.close()
                 audioLibrary.close()
                 throw ex
@@ -258,17 +269,20 @@ class FXMusicLibrary private constructor(
             when (val config = audioLibraryStorage) {
                 is VolatileStorage -> VolatileRepository("FXAudioLibrary")
                 is JsonFileStorage -> JsonFileRepository(config.file, ObservableAudioItemMapSerializer)
-                is SqlStorage<*> ->
-                    SqlRepository((config as SqlStorage<ObservableAudioItem>).dataSource, config.tableDef)
+                is SqlStorage<*> -> SqlRepository((config as SqlStorage<ObservableAudioItem>).dataSource, config.tableDef)
             }
 
         @Suppress("UNCHECKED_CAST")
         private fun createPlaylistRepository(): Repository<Int, ObservablePlaylist> =
             when (val config = playlistHierarchyStorage) {
                 is VolatileStorage -> VolatileRepository("FXPlaylistHierarchy")
-                is JsonFileStorage -> JsonFileRepository(config.file, ObservablePlaylistMapSerializer)
+                is JsonFileStorage -> JsonFileRepository(config.file, ObservablePlaylistMapSerializer, loadOnInit = false)
                 is SqlStorage<*> ->
-                    SqlRepository((config as SqlStorage<ObservablePlaylist>).dataSource, config.tableDef)
+                    SqlRepository(
+                        (config as SqlStorage<ObservablePlaylist>).dataSource,
+                        config.tableDef,
+                        loadOnInit = false
+                    )
             }
 
         @Suppress("UNCHECKED_CAST")
@@ -276,8 +290,7 @@ class FXMusicLibrary private constructor(
             when (val config = waveformRepositoryStorage) {
                 is VolatileStorage -> VolatileRepository("FXWaveformRepository")
                 is JsonFileStorage -> JsonFileRepository(config.file, AudioWaveformMapSerializer)
-                is SqlStorage<*> ->
-                    SqlRepository((config as SqlStorage<AudioWaveform>).dataSource, config.tableDef)
+                is SqlStorage<*> -> SqlRepository((config as SqlStorage<AudioWaveform>).dataSource, config.tableDef)
             }
     }
 
