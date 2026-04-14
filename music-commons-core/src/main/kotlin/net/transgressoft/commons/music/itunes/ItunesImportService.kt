@@ -100,7 +100,7 @@ class ItunesImportService(private val musicLibrary: MusicLibrary) {
         return accumulator
     }
 
-    private fun processTrack(track: ItunesTrack, trackId: Int, policy: ItunesImportPolicy, accumulator: TrackImportAccumulator) {
+    private suspend fun processTrack(track: ItunesTrack, trackId: Int, policy: ItunesImportPolicy, accumulator: TrackImportAccumulator) {
         try {
             val path = resolveTrackPath(track)
 
@@ -140,7 +140,7 @@ class ItunesImportService(private val musicLibrary: MusicLibrary) {
         }
     }
 
-    private fun importTrack(track: ItunesTrack, path: Path, policy: ItunesImportPolicy): AudioItem {
+    private suspend fun importTrack(track: ItunesTrack, path: Path, policy: ItunesImportPolicy): AudioItem {
         val audioItem =
             if (policy.useFileMetadata) {
                 musicLibrary.audioItemFromFile(path)
@@ -153,7 +153,7 @@ class ItunesImportService(private val musicLibrary: MusicLibrary) {
         }
 
         if (policy.writeMetadata && !policy.useFileMetadata) {
-            audioItem.writeMetadata()
+            audioItem.writeMetadata().join()
         }
 
         return audioItem
@@ -208,7 +208,7 @@ class ItunesImportService(private val musicLibrary: MusicLibrary) {
 
     private fun resolveTrackPath(track: ItunesTrack): Path {
         val uri = URI(track.location)
-        return Paths.get(uri.path)
+        return Paths.get(uri)
     }
 
     private fun createPlaylists(selectedPlaylists: List<ItunesPlaylist>, trackIdToItem: Map<Int, AudioItem>): Int {
