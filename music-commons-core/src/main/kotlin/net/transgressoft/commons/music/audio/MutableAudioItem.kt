@@ -256,6 +256,7 @@ internal class MutableAudioItem(
     internal fun incrementPlayCount() = _playCount++
 
     override fun setPlayCount(count: Short) {
+        require(count >= 0) { "Play count cannot be negative" }
         withEventsDisabled { _playCount = count }
     }
 

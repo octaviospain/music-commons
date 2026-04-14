@@ -400,6 +400,7 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
             }
 
         override fun setPlayCount(count: Short) {
+            require(count >= 0) { "Play count cannot be negative" }
             withEventsDisabled { _playCountProperty.set(count.toInt()) }
         }
 

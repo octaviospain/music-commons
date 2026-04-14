@@ -6,6 +6,7 @@ import net.transgressoft.lirp.event.ReactiveScope
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.ints.shouldBeLessThan
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import org.jaudiotagger.audio.AudioFileIO
@@ -265,8 +266,6 @@ internal class ItunesImportServiceTest : StringSpec({
         val result = service.importAsync(listOf(playlist), library, policy).get()
 
         result.importedCount shouldBe 1
-        val item = musicLibrary.audioLibrary().search { true }.first()
-        item.writeMetadata().join()
         val audioFile = AudioFileIO.read(tmpFile)
         audioFile.tag.getFirst(FieldKey.TITLE) shouldBe "Written Title"
         audioFile.tag.getFirst(FieldKey.ARTIST) shouldBe "Written Artist"
@@ -295,7 +294,8 @@ internal class ItunesImportServiceTest : StringSpec({
             (e.cause is CancellationException || e.cause is kotlinx.coroutines.CancellationException) shouldBe true
         }
 
-        musicLibrary.audioLibrary().size() shouldBe (musicLibrary.audioLibrary().size())
+        // Cancellation is proven by the exception above; the library should have fewer than all 20 tracks
+        musicLibrary.audioLibrary().size() shouldBeLessThan 20
     }
 
     "ItunesImportService imports playlist with suffix when name already exists" {
