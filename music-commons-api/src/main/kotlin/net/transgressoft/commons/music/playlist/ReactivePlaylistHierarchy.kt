@@ -46,6 +46,26 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
         audioItems: List<I>
     ): P
 
+    /**
+     * Creates a new playlist with the given [name] pre-populated with audio items identified by [audioItemIds].
+     *
+     * Enables callers that hold audio item IDs (e.g. from an external import source) to create
+     * playlists without requiring typed item references. Follows the same overloading convention
+     * as [removeAudioItemsFromPlaylist].
+     *
+     * @param name the unique playlist name
+     * @param audioItemIds the IDs of audio items to include in the playlist
+     * @return the created playlist
+     * @throws IllegalArgumentException if a playlist with [name] already exists
+     */
+    @Suppress("INAPPLICABLE_JVM_NAME")
+    @JvmName("createPlaylistWithIds")
+    @Throws(IllegalArgumentException::class)
+    fun createPlaylist(
+        name: String,
+        audioItemIds: List<Int>
+    ): P
+
     @Throws(IllegalArgumentException::class)
     fun createPlaylistDirectory(name: String): P
 

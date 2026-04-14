@@ -80,6 +80,17 @@ interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I>, Co
      */
     fun setPlayCount(count: Short)
 
+    /**
+     * Executes [action] with reactive mutation events suppressed.
+     *
+     * Use when bulk-setting properties during creation or import, where each setter would otherwise
+     * emit individual mutation events. The entity remains unchanged from the event system's
+     * perspective until events are re-enabled.
+     *
+     * @param action the block to execute with events disabled
+     */
+    fun <T> withEventsSuppressed(action: () -> T): T
+
     fun writeMetadata(): Job
 
     fun asJsonKeyValue() =

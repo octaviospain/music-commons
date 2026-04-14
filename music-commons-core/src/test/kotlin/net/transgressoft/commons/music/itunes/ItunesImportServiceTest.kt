@@ -1,6 +1,6 @@
 package net.transgressoft.commons.music.itunes
 
-import net.transgressoft.commons.music.MusicLibrary
+import net.transgressoft.commons.music.CoreMusicLibrary
 import net.transgressoft.commons.music.audio.AudioFileType
 import net.transgressoft.lirp.event.ReactiveScope
 import io.kotest.core.annotation.DisplayName
@@ -46,7 +46,7 @@ internal class ItunesImportServiceTest : StringSpec({
     val testDispatcher = UnconfinedTestDispatcher()
     val testScope = CoroutineScope(testDispatcher)
 
-    lateinit var musicLibrary: MusicLibrary
+    lateinit var musicLibrary: CoreMusicLibrary
     lateinit var service: ItunesImportService
 
     val mp3File = testResourcePath("/testfiles/testeable.mp3")
@@ -101,7 +101,7 @@ internal class ItunesImportServiceTest : StringSpec({
     }
 
     beforeEach {
-        musicLibrary = MusicLibrary.builder().build()
+        musicLibrary = CoreMusicLibrary.builder().build()
         service = ItunesImportService(musicLibrary)
     }
 

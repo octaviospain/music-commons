@@ -96,14 +96,21 @@ internal class FXPlaylistHierarchy(
         subscribe(playlistChangesSubscriber)
     }
 
-    override fun createPlaylist(name: String): ObservablePlaylist = createPlaylist(name, emptyList())
+    override fun createPlaylist(name: String): ObservablePlaylist = createPlaylist(name, emptyList<Int>())
 
     override fun createPlaylist(
         name: String,
         audioItems: List<ObservableAudioItem>
+    ): ObservablePlaylist = createPlaylist(name, audioItems.map { it.id })
+
+    @Suppress("INAPPLICABLE_JVM_NAME")
+    @JvmName("createPlaylistWithIds")
+    override fun createPlaylist(
+        name: String,
+        audioItemIds: List<Int>
     ): ObservablePlaylist {
         require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
-        return FXPlaylist(newId(), name, false, audioItems.map { it.id }).also {
+        return FXPlaylist(newId(), name, false, audioItemIds).also {
             logger.debug { "Created playlist $it" }
             add(it)
         }

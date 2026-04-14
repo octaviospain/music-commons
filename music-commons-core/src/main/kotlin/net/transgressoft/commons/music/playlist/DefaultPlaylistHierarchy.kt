@@ -46,14 +46,21 @@ internal class DefaultPlaylistHierarchy(
         RegistryBase.registerRepository(MutableAudioPlaylist::class.java, repository)
     }
 
-    override fun createPlaylist(name: String): MutableAudioPlaylist = createPlaylist(name, emptyList())
+    override fun createPlaylist(name: String): MutableAudioPlaylist = createPlaylist(name, emptyList<Int>())
 
     override fun createPlaylist(
         name: String,
         audioItems: List<AudioItem>
+    ): MutableAudioPlaylist = createPlaylist(name, audioItems.map { it.id })
+
+    @Suppress("INAPPLICABLE_JVM_NAME")
+    @JvmName("createPlaylistWithIds")
+    override fun createPlaylist(
+        name: String,
+        audioItemIds: List<Int>
     ): MutableAudioPlaylist {
         require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
-        return MutablePlaylist(newId(), name, false, audioItems.map { it.id }).also {
+        return MutablePlaylist(newId(), name, false, audioItemIds).also {
             logger.debug { "Created playlist $it" }
             add(it)
         }

@@ -26,6 +26,7 @@ import net.transgressoft.commons.fx.music.playlist.FXPlaylistHierarchy
 import net.transgressoft.commons.fx.music.playlist.ObservablePlaylist
 import net.transgressoft.commons.fx.music.playlist.ObservablePlaylistHierarchy
 import net.transgressoft.commons.fx.music.playlist.ObservablePlaylistMapSerializer
+import net.transgressoft.commons.music.MusicLibrary
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.waveform.AudioWaveform
@@ -70,13 +71,13 @@ class FXMusicLibrary private constructor(
     private val _audioLibrary: FXAudioLibrary,
     private val _playlistHierarchy: FXPlaylistHierarchy,
     private val _waveformRepository: AudioWaveformRepository<AudioWaveform, ObservableAudioItem>
-) : AutoCloseable {
+) : MusicLibrary<ObservableAudioItem, ObservablePlaylist> {
 
     /** Returns the underlying observable audio library for advanced operations. */
-    fun audioLibrary(): ObservableAudioLibrary = _audioLibrary
+    override fun audioLibrary(): ObservableAudioLibrary = _audioLibrary
 
     /** Returns the underlying observable playlist hierarchy for advanced operations. */
-    fun playlistHierarchy(): ObservablePlaylistHierarchy = _playlistHierarchy
+    override fun playlistHierarchy(): ObservablePlaylistHierarchy = _playlistHierarchy
 
     /** Returns the underlying waveform repository for advanced operations. */
     fun waveformRepository(): AudioWaveformRepository<AudioWaveform, ObservableAudioItem> = _waveformRepository
@@ -125,43 +126,32 @@ class FXMusicLibrary private constructor(
      * @param path the path to the audio file
      * @return the created [ObservableAudioItem]
      */
-    fun audioItemFromFile(path: Path): ObservableAudioItem = _audioLibrary.createFromFile(path)
+    override fun audioItemFromFile(path: Path): ObservableAudioItem = _audioLibrary.createFromFile(path)
+
+    override fun createPlaylist(name: String): ObservablePlaylist = _playlistHierarchy.createPlaylist(name)
 
     /**
-     * Creates a new playlist with the given [name].
+     * Creates a new playlist with [name] pre-populated with [audioItems].
      *
      * @param name the unique playlist name
+     * @param audioItems the audio items to include in the playlist
      * @return the created [ObservablePlaylist]
      * @throws IllegalArgumentException if a playlist with [name] already exists
      */
-    fun createPlaylist(name: String): ObservablePlaylist = _playlistHierarchy.createPlaylist(name)
+    fun createPlaylist(name: String, audioItems: List<ObservableAudioItem>): ObservablePlaylist =
+        _playlistHierarchy.createPlaylist(name, audioItems)
 
-    /**
-     * Creates a new playlist directory with the given [name].
-     *
-     * @param name the unique directory name
-     * @return the created [ObservablePlaylist] directory
-     * @throws IllegalArgumentException if a playlist with [name] already exists
-     */
-    fun createPlaylistDirectory(name: String): ObservablePlaylist = _playlistHierarchy.createPlaylistDirectory(name)
+    @Suppress("INAPPLICABLE_JVM_NAME")
+    @JvmName("createPlaylistWithIds")
+    override fun createPlaylist(name: String, audioItemIds: List<Int>): ObservablePlaylist =
+        _playlistHierarchy.createPlaylist(name, audioItemIds)
 
-    /**
-     * Moves the playlist named [playlistNameToMove] into the playlist named [destinationPlaylistName].
-     *
-     * @param playlistNameToMove the name of the playlist to move
-     * @param destinationPlaylistName the name of the destination playlist directory
-     * @throws IllegalArgumentException if either playlist does not exist
-     */
-    fun movePlaylist(playlistNameToMove: String, destinationPlaylistName: String) =
+    override fun createPlaylistDirectory(name: String): ObservablePlaylist = _playlistHierarchy.createPlaylistDirectory(name)
+
+    override fun movePlaylist(playlistNameToMove: String, destinationPlaylistName: String) =
         _playlistHierarchy.movePlaylist(playlistNameToMove, destinationPlaylistName)
 
-    /**
-     * Finds the playlist with the given [name].
-     *
-     * @param name the playlist name to search for
-     * @return an [Optional] containing the playlist, or empty if not found
-     */
-    fun findPlaylistByName(name: String): Optional<out ObservablePlaylist> = _playlistHierarchy.findByName(name)
+    override fun findPlaylistByName(name: String): Optional<out ObservablePlaylist> = _playlistHierarchy.findByName(name)
 
     override fun close() {
         _playlistHierarchy.close()

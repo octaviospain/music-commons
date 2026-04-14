@@ -67,14 +67,6 @@ internal class DefaultAudioLibrary(repository: Repository<Int, AudioItem>) :
                 logger.debug { "New AudioItem was created from file $audioItemPath with id ${audioItem.id}" }
             }
 
-    /**
-     * Returns the next available audio item ID for external construction.
-     *
-     * Used by [ItunesImportService][net.transgressoft.commons.music.itunes.ItunesImportService] when constructing
-     * [MutableAudioItem] via the deserialization constructor for the `useFileMetadata=false` import path.
-     */
-    internal fun nextAudioItemId(): Int = newId()
-
     override fun close() {
         super.close()
         RegistryBase.deregisterRepository(AudioItem::class.java)

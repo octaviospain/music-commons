@@ -4,21 +4,16 @@ import net.transgressoft.commons.music.MusicLibrary
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioFileType
-import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.AudioItemMetadataUtils
-import net.transgressoft.commons.music.audio.DefaultAudioLibrary
 import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.ImmutableLabel
-import net.transgressoft.commons.music.audio.MutableAudioItem
+import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import mu.KotlinLogging
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.time.Duration
-import java.time.LocalDateTime
 import java.util.concurrent.CompletableFuture
 import kotlin.io.path.extension
 import kotlinx.coroutines.CoroutineScope
@@ -44,7 +39,7 @@ import kotlinx.coroutines.future.future
  *
  * @param musicLibrary The target library to import into.
  */
-class ItunesImportService(private val musicLibrary: MusicLibrary) {
+class ItunesImportService(private val musicLibrary: MusicLibrary<*, *>) {
 
     private val logger = KotlinLogging.logger {}
 
@@ -140,13 +135,12 @@ class ItunesImportService(private val musicLibrary: MusicLibrary) {
         }
     }
 
-    private suspend fun importTrack(track: ItunesTrack, path: Path, policy: ItunesImportPolicy): AudioItem {
-        val audioItem =
-            if (policy.useFileMetadata) {
-                musicLibrary.audioItemFromFile(path)
-            } else {
-                importWithItunesMetadata(track, path, policy)
-            }
+    private suspend fun importTrack(track: ItunesTrack, path: Path, policy: ItunesImportPolicy): ReactiveAudioItem<*> {
+        val audioItem = musicLibrary.audioItemFromFile(path)
+
+        if (!policy.useFileMetadata) {
+            applyItunesMetadata(audioItem, track)
+        }
 
         if (policy.holdPlayCount && track.playCount > 0) {
             audioItem.setPlayCount(track.playCount)
@@ -159,36 +153,18 @@ class ItunesImportService(private val musicLibrary: MusicLibrary) {
         return audioItem
     }
 
-    private fun importWithItunesMetadata(track: ItunesTrack, path: Path, policy: ItunesImportPolicy): AudioItem {
-        val fileMetadata = AudioItemMetadataUtils.readMetadata(path)
-        val audioLib = musicLibrary.audioLibrary() as DefaultAudioLibrary
-        val id = audioLib.nextAudioItemId()
+    private fun applyItunesMetadata(audioItem: ReactiveAudioItem<*>, track: ItunesTrack) {
         val (artist, album, genres) = resolveItunesMetadata(track)
-        val playCount = if (policy.holdPlayCount) track.playCount else 0.toShort()
-
-        val audioItem =
-            MutableAudioItem(
-                path = path,
-                id = id,
-                title = track.title,
-                duration = Duration.ofMillis(track.totalTimeMs),
-                bitRate = fileMetadata.bitRate,
-                artist = artist,
-                album = album,
-                genres = genres,
-                comments = track.comments,
-                trackNumber = track.trackNumber,
-                discNumber = track.discNumber,
-                bpm = track.bpm,
-                encoder = fileMetadata.encoder,
-                encoding = fileMetadata.encoding,
-                dateOfCreation = track.dateAdded ?: LocalDateTime.now(),
-                lastDateModified = LocalDateTime.now(),
-                playCount = playCount
-            )
-
-        musicLibrary.audioLibrary().add(audioItem)
-        return audioItem
+        audioItem.withEventsSuppressed {
+            audioItem.title = track.title
+            audioItem.artist = artist
+            audioItem.album = album
+            audioItem.genres = genres
+            audioItem.comments = track.comments
+            audioItem.trackNumber = track.trackNumber
+            audioItem.discNumber = track.discNumber
+            audioItem.bpm = track.bpm
+        }
     }
 
     private fun resolveItunesMetadata(track: ItunesTrack): ItunesMetadata {
@@ -211,7 +187,7 @@ class ItunesImportService(private val musicLibrary: MusicLibrary) {
         return Paths.get(uri)
     }
 
-    private fun createPlaylists(selectedPlaylists: List<ItunesPlaylist>, trackIdToItem: Map<Int, AudioItem>): Int {
+    private fun createPlaylists(selectedPlaylists: List<ItunesPlaylist>, trackIdToItem: Map<Int, ReactiveAudioItem<*>>): Int {
         val createdNameByPersistentId = mutableMapOf<String, String>()
         var playlistsCreated = 0
 
@@ -240,18 +216,18 @@ class ItunesImportService(private val musicLibrary: MusicLibrary) {
 
     private fun createRegularPlaylists(
         selectedPlaylists: List<ItunesPlaylist>,
-        trackIdToItem: Map<Int, AudioItem>,
+        trackIdToItem: Map<Int, ReactiveAudioItem<*>>,
         createdNameByPersistentId: MutableMap<String, String>
     ): Int {
         var count = 0
         for (playlist in selectedPlaylists) {
             if (playlist.isFolder) continue
-            val audioItems = playlist.trackIds.mapNotNull { trackIdToItem[it] }
+            val audioItemIds = playlist.trackIds.mapNotNull { trackIdToItem[it]?.id }
             val uniqueName = resolveUniqueName(playlist.name)
-            musicLibrary.createPlaylist(uniqueName, audioItems)
+            musicLibrary.createPlaylist(uniqueName, audioItemIds)
             createdNameByPersistentId[playlist.persistentId] = uniqueName
             count++
-            logger.debug { "Created playlist '$uniqueName' with ${audioItems.size} items" }
+            logger.debug { "Created playlist '$uniqueName' with ${audioItemIds.size} items" }
         }
         return count
     }
@@ -289,6 +265,6 @@ class ItunesImportService(private val musicLibrary: MusicLibrary) {
         var importedCount = 0
         var skippedCount = 0
         val errors = mutableListOf<ImportError>()
-        val trackIdToItem = mutableMapOf<Int, AudioItem>()
+        val trackIdToItem = mutableMapOf<Int, ReactiveAudioItem<*>>()
     }
 }

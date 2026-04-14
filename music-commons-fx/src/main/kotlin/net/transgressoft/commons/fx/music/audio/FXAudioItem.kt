@@ -404,6 +404,15 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
             withEventsDisabled { _playCountProperty.set(count.toInt()) }
         }
 
+        override fun <T> withEventsSuppressed(action: () -> T): T {
+            disableEvents()
+            try {
+                return action()
+            } finally {
+                enableEvents()
+            }
+        }
+
         internal fun incrementPlayCount() {
             mutateAndPublish {
                 _playCountProperty.set(_playCountProperty.get() + 1)

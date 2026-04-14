@@ -168,7 +168,7 @@ internal class MutablePlaylistTest : StringSpec({
 internal fun randomQueenAudioItems(tempDirectory: Path, albumName: String = "", size: Int) =
     playlistHierarchy.createPlaylist(
         albumName,
-        buildList {
+        buildList<AudioItem> {
             for (i in 0 until size) {
                 val song = "Song $i - $albumName"
                 val artistName = "Queen"
