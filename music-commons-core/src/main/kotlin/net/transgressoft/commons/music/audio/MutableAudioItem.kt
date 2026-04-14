@@ -260,6 +260,15 @@ internal class MutableAudioItem(
         withEventsDisabled { _playCount = count }
     }
 
+    override fun <T> withEventsSuppressed(action: () -> T): T {
+        disableEvents()
+        try {
+            return action()
+        } finally {
+            enableEvents()
+        }
+    }
+
     override operator fun compareTo(other: AudioItem) = audioItemTrackDiscNumberComparator<AudioItem>().compare(this, other)
 
     override fun equals(other: Any?): Boolean {

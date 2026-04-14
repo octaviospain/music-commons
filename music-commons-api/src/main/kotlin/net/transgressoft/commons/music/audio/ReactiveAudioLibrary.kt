@@ -67,6 +67,19 @@ interface ReactiveAudioLibrary<I: ReactiveAudioItem<I>, AC: ReactiveArtistCatalo
     val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>>
 
     /**
+     * Creates an audio item via the supplied [factory] and adds it to the library.
+     *
+     * The library allocates a unique ID internally and passes it to the factory function,
+     * keeping ID generation encapsulated. Use this when constructing audio items outside
+     * the library's own [createFromFile] path, such as importing from external sources
+     * where metadata is provided externally.
+     *
+     * @param factory function that receives the allocated ID and returns a fully constructed audio item
+     * @return the created and registered audio item
+     */
+    fun createAudioItem(factory: (id: Int) -> I): I
+
+    /**
      * Creates an audio item from the file at the specified path.
      *
      * @param audioItemPath Path to the audio file

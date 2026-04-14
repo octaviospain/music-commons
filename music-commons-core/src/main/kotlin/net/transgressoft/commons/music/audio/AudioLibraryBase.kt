@@ -135,6 +135,8 @@ abstract class AudioLibraryBase<I, AC>(
         return id
     }
 
+    override fun createAudioItem(factory: (id: Int) -> I): I = factory(newId()).also { add(it) }
+
     override val playerSubscriber = PlayedEventSubscriber()
 
     override fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I> = observableArtistCatalogRegistry.findAlbumAudioItems(artist, albumName)

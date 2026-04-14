@@ -106,7 +106,8 @@ Unknown genre strings are preserved as `Genre.Custom(name)` instead of being dis
 ### iTunes Library Import
 
 The `music-commons-core` module includes an iTunes library XML import engine for migrating
-tracks and playlists from Apple Music / iTunes into a `MusicLibrary`.
+tracks and playlists from Apple Music / iTunes. `ItunesImportService` accepts any `MusicLibrary<*, *>`
+implementation, so it works with both `CoreMusicLibrary` (headless) and `FXMusicLibrary` (JavaFX).
 
 **Two-step import flow:**
 
@@ -146,9 +147,10 @@ tracks and playlists from Apple Music / iTunes into a `MusicLibrary`.
 Defines contracts and interfaces for the audio management domain.
 
 **Key Interfaces:**
-- `ReactiveAudioItem<I>` -- Audio file representation with metadata
-- `ReactiveAudioLibrary<I, AC>` -- Generic CRUD repository with reactive event publishing
-- `ReactiveAudioPlaylist<I, P>` / `ReactivePlaylistHierarchy<I, P>` -- Generic playlist management with M3U export
+- `MusicLibrary<I, P>` -- Unified facade interface implemented by both `CoreMusicLibrary` and `FXMusicLibrary`, enabling library-agnostic consumers like `ItunesImportService`
+- `ReactiveAudioItem<I>` -- Audio file representation with metadata and `withEventsSuppressed` for bulk property writes without mutation events
+- `ReactiveAudioLibrary<I, AC>` -- Generic CRUD repository with reactive event publishing and `createAudioItem(factory)` for ID-encapsulated construction
+- `ReactiveAudioPlaylist<I, P>` / `ReactivePlaylistHierarchy<I, P>` -- Generic playlist management with M3U export and ID-based `createPlaylist` overload
 - `AudioWaveform` / `AudioWaveformRepository` -- Waveform data and generation
 - `AudioItemPlayer` -- Playback controls with status monitoring
 
@@ -156,7 +158,7 @@ Defines contracts and interfaces for the audio management domain.
 
 Concrete implementations with JSON file persistence via [lirp](https://github.com/octaviospain/lirp) and reactive event subscriptions.
 
-- `MusicLibrary` -- Unified facade for headless audio management (builder-based entry point)
+- `CoreMusicLibrary` -- Unified facade for headless audio management implementing `MusicLibrary<AudioItem, MutableAudioPlaylist>` (builder-based entry point)
 - `AudioLibrary` -- Narrowed `ReactiveAudioLibrary` for `AudioItem` and `ArtistCatalog` types
 - `PlaylistHierarchy` -- Narrowed `ReactivePlaylistHierarchy` for `AudioItem` and `MutableAudioPlaylist` types
 - Internal implementations: `DefaultAudioLibrary`, `DefaultPlaylistHierarchy`, `DefaultAudioWaveformRepository`
@@ -166,7 +168,7 @@ Concrete implementations with JSON file persistence via [lirp](https://github.co
 
 Bridges core module with JavaFX's property binding system.
 
-- `FXMusicLibrary` -- Unified facade for JavaFX audio management with observable properties (builder-based entry point)
+- `FXMusicLibrary` -- Unified facade for JavaFX audio management implementing `MusicLibrary<ObservableAudioItem, ObservablePlaylist>` with observable properties (builder-based entry point)
 - `ObservableAudioLibrary` -- Narrowed `ReactiveAudioLibrary` with JavaFX observable properties for UI binding
 - `ObservablePlaylistHierarchy` -- Narrowed `ReactivePlaylistHierarchy` with a JavaFX observable playlists collection
 - `JavaFxPlayer` -- Native JavaFX MediaPlayer wrapper with reactive events
@@ -176,23 +178,23 @@ Bridges core module with JavaFX's property binding system.
 
 ### Core module (headless)
 
-Use `MusicLibrary.builder()` as the single entry point for headless audio management:
+Use `CoreMusicLibrary.builder()` as the single entry point for headless audio management:
 
 ```kotlin
-import net.transgressoft.commons.music.MusicLibrary
+import net.transgressoft.commons.music.CoreMusicLibrary
 
 // In-memory (volatile) storage -- no files needed
-val library = MusicLibrary.builder().build()
+val library = CoreMusicLibrary.builder().build()
 
 // JSON file persistence
-val library = MusicLibrary.builder()
+val library = CoreMusicLibrary.builder()
     .audioLibraryJsonFile(File("audio-library.json"))
     .playlistHierarchyJsonFile(File("playlists.json"))
     .waveformRepositoryJsonFile(File("waveforms.json"))
     .build()
 
 // SQL persistence (requires KSP-generated SqlTableDef for each entity)
-val library = MusicLibrary.builder()
+val library = CoreMusicLibrary.builder()
     .audioLibrarySql(dataSource, audioItemTableDef)
     .playlistHierarchySql(dataSource, playlistTableDef)
     .waveformRepositorySql(dataSource, waveformTableDef)

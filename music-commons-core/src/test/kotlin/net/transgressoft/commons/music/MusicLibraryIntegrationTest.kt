@@ -37,7 +37,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     lateinit var playlistsFile: File
     lateinit var waveformsFile: File
 
-    lateinit var musicLibrary: MusicLibrary
+    lateinit var musicLibrary: CoreMusicLibrary
 
     lateinit var audioLibrary: AudioLibrary
     lateinit var waveforms: AudioWaveformRepository<AudioWaveform, AudioItem>
@@ -54,7 +54,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         waveformsFile = tempfile("waveformRepository-test", ".json").apply { deleteOnExit() }
 
         musicLibrary =
-            MusicLibrary.builder()
+            CoreMusicLibrary.builder()
                 .audioLibraryJsonFile(audioFile)
                 .playlistHierarchyJsonFile(playlistsFile)
                 .waveformRepositoryJsonFile(waveformsFile)
@@ -245,7 +245,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         musicLibrary.close()
 
         val restoredLibrary =
-            MusicLibrary.builder()
+            CoreMusicLibrary.builder()
                 .audioLibraryJsonFile(audioFile)
                 .playlistHierarchyJsonFile(playlistsFile)
                 .waveformRepositoryJsonFile(waveformsFile)

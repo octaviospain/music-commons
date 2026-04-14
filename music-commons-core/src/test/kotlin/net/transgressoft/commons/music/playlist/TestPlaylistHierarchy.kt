@@ -34,9 +34,14 @@ internal class TestPlaylistHierarchy(
         return TestMutablePlaylist(newId(), name, false).also(::add)
     }
 
-    override fun createPlaylist(name: String, audioItems: List<AudioItem>): MutableAudioPlaylist {
+    override fun createPlaylist(name: String, audioItems: List<AudioItem>): MutableAudioPlaylist =
+        createPlaylist(name, audioItems.map { it.id })
+
+    @Suppress("INAPPLICABLE_JVM_NAME")
+    @JvmName("createPlaylistWithIds")
+    override fun createPlaylist(name: String, audioItemIds: List<Int>): MutableAudioPlaylist {
         require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
-        return TestMutablePlaylist(newId(), name, false, audioItems.map { it.id }).also(::add)
+        return TestMutablePlaylist(newId(), name, false, audioItemIds).also(::add)
     }
 
     override fun createPlaylistDirectory(name: String): MutableAudioPlaylist {

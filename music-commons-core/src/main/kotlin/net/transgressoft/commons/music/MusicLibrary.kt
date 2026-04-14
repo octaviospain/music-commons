@@ -76,21 +76,15 @@ internal data class SqlStorage<E : IdentifiableEntity<*>>(
  *     .build()
  * ```
  */
-class MusicLibrary private constructor(
+class CoreMusicLibrary private constructor(
     private val _audioLibrary: AudioLibrary,
     private val _playlistHierarchy: PlaylistHierarchy,
     private val _waveformRepository: AudioWaveformRepository<AudioWaveform, AudioItem>
-) : AutoCloseable {
+) : MusicLibrary<AudioItem, MutableAudioPlaylist> {
 
-    /**
-     * Returns the underlying audio library for direct access to audio item management.
-     */
-    fun audioLibrary(): AudioLibrary = _audioLibrary
+    override fun audioLibrary(): AudioLibrary = _audioLibrary
 
-    /**
-     * Returns the underlying playlist hierarchy for direct access to playlist management.
-     */
-    fun playlistHierarchy(): PlaylistHierarchy = _playlistHierarchy
+    override fun playlistHierarchy(): PlaylistHierarchy = _playlistHierarchy
 
     /**
      * Returns the underlying waveform repository for direct access to waveform management.
@@ -108,15 +102,9 @@ class MusicLibrary private constructor(
     val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, ArtistCatalog<AudioItem>>>
         get() = _audioLibrary.artistCatalogPublisher
 
-    /**
-     * Creates an [AudioItem] from the audio file at [path] and adds it to the audio library.
-     */
-    fun audioItemFromFile(path: Path): AudioItem = _audioLibrary.createFromFile(path)
+    override fun audioItemFromFile(path: Path): AudioItem = _audioLibrary.createFromFile(path)
 
-    /**
-     * Creates a new playlist with [name] and adds it to the playlist hierarchy.
-     */
-    fun createPlaylist(name: String): MutableAudioPlaylist = _playlistHierarchy.createPlaylist(name)
+    override fun createPlaylist(name: String): MutableAudioPlaylist = _playlistHierarchy.createPlaylist(name)
 
     /**
      * Creates a new playlist with [name] pre-populated with [audioItems].
@@ -124,21 +112,17 @@ class MusicLibrary private constructor(
     fun createPlaylist(name: String, audioItems: List<AudioItem>): MutableAudioPlaylist =
         _playlistHierarchy.createPlaylist(name, audioItems)
 
-    /**
-     * Creates a new playlist directory with [name].
-     */
-    fun createPlaylistDirectory(name: String): MutableAudioPlaylist = _playlistHierarchy.createPlaylistDirectory(name)
+    @Suppress("INAPPLICABLE_JVM_NAME")
+    @JvmName("createPlaylistWithIds")
+    override fun createPlaylist(name: String, audioItemIds: List<Int>): MutableAudioPlaylist =
+        _playlistHierarchy.createPlaylist(name, audioItemIds)
 
-    /**
-     * Moves the playlist identified by [playlistNameToMove] into the directory identified by [destinationPlaylistName].
-     */
-    fun movePlaylist(playlistNameToMove: String, destinationPlaylistName: String) =
+    override fun createPlaylistDirectory(name: String): MutableAudioPlaylist = _playlistHierarchy.createPlaylistDirectory(name)
+
+    override fun movePlaylist(playlistNameToMove: String, destinationPlaylistName: String) =
         _playlistHierarchy.movePlaylist(playlistNameToMove, destinationPlaylistName)
 
-    /**
-     * Finds a playlist by its [name], returning an empty [Optional] if not found.
-     */
-    fun findPlaylistByName(name: String): Optional<out MutableAudioPlaylist> = _playlistHierarchy.findByName(name)
+    override fun findPlaylistByName(name: String): Optional<out MutableAudioPlaylist> = _playlistHierarchy.findByName(name)
 
     /**
      * Returns all audio items in [albumName] by [artist].
@@ -242,7 +226,7 @@ class MusicLibrary private constructor(
          * Construction order matters: the audio library is created first so its repository is
          * registered in LirpContext before the playlist hierarchy resolves audio item references.
          */
-        fun build(): MusicLibrary {
+        fun build(): CoreMusicLibrary {
             // 1. Audio library first — registers AudioItem in LirpContext
             val audioRepo = createAudioRepository()
             val audioLibrary = DefaultAudioLibrary(audioRepo)
@@ -260,7 +244,7 @@ class MusicLibrary private constructor(
                 audioLibrary.subscribe(waveformRepository)
                 audioLibrary.subscribe(playlistHierarchy)
 
-                return MusicLibrary(audioLibrary, playlistHierarchy, waveformRepository)
+                return CoreMusicLibrary(audioLibrary, playlistHierarchy, waveformRepository)
             } catch (ex: Exception) {
                 waveformRepository?.close()
                 audioLibrary.close()
@@ -303,7 +287,7 @@ class MusicLibrary private constructor(
 
     companion object {
         /**
-         * Returns a new [Builder] to configure and construct a [MusicLibrary].
+         * Returns a new [Builder] to configure and construct a [CoreMusicLibrary].
          */
         @JvmStatic
         fun builder(): Builder = Builder()

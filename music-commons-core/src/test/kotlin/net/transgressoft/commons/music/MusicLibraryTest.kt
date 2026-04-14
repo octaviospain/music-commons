@@ -31,7 +31,7 @@ internal class MusicLibraryTest : StringSpec({
     }
 
     "MusicLibrary builder creates volatile library by default" {
-        val library = MusicLibrary.builder().build()
+        val library = CoreMusicLibrary.builder().build()
 
         library.audioLibrary() shouldNotBe null
         library.playlistHierarchy() shouldNotBe null
@@ -46,7 +46,7 @@ internal class MusicLibraryTest : StringSpec({
         val waveformsFile = tempfile("waveformRepository-test", ".json").apply { deleteOnExit() }
 
         val library =
-            MusicLibrary.builder()
+            CoreMusicLibrary.builder()
                 .audioLibraryJsonFile(audioFile)
                 .playlistHierarchyJsonFile(playlistsFile)
                 .waveformRepositoryJsonFile(waveformsFile)
@@ -64,7 +64,7 @@ internal class MusicLibraryTest : StringSpec({
     }
 
     "MusicLibrary curated methods delegate to components" {
-        val library = MusicLibrary.builder().build()
+        val library = CoreMusicLibrary.builder().build()
 
         val audioItem = library.audioItemFromFile(Arb.virtualAudioFile().next())
         testDispatcher.scheduler.advanceUntilIdle()
@@ -79,7 +79,7 @@ internal class MusicLibraryTest : StringSpec({
     }
 
     "MusicLibrary close disposes all components" {
-        val library = MusicLibrary.builder().build()
+        val library = CoreMusicLibrary.builder().build()
 
         val audioItem = library.audioItemFromFile(Arb.virtualAudioFile().next())
         testDispatcher.scheduler.advanceUntilIdle()
@@ -107,7 +107,7 @@ internal class MusicLibraryTest : StringSpec({
         val waveformsFile = tempfile("waveformRepository-rt", ".json").apply { deleteOnExit() }
 
         val library =
-            MusicLibrary.builder()
+            CoreMusicLibrary.builder()
                 .audioLibraryJsonFile(audioFile)
                 .playlistHierarchyJsonFile(playlistsFile)
                 .waveformRepositoryJsonFile(waveformsFile)
@@ -129,7 +129,7 @@ internal class MusicLibraryTest : StringSpec({
         library.close()
 
         val restoredLibrary =
-            MusicLibrary.builder()
+            CoreMusicLibrary.builder()
                 .audioLibraryJsonFile(audioFile)
                 .playlistHierarchyJsonFile(playlistsFile)
                 .waveformRepositoryJsonFile(waveformsFile)
