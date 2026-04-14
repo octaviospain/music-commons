@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Major Version</key><integer>1</integer>
+    <key>Minor Version</key><integer>1</integer>
+    <key>Tracks</key>
+    <dict>
+        <key>100</key>
+        <dict>
+            <key>Track ID</key><integer>100</integer>
+            <key>Name</key><string>Test Song</string>
+            <key>Artist</key><string>Test Artist</string>
+            <key>Album Artist</key><string>Test Artist</string>
+            <key>Album</key><string>Test Album</string>
+            <key>Genre</key><string>Rock</string>
+            <key>Year</key><integer>2020</integer>
+            <key>Track Number</key><integer>1</integer>
+            <key>Disc Number</key><integer>1</integer>
+            <key>Total Time</key><integer>240000</integer>
+            <key>Bit Rate</key><integer>320</integer>
+            <key>Play Count</key><integer>5</integer>
+            <key>Rating</key><integer>80</integer>
+            <key>BPM</key><integer>120</integer>
+            <key>Persistent ID</key><string>ABC123</string>
+            <key>Location</key><string>file:///music/test-song.mp3</string>
+            <key>Date Added</key><date>2020-06-15T10:30:00Z</date>
+        </dict>
+        <key>101</key>
+        <dict>
+            <key>Track ID</key><integer>101</integer>
+            <key>Name</key><string>Minimal Track</string>
+            <key>Artist</key><string>Unknown</string>
+            <key>Album</key><string></string>
+            <key>Total Time</key><integer>180000</integer>
+            <key>Bit Rate</key><integer>128</integer>
+            <key>Location</key><string>file:///music/minimal.flac</string>
+        </dict>
+        <key>102</key>
+        <dict>
+            <key>Track ID</key><integer>102</integer>
+            <key>Name</key><string>No Location Track</string>
+            <key>Artist</key><string>Some Artist</string>
+            <key>Album</key><string>Some Album</string>
+            <key>Total Time</key><integer>200000</integer>
+            <key>Bit Rate</key><integer>256</integer>
+        </dict>
+        <key>103</key>
+        <dict>
+            <key>Track ID</key><integer>103</integer>
+            <key>Name</key><string>Another Song</string>
+            <key>Artist</key><string>Another Artist</string>
+            <key>Album Artist</key><string>Another Artist</string>
+            <key>Album</key><string>Another Album</string>
+            <key>Genre</key><string>Pop</string>
+            <key>Year</key><integer>2021</integer>
+            <key>Track Number</key><integer>2</integer>
+            <key>Total Time</key><integer>300000</integer>
+            <key>Bit Rate</key><integer>256</integer>
+            <key>Play Count</key><integer>10</integer>
+            <key>Rating</key><integer>100</integer>
+            <key>Persistent ID</key><string>DEF456</string>
+            <key>Location</key><string>file:///music/another.m4a</string>
+            <key>Date Added</key><date>2021-03-20T08:00:00Z</date>
+        </dict>
+    </dict>
+    <key>Playlists</key>
+    <array>
+        <dict>
+            <key>Name</key><string>My Playlist</string>
+            <key>Playlist Persistent ID</key><string>PL001</string>
+            <key>Playlist Items</key>
+            <array>
+                <dict><key>Track ID</key><integer>100</integer></dict>
+                <dict><key>Track ID</key><integer>101</integer></dict>
+            </array>
+        </dict>
+        <dict>
+            <key>Name</key><string>Second Playlist</string>
+            <key>Playlist Persistent ID</key><string>PL002</string>
+            <key>Playlist Items</key>
+            <array>
+                <dict><key>Track ID</key><integer>103</integer></dict>
+            </array>
+        </dict>
+        <dict>
+            <key>Name</key><string>Smart Playlist</string>
+            <key>Playlist Persistent ID</key><string>PL003</string>
+            <key>Smart Info</key>
+            <data>
+            AQEAAwAAAAIAAAAZAAAAAAAAAAcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+            AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+            </data>
+            <key>Playlist Items</key>
+            <array>
+                <dict><key>Track ID</key><integer>100</integer></dict>
+            </array>
+        </dict>
+        <dict>
+            <key>Name</key><string>My Folder</string>
+            <key>Playlist Persistent ID</key><string>PL004</string>
+            <key>Folder</key><true/>
+        </dict>
+        <dict>
+            <key>Name</key><string>Child Playlist</string>
+            <key>Playlist Persistent ID</key><string>PL005</string>
+            <key>Parent Persistent ID</key><string>PL004</string>
+            <key>Playlist Items</key>
+            <array>
+                <dict><key>Track ID</key><integer>100</integer></dict>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

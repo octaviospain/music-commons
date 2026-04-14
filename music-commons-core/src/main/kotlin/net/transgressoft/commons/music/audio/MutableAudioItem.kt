@@ -83,7 +83,7 @@ internal class MutableAudioItem(
                 }
         )
 
-    // Constructor for deserialization
+    // Constructor for deserialization & iTunes import
     internal constructor(
         path: Path,
         id: Int,
@@ -254,6 +254,10 @@ internal class MutableAudioItem(
         }
 
     internal fun incrementPlayCount() = _playCount++
+
+    override fun setPlayCount(count: Short) {
+        withEventsDisabled { _playCount = count }
+    }
 
     override operator fun compareTo(other: AudioItem) = audioItemTrackDiscNumberComparator<AudioItem>().compare(this, other)
 

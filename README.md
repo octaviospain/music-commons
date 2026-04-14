@@ -103,6 +103,42 @@ Unknown genre strings are preserved as `Genre.Custom(name)` instead of being dis
 - **Thread safety**: Audio item collections use `FxAggregateList` delegates that auto-dispatch listener notifications to the JavaFX Application Thread; artist catalog and album properties are updated via `Platform.runLater` from CRUD subscriptions
 - **Custom controls**: `WaveformPane` component for waveform visualization
 
+### iTunes Library Import
+
+The `music-commons-core` module includes an iTunes library XML import engine for migrating
+tracks and playlists from Apple Music / iTunes into a `MusicLibrary`.
+
+**Two-step import flow:**
+
+1. **Parse** the iTunes `library.xml` file:
+   ```kotlin
+   val itunesLibrary = ItunesLibraryParser.parse(Paths.get("/path/to/library.xml"))
+   // Inspect itunesLibrary.playlists to let the user select which to import
+   ```
+
+2. **Import** selected playlists with a configurable policy:
+   ```kotlin
+   val service = ItunesImportService(musicLibrary)
+   val future = service.importAsync(
+       selectedPlaylists = chosen,
+       itunesLibrary = itunesLibrary,
+       policy = ItunesImportPolicy(useFileMetadata = false, holdPlayCount = true),
+       onProgress = { progress -> println("${progress.itemsProcessed}/${progress.totalItems}") }
+   )
+   val result = future.get()
+   println("Imported: ${result.importedCount}, Skipped: ${result.skippedCount}")
+   ```
+
+**Import policy options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `useFileMetadata` | `true` | When `true`, metadata comes from audio file tags. When `false`, user-facing fields come from iTunes data. |
+| `holdPlayCount` | `true` | Transfers play counts from iTunes to imported items. |
+| `writeMetadata` | `true` | Writes iTunes metadata to audio file tags after import. |
+| `ignoreNotFound` | `true` | Skips tracks whose files don't exist on disk instead of erroring. |
+| `acceptedFileTypes` | All | Filters tracks by audio file type (MP3, M4A, WAV, FLAC). |
+
 ## Module Details
 
 ### music-commons-api

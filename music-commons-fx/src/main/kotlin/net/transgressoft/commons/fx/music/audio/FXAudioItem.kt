@@ -399,6 +399,10 @@ class FXAudioItem internal constructor(override val path: Path, override val id:
                 logger.debug { "Metadata of $this successfully written to file" }
             }
 
+        override fun setPlayCount(count: Short) {
+            withEventsDisabled { _playCountProperty.set(count.toInt()) }
+        }
+
         internal fun incrementPlayCount() {
             mutateAndPublish {
                 _playCountProperty.set(_playCountProperty.get() + 1)

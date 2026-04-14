@@ -14,6 +14,7 @@ dependencies {
     implementation libs.lirp.sql.get()
     implementation libs.jave.core.get()
     implementation libs.jave.nativebin.linux64.get()
+    implementation libs.dd.plist.get()
 
     ksp libs.lirp.ksp.get()
     kspTest libs.lirp.ksp.get()

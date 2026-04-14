@@ -68,6 +68,18 @@ interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I>, Co
     val dateOfCreation: LocalDateTime
     val playCount: Short
 
+    /**
+     * Sets the play count to [count].
+     *
+     * Used during import operations (e.g., iTunes import) where the play count is transferred
+     * from an external source rather than incremented through playback. Implementations disable
+     * reactive mutation events during this operation since it represents a bulk data transfer,
+     * not a user-observable state change.
+     *
+     * @param count The play count value to set.
+     */
+    fun setPlayCount(count: Short)
+
     fun writeMetadata(): Job
 
     fun asJsonKeyValue() =
