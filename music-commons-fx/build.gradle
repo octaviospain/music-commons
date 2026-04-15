@@ -17,6 +17,13 @@ tasks.register('runWaveformPaneDemo', JavaExec) {
     mainClass = "net.transgressoft.commons.fx.music.waveform.WaveformPaneDemo"
 }
 
+tasks.register('runPlayableWaveformPaneDemo', JavaExec) {
+    group = "Execution"
+    description = "Run PlayableWaveformPaneDemo"
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = "net.transgressoft.commons.fx.music.waveform.PlayableWaveformPaneDemo"
+}
+
 test {
     useJUnitPlatform()
 
