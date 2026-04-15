@@ -99,10 +99,10 @@ subprojects {
         implementation platform(libs.kotlin.bom.get())
         api platform(libs.coroutines.bom.get())
         api libs.kotlin.stdlib.get()
+        api libs.lirp.api.get()
 
         implementation libs.nv.i18n.get()
         implementation libs.kotlin.logging.get()
-        implementation libs.lirp.api.get()
         implementation libs.kotlinx.serialization.json.get()
 
         testImplementation libs.logback.core.get()
