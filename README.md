@@ -84,6 +84,7 @@ Unknown genre strings are preserved as `Genre.Custom(name)` instead of being dis
 - **Repository caching**: Waveforms are cached and reused across requests
 - **Normalized amplitude caching**: Serialized waveforms cache normalized amplitudes with their display width — same-width requests return instantly without audio file I/O, and height-only changes apply linear scaling from cache
 - **JavaFX component**: Custom `WaveformPane` canvas with automatic redraw on resize
+- **Playback-aware visualization**: `PlayableWaveformPane` adds two-color progress fill, playhead line, click-to-seek with drag-to-scrub, and a shimmer loading animation
 
 ### Audio Playback
 
@@ -102,7 +103,7 @@ Unknown genre strings are preserved as `Genre.Custom(name)` instead of being dis
 
 - **Observable properties**: Direct binding to JavaFX TableView, ListView, and other controls
 - **Thread safety**: Audio item collections use `FxAggregateList` delegates that auto-dispatch listener notifications to the JavaFX Application Thread; artist catalog and album properties are updated via `Platform.runLater` from CRUD subscriptions
-- **Custom controls**: `WaveformPane` component for waveform visualization
+- **Custom controls**: `WaveformPane` for static waveforms, `PlayableWaveformPane` for playback-aware visualization with seek
 
 ### iTunes Library Import
 
@@ -173,7 +174,9 @@ Bridges core module with JavaFX's property binding system.
 - `ObservableAudioLibrary` -- Narrowed `ReactiveAudioLibrary` with JavaFX observable properties for UI binding
 - `ObservablePlaylistHierarchy` -- Narrowed `ReactivePlaylistHierarchy` with a JavaFX observable playlists collection
 - `JavaFxPlayer` -- Native JavaFX MediaPlayer wrapper with reactive events
-- `WaveformPane` -- Custom Canvas component for waveform visualization
+- `WaveformPane` -- Custom Canvas component for static waveform visualization
+- `PlayableWaveformPane` -- Region component with progress fill, playhead, seek, and shimmer loading
+- `SeekEvent` -- Custom JavaFX event fired on click-to-seek and drag-to-scrub interactions
 
 ## Usage Examples
 
@@ -290,11 +293,33 @@ player.dispose()
 import net.transgressoft.commons.fx.music.waveform.WaveformPane
 import javafx.scene.paint.Color
 
+// Static waveform (no playback controls)
 val waveformPane = WaveformPane()
 waveformPane.drawWaveformAsync(waveform, Color.CYAN, Color.BLACK)
-
-// Add to scene -- auto-redraws on resize
 stackPane.children.add(waveformPane)
+```
+
+#### Playback-Aware Waveform
+
+`PlayableWaveformPane` adds progress visualization, seek interaction, and a shimmer loading animation:
+
+```kotlin
+import net.transgressoft.commons.fx.music.waveform.PlayableWaveformPane
+import net.transgressoft.commons.fx.music.waveform.SeekEvent
+
+val playablePane = PlayableWaveformPane()
+playablePane.loadWaveform(waveform)
+
+// Bind progress to player (0.0-1.0)
+player.currentTimeProperty.addListener { _, _, newTime ->
+    val total = player.totalDuration.toMillis()
+    if (total > 0) playablePane.progressProperty.set(newTime.toMillis() / total)
+}
+
+// Handle seek events (fires on mouse release)
+playablePane.addEventHandler(SeekEvent.SEEK) { event ->
+    player.seek(event.seekRatio * player.totalDuration.toMillis())
+}
 ```
 
 ## Building the Project
