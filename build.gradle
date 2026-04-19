@@ -142,10 +142,36 @@ subprojects {
         }
     }
 
-    test {
+    // Cross-platform test tag filtering. See CONTRIBUTING.md "Cross-Platform Testing".
+    //
+    //   Tag                Purpose                              Default
+    //   linux-only         Needs Linux (jave-nativebin-linux64) Included
+    //   posix-only         Needs POSIX (chmod, /tmp semantics)  Included
+    //   windows-only       Needs real Windows host              EXCLUDED
+    //   requires-playback  Needs audio playback (JavaFX media)  Included
+    //
+    //   -PexcludeLinuxOnly=true     skip linux-only tests   (use on macOS, Windows)
+    //   -PexcludePosixOnly=true     skip posix-only tests   (use on Windows)
+    //   -PincludeWindowsOnly=true   un-skip windows-only    (use on Windows)
+    //   -PexcludePlaybackTests=true skip requires-playback  (use on headless CI)
+    //
+    // configureEach (not just `test { … }`) so any future or custom Test task in a subproject
+    // — integration suites, split runs — gets the same JVM args and tag filtering.
+    tasks.withType(Test).configureEach {
         useJUnitPlatform()
+        jvmArgs '-XX:+EnableDynamicAgentLoading'
+        maxHeapSize = '1g'
         testLogging {
             events 'passed', 'skipped', 'failed'
+        }
+
+        def excludeTags = ['windows-only']
+        if (project.findProperty('includeWindowsOnly')?.toString()?.toBoolean()) excludeTags.remove('windows-only')
+        if (project.findProperty('excludeLinuxOnly')?.toString()?.toBoolean()) excludeTags << 'linux-only'
+        if (project.findProperty('excludePosixOnly')?.toString()?.toBoolean()) excludeTags << 'posix-only'
+        if (project.findProperty('excludePlaybackTests')?.toString()?.toBoolean()) excludeTags << 'requires-playback'
+        if (!excludeTags.isEmpty()) {
+            systemProperty 'kotest.tags.exclude', excludeTags.join(',')
         }
     }
 

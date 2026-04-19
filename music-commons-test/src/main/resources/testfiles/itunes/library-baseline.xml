@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Tracks</key>
+    <dict>
+        <key>1</key>
+        <dict>
+            <key>Track ID</key><integer>1</integer>
+            <key>Name</key><string>Song One</string>
+            <key>Artist</key><string>Artist One</string>
+            <key>Album</key><string>Album One</string>
+            <key>Location</key><string>file:///testfiles/song1.mp3</string>
+        </dict>
+        <key>2</key>
+        <dict>
+            <key>Track ID</key><integer>2</integer>
+            <key>Name</key><string>Song Two</string>
+            <key>Artist</key><string>Artist Two</string>
+            <key>Album</key><string>Album Two</string>
+            <key>Location</key><string>file:///testfiles/song2.mp3</string>
+        </dict>
+        <key>3</key>
+        <dict>
+            <key>Track ID</key><integer>3</integer>
+            <key>Name</key><string>Song Three</string>
+            <key>Artist</key><string>Artist Three</string>
+            <key>Album</key><string>Album Three</string>
+            <key>Location</key><string>file:///testfiles/song3.mp3</string>
+        </dict>
+    </dict>
+    <key>Playlists</key>
+    <array>
+        <dict>
+            <key>Name</key><string>Baseline Playlist</string>
+            <key>Playlist Persistent ID</key><string>BPL001</string>
+            <key>Playlist Items</key>
+            <array>
+                <dict><key>Track ID</key><integer>1</integer></dict>
+                <dict><key>Track ID</key><integer>2</integer></dict>
+                <dict><key>Track ID</key><integer>3</integer></dict>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

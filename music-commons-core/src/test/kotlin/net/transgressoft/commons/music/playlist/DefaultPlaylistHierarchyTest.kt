@@ -2,12 +2,15 @@ package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
+import net.transgressoft.commons.music.audio.WindowsPathException
 import net.transgressoft.commons.music.audio.audioItem
+import net.transgressoft.commons.music.common.OsDetector
 import net.transgressoft.lirp.event.ReactiveScope
 import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.VolatileRepository
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import io.kotest.assertions.json.shouldEqualJson
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.throwables.shouldThrowMessage
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
@@ -395,5 +398,28 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         fifties.playlists.isEmpty() shouldBe true
 
         playlistHierarchy.close()
+    }
+
+    "MutablePlaylistBase.name assignment throws WindowsPathException on Windows when name contains forbidden char" {
+        OsDetector.withOverriddenIsWindows(false) {
+            DefaultPlaylistHierarchy().use { playlistHierarchy ->
+                val playlist = playlistHierarchy.createPlaylist("ok")
+                OsDetector.withOverriddenIsWindows(true) {
+                    val beforeName = playlist.name
+                    shouldThrow<WindowsPathException> { playlist.name = "bad|name" }
+                    playlist.name shouldBe beforeName
+                }
+            }
+        }
+    }
+
+    "MutablePlaylistBase.name assignment with forbidden chars on Linux succeeds (pass-through)" {
+        OsDetector.withOverriddenIsWindows(false) {
+            DefaultPlaylistHierarchy().use { playlistHierarchy ->
+                val playlist = playlistHierarchy.createPlaylist("ok")
+                playlist.name = "bad|name"
+                playlist.name shouldBe "bad|name"
+            }
+        }
     }
 })

@@ -35,6 +35,7 @@ import org.jaudiotagger.tag.mp4.Mp4Tag
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 
@@ -42,7 +43,7 @@ private val testCover = getResourceAsFile("/testfiles/cover.jpg").toPath()
 private val testCover2 = getResourceAsFile("/testfiles/cover-2.jpg").toPath()
 
 val testCoverBytes = Files.readAllBytes(testCover)
-val testCoverBytes2 = Files.readAllBytes(testCover)
+val testCoverBytes2 = Files.readAllBytes(testCover2)
 
 object ArbitraryAudioFile : TestConfiguration() {
 
@@ -138,19 +139,30 @@ object ArbitraryAudioFile : TestConfiguration() {
         }
     }
 
-    internal fun getResourceAsFile(resourcePath: String): File {
+    /**
+     * Test helper that resolves a classpath resource to a [File] on disk.
+     *
+     * For `file://` resources (exploded test classes) the URL is decoded through [Paths.get] to
+     * handle Windows drive prefixes and spaces correctly. For `jar://` resources the helper
+     * extracts the entry into a temp file marked with [File.deleteOnExit]; callers are responsible
+     * for the temp-file's lifetime but the JVM will clean it up on normal exit. Intentionally
+     * public so cross-module test utilities (`music-commons-core`, `music-commons-fx`) can share a
+     * single canonical loader instead of each reimplementing `File(url.file)` with its platform
+     * quirks.
+     */
+    fun getResourceAsFile(resourcePath: String): File {
         val path = if (resourcePath.startsWith("/")) resourcePath else "/$resourcePath"
         val url =
             ArbitraryAudioFile::class.java.getResource(path) ?: ArbitraryAudioFile::class.java.classLoader.getResource(path.removePrefix("/"))
                 ?: throw IllegalArgumentException("Resource not found: $resourcePath")
 
         return when (url.protocol) {
-            "file" -> File(url.file)
+            "file" -> Paths.get(url.toURI()).toFile()
             "jar" -> { // Extract from JAR to temp file
                 val extension = url.file.substringAfterLast('.')
                 val tempFile = File.createTempFile("resource-", "-tmp.$extension")
                 tempFile.deleteOnExit()
-                ArbitraryAudioFile::class.java.getResourceAsStream(resourcePath)?.use { input ->
+                url.openStream().use { input ->
                     tempFile.outputStream().use { output ->
                         input.copyTo(output)
                     }

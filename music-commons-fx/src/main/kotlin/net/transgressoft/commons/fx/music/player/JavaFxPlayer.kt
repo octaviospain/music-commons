@@ -58,7 +58,11 @@ class JavaFxPlayer(
 
         private val SUPPORTED_AUDIO_TYPES = EnumSet.of(MP3, WAV, M4A)
 
-        private val playerStatusMap: Map<MediaPlayer.Status, AudioItemPlayer.Status> =
+        // Lazy so that calling `isPlayable` does not eagerly load `javafx.scene.media.MediaPlayer`
+        // at companion init — on Windows headless Monocle runners, loading MediaPlayer triggers
+        // the bundled gstreamer-lite.dll which crashes (EXCEPTION_ACCESS_VIOLATION). Keeping the
+        // map behind a lazy delegate means the static `isPlayable` predicate stays cross-platform.
+        private val playerStatusMap: Map<MediaPlayer.Status, AudioItemPlayer.Status> by lazy {
             buildMap {
                 put(MediaPlayer.Status.UNKNOWN, AudioItemPlayer.Status.UNKNOWN)
                 put(MediaPlayer.Status.READY, AudioItemPlayer.Status.READY)
@@ -69,6 +73,7 @@ class JavaFxPlayer(
                 put(MediaPlayer.Status.HALTED, AudioItemPlayer.Status.HALTED)
                 put(MediaPlayer.Status.DISPOSED, AudioItemPlayer.Status.DISPOSED)
             }
+        }
 
         fun isPlayable(audioItem: ReactiveAudioItem<*>): Boolean =
             audioItem.extension.toAudioFileType() in SUPPORTED_AUDIO_TYPES &&
