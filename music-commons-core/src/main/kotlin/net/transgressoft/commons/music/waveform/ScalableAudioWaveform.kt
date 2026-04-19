@@ -23,6 +23,8 @@ import net.transgressoft.commons.music.audio.AudioFileType.M4A
 import net.transgressoft.commons.music.audio.AudioFileType.MP3
 import net.transgressoft.commons.music.audio.AudioFileType.WAV
 import net.transgressoft.commons.music.audio.toAudioFileType
+import net.transgressoft.commons.music.common.WindowsLongPathSupport
+import net.transgressoft.commons.music.common.WindowsPathValidator
 import net.transgressoft.lirp.entity.ReactiveEntityBase
 import ws.schild.jave.Encoder
 import ws.schild.jave.MultimediaObject
@@ -39,6 +41,7 @@ import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 import kotlin.io.path.exists
 import kotlin.io.path.extension
+import kotlin.io.path.nameWithoutExtension
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -132,10 +135,14 @@ class ScalableAudioWaveform(
     }
 
     private fun transcodeToWav(path: Path): File {
-        val fileName = path.fileName.toString()
-        val decodedFile = File.createTempFile("decoded_$fileName", "." + WAV.extension)
-        val copiedFile = File.createTempFile("original_$fileName", "." + path.extension)
-        Files.copy(path, copiedFile.toPath(), StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING)
+        // Strip the original extension before sanitizing so temp files are
+        // "decoded_song.wav" rather than "decoded_song.mp3<rand>.wav".
+        val safeName = WindowsPathValidator.sanitizeForTempFile(path.nameWithoutExtension)
+        val originalExtension = path.extension
+        val safePath = WindowsLongPathSupport.toLongPathSafe(path)
+        val decodedFile = File.createTempFile("decoded_$safeName", "." + WAV.extension)
+        val copiedFile = File.createTempFile("original_$safeName", ".$originalExtension")
+        Files.copy(safePath, copiedFile.toPath(), StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING)
         try {
             Encoder().encode(
                 MultimediaObject(copiedFile), decodedFile,
@@ -206,19 +213,21 @@ class ScalableAudioWaveform(
     }
 
     @Throws(AudioWaveformProcessingException::class)
-    override suspend fun amplitudes(width: Int, height: Int): FloatArray {
+    override suspend fun amplitudes(width: Int, height: Int, dispatcher: CoroutineDispatcher): FloatArray {
         check(width > 0) { "Width must be greater than 0" }
         check(height > 0) { "Height must be greater than 0" }
 
         var computed: FloatArray? = null
         val result =
-            cacheMutex.withLock {
-                val cached = normalizedAmplitudes
-                if (cached != null && cachedWidth == width) {
-                    FloatArray(cached.size) { cached[it] * height }
-                } else {
-                    computeNormalized(width).also { computed = it }.let { arr ->
-                        FloatArray(arr.size) { arr[it] * height }
+            withContext(dispatcher) {
+                cacheMutex.withLock {
+                    val cached = normalizedAmplitudes
+                    if (cached != null && cachedWidth == width) {
+                        FloatArray(cached.size) { cached[it] * height }
+                    } else {
+                        computeNormalized(width).also { computed = it }.let { arr ->
+                            FloatArray(arr.size) { arr[it] * height }
+                        }
                     }
                 }
             }
@@ -237,26 +246,28 @@ class ScalableAudioWaveform(
         check(width > 0) { "Width must be greater than 0" }
         check(height > 0) { "Height must be greater than 0" }
 
-        val amplitudes = amplitudes(width, height)
+        val amplitudes = amplitudes(width, height, dispatcher)
 
-        val bufferedImage =
-            BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB).apply {
-                for (x in 0 until width) {
-                    for (y in 0 until height) {
-                        val absoluteAmplitude = amplitudes[x].roundToInt()
-                        val y1: Int = (height - 2 * absoluteAmplitude) / 2
-                        val y2: Int = y1 + 2 * absoluteAmplitude
+        // The BufferedImage construction and width × height setRGB loop is non-trivial CPU work;
+        // run it on the requested dispatcher together with the IO write so callers that pass
+        // Dispatchers.JavaFx do not block the FX thread.
+        withContext(dispatcher) {
+            val bufferedImage =
+                BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB).apply {
+                    for (x in 0 until width) {
+                        for (y in 0 until height) {
+                            val absoluteAmplitude = amplitudes[x].roundToInt()
+                            val y1: Int = (height - 2 * absoluteAmplitude) / 2
+                            val y2: Int = y1 + 2 * absoluteAmplitude
 
-                        if (y in y1..y2) {
-                            setRGB(x, y, waveformColor.rgb)
-                        } else {
-                            setRGB(x, y, backgroundColor.rgb)
+                            if (y in y1..y2) {
+                                setRGB(x, y, waveformColor.rgb)
+                            } else {
+                                setRGB(x, y, backgroundColor.rgb)
+                            }
                         }
                     }
                 }
-            }
-
-        withContext(dispatcher) {
             ImageIO.write(bufferedImage, "png", outputFile)
         }
     }

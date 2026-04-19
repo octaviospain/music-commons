@@ -19,6 +19,7 @@ package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.music.event.PlayedEventSubscriber
 import net.transgressoft.lirp.event.CrudEvent
+import net.transgressoft.lirp.event.CrudEvent.Type.CONFLICT
 import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.READ
@@ -98,6 +99,9 @@ abstract class AudioLibraryBase<I, AC>(
      * - UPDATE events modify catalogs when artist/album/ordering changes occur
      * - DELETE events remove audio items, delete empty catalogs, and unsubscribe from mutations
      * - READ events are ignored (no catalog changes needed)
+     * - CONFLICT events are ignored — music-commons uses in-memory and JSON-file repositories where
+     *   optimistic lock failures are not expected; SQL-backed deployments must handle reconciliation
+     *   at a higher layer
      *
      */
     private val subscription =
@@ -119,9 +123,7 @@ abstract class AudioLibraryBase<I, AC>(
                     observableArtistCatalogRegistry.removeAudioItems(event.entities.values)
                     event.entities.values.forEach { entitySubscriptions.remove(it.id)?.cancel() }
                 }
-                READ -> {
-                    Unit
-                }
+                READ, CONFLICT -> Unit
             }
         }
 

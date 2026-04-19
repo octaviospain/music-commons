@@ -2,12 +2,16 @@ package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.AudioItemTestFactory
 import net.transgressoft.commons.music.audio.Genre
+import net.transgressoft.commons.music.audio.InvalidAudioFilePathException
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import io.kotest.assertions.json.shouldContainJsonKey
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
+import java.nio.file.Files
 import java.time.temporal.ChronoUnit.SECONDS
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
@@ -90,6 +94,52 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
 
         val decoded = json.decodeFromString(ObservableAudioItemSerializer, legacyItem.toString())
         decoded.genres shouldBe setOf(Genre.Rock)
+    }
+
+    "ObservableAudioItemSerializer inherits file:// URI format from ReactiveAudioItem.toJsonObject" {
+        val path = Arb.virtualAudioFile().next()
+        val fxAudioItem = FXAudioItem(path, AudioItemTestFactory.nextTestId())
+
+        val encoded = json.encodeToString(ObservableAudioItemSerializer, fxAudioItem)
+
+        encoded shouldContain "\"path\":\"file://"
+    }
+
+    "ObservableAudioItemSerializer deserialization throws for a path that no longer exists on disk" {
+        val gonePath = Files.createTempFile("offline", ".mp3").also { Files.deleteIfExists(it) }
+        val pathUri = gonePath.toUri().toString()
+        val offlineDriveJson =
+            """
+            {
+              "id": 1,
+              "path": "$pathUri",
+              "title": "Ghost",
+              "duration": 180,
+              "bitRate": 320,
+              "artist": {"name": "Artist", "countryCode": "US"},
+              "album": {
+                "name": "Album",
+                "albumArtist": {"name": "Artist", "countryCode": "US"},
+                "isCompilation": false,
+                "year": null,
+                "label": {"name": "Label"}
+              },
+              "genres": [],
+              "comments": null,
+              "trackNumber": null,
+              "discNumber": null,
+              "bpm": null,
+              "encoder": null,
+              "encoding": null,
+              "dateOfCreation": 1000000,
+              "lastDateModified": 1000000,
+              "playCount": 0
+            }
+            """.trimIndent()
+
+        shouldThrow<InvalidAudioFilePathException> {
+            json.decodeFromString(ObservableAudioItemSerializer, offlineDriveJson)
+        }
     }
 
     "ObservableAudioItemMapSerializer round-trip preserves the map entries" {

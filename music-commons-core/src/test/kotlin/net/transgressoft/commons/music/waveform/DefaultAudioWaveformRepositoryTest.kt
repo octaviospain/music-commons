@@ -7,10 +7,12 @@ import net.transgressoft.commons.music.audio.AudioItemMapSerializer
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.commons.music.audio.audioItem
+import net.transgressoft.commons.music.common.toJsonUri
 import net.transgressoft.lirp.event.ReactiveScope
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.json.JsonRepository
 import io.kotest.assertions.json.shouldEqualJson
+import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.optional.shouldBePresent
@@ -20,7 +22,6 @@ import io.kotest.property.arbitrary.next
 import io.kotest.property.arbitrary.short
 import io.mockk.unmockkAll
 import java.io.File
-import kotlin.io.path.absolutePathString
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -28,6 +29,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 @ExperimentalCoroutinesApi
+@Tags("linux-only")
 internal class DefaultAudioWaveformRepositoryTest : StringSpec({
 
     val testDispatcher = UnconfinedTestDispatcher()
@@ -72,7 +74,7 @@ internal class DefaultAudioWaveformRepositoryTest : StringSpec({
                     "${audioWaveform.id}",
                     buildJsonObject {
                         put("id", audioWaveform.id)
-                        put("audioFilePath", audioWaveform.audioFilePath.absolutePathString())
+                        put("audioFilePath", audioWaveform.audioFilePath.toJsonUri())
                         put("cachedWidth", 0)
                         put("normalizedAmplitudes", "")
                     }

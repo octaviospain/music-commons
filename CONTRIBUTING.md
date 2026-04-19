@@ -89,14 +89,70 @@ Alternatives considered:
 - Batching writes: Would introduce latency in persistence
 ```
 
-### Platform Requirements
+### Cross-Platform Path Handling
 
-Music Commons bundles FFmpeg native binaries for **Linux 64-bit only** (via `jave-nativebin-linux64`). This affects the waveform transcoding module.
+Windows-specific path validation (forbidden characters, reserved names, trailing dots/
+spaces, MAX_PATH=260, `\\?\` long-path prefix) activates only when the library runs on a
+Windows JVM. Linux and macOS consumers see no behavioral change -- the library remains a
+good Linux citizen.
 
-**If you develop on macOS or Windows:**
-- Waveform-related tests (`music-commons-core` waveform tests) will fail due to missing native binaries
-- You can skip these tests locally and rely on CI (which runs on Linux) for full test validation
-- All other modules and tests work cross-platform without restrictions
+CI verifies behavior on both Ubuntu and Windows matrix legs on every push and pull
+request. The next section documents the test-tag taxonomy and the Gradle flags that
+gate platform-specific suites.
+
+### Cross-Platform Testing
+
+Music Commons bundles FFmpeg native binaries for **Linux 64-bit only** (via
+`jave-nativebin-linux64`). The test suite uses four Kotest tags to gate platform-specific
+or environment-specific tests. Each tag is paired with a Gradle property that toggles its
+filter:
+
+| Tag                 | Purpose                                                      | Default      | Flag to flip default                |
+| ------------------- | ------------------------------------------------------------ | ------------ | ----------------------------------- |
+| `linux-only`        | Needs Linux specifically (`jave-nativebin-linux64` for audio transcoding, waveform generation) | included     | `-PexcludeLinuxOnly=true`           |
+| `posix-only`        | Needs POSIX semantics (POSIX file permissions like `chmod`) -- works on Linux *and* macOS | included     | `-PexcludePosixOnly=true`           |
+| `windows-only`      | Needs a real Windows host (NTFS, Windows JVM filesystem provider) | **EXCLUDED** | `-PincludeWindowsOnly=true`         |
+| `requires-playback` | Needs JavaFX MediaPlayer with audio output (fragile in headless CI) | included     | `-PexcludePlaybackTests=true`       |
+
+#### Examples
+
+```bash
+# Local Linux dev (everything except windows-only)
+gradle build
+
+# Local macOS dev (no Linux-only transcoding tests, no Windows tests)
+gradle build -PexcludeLinuxOnly=true
+
+# Local Windows dev (no POSIX permission tests, no Linux-only tests, include Windows-only tests)
+gradle build -PexcludeLinuxOnly=true -PexcludePosixOnly=true -PincludeWindowsOnly=true
+
+# Headless CI on Linux (skip flaky audio playback)
+gradle build -PexcludePlaybackTests=true
+
+# Headless CI on Windows (full Windows leg)
+gradle build -PexcludeLinuxOnly=true -PexcludePosixOnly=true -PincludeWindowsOnly=true -PexcludePlaybackTests=true
+```
+
+CI runs this matrix automatically on both `ubuntu-latest` and `windows-latest`; the Linux
+leg additionally runs ktlintCheck and SonarQube.
+
+#### Authoring Cross-Platform Tests
+
+Where possible, prefer cross-platform tests over tagging. The codebase uses two patterns
+that let tests verify Windows-validation logic on Linux/macOS hosts without skipping:
+
+- **Jimfs in-memory paths.** `Jimfs.newFileSystem(Configuration.unix())` accepts paths
+  containing characters that the host OS would reject (e.g., `|` on Windows). Use this
+  to construct test inputs that are valid in the in-memory layer but flow through the
+  real validator. See `WindowsPathValidatorTest` and `FXAudioItemTest` for examples.
+- **`OsDetector.withOverriddenIsWindows(value) { ... }`.** Flips the library's
+  `OsDetector.isWindows` flag for the duration of the block, exercising the
+  Windows-validation branch on any host. Combine with Jimfs paths for inputs that
+  contain Windows-forbidden chars.
+
+Reach for a tag only when neither pattern works: when the test exercises a real OS-level
+behavior that cannot be simulated (POSIX permissions, NTFS long-path handling, native
+binary dependencies).
 
 ## Style Guidelines
 

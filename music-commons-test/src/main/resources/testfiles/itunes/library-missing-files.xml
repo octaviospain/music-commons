@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Tracks</key>
+    <dict>
+        <key>1</key>
+        <dict>
+            <key>Track ID</key><integer>1</integer>
+            <key>Name</key><string>Existing Song</string>
+            <key>Artist</key><string>Artist One</string>
+            <key>Album</key><string>Album One</string>
+            <key>Location</key><string>file:///testfiles/existing.mp3</string>
+        </dict>
+        <key>2</key>
+        <dict>
+            <key>Track ID</key><integer>2</integer>
+            <key>Name</key><string>Missing Song</string>
+            <key>Artist</key><string>Artist Two</string>
+            <key>Album</key><string>Album Two</string>
+            <key>Location</key><string>file:///testfiles/does-not-exist.mp3</string>
+        </dict>
+    </dict>
+    <key>Playlists</key>
+    <array>
+        <dict>
+            <key>Name</key><string>Mixed Playlist</string>
+            <key>Playlist Persistent ID</key><string>MPL001</string>
+            <key>Playlist Items</key>
+            <array>
+                <dict><key>Track ID</key><integer>1</integer></dict>
+                <dict><key>Track ID</key><integer>2</integer></dict>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

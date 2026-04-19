@@ -18,6 +18,7 @@
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
+import net.transgressoft.commons.music.common.WindowsPathValidator
 import net.transgressoft.lirp.entity.ReactiveEntityBase
 import mu.KotlinLogging
 
@@ -40,7 +41,18 @@ abstract class MutablePlaylistBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPl
 
     override var isDirectory: Boolean by reactiveProperty(isDirectory)
 
-    override var name: String by reactiveProperty(name)
+    // Validate at construction so callers (deserialization, direct instantiation) get the same
+    // rejection the setter enforces. Without this, a Windows-invalid name could enter the playlist
+    // hierarchy via JSON load and surface only later when the user tries to rename it.
+    private var _name: String = name.also { WindowsPathValidator.validateName(it) }
+
+    override var name: String by reactiveProperty(
+        getter = { _name },
+        setter = { newName ->
+            WindowsPathValidator.validateName(newName)
+            _name = newName
+        }
+    )
 
     abstract override val audioItems: MutableList<I>
 

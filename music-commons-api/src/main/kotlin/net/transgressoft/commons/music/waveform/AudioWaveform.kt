@@ -34,10 +34,16 @@ interface AudioWaveform : ReactiveEntity<Int, AudioWaveform> {
     /**
      * Calculates the waveform amplitudes for the specified dimensions.
      *
+     * @param width the waveform width in pixels
+     * @param height the waveform height in pixels
+     * @param dispatcher the coroutine dispatcher on which the computation runs; defaults to
+     * [Dispatchers.IO] because the first invocation for a given waveform reads (and possibly
+     * transcodes) the audio file. Callers may inject an alternative (e.g., a test dispatcher)
+     * without having to wrap the call in `withContext`
      * @throws AudioWaveformProcessingException if an error occurs during amplitude calculation
      */
     @Throws(AudioWaveformProcessingException::class)
-    suspend fun amplitudes(width: Int, height: Int): FloatArray
+    suspend fun amplitudes(width: Int, height: Int, dispatcher: CoroutineDispatcher = Dispatchers.IO): FloatArray
 
     /**
      * Creates a visual image of the waveform with the specified colors and dimensions.

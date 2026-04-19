@@ -153,7 +153,7 @@ class PlayableWaveformPane : Region() {
                     if (width > 0 && height > 0) {
                         val w = width.toInt()
                         val h = height.toInt()
-                        val amplitudes = withContext(Dispatchers.IO) { waveform.amplitudes(w, h) }
+                        val amplitudes = waveform.amplitudes(w, h)
                         withContext(Dispatchers.JavaFx) {
                             stopShimmer()
                             cachedAmplitudes = amplitudes

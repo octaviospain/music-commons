@@ -19,6 +19,7 @@ package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.music.AudioUtils
 import net.transgressoft.commons.music.AudioUtils.audioItemTrackDiscNumberComparator
+import net.transgressoft.commons.music.common.toJsonUri
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.fail
 import io.kotest.assertions.json.shouldEqualJson
@@ -26,7 +27,6 @@ import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import java.io.File
 import java.time.ZoneOffset
-import kotlin.io.path.absolutePathString
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.contentOrNull
@@ -77,7 +77,7 @@ infix fun JsonObject.shouldContainAudioItem(audioItem: AudioItem) {
 
     val itemJson = this[id]?.jsonObject ?: fail("No JSON object found for ID: $id")
 
-    itemJson["path"]?.jsonPrimitive?.content shouldBe audioItem.path.absolutePathString()
+    itemJson["path"]?.jsonPrimitive?.content shouldBe audioItem.path.toJsonUri()
     itemJson["id"]?.jsonPrimitive?.int shouldBe audioItem.id
     itemJson["title"]?.jsonPrimitive?.content shouldBe audioItem.title
     itemJson["duration"]?.jsonPrimitive?.int shouldBe audioItem.duration.toSeconds().toInt()

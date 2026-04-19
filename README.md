@@ -48,8 +48,8 @@ dependencies {
 The core module depends on [lirp](https://github.com/octaviospain/lirp):
 
 ```kotlin
-implementation("net.transgressoft:lirp-api:2.3.0")
-implementation("net.transgressoft:lirp-core:2.3.0")
+implementation("net.transgressoft:lirp-api:2.4.0")
+implementation("net.transgressoft:lirp-core:2.4.0")
 ```
 
 ## Key Features
@@ -105,6 +105,33 @@ Unknown genre strings are preserved as `Genre.Custom(name)` instead of being dis
 - **Thread safety**: Audio item collections use `FxAggregateList` delegates that auto-dispatch listener notifications to the JavaFX Application Thread; artist catalog and album properties are updated via `Platform.runLater` from CRUD subscriptions
 - **Custom controls**: `WaveformPane` for static waveforms, `PlayableWaveformPane` for playback-aware visualization with seek
 
+### Typed Path Validation Exceptions
+
+Audio-item construction and iTunes import now throw typed exceptions for invalid paths:
+
+- `InvalidAudioFilePathException` -- any of: file does not exist, path is not a regular
+  file, file is not readable. Subclass of `AudioItemManipulationException`, so existing
+  catch blocks continue to work.
+- `WindowsPathException` (subclass of `InvalidAudioFilePathException`) -- thrown only when
+  the JVM runs on Windows. Carries a `WindowsViolation` reason: `ForbiddenChar`,
+  `ReservedName`, `TrailingDotOrSpace`, or `ExceedsMaxPath`.
+
+On a real Windows JVM, `Paths.get("bad|name.mp3")` throws `java.nio.file.InvalidPathException`
+at parse time, before the validator even runs. `WindowsPathException` surfaces for inputs that
+parse successfully but fail validation: reserved names, trailing dot/space, MAX_PATH overflow,
+or paths assembled from already-parsed segments.
+
+```kotlin
+try {
+    // Reserved name -- parses fine on Windows, but the validator rejects it.
+    library.audioItemFromFile(Paths.get("C:\\music\\NUL.mp3"))
+} catch (e: WindowsPathException) {
+    println("Windows-specific: ${e.violation}")
+} catch (e: InvalidAudioFilePathException) {
+    println("Invalid path: ${e.message}")
+}
+```
+
 ### iTunes Library Import
 
 The `music-commons-core` module includes an iTunes library XML import engine for migrating
@@ -129,8 +156,29 @@ implementation, so it works with both `CoreMusicLibrary` (headless) and `FXMusic
        onProgress = { progress -> println("${progress.itemsProcessed}/${progress.totalItems}") }
    )
    val result = future.get()
-   println("Imported: ${result.importedCount}, Skipped: ${result.skippedCount}")
+   result.imported                // List<ReactiveAudioItem<*>> -- successful imports
+   result.unresolved              // List<UnresolvedTrack> -- could not resolve
+   result.rejectedPlaylistNames   // List<RejectedPlaylistName> -- Windows-incompatible names
    ```
+
+#### Structured Import Results
+
+`ItunesImportService.importAsync()` returns a structured `ImportResult` with three typed buckets
+so consumers can handle every failure mode individually:
+
+```kotlin
+val result = itunesImport.importAsync(...).await()
+result.imported                // List<ReactiveAudioItem<*>> -- successful imports
+result.unresolved              // List<UnresolvedTrack> -- could not resolve (FileNotFound,
+                               //   UnsupportedType, ImportError)
+result.rejectedPlaylistNames   // List<RejectedPlaylistName> -- playlist name incompatible
+                               //   with Windows filesystems (only rejected when JVM is
+                               //   running on Windows)
+```
+
+Filenames in iTunes XML are also normalized to Unicode NFC form after URI decoding, which
+fixes the common case of a macOS-origin library failing to resolve tracks on Linux or
+Windows due to NFD-encoded accented characters.
 
 **Import policy options:**
 
@@ -139,8 +187,10 @@ implementation, so it works with both `CoreMusicLibrary` (headless) and `FXMusic
 | `useFileMetadata` | `true` | When `true`, metadata comes from audio file tags. When `false`, user-facing fields come from iTunes data. |
 | `holdPlayCount` | `true` | Transfers play counts from iTunes to imported items. |
 | `writeMetadata` | `true` | Writes iTunes metadata to audio file tags after import. |
-| `ignoreNotFound` | `true` | Skips tracks whose files don't exist on disk instead of erroring. |
 | `acceptedFileTypes` | All | Filters tracks by audio file type (MP3, M4A, WAV, FLAC). |
+
+Tracks whose files don't exist on disk are always recorded in `ImportResult.unresolved`
+with reason `UnresolvedReason.FileNotFound`; consumers decide how to surface them.
 
 ## Module Details
 
@@ -150,7 +200,7 @@ Defines contracts and interfaces for the audio management domain.
 
 **Key Interfaces:**
 - `MusicLibrary<I, P>` -- Unified facade interface implemented by both `CoreMusicLibrary` and `FXMusicLibrary`, enabling library-agnostic consumers like `ItunesImportService`
-- `ReactiveAudioItem<I>` -- Audio file representation with metadata and `withEventsSuppressed` for bulk property writes without mutation events
+- `ReactiveAudioItem<I>` -- Audio file representation with metadata
 - `ReactiveAudioLibrary<I, AC>` -- Generic CRUD repository with reactive event publishing and `createAudioItem(factory)` for ID-encapsulated construction
 - `ReactiveAudioPlaylist<I, P>` / `ReactivePlaylistHierarchy<I, P>` -- Generic playlist management with M3U export and ID-based `createPlaylist` overload
 - `AudioWaveform` / `AudioWaveformRepository` -- Waveform data and generation
@@ -340,8 +390,6 @@ gradle ktlintCheck
 # Generate documentation
 gradle dokkaHtml
 ```
-
-> **Note:** Waveform transcoding requires FFmpeg native binaries that are only bundled for Linux 64-bit (`jave-nativebin-linux64`). Waveform-related tests will fail on macOS and Windows. Non-Linux developers can safely skip these tests locally and rely on CI for full test coverage.
 
 ## Contributing
 

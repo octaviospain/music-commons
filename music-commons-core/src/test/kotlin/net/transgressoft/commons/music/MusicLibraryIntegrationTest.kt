@@ -6,11 +6,13 @@ import net.transgressoft.commons.music.audio.AudioLibrary
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.commons.music.common.toJsonUri
 import net.transgressoft.commons.music.playlist.PlaylistHierarchy
 import net.transgressoft.commons.music.playlist.asJsonKeyValues
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
 import net.transgressoft.lirp.event.ReactiveScope
+import io.kotest.assertions.json.shouldContainJsonKeyValue
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
@@ -78,7 +80,8 @@ internal class MusicLibraryIntegrationTest : StringSpec({
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        audioFile.readText() shouldContain audioItem.path.toString()
+        // Compare via JSON key/value using the file:// URI form that toJsonUri() serializes.
+        audioFile.readText().shouldContainJsonKeyValue("${audioItem.id}.path", audioItem.path.toJsonUri())
         audioLibrary.findAlbumAudioItems(audioItem.artist, audioItem.album.name).shouldContainOnly(audioItem)
 
         val waveform = waveforms.getOrCreateWaveformAsync(audioItem, 780, 335, testDispatcher.asExecutor())
@@ -87,7 +90,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
 
         waveform.get() shouldNotBe null
         waveform.get().id shouldBe audioItem.id
-        waveformsFile.readText() shouldContain audioItem.path.toString()
+        waveformsFile.readText().shouldContainJsonKeyValue("${waveform.get().id}.audioFilePath", audioItem.path.toJsonUri())
         waveformsFile.readText() shouldContain waveform.get().id.toString()
 
         playlistHierarchy.createPlaylist("Test Playlist").also { it.addAudioItem(audioItem) }

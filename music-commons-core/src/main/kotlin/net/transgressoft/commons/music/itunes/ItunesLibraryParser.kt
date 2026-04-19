@@ -1,5 +1,7 @@
 package net.transgressoft.commons.music.itunes
 
+import net.transgressoft.commons.music.audio.InvalidAudioFilePathException
+import net.transgressoft.commons.music.common.WindowsPathValidator
 import com.dd.plist.NSArray
 import com.dd.plist.NSDate
 import com.dd.plist.NSDictionary
@@ -26,10 +28,19 @@ object ItunesLibraryParser {
      *
      * @param xmlPath path to the `library.xml` iTunes export file
      * @return an [ItunesLibrary] containing all valid tracks and non-smart playlists
-     * @throws IllegalArgumentException if the file does not exist
+     * @throws InvalidAudioFilePathException if the file does not exist, is not a regular file, or is not readable
      */
     fun parse(xmlPath: Path): ItunesLibrary {
-        require(Files.exists(xmlPath)) { "iTunes library file '${xmlPath.toAbsolutePath()}' does not exist" }
+        WindowsPathValidator.validatePath(xmlPath)
+        if (!Files.exists(xmlPath)) {
+            throw InvalidAudioFilePathException("iTunes library file '${xmlPath.toAbsolutePath()}' does not exist")
+        }
+        if (!Files.isRegularFile(xmlPath)) {
+            throw InvalidAudioFilePathException("iTunes library path '${xmlPath.toAbsolutePath()}' is not a regular file")
+        }
+        if (!Files.isReadable(xmlPath)) {
+            throw InvalidAudioFilePathException("iTunes library file '${xmlPath.toAbsolutePath()}' is not readable")
+        }
         val root = PropertyListParser.parse(xmlPath.toFile()) as NSDictionary
         val tracks = parseTracks(root.objectForKey("Tracks") as? NSDictionary ?: NSDictionary())
         val playlists = parsePlaylists(root.objectForKey("Playlists") as? NSArray ?: NSArray(0))

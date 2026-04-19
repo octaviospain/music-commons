@@ -1,14 +1,18 @@
 package net.transgressoft.commons.music.itunes
 
 import net.transgressoft.commons.music.CoreMusicLibrary
+import net.transgressoft.commons.music.audio.ArbitraryAudioFile
 import net.transgressoft.commons.music.audio.AudioFileType
+import net.transgressoft.commons.music.common.OsDetector
 import net.transgressoft.lirp.event.ReactiveScope
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.ints.shouldBeLessThan
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.tag.FieldKey
 import java.io.File
@@ -23,22 +27,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
-@OptIn(ExperimentalCoroutinesApi::class)
-private fun testResourcePath(resource: String): Path {
-    val url = ItunesImportServiceTest::class.java.getResource(resource)!!
-    return when (url.protocol) {
-        "file" -> Paths.get(url.toURI())
-        else -> {
-            val extension = resource.substringAfterLast('.')
-            val tmp = File.createTempFile("test-resource-", ".$extension").also { it.deleteOnExit() }
-            ItunesImportServiceTest::class.java.getResourceAsStream(resource)!!.use { input ->
-                Files.copy(input, tmp.toPath(), StandardCopyOption.REPLACE_EXISTING)
-            }
-            tmp.toPath()
-        }
-    }
-}
-
 @ExperimentalCoroutinesApi
 @DisplayName("ItunesImportService")
 internal class ItunesImportServiceTest : StringSpec({
@@ -49,8 +37,8 @@ internal class ItunesImportServiceTest : StringSpec({
     lateinit var musicLibrary: CoreMusicLibrary
     lateinit var service: ItunesImportService
 
-    val mp3File = testResourcePath("/testfiles/testeable.mp3")
-    val flacFile = testResourcePath("/testfiles/testeable.flac")
+    val mp3File = ArbitraryAudioFile.getResourceAsFile("/testfiles/testeable.mp3").toPath()
+    val flacFile = ArbitraryAudioFile.getResourceAsFile("/testfiles/testeable.flac").toPath()
 
     fun trackFor(
         id: Int,
@@ -118,9 +106,8 @@ internal class ItunesImportServiceTest : StringSpec({
 
         val result = service.importAsync(listOf(playlist), library, policy).get()
 
-        result.importedCount shouldBe 2
-        result.skippedCount shouldBe 0
-        result.errorCount shouldBe 0
+        result.imported.size shouldBe 2
+        result.unresolved shouldHaveSize 0
         musicLibrary.audioLibrary().size() shouldBe 2
     }
 
@@ -132,8 +119,8 @@ internal class ItunesImportServiceTest : StringSpec({
 
         val result = service.importAsync(listOf(playlist), library, policy).get()
 
-        result.importedCount shouldBe 1
-        result.errorCount shouldBe 0
+        result.imported.size shouldBe 1
+        result.unresolved shouldHaveSize 0
         val items = musicLibrary.audioLibrary().search { true }
         items shouldHaveSize 1
         val item = items.first()
@@ -150,7 +137,7 @@ internal class ItunesImportServiceTest : StringSpec({
 
         val result = service.importAsync(listOf(playlist), library, policy).get()
 
-        result.importedCount shouldBe 1
+        result.imported.size shouldBe 1
         musicLibrary.audioLibrary().search { true }.first().playCount shouldBe 42.toShort()
     }
 
@@ -162,20 +149,21 @@ internal class ItunesImportServiceTest : StringSpec({
 
         val result = service.importAsync(listOf(playlist), library, policy).get()
 
-        result.importedCount shouldBe 1
+        result.imported.size shouldBe 1
         musicLibrary.audioLibrary().search { true }.first().playCount shouldBe 10.toShort()
     }
 
-    "ItunesImportService skips tracks with missing files when ignoreNotFound=true" {
+    "ItunesImportService reports missing files in unresolved bucket with FileNotFound reason" {
         val track = trackFor(1, Paths.get("/non/existent/file.mp3"))
         val playlist = playlistFor("PL", "PL1", listOf(1))
         val library = ItunesLibrary(mapOf(1 to track), listOf(playlist))
-        val policy = ItunesImportPolicy(ignoreNotFound = true, writeMetadata = false)
+        val policy = ItunesImportPolicy(writeMetadata = false)
 
         val result = service.importAsync(listOf(playlist), library, policy).get()
 
-        result.skippedCount shouldBe 1
-        result.importedCount shouldBe 0
+        result.unresolved shouldHaveSize 1
+        result.unresolved.first().reason shouldBe UnresolvedReason.FileNotFound
+        result.imported shouldHaveSize 0
     }
 
     "ItunesImportService creates playlists from selected playlists" {
@@ -186,7 +174,7 @@ internal class ItunesImportServiceTest : StringSpec({
 
         val result = service.importAsync(listOf(playlist), library, policy).get()
 
-        result.playlistsCreated shouldBe 1
+        result.rejectedPlaylistNames shouldHaveSize 0
         musicLibrary.findPlaylistByName("My Import Playlist") shouldBePresent { it.name shouldBe "My Import Playlist" }
     }
 
@@ -199,7 +187,7 @@ internal class ItunesImportServiceTest : StringSpec({
 
         val result = service.importAsync(listOf(folder, child), library, policy).get()
 
-        result.playlistsCreated shouldBe 2
+        result.rejectedPlaylistNames shouldHaveSize 0
         musicLibrary.findPlaylistByName("My Folder").shouldBePresent().isDirectory shouldBe true
         musicLibrary.findPlaylistByName("Child Playlist") shouldBePresent { it.name shouldBe "Child Playlist" }
     }
@@ -214,7 +202,7 @@ internal class ItunesImportServiceTest : StringSpec({
 
         val result = service.importAsync(listOf(grandparent, parent, child), library, policy).get()
 
-        result.playlistsCreated shouldBe 3
+        result.rejectedPlaylistNames shouldHaveSize 0
         musicLibrary.findPlaylistByName("Root Folder").shouldBePresent().isDirectory shouldBe true
         musicLibrary.findPlaylistByName("Sub Folder").shouldBePresent().isDirectory shouldBe true
         musicLibrary.findPlaylistByName("Leaf Playlist") shouldBePresent { it.name shouldBe "Leaf Playlist" }
@@ -237,21 +225,21 @@ internal class ItunesImportServiceTest : StringSpec({
         progressSnapshots.last().totalItems shouldBe 2
     }
 
-    "ItunesImportService skips tracks with unsupported file types" {
+    "ItunesImportService reports unsupported file types in unresolved bucket" {
         val track = trackFor(1, Paths.get("/music/song.ogg"))
         val playlist = playlistFor("PL", "PL1", listOf(1))
         val library = ItunesLibrary(mapOf(1 to track), listOf(playlist))
         val policy =
             ItunesImportPolicy(
                 acceptedFileTypes = setOf(AudioFileType.MP3),
-                ignoreNotFound = true,
                 writeMetadata = false
             )
 
         val result = service.importAsync(listOf(playlist), library, policy).get()
 
-        result.skippedCount shouldBe 1
-        result.importedCount shouldBe 0
+        result.unresolved shouldHaveSize 1
+        result.unresolved.first().reason shouldBe UnresolvedReason.UnsupportedType("ogg")
+        result.imported shouldHaveSize 0
     }
 
     "ItunesImportService writes iTunes metadata to file tags when writeMetadata=true" {
@@ -265,7 +253,7 @@ internal class ItunesImportServiceTest : StringSpec({
 
         val result = service.importAsync(listOf(playlist), library, policy).get()
 
-        result.importedCount shouldBe 1
+        result.imported.size shouldBe 1
         val audioFile = AudioFileIO.read(tmpFile)
         audioFile.tag.getFirst(FieldKey.TITLE) shouldBe "Written Title"
         audioFile.tag.getFirst(FieldKey.ARTIST) shouldBe "Written Artist"
@@ -278,7 +266,7 @@ internal class ItunesImportServiceTest : StringSpec({
         val library = ItunesLibrary(tracks, listOf(playlist))
         val policy = ItunesImportPolicy(useFileMetadata = true, writeMetadata = false)
 
-        var future: CompletableFuture<ItunesImportResult>? = null
+        var future: CompletableFuture<ImportResult>? = null
         future =
             service.importAsync(listOf(playlist), library, policy) { progress ->
                 if (progress.itemsProcessed >= 1) {
@@ -307,8 +295,8 @@ internal class ItunesImportServiceTest : StringSpec({
         musicLibrary.createPlaylist("Existing Playlist")
         val result = service.importAsync(listOf(playlist), library, policy).get()
 
-        result.importedCount shouldBe 1
-        result.playlistsCreated shouldBe 1
+        result.imported.size shouldBe 1
+        result.rejectedPlaylistNames shouldHaveSize 0
         musicLibrary.findPlaylistByName("Existing Playlist_1") shouldBePresent { it.name shouldBe "Existing Playlist_1" }
     }
 
@@ -322,7 +310,7 @@ internal class ItunesImportServiceTest : StringSpec({
         musicLibrary.createPlaylist("Duped_1")
         val result = service.importAsync(listOf(playlist), library, policy).get()
 
-        result.playlistsCreated shouldBe 1
+        result.rejectedPlaylistNames shouldHaveSize 0
         musicLibrary.findPlaylistByName("Duped_2") shouldBePresent { it.name shouldBe "Duped_2" }
     }
 
@@ -336,8 +324,123 @@ internal class ItunesImportServiceTest : StringSpec({
         musicLibrary.createPlaylistDirectory("My Folder")
         val result = service.importAsync(listOf(folder, child), library, policy).get()
 
-        result.playlistsCreated shouldBe 2
+        result.rejectedPlaylistNames shouldHaveSize 0
         musicLibrary.findPlaylistByName("My Folder_1").shouldBePresent().isDirectory shouldBe true
         musicLibrary.findPlaylistByName("Child") shouldBePresent { it.name shouldBe "Child" }
+    }
+
+    "ItunesImportService imports baseline with all tracks and one playlist" {
+        val track1 = trackFor(1, mp3File, title = "Song One")
+        val track2 = trackFor(2, flacFile, title = "Song Two")
+        val playlist = playlistFor("Baseline Playlist", "BPL001", listOf(1, 2))
+        val library = ItunesLibrary(mapOf(1 to track1, 2 to track2), listOf(playlist))
+        val policy = ItunesImportPolicy(useFileMetadata = true, writeMetadata = false)
+
+        val result = service.importAsync(listOf(playlist), library, policy).get()
+
+        result.imported shouldHaveSize 2
+        result.unresolved.shouldBeEmpty()
+        result.rejectedPlaylistNames.shouldBeEmpty()
+    }
+
+    "ItunesImportService resolves NFD-encoded filenames via NFC normalization" {
+        // Explicit \u escapes so editor/IDE auto-normalization cannot collapse the two forms.
+        // NFC: precomposed e-acute (U+00E9). NFD: e (U+0065) + combining acute (U+0301).
+        val nfcName = "caf\u00e9.mp3"
+        val nfdName = "cafe\u0301.mp3"
+        check(nfdName != nfcName) { "NFD and NFC test inputs collapsed to the same string" }
+        val tmpDir = Files.createTempDirectory("itunes-nfc-test")
+        val nfcFile = tmpDir.resolve(nfcName)
+        Files.copy(mp3File, nfcFile, StandardCopyOption.REPLACE_EXISTING)
+
+        // Build a track whose location uses NFD form (e + combining acute)
+        val nfdLocation = nfcFile.parent.resolve(nfdName).toUri().toString()
+        val track =
+            ItunesTrack(
+                id = 1,
+                title = "Café Song",
+                artist = "Artist",
+                albumArtist = "Artist",
+                album = "Album",
+                genre = null,
+                year = null,
+                trackNumber = null,
+                discNumber = null,
+                totalTimeMs = 180000L,
+                bitRate = 320,
+                playCount = 0,
+                rating = 0,
+                bpm = null,
+                comments = null,
+                location = nfdLocation,
+                isCompilation = false,
+                persistentId = "NFD-1",
+                dateAdded = LocalDateTime.of(2020, 1, 1, 0, 0)
+            )
+        val playlist = playlistFor("NFD Playlist", "NPL001", listOf(1))
+        val library = ItunesLibrary(mapOf(1 to track), listOf(playlist))
+        val policy = ItunesImportPolicy(useFileMetadata = true, writeMetadata = false)
+
+        val result = service.importAsync(listOf(playlist), library, policy).get()
+
+        try {
+            result.imported shouldHaveSize 1
+            result.unresolved.shouldBeEmpty()
+        } finally {
+            tmpDir.toFile().deleteRecursively()
+        }
+    }
+
+    "ItunesImportService rejects Windows-forbidden playlist names when isWindows=true" {
+        val track = trackFor(1, mp3File, title = "Valid Song")
+        val forbidden = playlistFor("My|Playlist", "WPL001", listOf(1))
+        val reserved = playlistFor("NUL", "WPL002", listOf(1))
+        val trailingDot = playlistFor("valid.", "WPL003", listOf(1))
+        val allPlaylists = listOf(forbidden, reserved, trailingDot)
+        val library = ItunesLibrary(mapOf(1 to track), allPlaylists)
+        val policy = ItunesImportPolicy(useFileMetadata = true, writeMetadata = false)
+
+        OsDetector.withOverriddenIsWindows(true) {
+            val result = service.importAsync(allPlaylists, library, policy).get()
+
+            result.imported shouldHaveSize 1
+            result.rejectedPlaylistNames shouldHaveSize 3
+            result.rejectedPlaylistNames[0].name shouldBe "My|Playlist"
+            result.rejectedPlaylistNames[0].reason.shouldBeInstanceOf<RejectionReason.ForbiddenChar>()
+            (result.rejectedPlaylistNames[0].reason as RejectionReason.ForbiddenChar).char shouldBe '|'
+            result.rejectedPlaylistNames[1].name shouldBe "NUL"
+            result.rejectedPlaylistNames[1].reason shouldBe RejectionReason.ReservedName
+            result.rejectedPlaylistNames[2].name shouldBe "valid."
+            result.rejectedPlaylistNames[2].reason shouldBe RejectionReason.TrailingDotOrSpace
+        }
+    }
+
+    "ItunesImportService accepts Windows-forbidden playlist names on Linux (pass-through)" {
+        val track = trackFor(1, mp3File, title = "Valid Song")
+        val forbidden = playlistFor("My|Playlist", "WPL001", listOf(1))
+        val reserved = playlistFor("NUL", "WPL002", listOf(1))
+        val trailingDot = playlistFor("valid.", "WPL003", listOf(1))
+        val allPlaylists = listOf(forbidden, reserved, trailingDot)
+        val library = ItunesLibrary(mapOf(1 to track), allPlaylists)
+        val policy = ItunesImportPolicy(useFileMetadata = true, writeMetadata = false)
+
+        OsDetector.withOverriddenIsWindows(false) {
+            val result = service.importAsync(allPlaylists, library, policy).get()
+
+            result.imported shouldHaveSize 1
+            result.rejectedPlaylistNames.shouldBeEmpty()
+        }
+    }
+
+    "ItunesImportService resolveTrackPath is idempotent for ASCII input" {
+        val track = trackFor(1, mp3File, title = "ASCII Song")
+        val playlist = playlistFor("PL", "PL1", listOf(1))
+        val library = ItunesLibrary(mapOf(1 to track), listOf(playlist))
+        val policy = ItunesImportPolicy(useFileMetadata = true, writeMetadata = false)
+
+        val result = service.importAsync(listOf(playlist), library, policy).get()
+
+        result.imported shouldHaveSize 1
+        result.unresolved.shouldBeEmpty()
     }
 })

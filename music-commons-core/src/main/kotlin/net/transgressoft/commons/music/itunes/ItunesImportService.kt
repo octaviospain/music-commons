@@ -9,13 +9,18 @@ import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.ImmutableLabel
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
+import net.transgressoft.commons.music.audio.WindowsPathException
+import net.transgressoft.commons.music.audio.WindowsViolation
+import net.transgressoft.commons.music.common.WindowsPathValidator
 import mu.KotlinLogging
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.text.Normalizer
 import java.util.concurrent.CompletableFuture
 import kotlin.io.path.extension
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -47,7 +52,7 @@ class ItunesImportService(private val musicLibrary: MusicLibrary<*, *>) {
      * Imports tracks from [selectedPlaylists] (and their referenced tracks from [itunesLibrary])
      * into the [MusicLibrary], applying the given [policy].
      *
-     * Returns a [CompletableFuture] that completes with an [ItunesImportResult] summarizing the import.
+     * Returns a [CompletableFuture] that completes with an [ImportResult] summarizing the import.
      * The future can be canceled via [CompletableFuture.cancel], which stops processing between tracks.
      *
      * @param selectedPlaylists Playlists chosen by the consumer for import.
@@ -61,17 +66,15 @@ class ItunesImportService(private val musicLibrary: MusicLibrary<*, *>) {
         itunesLibrary: ItunesLibrary,
         policy: ItunesImportPolicy = ItunesImportPolicy(),
         onProgress: (ImportProgress) -> Unit = {}
-    ): CompletableFuture<ItunesImportResult> =
+    ): CompletableFuture<ImportResult> =
         CoroutineScope(Dispatchers.IO).future {
             val trackImportResult = importTracks(selectedPlaylists, itunesLibrary, policy, onProgress)
-            val playlistsCreated = createPlaylists(selectedPlaylists, trackImportResult.trackIdToItem)
+            val rejectedNames = createPlaylists(selectedPlaylists, trackImportResult.trackIdToItem)
 
-            ItunesImportResult(
-                importedCount = trackImportResult.importedCount,
-                skippedCount = trackImportResult.skippedCount,
-                errorCount = trackImportResult.errors.size,
-                errors = trackImportResult.errors,
-                playlistsCreated = playlistsCreated
+            ImportResult(
+                imported = trackImportResult.imported.toList(),
+                unresolved = trackImportResult.unresolved.toList(),
+                rejectedPlaylistNames = rejectedNames
             )
         }
 
@@ -101,22 +104,27 @@ class ItunesImportService(private val musicLibrary: MusicLibrary<*, *>) {
 
             if (isUnsupportedFileType(path, policy)) {
                 logger.debug { "Skipping track '${track.title}': unsupported file type '${path.extension.lowercase()}'" }
-                accumulator.skippedCount++
+                accumulator.unresolved.add(UnresolvedTrack(path, track.title, UnresolvedReason.UnsupportedType(path.extension.lowercase())))
                 return
             }
 
             if (!Files.exists(path)) {
-                handleMissingFile(track, path, policy, accumulator)
+                logger.debug { "Track '${track.title}': file not found at $path" }
+                accumulator.unresolved.add(UnresolvedTrack(path, track.title, UnresolvedReason.FileNotFound))
                 return
             }
 
             val audioItem = importTrack(track, path, policy)
             accumulator.trackIdToItem[trackId] = audioItem
-            accumulator.importedCount++
+            accumulator.imported.add(audioItem)
             logger.debug { "Imported track '${track.title}' with id ${audioItem.id}" }
+        } catch (e: CancellationException) {
+            // Cooperative cancellation must propagate; recording it as an UnresolvedTrack would
+            // contradict importAsync's "stops processing between tracks" contract.
+            throw e
         } catch (e: Exception) {
             logger.error("Error importing track '${track.title}'", e)
-            accumulator.errors.add(ImportError(track.title, e.message ?: "Unknown error"))
+            accumulator.unresolved.add(UnresolvedTrack(null, track.title, UnresolvedReason.ImportError(e.message ?: "Unknown error")))
         }
     }
 
@@ -124,15 +132,6 @@ class ItunesImportService(private val musicLibrary: MusicLibrary<*, *>) {
         val extension = path.extension.lowercase()
         val fileType = AudioFileType.entries.find { it.extension == extension }
         return fileType == null || fileType !in policy.acceptedFileTypes
-    }
-
-    private fun handleMissingFile(track: ItunesTrack, path: Path, policy: ItunesImportPolicy, accumulator: TrackImportAccumulator) {
-        if (policy.ignoreNotFound) {
-            logger.debug { "Skipping track '${track.title}': file not found at $path" }
-            accumulator.skippedCount++
-        } else {
-            accumulator.errors.add(ImportError(track.title, "File not found: $path"))
-        }
     }
 
     private suspend fun importTrack(track: ItunesTrack, path: Path, policy: ItunesImportPolicy): ReactiveAudioItem<*> {
@@ -155,7 +154,7 @@ class ItunesImportService(private val musicLibrary: MusicLibrary<*, *>) {
 
     private fun applyItunesMetadata(audioItem: ReactiveAudioItem<*>, track: ItunesTrack) {
         val (artist, album, genres) = resolveItunesMetadata(track)
-        audioItem.withEventsSuppressed {
+        audioItem.withEventsDisabled {
             audioItem.title = track.title
             audioItem.artist = artist
             audioItem.album = album
@@ -184,53 +183,67 @@ class ItunesImportService(private val musicLibrary: MusicLibrary<*, *>) {
 
     private fun resolveTrackPath(track: ItunesTrack): Path {
         val uri = URI(track.location)
-        return Paths.get(uri)
+        val rawPath = Paths.get(uri)
+        // Normalize filename to NFC: macOS iTunes writes NFD-decomposed Unicode;
+        // Linux/Windows expect NFC. Idempotent and no-op for ASCII.
+        val normalizedName = Normalizer.normalize(rawPath.fileName.toString(), Normalizer.Form.NFC)
+        return rawPath.parent?.resolve(normalizedName) ?: rawPath
     }
 
-    private fun createPlaylists(selectedPlaylists: List<ItunesPlaylist>, trackIdToItem: Map<Int, ReactiveAudioItem<*>>): Int {
+    private fun createPlaylists(
+        selectedPlaylists: List<ItunesPlaylist>,
+        trackIdToItem: Map<Int, ReactiveAudioItem<*>>
+    ): List<RejectedPlaylistName> {
         val createdNameByPersistentId = mutableMapOf<String, String>()
-        var playlistsCreated = 0
+        val rejected = mutableListOf<RejectedPlaylistName>()
 
-        playlistsCreated += createFolderDirectories(selectedPlaylists, createdNameByPersistentId)
-        playlistsCreated += createRegularPlaylists(selectedPlaylists, trackIdToItem, createdNameByPersistentId)
+        createFolderDirectories(selectedPlaylists, createdNameByPersistentId, rejected)
+        createRegularPlaylists(selectedPlaylists, trackIdToItem, createdNameByPersistentId, rejected)
         wirePlaylistHierarchy(selectedPlaylists, createdNameByPersistentId)
 
-        return playlistsCreated
+        return rejected
     }
 
     private fun createFolderDirectories(
         selectedPlaylists: List<ItunesPlaylist>,
-        createdNameByPersistentId: MutableMap<String, String>
-    ): Int {
-        var count = 0
+        createdNameByPersistentId: MutableMap<String, String>,
+        rejected: MutableList<RejectedPlaylistName>
+    ) {
         for (playlist in selectedPlaylists) {
             if (!playlist.isFolder) continue
+            if (!acceptPlaylistName(playlist.name, rejected)) continue
             val uniqueName = resolveUniqueName(playlist.name)
             musicLibrary.createPlaylistDirectory(uniqueName)
             createdNameByPersistentId[playlist.persistentId] = uniqueName
-            count++
             logger.debug { "Created playlist directory '$uniqueName'" }
         }
-        return count
     }
 
     private fun createRegularPlaylists(
         selectedPlaylists: List<ItunesPlaylist>,
         trackIdToItem: Map<Int, ReactiveAudioItem<*>>,
-        createdNameByPersistentId: MutableMap<String, String>
-    ): Int {
-        var count = 0
+        createdNameByPersistentId: MutableMap<String, String>,
+        rejected: MutableList<RejectedPlaylistName>
+    ) {
         for (playlist in selectedPlaylists) {
             if (playlist.isFolder) continue
+            if (!acceptPlaylistName(playlist.name, rejected)) continue
             val audioItemIds = playlist.trackIds.mapNotNull { trackIdToItem[it]?.id }
             val uniqueName = resolveUniqueName(playlist.name)
             musicLibrary.createPlaylist(uniqueName, audioItemIds)
             createdNameByPersistentId[playlist.persistentId] = uniqueName
-            count++
             logger.debug { "Created playlist '$uniqueName' with ${audioItemIds.size} items" }
         }
-        return count
     }
+
+    private fun acceptPlaylistName(name: String, rejected: MutableList<RejectedPlaylistName>): Boolean =
+        try {
+            WindowsPathValidator.validateName(name)
+            true
+        } catch (e: WindowsPathException) {
+            rejected.add(RejectedPlaylistName(name, e.violation.toRejectionReason()))
+            false
+        }
 
     private fun wirePlaylistHierarchy(
         selectedPlaylists: List<ItunesPlaylist>,
@@ -258,13 +271,23 @@ class ItunesImportService(private val musicLibrary: MusicLibrary<*, *>) {
         return "${name}_$suffix"
     }
 
+    private fun WindowsViolation.toRejectionReason(): RejectionReason =
+        when (this) {
+            is WindowsViolation.ForbiddenChar -> RejectionReason.ForbiddenChar(char)
+            is WindowsViolation.ReservedName -> RejectionReason.ReservedName
+            WindowsViolation.TrailingDotOrSpace -> RejectionReason.TrailingDotOrSpace
+            // Today validateName(name) does not enforce MAX_PATH on a single segment, so this branch is
+            // currently unreachable. Mapped exhaustively (rather than throwing) so any future tightening
+            // of the validator surfaces as a typed rejection instead of a hard import failure.
+            WindowsViolation.ExceedsMaxPath -> RejectionReason.ExceedsMaxPath
+        }
+
     private data class ItunesMetadata(val artist: Artist, val album: Album, val genres: Set<Genre>)
 
     private class TrackImportAccumulator(val totalItems: Int) {
         var itemsProcessed = 0
-        var importedCount = 0
-        var skippedCount = 0
-        val errors = mutableListOf<ImportError>()
+        val imported = mutableListOf<ReactiveAudioItem<*>>()
+        val unresolved = mutableListOf<UnresolvedTrack>()
         val trackIdToItem = mutableMapOf<Int, ReactiveAudioItem<*>>()
     }
 }
