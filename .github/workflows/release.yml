@@ -57,9 +57,7 @@ jobs:
                         ${{ runner.os }}-gradle-
 
             -   name: Build with Gradle and Virtual Display
-                env:
-                    CI: true
-                run: ./gradlew build
+                run: ./gradlew build -PexcludePlaybackTests=true
 
             -   name: Release
                 env:

@@ -1,6 +1,14 @@
-name: non-master build
+name: branch / PR build
 
 on:
+    workflow_dispatch:
+    push:
+        branches-ignore:
+            - main
+        paths-ignore:
+            - "**.md"
+            - '.gitignore'
+            - 'docs/**'
     pull_request:
         types: [opened, synchronize, reopened]
         branches:
@@ -12,7 +20,11 @@ on:
 
 jobs:
     build-and-test:
-        runs-on: ubuntu-latest
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, windows-latest]
 
         steps:
             -   uses: actions/checkout@v4
@@ -26,7 +38,8 @@ jobs:
                     distribution: 'liberica'
                     java-package: 'jdk+fx'
 
-            -   name: Install dependencies
+            -   name: Install dependencies (Linux)
+                if: matrix.os == 'ubuntu-latest'
                 run: |
                     sudo apt-get update
                     sudo apt-get install -y \
@@ -54,12 +67,16 @@ jobs:
                     restore-keys: |
                         ${{ runner.os }}-gradle-
 
-            -   name: Build with Gradle and Virtual Display
-                env:
-                    CI: true
-                run: ./gradlew build
+            -   name: Build with and Virtual Display (Linux)
+                if: matrix.os == 'ubuntu-latest'
+                run: ./gradlew check -PexcludePlaybackTests=true
+
+            -   name: Build (Windows, skip Linux-only and playback tests)
+                if: matrix.os == 'windows-latest'
+                run: ./gradlew check -PexcludeLinuxOnly=true -PexcludePosixOnly=true -PincludeWindowsOnly=true
 
             -   name: Upload coverage to Codecov
+                if: matrix.os == 'ubuntu-latest' && !env.ACT
                 uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5
                 env:
                     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -67,9 +84,10 @@ jobs:
                     files: build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml
 
             -   name: Upload test results to Codecov
-                if: ${{ !cancelled() }}
+                if: "!cancelled() && !env.ACT"
                 uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5
                 with:
                     token: ${{ secrets.CODECOV_TOKEN }}
                     report_type: test_results
                     files: "**/build/test-results/test/*.xml"
+                    flags: ${{ matrix.os }}

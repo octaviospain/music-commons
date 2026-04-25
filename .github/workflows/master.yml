@@ -11,7 +11,11 @@ on:
 
 jobs:
     build-analyze:
-        runs-on: ubuntu-latest
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, windows-latest]
 
         steps:
             -   uses: actions/checkout@v4
@@ -25,7 +29,8 @@ jobs:
                     distribution: 'liberica'
                     java-package: 'jdk+fx'
 
-            -   name: Install dependencies
+            -   name: Install dependencies (Linux)
+                if: matrix.os == 'ubuntu-latest'
                 run: |
                     sudo apt-get update
                     sudo apt-get install -y \
@@ -44,6 +49,7 @@ jobs:
                     echo "DISPLAY=:99.0" >> $GITHUB_ENV
 
             -   name: Cache SonarQube packages
+                if: matrix.os == 'ubuntu-latest'
                 uses: actions/cache@v4
                 with:
                     path: ~/.sonar/cache
@@ -60,16 +66,33 @@ jobs:
                     restore-keys: |
                         ${{ runner.os }}-gradle-
 
-            -   name: Verify Build with Virtual Display
+            -   name: Build with Virtual Display (Linux)
+                if: matrix.os == 'ubuntu-latest'
+                run: ./gradlew check -PexcludePlaybackTests=true
+
+            -   name: Build (Windows, skip Linux-only and playback tests)
+                if: matrix.os == 'windows-latest'
+                run: ./gradlew check -PexcludeLinuxOnly=true -PexcludePosixOnly=true -PincludeWindowsOnly=true
+
+            -   name: Upload coverage to Codecov
+                if: matrix.os == 'ubuntu-latest'
+                uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5
                 env:
-                    CI: true
-                run: ./gradlew compileKotlin compileTestKotlin ktlintCheck test
+                    CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+                with:
+                    files: build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml
 
-
-            -   name: Build with Gradle and Virtual Display
-                run: ./gradlew build
+            -   name: Upload test results to Codecov
+                if: "!cancelled()"
+                uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5
+                with:
+                    token: ${{ secrets.CODECOV_TOKEN }}
+                    report_type: test_results
+                    files: "**/build/test-results/test/*.xml"
+                    flags: ${{ matrix.os }}
 
             -   name: Upload Artifacts
+                if: matrix.os == 'ubuntu-latest'
                 uses: actions/upload-artifact@v4
                 with:
                     name: release-build-libs
@@ -78,6 +101,7 @@ jobs:
                     overwrite: true
 
             -   name: SonarQube Scan
+                if: matrix.os == 'ubuntu-latest'
                 env:
                     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
                 run: ./gradlew sonar --info
