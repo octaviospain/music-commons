@@ -29,7 +29,7 @@ object VirtualTestFileFactory {
     @JvmStatic
     fun createVirtualAudioFile(attributes: Consumer<AudioItemTestAttributes>): Path =
         Arb.virtualAudioFile(
-            Arb.enum<AudioFileTagType>().next(),
-            attributes::accept
+            audioFileTagType = Arb.enum<AudioFileTagType>().next(),
+            attributesAction = attributes::accept
         ).next()
 }

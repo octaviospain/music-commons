@@ -1,5 +1,10 @@
 package net.transgressoft.commons.music.itunes
 
+import net.transgressoft.commons.music.audio.InvalidAudioFilePathException
+import net.transgressoft.commons.music.audio.WindowsPathException
+import net.transgressoft.commons.music.common.OsDetector
+import com.google.common.jimfs.Configuration
+import com.google.common.jimfs.Jimfs
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
@@ -7,6 +12,8 @@ import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
+import java.nio.file.Files
 import java.nio.file.Paths
 
 /**
@@ -84,11 +91,52 @@ internal class ItunesLibraryParserTest : StringSpec({
         dateAdded.dayOfMonth shouldBe 15
     }
 
-    "ItunesLibraryParser throws on non-existent file" {
-        val nonExistentPath = Paths.get("/tmp/does-not-exist-itunes-library.xml")
+    "ItunesLibraryParser.parse throws InvalidAudioFilePathException when xml file does not exist" {
+        Jimfs.newFileSystem(Configuration.unix()).use { fs ->
+            val nonExistent = fs.getPath("/missing/library.xml")
+            val ex = shouldThrow<InvalidAudioFilePathException> { ItunesLibraryParser.parse(nonExistent) }
+            ex.message!! shouldContain "does not exist"
+        }
+    }
 
-        shouldThrow<IllegalArgumentException> {
-            ItunesLibraryParser.parse(nonExistentPath)
+    "ItunesLibraryParser.parse throws InvalidAudioFilePathException when xml path is a directory" {
+        Jimfs.newFileSystem(Configuration.unix()).use { fs ->
+            val dir = fs.getPath("/library-dir")
+            Files.createDirectory(dir)
+            val ex = shouldThrow<InvalidAudioFilePathException> { ItunesLibraryParser.parse(dir) }
+            ex.message!! shouldContain "is not a regular file"
+        }
+    }
+
+    "ItunesLibraryParser.parse throws InvalidAudioFilePathException when xml file is not readable"
+        .config(enabled = !OsDetector.isWindows) {
+            val tempFile = Files.createTempFile("unreadable-itunes", ".xml")
+            try {
+                tempFile.toFile().setReadable(false)
+                val ex = shouldThrow<InvalidAudioFilePathException> { ItunesLibraryParser.parse(tempFile) }
+                ex.message!! shouldContain "is not readable"
+            } finally {
+                tempFile.toFile().setReadable(true)
+                Files.deleteIfExists(tempFile)
+            }
+        }
+
+    "ItunesLibraryParser.parse throws WindowsPathException for a Windows-invalid xmlPath when isWindows=true" {
+        OsDetector.withOverriddenIsWindows(true) {
+            Jimfs.newFileSystem(Configuration.unix()).use { fs ->
+                val forbidden = fs.getPath("/tmp/bad|name.xml")
+                shouldThrow<WindowsPathException> { ItunesLibraryParser.parse(forbidden) }
+            }
+        }
+    }
+
+    "ItunesLibraryParser.parse pass-through on Linux for xmlPath with Windows-only forbidden chars" {
+        OsDetector.withOverriddenIsWindows(false) {
+            Jimfs.newFileSystem(Configuration.unix()).use { fs ->
+                val path = fs.getPath("/itunes/bad|name.xml")
+                val ex = shouldThrow<InvalidAudioFilePathException> { ItunesLibraryParser.parse(path) }
+                ex.message!! shouldContain "does not exist"
+            }
         }
     }
 })

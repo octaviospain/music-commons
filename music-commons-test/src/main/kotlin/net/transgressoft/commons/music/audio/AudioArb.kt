@@ -21,10 +21,11 @@ import net.transgressoft.commons.music.AudioUtils.audioItemTrackDiscNumberCompar
 import net.transgressoft.commons.music.AudioUtils.beautifyArtistName
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.property.Arb
+import io.kotest.property.arbitrary.Codepoint
+import io.kotest.property.arbitrary.alphanumeric
 import io.kotest.property.arbitrary.arbitrary
 import io.kotest.property.arbitrary.boolean
 import io.kotest.property.arbitrary.enum
-import io.kotest.property.arbitrary.file
 import io.kotest.property.arbitrary.float
 import io.kotest.property.arbitrary.int
 import io.kotest.property.arbitrary.localDateTime
@@ -190,10 +191,14 @@ fun Arb.Companion.label(name: String? = null, countryCode: CountryCode? = null) 
 
 fun Arb.Companion.audioFilePath(audioFileType: AudioFileType = Arb.enum<AudioFileType>().next()): Arb<Path> =
     arbitrary {
-        val path = Arb.file().bind()
-        val fileName = Arb.string().bind()
+        // Path segments are restricted to Windows-safe alphanumeric characters because Arb.string()
+        // produces arbitrary Unicode (including < > : " | ? * and other forbidden Windows path
+        // characters), which makes Path.of(...) throw InvalidPathException on Windows. Mocked
+        // audio items only need a syntactically valid Path — they do not resolve to disk.
+        val dir = Arb.string(1..20, Codepoint.alphanumeric()).bind()
+        val fileName = Arb.string(1..30, Codepoint.alphanumeric()).bind()
         val suffix = audioFileType.extension
-        Path.of(path.toString(), "$fileName.$suffix")
+        Path.of("music", dir, "$fileName.$suffix")
     }
 
 fun Arb.Companion.audioItemChange(): Arb<AudioItemChange> =
@@ -226,7 +231,11 @@ fun Arb.Companion.genre(): Arb<Genre> =
                 Genre.HipHop, Genre.Classical, Genre.Folk, Genre.Metal, Genre.Pop
             )
         if (Arb.boolean().bind()) samples[Arb.int(0 until samples.size).bind()]
-        else Genre.Custom(Arb.string(1..30).bind().replace(",", "").ifEmpty { "Custom" })
+        // Custom genre strings use alphanumeric chars only because JAudioTagger normalizes
+        // arbitrary Unicode (e.g., control characters, combining marks, NFD vs NFC) during
+        // FLAC Vorbis Comment write/read round-trips, which would make `loadedAudioItem.genres
+        // shouldBe audioItem.genres` flaky in MutableAudioItemTest.
+        else Genre.Custom(Arb.string(1..30, Codepoint.alphanumeric()).bind())
     }
 
 fun Arb.Companion.genres(): Arb<Set<Genre>> =

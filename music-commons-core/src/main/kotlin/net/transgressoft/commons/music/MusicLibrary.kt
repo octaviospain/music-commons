@@ -23,6 +23,7 @@ import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemMapSerializer
 import net.transgressoft.commons.music.audio.AudioLibrary
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
+import net.transgressoft.commons.music.common.WindowsPathValidator
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
 import net.transgressoft.commons.music.playlist.AudioPlaylistMapSerializer
 import net.transgressoft.commons.music.playlist.DefaultPlaylistHierarchy
@@ -102,7 +103,12 @@ class CoreMusicLibrary private constructor(
     val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, ArtistCatalog<AudioItem>>>
         get() = _audioLibrary.artistCatalogPublisher
 
-    override fun audioItemFromFile(path: Path): AudioItem = _audioLibrary.createFromFile(path)
+    override fun audioItemFromFile(path: Path): AudioItem {
+        // Defensive boundary check at the public API entry point — MutableAudioItem.init validates
+        // again, but failing here surfaces the exception before the audio item construction kicks off.
+        WindowsPathValidator.validatePath(path)
+        return _audioLibrary.createFromFile(path)
+    }
 
     override fun createPlaylist(name: String): MutableAudioPlaylist = _playlistHierarchy.createPlaylist(name)
 

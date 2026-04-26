@@ -17,13 +17,13 @@
 
 package net.transgressoft.commons.music.audio
 
+import net.transgressoft.commons.music.common.toPathFromJsonUri
 import net.transgressoft.lirp.persistence.json.LirpEntityPolymorphicSerializer
 import com.neovisionaries.i18n.CountryCode
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import kotlin.io.path.Path
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.MapSerializer
@@ -149,7 +149,7 @@ abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>> : LirpEntityPol
             obj[key]?.jsonPrimitive?.contentOrNull
                 ?: throw SerializationException("Missing required field '$fullKey' in AudioItem JSON")
 
-        val path = Path(requireString(json, "path"))
+        val path = requireString(json, "path").toPathFromJsonUri()
         val id = require("id").jsonPrimitive.int
         val title = requireString(json, "title")
         val duration = Duration.ofSeconds(require("duration").jsonPrimitive.long)

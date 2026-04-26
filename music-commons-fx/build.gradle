@@ -37,8 +37,11 @@ test {
             '-Dmonocle.platform=Headless',
             '-Djdk.gtk.version=2',
             "-Dprism.verbose=${System.getenv('PRISM_VERBOSE') ?: 'false'}",
-            '-Xmx1g',
+            '-Xmx2g',
+            '--add-exports', 'javafx.graphics/com.sun.glass.ui=ALL-UNNAMED',
             '--add-exports', 'javafx.graphics/com.sun.glass.ui.monocle=ALL-UNNAMED',
+            '--add-exports', 'javafx.graphics/com.sun.javafx.util=ALL-UNNAMED',
+            '--add-exports', 'javafx.base/com.sun.javafx.logging=ALL-UNNAMED',
             '--add-opens', 'javafx.graphics/com.sun.glass.ui.monocle=ALL-UNNAMED',
             '--add-opens', 'javafx.graphics/com.sun.glass.ui=ALL-UNNAMED',
             '--add-opens', 'javafx.graphics/com.sun.javafx.application=ALL-UNNAMED',
@@ -50,12 +53,6 @@ test {
     ]
 
     systemProperty 'testfx.setup.timeout', '60000'
-
-    if (System.getenv("CI")) {
-        systemProperty 'java.awt.headless', 'false'
-        systemProperty 'testfx.headless', 'true'
-        systemProperty 'prism.order', 'sw'
-    }
 
     testLogging {
         events 'passed', 'skipped', 'failed'
@@ -81,6 +78,7 @@ dependencies {
     testApi project(path: ':music-commons-fx-test')
     testImplementation(platform(libs.junit.bom.get()))
     testImplementation(libs.junit.jupiter.get())
+    testImplementation libs.jimfs.get()
     testImplementation libs.kotest.assertions.json.get()
     testImplementation libs.kotest.runner.junit5.get()
     testImplementation libs.kotest.property.get()

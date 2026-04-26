@@ -29,6 +29,7 @@ import net.transgressoft.commons.fx.music.playlist.ObservablePlaylistMapSerializ
 import net.transgressoft.commons.music.MusicLibrary
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
+import net.transgressoft.commons.music.common.WindowsPathValidator
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import net.transgressoft.commons.music.waveform.AudioWaveformMapSerializer
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
@@ -126,7 +127,10 @@ class FXMusicLibrary private constructor(
      * @param path the path to the audio file
      * @return the created [ObservableAudioItem]
      */
-    override fun audioItemFromFile(path: Path): ObservableAudioItem = _audioLibrary.createFromFile(path)
+    override fun audioItemFromFile(path: Path): ObservableAudioItem {
+        WindowsPathValidator.validatePath(path)
+        return _audioLibrary.createFromFile(path)
+    }
 
     override fun createPlaylist(name: String): ObservablePlaylist = _playlistHierarchy.createPlaylist(name)
 

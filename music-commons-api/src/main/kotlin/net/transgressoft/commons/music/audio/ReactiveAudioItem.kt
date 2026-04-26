@@ -17,12 +17,12 @@
 
 package net.transgressoft.commons.music.audio
 
+import net.transgressoft.commons.music.common.toJsonUri
 import net.transgressoft.lirp.entity.ReactiveEntity
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import kotlin.io.path.absolutePathString
 import kotlinx.coroutines.Job
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -80,17 +80,6 @@ interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I>, Co
      */
     fun setPlayCount(count: Short)
 
-    /**
-     * Executes [action] with reactive mutation events suppressed.
-     *
-     * Use when bulk-setting properties during creation or import, where each setter would otherwise
-     * emit individual mutation events. The entity remains unchanged from the event system's
-     * perspective until events are re-enabled.
-     *
-     * @param action the block to execute with events disabled
-     */
-    fun <T> withEventsSuppressed(action: () -> T): T
-
     fun writeMetadata(): Job
 
     fun asJsonKeyValue() =
@@ -107,7 +96,7 @@ interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I>, Co
 fun ReactiveAudioItem<*>.toJsonObject(): JsonObject =
     buildJsonObject {
         put("id", id)
-        put("path", path.absolutePathString())
+        put("path", path.toJsonUri())
         put("title", title)
         put("duration", duration.toSeconds())
         put("bitRate", bitRate)

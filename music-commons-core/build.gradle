@@ -21,6 +21,7 @@ dependencies {
 
     testApi project(path: ':music-commons-test')
     testImplementation(platform(libs.junit.bom.get()))
+    testImplementation libs.jimfs.get()
     testImplementation libs.mockk.get()
     testImplementation libs.kotest.runner.junit5.get()
     testImplementation libs.kotest.assertions.core.get()
@@ -28,4 +29,8 @@ dependencies {
     testImplementation libs.kotest.framework.datatest.get()
     testImplementation libs.kotest.assertions.json.get()
     testImplementation libs.coroutines.test.get()
+}
+
+tasks.withType(Test).configureEach {
+    systemProperty 'java.awt.headless', 'true'
 }

@@ -182,8 +182,8 @@ internal class AudioItemSerializerTest : StringSpec({
                 .filterNot { it.key in mutableNullableKeys }
                 .associate { it.key to it.value }
         val modifiedJson =
-            kotlinx.serialization.json.JsonObject(
-                mapOf("55" to kotlinx.serialization.json.JsonObject(filteredEntries))
+            JsonObject(
+                mapOf("55" to JsonObject(filteredEntries))
             ).toString()
 
         val decoded = json.decodeFromString(AudioItemMapSerializer, modifiedJson)
@@ -194,5 +194,90 @@ internal class AudioItemSerializerTest : StringSpec({
         decodedItem.discNumber shouldBe null
         decodedItem.bpm shouldBe null
         decodedItem.playCount shouldBe 0
+    }
+
+    "AudioItemSerializer writes path as file:// URI in JSON" {
+        val path = Arb.virtualAudioFile().next()
+        val audioItem: AudioItem = MutableAudioItemTestBridge.createAudioItem(path, 200)
+
+        val encoded = json.encodeToString(AudioItemMapSerializer, mapOf(200 to audioItem))
+
+        // file:// URIs always have three slashes (file://<authority>/<path> with empty authority);
+        // assert on that to catch regressions to malformed forms like "file://relative".
+        encoded shouldContain "\"path\":\"file:///"
+    }
+
+    "AudioItemSerializer deserialization throws for a path that no longer exists on disk" {
+        val offlineDriveJson =
+            """
+            {
+              "1": {
+                "id": 1,
+                "path": "file:///removed/disk/song.mp3",
+                "title": "Ghost",
+                "duration": 180,
+                "bitRate": 320,
+                "artist": {"name": "Artist", "countryCode": "US"},
+                "album": {
+                  "name": "Album",
+                  "albumArtist": {"name": "Artist", "countryCode": "US"},
+                  "isCompilation": false,
+                  "year": null,
+                  "label": {"name": "Label"}
+                },
+                "genres": [],
+                "comments": null,
+                "trackNumber": null,
+                "discNumber": null,
+                "bpm": null,
+                "encoder": null,
+                "encoding": null,
+                "dateOfCreation": 1000000,
+                "lastDateModified": 1000000,
+                "playCount": 0
+              }
+            }
+            """.trimIndent()
+
+        shouldThrow<InvalidAudioFilePathException> {
+            json.decodeFromString(AudioItemMapSerializer, offlineDriveJson)
+        }
+    }
+
+    "AudioItemSerializer rejects legacy JSON with raw path string" {
+        val legacyJson =
+            """
+            {
+              "201": {
+                "id": 201,
+                "path": "/home/u/song.mp3",
+                "title": "Test",
+                "duration": 180,
+                "bitRate": 320,
+                "artist": {"name": "Artist", "countryCode": "US"},
+                "album": {
+                  "name": "Album",
+                  "albumArtist": {"name": "Artist", "countryCode": "US"},
+                  "isCompilation": false,
+                  "year": null,
+                  "label": {"name": "Label"}
+                },
+                "genres": [],
+                "comments": null,
+                "trackNumber": null,
+                "discNumber": null,
+                "bpm": null,
+                "encoder": null,
+                "encoding": null,
+                "dateOfCreation": 1000000,
+                "lastDateModified": 1000000,
+                "playCount": 0
+              }
+            }
+            """.trimIndent()
+
+        shouldThrow<SerializationException> {
+            json.decodeFromString(AudioItemMapSerializer, legacyJson)
+        }
     }
 })

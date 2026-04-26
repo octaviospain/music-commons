@@ -17,11 +17,10 @@
 
 package net.transgressoft.commons.music.waveform
 
+import net.transgressoft.commons.music.common.toJsonUri
+import net.transgressoft.commons.music.common.toPathFromJsonUri
 import java.nio.ByteBuffer
-import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.Base64
-import kotlin.io.path.absolutePathString
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.MapSerializer
@@ -57,7 +56,7 @@ object AudioWaveformSerializer : KSerializer<AudioWaveform> {
     override val descriptor: SerialDescriptor =
         buildClassSerialDescriptor("AudioWaveform") {
             element<String>("id")
-            element<Path>("audioFilePath")
+            element<String>("audioFilePath")
             element<Int>("cachedWidth")
             element<String>("normalizedAmplitudes")
         }
@@ -93,7 +92,7 @@ object AudioWaveformSerializer : KSerializer<AudioWaveform> {
 
         return ScalableAudioWaveform(
             id,
-            Paths.get(audioFilePathString),
+            audioFilePathString.toPathFromJsonUri(),
             cachedWidth,
             decodedAmplitudes
         )
@@ -106,7 +105,7 @@ object AudioWaveformSerializer : KSerializer<AudioWaveform> {
         val jsonObject =
             buildJsonObject {
                 put("id", value.id)
-                put("audioFilePath", value.audioFilePath.absolutePathString())
+                put("audioFilePath", value.audioFilePath.toJsonUri())
                 put("cachedWidth", sw.cachedWidth)
                 put("normalizedAmplitudes", snapshot.toBase64String())
             }

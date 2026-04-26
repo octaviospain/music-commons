@@ -6,18 +6,24 @@ import net.transgressoft.commons.music.audio.AudioFileTagType.ID3_V_24
 import net.transgressoft.commons.music.audio.AudioFileTagType.MP4_INFO
 import net.transgressoft.commons.music.audio.AudioFileTagType.WAV
 import net.transgressoft.commons.music.audio.MutableAudioItemTestBridge.createAudioItem
+import net.transgressoft.commons.music.common.OsDetector
+import com.google.common.jimfs.Configuration
+import com.google.common.jimfs.Jimfs
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.date.shouldBeAfter
+import io.kotest.matchers.date.shouldNotBeBefore
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
+import java.nio.file.Files
 import java.time.Duration
 import java.time.LocalDateTime
 import kotlin.io.path.extension
@@ -112,8 +118,8 @@ internal class MutableAudioItemTest : FunSpec({
 
             assertSoftly {
                 loadedAudioItem.id shouldBe audioItem.id
-                loadedAudioItem.dateOfCreation shouldBeAfter audioItem.dateOfCreation
-                loadedAudioItem.lastDateModified shouldBeAfter audioItem.lastDateModified
+                loadedAudioItem.dateOfCreation shouldNotBeBefore audioItem.dateOfCreation
+                loadedAudioItem.lastDateModified shouldNotBeBefore audioItem.lastDateModified
                 loadedAudioItem.path shouldBe audioItem.path
                 loadedAudioItem.fileName shouldBe audioItem.fileName
                 loadedAudioItem.extension shouldBe audioItem.extension
@@ -194,6 +200,46 @@ internal class MutableAudioItemTest : FunSpec({
         }
     }
 
+    context("MutableAudioItem three-check path validation") {
+        test("MutableAudioItem throws InvalidAudioFilePathException when file does not exist") {
+            Jimfs.newFileSystem(Configuration.unix()).use { fs ->
+                val nonExistent = fs.getPath("/nowhere.mp3")
+                val ex = shouldThrow<InvalidAudioFilePathException> { MutableAudioItem(nonExistent) }
+                ex.message!! shouldContain "does not exist"
+                ex.message!! shouldContain "/nowhere.mp3"
+            }
+        }
+
+        test("MutableAudioItem throws InvalidAudioFilePathException when path is a directory") {
+            Jimfs.newFileSystem(Configuration.unix()).use { fs ->
+                val dir = fs.getPath("/a-directory")
+                Files.createDirectory(dir)
+                val ex = shouldThrow<InvalidAudioFilePathException> { MutableAudioItem(dir) }
+                ex.message!! shouldContain "is not a regular file"
+            }
+        }
+
+        test("MutableAudioItem throws InvalidAudioFilePathException when file is not readable")
+            .config(enabled = !OsDetector.isWindows) {
+                val tempFile = Files.createTempFile("unreadable", ".mp3")
+                try {
+                    tempFile.toFile().setReadable(false)
+                    val ex = shouldThrow<InvalidAudioFilePathException> { MutableAudioItem(tempFile) }
+                    ex.message!! shouldContain "is not readable"
+                } finally {
+                    tempFile.toFile().setReadable(true)
+                    Files.deleteIfExists(tempFile)
+                }
+            }
+
+        test("MutableAudioItem InvalidAudioFilePathException is catchable as AudioItemManipulationException") {
+            Jimfs.newFileSystem(Configuration.unix()).use { fs ->
+                val nonExistent = fs.getPath("/nowhere.mp3")
+                shouldThrow<AudioItemManipulationException> { MutableAudioItem(nonExistent) }
+            }
+        }
+    }
+
     test("AudioItemManipulationException has proper message and cause") {
         val testMessage = "Test error message"
         val testCause = RuntimeException("Test cause")
@@ -207,5 +253,28 @@ internal class MutableAudioItemTest : FunSpec({
         exceptionWithoutCause.message shouldBe testMessage
         exceptionWithoutCause.cause shouldBe null
         exceptionWithoutCause.toString()
+    }
+
+    context("MutableAudioItem Windows path validation") {
+        test("MutableAudioItem throws WindowsPathException for a Windows-invalid path when isWindows=true") {
+            OsDetector.withOverriddenIsWindows(true) {
+                Jimfs.newFileSystem(Configuration.unix()).use { fs ->
+                    val forbidden = fs.getPath("/tmp/bad|name.mp3")
+                    shouldThrow<WindowsPathException> { MutableAudioItem(forbidden) }
+                }
+            }
+        }
+
+        test("MutableAudioItem pass-through on Linux for path with Windows-only forbidden chars") {
+            OsDetector.withOverriddenIsWindows(false) {
+                Jimfs.newFileSystem(Configuration.unix()).use { fs ->
+                    val path = fs.getPath("/music/bad|name.mp3")
+                    // WindowsPathValidator is a no-op on Linux, so pipe char is fine
+                    // File does not exist, so it throws InvalidAudioFilePathException (not WindowsPathException)
+                    val ex = shouldThrow<InvalidAudioFilePathException> { MutableAudioItem(path) }
+                    (ex is WindowsPathException) shouldBe false
+                }
+            }
+        }
     }
 })

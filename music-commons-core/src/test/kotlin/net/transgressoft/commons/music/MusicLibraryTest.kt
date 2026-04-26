@@ -2,7 +2,12 @@ package net.transgressoft.commons.music
 
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.commons.music.audio.WindowsPathException
+import net.transgressoft.commons.music.common.OsDetector
 import net.transgressoft.lirp.event.ReactiveScope
+import com.google.common.jimfs.Configuration
+import com.google.common.jimfs.Jimfs
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.optional.shouldBePresent
@@ -145,5 +150,16 @@ internal class MusicLibraryTest : StringSpec({
         }
 
         restoredLibrary.close()
+    }
+
+    "MusicLibrary.audioItemFromFile throws WindowsPathException before delegating when isWindows=true" {
+        OsDetector.withOverriddenIsWindows(true) {
+            CoreMusicLibrary.builder().build().use { library ->
+                Jimfs.newFileSystem(Configuration.unix()).use { fs ->
+                    val forbidden = fs.getPath("/tmp/bad|name.mp3")
+                    shouldThrow<WindowsPathException> { library.audioItemFromFile(forbidden) }
+                }
+            }
+        }
     }
 })

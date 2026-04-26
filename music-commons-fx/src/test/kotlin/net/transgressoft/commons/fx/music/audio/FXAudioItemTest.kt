@@ -1,28 +1,38 @@
 package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
+import net.transgressoft.commons.music.audio.AudioItemManipulationException
 import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.ImmutableLabel
+import net.transgressoft.commons.music.audio.InvalidAudioFilePathException
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.commons.music.audio.WindowsPathException
 import net.transgressoft.commons.music.audio.audioItemChange
 import net.transgressoft.commons.music.audio.testCoverBytes
 import net.transgressoft.commons.music.audio.update
+import net.transgressoft.commons.music.common.OsDetector
+import com.google.common.jimfs.Configuration
+import com.google.common.jimfs.Jimfs
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.date.shouldBeAfter
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import javafx.scene.image.Image
 import java.io.ByteArrayInputStream
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.Optional
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.serialization.json.Json
@@ -228,6 +238,48 @@ internal class FXAudioItemTest : StringSpec({
         source[0] = 99.toByte()
 
         fxAudioItem.coverImageBytes!![0] shouldBe 1.toByte()
+    }
+
+    "FXAudioItem throws InvalidAudioFilePathException when file does not exist" {
+        val nonExistent = Paths.get("/tmp/fx-nonexistent-${System.nanoTime()}.mp3")
+        val ex = shouldThrow<InvalidAudioFilePathException> { FXAudioItem(nonExistent) }
+        ex.message!! shouldContain "does not exist"
+    }
+
+    "FXAudioItem throws InvalidAudioFilePathException when path is a directory" {
+        val dir = Files.createTempDirectory("fx-dir-test")
+        try {
+            val ex = shouldThrow<InvalidAudioFilePathException> { FXAudioItem(dir) }
+            ex.message!! shouldContain "is not a regular file"
+        } finally {
+            Files.deleteIfExists(dir)
+        }
+    }
+
+    "FXAudioItem InvalidAudioFilePathException is catchable as AudioItemManipulationException" {
+        val nonExistent = Paths.get("/tmp/fx-nonexistent-${System.nanoTime()}.mp3")
+        shouldThrow<AudioItemManipulationException> { FXAudioItem(nonExistent) }
+    }
+
+    "FXAudioItem throws WindowsPathException for a path with Windows-forbidden chars when isWindows=true" {
+        OsDetector.withOverriddenIsWindows(true) {
+            val fs = Jimfs.newFileSystem(Configuration.unix())
+            fs.use { fs ->
+                val forbidden = fs.getPath("/tmp/bad|name.mp3")
+                shouldThrow<WindowsPathException> { FXAudioItem(forbidden) }
+            }
+        }
+    }
+
+    "FXAudioItem pass-through when isWindows=false for a path with Windows-forbidden chars" {
+        OsDetector.withOverriddenIsWindows(false) {
+            val fs = Jimfs.newFileSystem(Configuration.unix())
+            fs.use { fs ->
+                val forbidden = fs.getPath("/tmp/fx-nonexistent-bad|name-${System.nanoTime()}.mp3")
+                val ex = shouldThrow<InvalidAudioFilePathException> { FXAudioItem(forbidden) }
+                ex.message!! shouldContain "does not exist"
+            }
+        }
     }
 })
 

@@ -21,6 +21,7 @@ import net.transgressoft.commons.music.AudioUtils.audioItemTrackDiscNumberCompar
 import net.transgressoft.commons.music.AudioUtils.getArtistsNamesInvolved
 import net.transgressoft.commons.music.audio.AudioItemMetadataUtils.readMetadata
 import net.transgressoft.commons.music.audio.AudioItemMetadataUtils.writeMetadataToFile
+import net.transgressoft.commons.music.common.WindowsPathValidator
 import net.transgressoft.lirp.entity.ReactiveEntityBase
 import mu.KotlinLogging
 import java.nio.file.Files
@@ -123,7 +124,16 @@ internal class MutableAudioItem(
     }
 
     init {
-        require(Files.exists(path)) { "File '${path.toAbsolutePath()}' does not exist" }
+        WindowsPathValidator.validatePath(path)
+        if (!Files.exists(path)) {
+            throw InvalidAudioFilePathException("File '${path.toAbsolutePath()}' does not exist")
+        }
+        if (!Files.isRegularFile(path)) {
+            throw InvalidAudioFilePathException("Path '${path.toAbsolutePath()}' is not a regular file")
+        }
+        if (!Files.isReadable(path)) {
+            throw InvalidAudioFilePathException("File '${path.toAbsolutePath()}' is not readable")
+        }
     }
 
     @Transient
@@ -258,15 +268,6 @@ internal class MutableAudioItem(
     override fun setPlayCount(count: Short) {
         require(count >= 0) { "Play count cannot be negative" }
         withEventsDisabled { _playCount = count }
-    }
-
-    override fun <T> withEventsSuppressed(action: () -> T): T {
-        disableEvents()
-        try {
-            return action()
-        } finally {
-            enableEvents()
-        }
     }
 
     override operator fun compareTo(other: AudioItem) = audioItemTrackDiscNumberComparator<AudioItem>().compare(this, other)

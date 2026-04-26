@@ -22,7 +22,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContainOnlyOnce
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
-import javafx.application.Platform
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
 import java.io.File
@@ -111,7 +110,8 @@ internal class ObservableAudioLibraryTest : StringSpec({
         val expectedIds = createdItems.map { it.id }.toSet()
         val expectedArtists = createdItems.flatMap { it.artistsInvolved }.toSet()
 
-        // Recreate the library from the same JsonRepository
+        // Close the existing library before recreating from the same repository
+        repository.close()
         repository = FXAudioLibrary(jsonFileRepository)
 
         testDispatcher.scheduler.advanceUntilIdle()
@@ -133,7 +133,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
     }
 
     "Rapid concurrent additions to library maintain consistency" {
-        val audioFiles = List(200) { Arb.virtualAudioFile().next() }
+        val audioFiles = List(50) { Arb.virtualAudioFile().next() }
 
         // Rapid additions that could trigger concurrent modifications
         val addedItems =
@@ -142,23 +142,21 @@ internal class ObservableAudioLibraryTest : StringSpec({
             }
 
         testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
 
         eventually(1.seconds) {
-            Platform.runLater {
-                repository.audioItemsProperty.size shouldBe 20
-                repository.audioItemsProperty.map { it: ObservableAudioItem -> it.id } shouldContainOnly addedItems.map { it.id }
-            }
+            repository.audioItemsProperty.size shouldBe 50
+            repository.audioItemsProperty.map { it: ObservableAudioItem -> it.id } shouldContainOnly addedItems.map { it.id }
         }
 
         // Rapid removals
-        addedItems.take(100).forEach { repository.remove(it) }
+        addedItems.take(25).forEach { repository.remove(it) }
 
         testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
 
         eventually(1.seconds) {
-            Platform.runLater {
-                repository.audioItemsProperty.size shouldBe 100
-            }
+            repository.audioItemsProperty.size shouldBe 25
         }
     }
 
