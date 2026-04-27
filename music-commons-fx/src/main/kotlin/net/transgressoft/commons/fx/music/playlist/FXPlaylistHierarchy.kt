@@ -78,14 +78,20 @@ internal class FXPlaylistHierarchy(
         RegistryBase.deregisterRepository(ObservablePlaylist::class.java)
         RegistryBase.registerRepository(ObservablePlaylist::class.java, repository)
 
-        // Re-sync self-referencing playlist aggregates after all entities are loaded.
-        // During repository load, entities are added one at a time, so forward references
-        // (e.g. ROOT playlist referencing CHILD playlist) cannot resolve because the
-        // referenced entity isn't in the repo yet. Now that all entities are loaded,
-        // syncLocalCache resolves the backing IDs to actual entities.
+        // Re-sync aggregates after all entities are loaded. During repository load, entities
+        // are added one at a time, so forward references (e.g. ROOT playlist referencing CHILD
+        // playlist) cannot resolve because the referenced entity isn't in the repo yet. Audio
+        // item aggregates also need re-sync because the audio repository is fully populated
+        // before the playlist hierarchy loads, but FXPlaylist.init runs before bindEntityRefs
+        // attaches the audio item registry. Now that all entities are loaded and bound,
+        // syncLocalCache materializes the backing IDs into the local FX-observable cache,
+        // and triggerCoverHydration recomputes cover/recursive properties from the freshly
+        // populated audio item aggregate.
         forEach { playlist ->
             if (playlist is FXPlaylist) {
+                runCatching { playlist.audioItemsAggregate.syncLocalCache() }
                 playlist.playlistsAggregate.syncLocalCache()
+                playlist.triggerCoverHydration()
             }
         }
 
