@@ -131,14 +131,33 @@ internal class FXPlaylist(
     init {
         audioItemsAggregate.addListener(
             ListChangeListener {
-                replaceRecursiveAudioItems()
-                changePlaylistCover()
+                refreshDerivedState()
             }
         )
         playlistsAggregate.addListener { _: SetChangeListener.Change<out ObservablePlaylist> ->
-            replaceRecursiveAudioItems()
-            changePlaylistCover()
+            refreshDerivedState()
         }
+        // Best-effort initial computation. Effective only for non-hydrated paths where audio items
+        // are already resolvable at construction time. For JSON-hydrated playlists the aggregates
+        // bind to their registries after init runs; FXPlaylistHierarchy invokes
+        // [triggerCoverHydration] post-load to recompute the cover once aggregates are bound.
+        refreshDerivedState()
+    }
+
+    /**
+     * Recomputes the recursive audio item view and cover image after the aggregate registries
+     * have been bound and synchronized. Intended to be called by [FXPlaylistHierarchy] once
+     * JSON-hydrated playlists have completed their lirp registry binding pass — at that point
+     * the audio item aggregate can resolve its referenced entities and the cover image can be
+     * derived from them. No-op for playlists whose aggregates are already populated.
+     */
+    internal fun triggerCoverHydration() {
+        refreshDerivedState()
+    }
+
+    private fun refreshDerivedState() {
+        replaceRecursiveAudioItems()
+        changePlaylistCover()
     }
 
     private fun replaceRecursiveAudioItems() {
