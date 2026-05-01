@@ -2,6 +2,16 @@ name: Manual Release to Maven Central
 
 on:
     workflow_dispatch:
+        inputs:
+            version-increment:
+                description: 'Version increment strategy'
+                required: true
+                default: 'incrementMinor'
+                type: choice
+                options:
+                    - incrementPatch
+                    - incrementMinor
+                    - incrementMajor
 
 jobs:
     release:
@@ -57,7 +67,7 @@ jobs:
                         ${{ runner.os }}-gradle-
 
             -   name: Build with Gradle and Virtual Display
-                run: ./gradlew build -PexcludePlaybackTests=true
+                run: ./gradlew build -PexcludePlaybackTests=true -PversionIncrement=${{ inputs.version-increment }}
 
             -   name: Release
                 env:
@@ -71,7 +81,7 @@ jobs:
                     git config user.email "github-actions@github.com"
                     git config user.name "github-actions"
                     git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
-                    ./gradlew createRelease
+                    ./gradlew createRelease -PversionIncrement=${{ inputs.version-increment }}
                     git push --tags origin HEAD
-                    ./gradlew publishToMavenCentral
+                    ./gradlew publishToMavenCentral -PversionIncrement=${{ inputs.version-increment }}
                     echo "Release completed ${{ steps.release.outputs.released-version }}"

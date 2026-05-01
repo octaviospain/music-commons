@@ -40,7 +40,7 @@ scmVersion {
     }
     useHighestVersion = true
     ignoreUncommittedChanges = false
-    versionIncrementer 'incrementMinor'
+    versionIncrementer((project.findProperty('versionIncrement') ?: 'incrementMinor') as String)
 
     checks {
         uncommittedChanges = false
