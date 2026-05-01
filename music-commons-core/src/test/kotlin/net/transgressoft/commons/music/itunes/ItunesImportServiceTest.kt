@@ -8,7 +8,9 @@ import net.transgressoft.lirp.event.ReactiveScope
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.ints.shouldBeLessThan
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
@@ -206,6 +208,78 @@ internal class ItunesImportServiceTest : StringSpec({
         musicLibrary.findPlaylistByName("Root Folder").shouldBePresent().isDirectory shouldBe true
         musicLibrary.findPlaylistByName("Sub Folder").shouldBePresent().isDirectory shouldBe true
         musicLibrary.findPlaylistByName("Leaf Playlist") shouldBePresent { it.name shouldBe "Leaf Playlist" }
+    }
+
+    "ItunesImportService preserves ancestor folders when only leaf playlists are selected" {
+        val track = trackFor(1, mp3File)
+        val grandparent = playlistFor("Root Folder", "GF1", isFolder = true)
+        val parent = playlistFor("Sub Folder", "PF1", isFolder = true, parentId = "GF1")
+        val child = playlistFor("Leaf Playlist", "CHILD1", listOf(1), parentId = "PF1")
+        val library = ItunesLibrary(mapOf(1 to track), listOf(grandparent, parent, child))
+        val policy = ItunesImportPolicy(useFileMetadata = true, writeMetadata = false)
+
+        val result = service.importAsync(listOf(child), library, policy).get()
+
+        result.rejectedPlaylistNames shouldHaveSize 0
+        musicLibrary.findPlaylistByName("Root Folder").shouldBePresent().isDirectory shouldBe true
+        musicLibrary.findPlaylistByName("Sub Folder").shouldBePresent().isDirectory shouldBe true
+        musicLibrary.findPlaylistByName("Leaf Playlist") shouldBePresent { it.name shouldBe "Leaf Playlist" }
+    }
+
+    "ItunesImportService skips ancestor lookup when ancestor is missing from the library" {
+        val track = trackFor(1, mp3File)
+        val orphanLeaf = playlistFor("Orphan Leaf", "ORPHAN1", listOf(1), parentId = "MISSING_FOLDER")
+        val library = ItunesLibrary(mapOf(1 to track), listOf(orphanLeaf))
+        val policy = ItunesImportPolicy(useFileMetadata = true, writeMetadata = false)
+
+        val result = service.importAsync(listOf(orphanLeaf), library, policy).get()
+
+        result.rejectedPlaylistNames shouldHaveSize 0
+        musicLibrary.findPlaylistByName("Orphan Leaf") shouldBePresent { it.name shouldBe "Orphan Leaf" }
+    }
+
+    "ItunesImportService wires top-level imported playlists to the supplied rootDirectoryName" {
+        val track = trackFor(1, mp3File)
+        val track2 = trackFor(2, flacFile, title = "Other")
+        val rootContainer = musicLibrary.playlistHierarchy().createPlaylistDirectory("My Root")
+        val topLevelLeaf = playlistFor("Solo Leaf", "SOLO1", listOf(1))
+        val topLevelFolder = playlistFor("Top Folder", "TOP1", isFolder = true)
+        val nestedLeaf = playlistFor("Nested Leaf", "NEST1", listOf(2), parentId = "TOP1")
+        val library = ItunesLibrary(mapOf(1 to track, 2 to track2), listOf(topLevelLeaf, topLevelFolder, nestedLeaf))
+        val policy = ItunesImportPolicy(useFileMetadata = true, writeMetadata = false)
+
+        service.importAsync(listOf(topLevelLeaf, topLevelFolder, nestedLeaf), library, policy, rootDirectoryName = "My Root").get()
+
+        // Top-level imported playlists land inside My Root; the nested leaf stays inside its iTunes parent folder.
+        val rootChildren = rootContainer.playlists.map { it.name }
+        rootChildren shouldContain "Solo Leaf"
+        rootChildren shouldContain "Top Folder"
+        val topFolder = musicLibrary.findPlaylistByName("Top Folder").get()
+        topFolder.playlists.map { it.name } shouldContain "Nested Leaf"
+    }
+
+    "ItunesImportService leaves top-level imported playlists orphaned when rootDirectoryName is null" {
+        val track = trackFor(1, mp3File)
+        val rootContainer = musicLibrary.playlistHierarchy().createPlaylistDirectory("My Root")
+        val topLevelLeaf = playlistFor("Solo Leaf", "SOLO1", listOf(1))
+        val library = ItunesLibrary(mapOf(1 to track), listOf(topLevelLeaf))
+        val policy = ItunesImportPolicy(useFileMetadata = true, writeMetadata = false)
+
+        service.importAsync(listOf(topLevelLeaf), library, policy).get()
+
+        rootContainer.playlists.map { it.name } shouldNotContain "Solo Leaf"
+        musicLibrary.findPlaylistByName("Solo Leaf").isPresent shouldBe true
+    }
+
+    "ItunesImportService gracefully skips top-level wiring when rootDirectoryName does not exist in the library" {
+        val track = trackFor(1, mp3File)
+        val topLevelLeaf = playlistFor("Solo Leaf", "SOLO1", listOf(1))
+        val library = ItunesLibrary(mapOf(1 to track), listOf(topLevelLeaf))
+        val policy = ItunesImportPolicy(useFileMetadata = true, writeMetadata = false)
+
+        service.importAsync(listOf(topLevelLeaf), library, policy, rootDirectoryName = "NotInLibrary").get()
+
+        musicLibrary.findPlaylistByName("Solo Leaf").isPresent shouldBe true
     }
 
     "ItunesImportService reports progress via callback" {

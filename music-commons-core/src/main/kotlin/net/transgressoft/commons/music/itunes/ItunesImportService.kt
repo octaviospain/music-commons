@@ -42,6 +42,11 @@ import kotlinx.coroutines.future.future
  * When a playlist name already exists in the hierarchy, the import creates it with an
  * incremental suffix (e.g., `Playlist_1`, `Playlist_2`). Folder playlists support recursive nesting.
  *
+ * Hierarchy preservation: when a selected playlist references an ancestor folder via
+ * [ItunesPlaylist.parentPersistentId] but the ancestor is not itself in [selectedPlaylists],
+ * the missing ancestors are looked up in [ItunesLibrary.playlists] and imported automatically
+ * so the user's original folder structure is reproduced in the target library.
+ *
  * @param musicLibrary The target library to import into.
  */
 class ItunesImportService(private val musicLibrary: MusicLibrary<*, *>) {
@@ -58,6 +63,12 @@ class ItunesImportService(private val musicLibrary: MusicLibrary<*, *>) {
      * @param selectedPlaylists Playlists chosen by the consumer for import.
      * @param itunesLibrary The full parsed iTunes library (for track lookup).
      * @param policy Import configuration controlling metadata source, play count, write-back, etc.
+     * @param rootDirectoryName Optional name of an existing playlist directory to use as the
+     *  parent for top-level imported playlists (those whose iTunes
+     *  [ItunesPlaylist.parentPersistentId] is `null`). When provided, every top-level imported
+     *  playlist is wired as a child of the named directory. When `null` or when no playlist
+     *  with that name exists in the library, top-level imported playlists remain orphaned in
+     *  the hierarchy and the consumer is responsible for placing them.
      * @param onProgress Callback invoked after each track is processed.
      * @return A cancellable future completing with the import result.
      */
@@ -65,11 +76,13 @@ class ItunesImportService(private val musicLibrary: MusicLibrary<*, *>) {
         selectedPlaylists: List<ItunesPlaylist>,
         itunesLibrary: ItunesLibrary,
         policy: ItunesImportPolicy = ItunesImportPolicy(),
+        rootDirectoryName: String? = null,
         onProgress: (ImportProgress) -> Unit = {}
     ): CompletableFuture<ImportResult> =
         CoroutineScope(Dispatchers.IO).future {
-            val trackImportResult = importTracks(selectedPlaylists, itunesLibrary, policy, onProgress)
-            val rejectedNames = createPlaylists(selectedPlaylists, trackImportResult.trackIdToItem)
+            val effectivePlaylists = expandWithAncestors(selectedPlaylists, itunesLibrary)
+            val trackImportResult = importTracks(effectivePlaylists, itunesLibrary, policy, onProgress)
+            val rejectedNames = createPlaylists(effectivePlaylists, trackImportResult.trackIdToItem, rootDirectoryName)
 
             ImportResult(
                 imported = trackImportResult.imported.toList(),
@@ -77,6 +90,21 @@ class ItunesImportService(private val musicLibrary: MusicLibrary<*, *>) {
                 rejectedPlaylistNames = rejectedNames
             )
         }
+
+    private fun expandWithAncestors(
+        selectedPlaylists: List<ItunesPlaylist>,
+        itunesLibrary: ItunesLibrary
+    ): List<ItunesPlaylist> {
+        val byPersistentId = itunesLibrary.playlists.associateBy(ItunesPlaylist::persistentId)
+        val expanded = LinkedHashSet<ItunesPlaylist>()
+        for (playlist in selectedPlaylists) {
+            var current: ItunesPlaylist? = playlist
+            while (current != null && expanded.add(current)) {
+                current = current.parentPersistentId?.let(byPersistentId::get)
+            }
+        }
+        return expanded.toList()
+    }
 
     private suspend fun importTracks(
         selectedPlaylists: List<ItunesPlaylist>,
@@ -192,14 +220,15 @@ class ItunesImportService(private val musicLibrary: MusicLibrary<*, *>) {
 
     private fun createPlaylists(
         selectedPlaylists: List<ItunesPlaylist>,
-        trackIdToItem: Map<Int, ReactiveAudioItem<*>>
+        trackIdToItem: Map<Int, ReactiveAudioItem<*>>,
+        rootDirectoryName: String?
     ): List<RejectedPlaylistName> {
         val createdNameByPersistentId = mutableMapOf<String, String>()
         val rejected = mutableListOf<RejectedPlaylistName>()
 
         createFolderDirectories(selectedPlaylists, createdNameByPersistentId, rejected)
         createRegularPlaylists(selectedPlaylists, trackIdToItem, createdNameByPersistentId, rejected)
-        wirePlaylistHierarchy(selectedPlaylists, createdNameByPersistentId)
+        wirePlaylistHierarchy(selectedPlaylists, createdNameByPersistentId, rootDirectoryName)
 
         return rejected
     }
@@ -247,12 +276,20 @@ class ItunesImportService(private val musicLibrary: MusicLibrary<*, *>) {
 
     private fun wirePlaylistHierarchy(
         selectedPlaylists: List<ItunesPlaylist>,
-        createdNameByPersistentId: Map<String, String>
+        createdNameByPersistentId: Map<String, String>,
+        rootDirectoryName: String?
     ) {
+        val rootDirectoryExists =
+            rootDirectoryName != null && musicLibrary.findPlaylistByName(rootDirectoryName).isPresent
         for (playlist in selectedPlaylists) {
-            val parentId = playlist.parentPersistentId ?: continue
-            val parentName = createdNameByPersistentId[parentId] ?: continue
             val childName = createdNameByPersistentId[playlist.persistentId] ?: continue
+            val parentId = playlist.parentPersistentId
+            val parentName =
+                if (parentId == null) {
+                    if (rootDirectoryExists) rootDirectoryName else continue
+                } else {
+                    createdNameByPersistentId[parentId] ?: continue
+                }
             try {
                 musicLibrary.playlistHierarchy().addPlaylistsToDirectory(setOf(childName), parentName)
                 logger.debug { "Wired '$childName' to folder '$parentName'" }

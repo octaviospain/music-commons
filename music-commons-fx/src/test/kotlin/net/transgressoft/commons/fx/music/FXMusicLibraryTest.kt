@@ -112,6 +112,27 @@ internal class FXMusicLibraryTest : StringSpec({
         library.close()
     }
 
+    "FXMusicLibrary createPlaylist with non-empty audioItemIds resolves the playlist cover image after lirp binding" {
+        val library = FXMusicLibrary.builder().build()
+
+        val audioPath = Arb.virtualAudioFile().next()
+        val audioItem = library.audioItemFromFile(audioPath)
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        val playlist = library.playlistHierarchy().createPlaylist("Imported", listOf(audioItem.id))
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventuallyAfterFxEvents {
+            playlist.coverImageProperty.get().isPresent shouldBe true
+        }
+
+        library.close()
+    }
+
     "FXMusicLibrary resolves playlist self-references after JSON deserialization" {
         val playlistFile = tempfile("playlist-self-ref-test", ".json").also { it.deleteOnExit() }
         playlistFile.writeText(
