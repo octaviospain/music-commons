@@ -125,6 +125,11 @@ internal class FXPlaylistHierarchy(
         return FXPlaylist(newId(), name, false, audioItemIds).also {
             logger.debug { "Created playlist $it" }
             add(it)
+            // The FXPlaylist init runs refreshDerivedState before lirp registry binding completes,
+            // so its cover and audioItemsRecursive view are computed against an empty aggregate.
+            // After add() the aggregate delegates are bound — re-trigger the recompute so a
+            // playlist created with non-empty audioItemIds shows its cover image immediately.
+            it.triggerCoverHydration()
         }
     }
 
@@ -138,6 +143,7 @@ internal class FXPlaylistHierarchy(
         return FXPlaylist(newId(), name, true, audioItems.map { it.id }).also {
             logger.debug { "Created playlist $it" }
             add(it)
+            it.triggerCoverHydration()
         }
     }
 
