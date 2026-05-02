@@ -168,6 +168,19 @@ internal class FXPlaylist(
     }
 
     /**
+     * Detaches every child-recursive listener owned by this playlist. Invoked by
+     * [FXPlaylistHierarchy] when this playlist is removed from the repository so that
+     * descendants no longer hold a strong listener reference back to this instance and
+     * the deleted subtree can be garbage-collected cleanly.
+     */
+    internal fun detachAllChildRecursiveListeners() {
+        attachedChildListeners.values.forEach {
+            it.audioItemsRecursiveProperty.removeListener(childRecursiveListener)
+        }
+        attachedChildListeners.clear()
+    }
+
+    /**
      * Recomputes the recursive audio item view and cover image after the aggregate registries
      * have been bound and synchronized. Intended to be called by [FXPlaylistHierarchy] once
      * JSON-hydrated playlists have completed their lirp registry binding pass — at that point

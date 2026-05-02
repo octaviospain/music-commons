@@ -940,7 +940,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         val audioItemRepository = VolatileRepository<Int, ObservableAudioItem>()
         audioItemRepository.add(seed)
         audioItemRepository.add(seed2)
-        FXAudioLibrary(audioItemRepository)
+        val audioLibrary = FXAudioLibrary(audioItemRepository)
 
         val readHierarchy = FXPlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
 
@@ -965,6 +965,8 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         reloadedFolder.audioItemsRecursiveProperty.size shouldBe 3
 
         readHierarchy.close()
+        audioLibrary.close()
+        audioItemRepository.close()
     }
 
     "Recursive audio items property stops propagating after a child is removed" {

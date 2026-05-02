@@ -68,6 +68,9 @@ internal class FXPlaylistHierarchy(
                 }
             }
             addOnNextEventAction(DELETE) { event ->
+                event.entities.values.forEach { playlist ->
+                    if (playlist is FXPlaylist) playlist.detachAllChildRecursiveListeners()
+                }
                 synchronized(playlistsProperty) {
                     Platform.runLater { observablePlaylistsSet.removeAll(event.entities.values.toSet()) }
                 }
@@ -154,6 +157,9 @@ internal class FXPlaylistHierarchy(
      * then deregisters the playlist repository from LirpContext.
      */
     override fun close() {
+        forEach { playlist ->
+            if (playlist is FXPlaylist) playlist.detachAllChildRecursiveListeners()
+        }
         super.close()
         playlistChangesSubscriber.cancelSubscription()
         RegistryBase.deregisterRepository(ObservablePlaylist::class.java)
