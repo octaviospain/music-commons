@@ -86,7 +86,9 @@ internal class FXPlaylistHierarchy(
         // attaches the audio item registry. Now that all entities are loaded and bound,
         // syncLocalCache materializes the backing IDs into the local FX-observable cache,
         // and triggerCoverHydration recomputes cover/recursive properties from the freshly
-        // populated audio item aggregate.
+        // populated audio item aggregate. FXPlaylist's child-recursive listener attaches
+        // during this pass, so any descendant whose triggerCoverHydration runs after its
+        // parent's still cascades the recursive aggregate up the chain.
         forEach { playlist ->
             if (playlist is FXPlaylist) {
                 val audioSyncResult = runCatching { playlist.audioItemsAggregate.syncLocalCache() }

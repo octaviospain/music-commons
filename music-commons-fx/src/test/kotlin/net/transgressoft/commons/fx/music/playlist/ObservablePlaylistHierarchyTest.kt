@@ -852,6 +852,160 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         hierarchy.close()
     }
 
+    "Recursive audio items property propagates when items are added to a nested child playlist" {
+        val hierarchy = FXPlaylistHierarchy()
+
+        val leaf: ObservablePlaylist = hierarchy.createPlaylist("Leaf")
+        val folder: ObservablePlaylist = hierarchy.createPlaylistDirectory("Folder")
+
+        folder.addPlaylist(leaf)
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        folder.audioItemsRecursiveProperty.size shouldBe 0
+
+        val late1 = Arb.fxAudioItem { title = "Late1" }.next()
+        val late2 = Arb.fxAudioItem { title = "Late2" }.next()
+        leaf.addAudioItems(listOf(late1, late2))
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        leaf.audioItemsRecursiveProperty.size shouldBe 2
+        folder.audioItemsRecursiveProperty.size shouldBe 2
+        folder.audioItemsRecursiveProperty.map { it: ObservableAudioItem -> it.title } shouldContainExactly listOf("Late1", "Late2")
+
+        leaf.removeAudioItems(listOf(late1))
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        folder.audioItemsRecursiveProperty.size shouldBe 1
+        folder.audioItemsRecursiveProperty.map { it: ObservableAudioItem -> it.title } shouldContainExactly listOf("Late2")
+
+        hierarchy.close()
+    }
+
+    "Recursive audio items property propagates through grandchild updates" {
+        val hierarchy = FXPlaylistHierarchy()
+
+        val grandchild: ObservablePlaylist = hierarchy.createPlaylist("Grandchild")
+        val middle: ObservablePlaylist = hierarchy.createPlaylistDirectory("Middle")
+        val top: ObservablePlaylist = hierarchy.createPlaylistDirectory("Top")
+
+        middle.addPlaylist(grandchild)
+        top.addPlaylist(middle)
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        top.audioItemsRecursiveProperty.size shouldBe 0
+
+        val deep = Arb.fxAudioItem { title = "Deep" }.next()
+        grandchild.addAudioItems(listOf(deep))
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        middle.audioItemsRecursiveProperty.size shouldBe 1
+        top.audioItemsRecursiveProperty.size shouldBe 1
+        top.audioItemsRecursiveProperty.map { it: ObservableAudioItem -> it.title } shouldContainExactly listOf("Deep")
+
+        hierarchy.close()
+    }
+
+    "Recursive audio items property reflects nested descendants after JSON round-trip" {
+        val jsonFile = tempfile("observablePlaylistHierarchy-recursive-roundtrip", ".json").apply { deleteOnExit() }
+
+        val seed = Arb.fxAudioItem { title = "RoundtripSeed" }.next()
+        val seed2 = Arb.fxAudioItem { title = "RoundtripSeed2" }.next()
+
+        // Author phase: build folder + nested leaf with audio items, then persist.
+        val writeHierarchy = FXPlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
+        val leaf = writeHierarchy.createPlaylist("Leaf")
+        val folder = writeHierarchy.createPlaylistDirectory("Folder")
+        folder.addPlaylist(leaf)
+        leaf.addAudioItems(listOf(seed, seed2))
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        folder.audioItemsRecursiveProperty.size shouldBe 2
+
+        writeHierarchy.close()
+
+        // Reload phase: simulate app restart — the audio library must be available so the
+        // playlist hierarchy can resolve the persisted audio item ids back to entities.
+        val audioItemRepository = VolatileRepository<Int, ObservableAudioItem>()
+        audioItemRepository.add(seed)
+        audioItemRepository.add(seed2)
+        FXAudioLibrary(audioItemRepository)
+
+        val readHierarchy = FXPlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        val reloadedFolder = readHierarchy.findByName("Folder").get()
+        val reloadedLeaf = readHierarchy.findByName("Leaf").get()
+
+        reloadedLeaf.audioItemsRecursiveProperty.size shouldBe 2
+        reloadedFolder.audioItemsRecursiveProperty.size shouldBe 2
+        reloadedFolder.audioItemsRecursiveProperty.map { it: ObservableAudioItem -> it.title } shouldContainExactly listOf("RoundtripSeed", "RoundtripSeed2")
+
+        // Subsequent runtime mutations on the reloaded leaf must propagate to the reloaded folder.
+        val late = Arb.fxAudioItem { title = "RoundtripLate" }.next()
+        audioItemRepository.add(late)
+        reloadedLeaf.addAudioItems(listOf(late))
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        reloadedFolder.audioItemsRecursiveProperty.size shouldBe 3
+
+        readHierarchy.close()
+    }
+
+    "Recursive audio items property stops propagating after a child is removed" {
+        val hierarchy = FXPlaylistHierarchy()
+
+        // Build the same shape as the surrounding tests use: create the leaf empty,
+        // nest it, then add items afterwards. This avoids the racy "create-with-items
+        // then nest" setup where the audio item aggregate binds asynchronously.
+        val leaf: ObservablePlaylist = hierarchy.createPlaylist("Leaf")
+        val folder: ObservablePlaylist = hierarchy.createPlaylistDirectory("Folder")
+
+        folder.addPlaylist(leaf)
+
+        val seed = Arb.fxAudioItem { title = "Seed" }.next()
+        leaf.addAudioItems(listOf(seed))
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        folder.audioItemsRecursiveProperty.size shouldBe 1
+
+        folder.removePlaylist(leaf)
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        folder.audioItemsRecursiveProperty.size shouldBe 0
+
+        // Items added to a former child after removal must not appear in the former parent.
+        val late = Arb.fxAudioItem { title = "Late" }.next()
+        leaf.addAudioItems(listOf(late))
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        leaf.audioItemsRecursiveProperty.size shouldBe 2
+        folder.audioItemsRecursiveProperty.size shouldBe 0
+
+        hierarchy.close()
+    }
+
     "Repository subscription updates observable properties" {
         val hierarchy = FXPlaylistHierarchy()
 
