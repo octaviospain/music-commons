@@ -128,20 +128,56 @@ internal class FXPlaylist(
 
     override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>> = _coverImageProperty
 
+    private val childRecursiveListener = ListChangeListener<ObservableAudioItem> { refreshDerivedState() }
+
+    private val attachedChildListeners = mutableMapOf<Int, ObservablePlaylist>()
+
     init {
         audioItemsAggregate.addListener(
             ListChangeListener {
                 refreshDerivedState()
             }
         )
-        playlistsAggregate.addListener { _: SetChangeListener.Change<out ObservablePlaylist> ->
+        playlistsAggregate.addListener { change: SetChangeListener.Change<out ObservablePlaylist> ->
+            if (change.wasAdded()) {
+                attachChildRecursiveListener(change.elementAdded)
+            }
+            if (change.wasRemoved()) {
+                detachChildRecursiveListener(change.elementRemoved)
+            }
             refreshDerivedState()
         }
+        // Attach listeners for any children present at construction time so that mutations to
+        // their recursive views (e.g. items added to an already-nested leaf) propagate up.
+        playlistsAggregate.forEach { attachChildRecursiveListener(it) }
         // Best-effort initial computation. Effective only for non-hydrated paths where audio items
         // are already resolvable at construction time. For JSON-hydrated playlists the aggregates
         // bind to their registries after init runs; FXPlaylistHierarchy invokes
         // [triggerCoverHydration] post-load to recompute the cover once aggregates are bound.
         refreshDerivedState()
+    }
+
+    private fun attachChildRecursiveListener(child: ObservablePlaylist) {
+        if (attachedChildListeners.putIfAbsent(child.id, child) == null) {
+            child.audioItemsRecursiveProperty.addListener(childRecursiveListener)
+        }
+    }
+
+    private fun detachChildRecursiveListener(child: ObservablePlaylist) {
+        attachedChildListeners.remove(child.id)?.audioItemsRecursiveProperty?.removeListener(childRecursiveListener)
+    }
+
+    /**
+     * Detaches every child-recursive listener owned by this playlist. Invoked by
+     * [FXPlaylistHierarchy] when this playlist is removed from the repository so that
+     * descendants no longer hold a strong listener reference back to this instance and
+     * the deleted subtree can be garbage-collected cleanly.
+     */
+    internal fun detachAllChildRecursiveListeners() {
+        attachedChildListeners.values.forEach {
+            it.audioItemsRecursiveProperty.removeListener(childRecursiveListener)
+        }
+        attachedChildListeners.clear()
     }
 
     /**
@@ -150,9 +186,25 @@ internal class FXPlaylist(
      * JSON-hydrated playlists have completed their lirp registry binding pass — at that point
      * the audio item aggregate can resolve its referenced entities and the cover image can be
      * derived from them. No-op for playlists whose aggregates are already populated.
+     *
+     * Also reconciles child-recursive listeners against the post-sync [playlistsAggregate]:
+     * `syncLocalCache` populates the underlying set without firing `SetChangeListener` events,
+     * so children added during JSON load do not flow through the [playlistsAggregate] listener
+     * that normally drives listener attachment. This pass picks them up and detaches any
+     * listeners for children that are no longer present.
      */
     internal fun triggerCoverHydration() {
+        reconcileChildRecursiveListeners()
         refreshDerivedState()
+    }
+
+    private fun reconcileChildRecursiveListeners() {
+        val currentChildIds = playlistsAggregate.map { it.id }.toSet()
+        val staleIds = attachedChildListeners.keys.toSet() - currentChildIds
+        staleIds.forEach { id ->
+            attachedChildListeners.remove(id)?.audioItemsRecursiveProperty?.removeListener(childRecursiveListener)
+        }
+        playlistsAggregate.forEach { attachChildRecursiveListener(it) }
     }
 
     private fun refreshDerivedState() {
