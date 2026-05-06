@@ -17,11 +17,12 @@
 
 package net.transgressoft.commons.music.player
 
+import net.transgressoft.commons.music.audio.AudioFileCodec
+import net.transgressoft.commons.music.audio.AudioFileType
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
+import net.transgressoft.commons.music.audio.toAudioFileType
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
-import javafx.beans.property.DoubleProperty
-import javafx.beans.property.ReadOnlyObjectProperty
-import javafx.util.Duration
+import java.time.Duration
 import java.util.concurrent.Flow
 
 /**
@@ -45,9 +46,10 @@ interface AudioItemPlayer : Flow.Publisher<AudioItemPlayerEvent> {
     }
 
     val totalDuration: Duration
-    val volumeProperty: DoubleProperty
-    val statusProperty: ReadOnlyObjectProperty<Status>
-    val currentTimeProperty: ReadOnlyObjectProperty<Duration>
+
+    fun status(): Status
+
+    fun getCurrentTime(): Duration
 
     @Throws(UnsupportedAudioPlaybackException::class)
     fun play(audioItem: ReactiveAudioItem<*>)
@@ -60,11 +62,62 @@ interface AudioItemPlayer : Flow.Publisher<AudioItemPlayerEvent> {
 
     fun dispose()
 
-    fun status(): Status
-
     fun setVolume(value: Double)
 
-    fun seek(milliSeconds: Double)
+    fun seek(position: Duration)
 
     fun onFinish(value: Runnable)
+
+    companion object {
+        private val PLAYABLE_FILE_TYPES = AudioFileType.entries.filter { it.isPrimaryCodecSupported() }.toSet()
+
+        /**
+         * Determines if an audio item is playable based on its file type and codec.
+         *
+         * Checks both the file extension against known playable types and the
+         * encoding/encoder metadata to filter out unsupported codecs (ALAC, Opus,
+         * FLAC-in-M4A).
+         *
+         * @param audioItem the audio item to check
+         * @return true if the item's format and codec are supported for playback
+         */
+        fun isPlayable(audioItem: ReactiveAudioItem<*>): Boolean {
+            val fileType = runCatching { audioItem.extension.toAudioFileType() }.getOrNull()
+            if (fileType !in PLAYABLE_FILE_TYPES) return false
+
+            val encoding = audioItem.encoding ?: ""
+            val encoder = audioItem.encoder ?: ""
+
+            return when {
+                // ALAC in M4A
+                encoding.startsWith("Apple", ignoreCase = true) || encoder.startsWith("iTunes", ignoreCase = true) -> false
+                // Opus in any container
+                encoding.startsWith("Opus", ignoreCase = true) -> false
+                // FLAC in M4A container (not native FLAC files)
+                encoding.startsWith("FLAC", ignoreCase = true) && fileType == AudioFileType.M4A -> false
+                else -> true
+            }
+        }
+
+        /**
+         * Returns the detected [AudioFileCodec] for the given audio item, or null if
+         * the codec cannot be determined from the file type and metadata.
+         *
+         * @param audioItem the audio item to analyze
+         * @return the detected codec or null
+         */
+        fun detectCodec(audioItem: ReactiveAudioItem<*>): AudioFileCodec? {
+            val fileType = runCatching { audioItem.extension.toAudioFileType() }.getOrNull() ?: return null
+            val encoding = audioItem.encoding ?: ""
+            val encoder = audioItem.encoder ?: ""
+
+            return when {
+                encoding.startsWith("AAC", ignoreCase = true) || encoding.contains("MPEG-4", ignoreCase = true) -> AudioFileCodec.AAC
+                encoding.startsWith("Apple", ignoreCase = true) || encoder.startsWith("iTunes", ignoreCase = true) -> AudioFileCodec.ALAC
+                encoding.startsWith("Opus", ignoreCase = true) -> AudioFileCodec.OPUS
+                encoding.startsWith("FLAC", ignoreCase = true) && fileType == AudioFileType.M4A -> AudioFileCodec.FLAC
+                else -> fileType.primaryCodec
+            }
+        }
+    }
 }

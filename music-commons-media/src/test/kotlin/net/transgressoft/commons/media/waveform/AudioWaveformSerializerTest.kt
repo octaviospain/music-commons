@@ -1,11 +1,12 @@
-package net.transgressoft.commons.music.waveform
+package net.transgressoft.commons.media.waveform
 
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.AudioFileTagType.ID3_V_24
+import net.transgressoft.commons.music.audio.AudioFileTagType.WAV
 import net.transgressoft.commons.music.common.toJsonUri
+import net.transgressoft.commons.music.waveform.AudioWaveform
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.DisplayName
-import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -21,7 +22,6 @@ import kotlinx.serialization.json.Json
  * round-trip serialization fidelity, and Base64 cache field encoding.
  */
 @DisplayName("AudioWaveformSerializer")
-@Tags("linux-only")
 internal class AudioWaveformSerializerTest : StringSpec({
 
     val json = Json { prettyPrint = false }
@@ -50,7 +50,7 @@ internal class AudioWaveformSerializerTest : StringSpec({
     }
 
     "AudioWaveformSerializer encodes cachedWidth and normalizedAmplitudes in JSON when cache is populated" {
-        val realAudioPath = Arb.realAudioFile(ID3_V_24).next()
+        val realAudioPath = Arb.realAudioFile(WAV).next()
         val waveform = ScalableAudioWaveform(5, realAudioPath)
         waveform.amplitudes(780, 335)
 
@@ -61,7 +61,7 @@ internal class AudioWaveformSerializerTest : StringSpec({
     }
 
     "AudioWaveformSerializer round-trip with cached amplitudes preserves cachedWidth and normalizedAmplitudes size" {
-        val realAudioPath = Arb.realAudioFile(ID3_V_24).next()
+        val realAudioPath = Arb.realAudioFile(WAV).next()
         val waveform = ScalableAudioWaveform(10, realAudioPath)
         waveform.amplitudes(780, 335)
 

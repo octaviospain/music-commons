@@ -8,12 +8,11 @@ dependencies {
     api project(path: ':music-commons-api')
     api 'org.jetbrains.kotlinx:kotlinx-coroutines-core'
 
+    implementation project(':music-commons-media')
     implementation libs.guava.get()
     implementation libs.jaudiotagger.get()
     implementation libs.lirp.core.get()
     implementation libs.lirp.sql.get()
-    implementation libs.jave.core.get()
-    implementation libs.jave.nativebin.linux64.get()
     implementation libs.dd.plist.get()
 
     ksp libs.lirp.ksp.get()

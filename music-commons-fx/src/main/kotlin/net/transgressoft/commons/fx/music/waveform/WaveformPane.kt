@@ -20,6 +20,8 @@ package net.transgressoft.commons.fx.music.waveform
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import javafx.scene.canvas.Canvas
 import javafx.scene.paint.Color
+import mu.KotlinLogging
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -35,6 +37,8 @@ import kotlinx.coroutines.withContext
  * pending waveform computations when a new waveform is requested or when the size changes.
  */
 class WaveformPane : Canvas() {
+
+    private val logger = KotlinLogging.logger {}
 
     private var waveform: AudioWaveform? = null
     private var waveformColor: Color = Color.WHITE
@@ -80,9 +84,15 @@ class WaveformPane : Canvas() {
                     gc.fill = backgroundColor
                     gc.fillRect(0.0, 0.0, width, height)
 
-                    val amplitudes = waveform.amplitudes(width.toInt(), height.toInt())
-                    withContext(Dispatchers.JavaFx) {
-                        drawWaveform(amplitudes, waveformColor)
+                    try {
+                        val amplitudes = waveform.amplitudes(width.toInt(), height.toInt())
+                        withContext(Dispatchers.JavaFx) {
+                            drawWaveform(amplitudes, waveformColor)
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        logger.warn(e) { "Failed to compute waveform for $waveform" }
                     }
                 }
             }

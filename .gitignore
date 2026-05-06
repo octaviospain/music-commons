@@ -37,6 +37,9 @@ replay_pid*
 .serena
 .claude
 .planning
+.codexignore
+.codex
+AGENTS.md
 CLAUDE.md
 .mcp.json
 .graphifyignore

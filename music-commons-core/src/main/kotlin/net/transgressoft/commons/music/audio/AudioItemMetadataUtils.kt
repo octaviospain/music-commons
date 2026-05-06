@@ -25,6 +25,7 @@ import com.neovisionaries.i18n.CountryCode
 import mu.KLogger
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.AudioHeader
+import org.jaudiotagger.audio.exceptions.CannotReadException
 import org.jaudiotagger.audio.wav.WavOptions
 import org.jaudiotagger.tag.FieldKey
 import org.jaudiotagger.tag.Tag
@@ -84,9 +85,21 @@ object AudioItemMetadataUtils {
      * @param path path to the audio file
      */
     fun readMetadata(path: Path): AudioFileMetadata {
-        val audioFile = AudioFileIO.read(path.toFile())
+        val audioFile =
+            try {
+                AudioFileIO.read(path.toFile())
+            } catch (_: CannotReadException) {
+                // File is a valid audio stream but has no readable tag block (e.g. OGG without vorbiscomment).
+                // Fall back to header-only metadata so the file can still be played.
+                return emptyMetadata()
+            } catch (_: NullPointerException) {
+                // JAudioTagger's Mp4InfoReader throws NPE for unsupported M4A codecs
+                // (Opus, FLAC-in-M4A) because fields like noOfChannels are null.
+                // Fall back to empty metadata so the file can still be played.
+                return emptyMetadata()
+            }
         val header = audioFile.audioHeader
-        val tag = audioFile.tag
+        val tag = audioFile.tag ?: return emptyMetadata(header)
         return AudioFileMetadata(
             bitRate = parseBitRate(header),
             duration = Duration.ofSeconds(header.trackLength.toLong()),
@@ -103,6 +116,23 @@ object AudioItemMetadataUtils {
             coverBytes = parseCoverBytes(tag)
         )
     }
+
+    private fun emptyMetadata(header: AudioHeader? = null): AudioFileMetadata =
+        AudioFileMetadata(
+            bitRate = header?.let(::parseBitRate) ?: 0,
+            duration = header?.let { Duration.ofSeconds(it.trackLength.toLong()) } ?: Duration.ZERO,
+            encoder = null,
+            encoding = header?.encodingType,
+            title = "",
+            artist = ImmutableArtist.UNKNOWN,
+            album = ImmutableAlbum.UNKNOWN,
+            genres = emptySet(),
+            comments = null,
+            trackNumber = null,
+            discNumber = null,
+            bpm = null,
+            coverBytes = null
+        )
 
     /**
      * Reads the cover image bytes from the audio file at [path], or returns `null` if the file
@@ -150,8 +180,10 @@ object AudioItemMetadataUtils {
         audio.commit()
     }
 
-    // getFirst returns "" for missing fields in JAudioTagger — callers rely on this established behavior
-    private fun getFieldIfExisting(tag: Tag, fieldKey: FieldKey): String? = tag.getFirst(fieldKey)
+    // getFirst returns "" for missing fields, but throws UnsupportedOperationException for some tag/field
+    // combinations (e.g. WavTag + COUNTRY). Treat both as "field not present".
+    private fun getFieldIfExisting(tag: Tag, fieldKey: FieldKey): String? =
+        runCatching { tag.getFirst(fieldKey) }.getOrNull()
 
     private fun parseArtist(tag: Tag): Artist =
         getFieldIfExisting(tag, FieldKey.ARTIST)?.let { artistName ->

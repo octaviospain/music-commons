@@ -24,14 +24,16 @@ import org.jaudiotagger.tag.Tag
 import org.jaudiotagger.tag.flac.FlacTag
 import org.jaudiotagger.tag.id3.ID3v24Tag
 import org.jaudiotagger.tag.mp4.Mp4Tag
+import org.jaudiotagger.tag.vorbiscomment.VorbisCommentTag
 import org.jaudiotagger.tag.wav.WavInfoTag
 import org.jaudiotagger.tag.wav.WavTag
 import java.io.File
 
 internal val mp3File = getResourceAsFile("/testfiles/testeable.mp3")
-internal val m4aFile = getResourceAsFile("/testfiles/testeable.m4a")
+internal val m4aFile = getResourceAsFile("/testfiles/testeable_aac.m4a")
 internal val flacFile = getResourceAsFile("/testfiles/testeable.flac")
 internal val wavFile = getResourceAsFile("/testfiles/testeable.wav")
+internal val oggFile = getResourceAsFile("/testfiles/testeable_vorbis.ogg")
 
 enum class AudioFileTagType {
 
@@ -48,6 +50,12 @@ enum class AudioFileTagType {
             }
         },
         wavFile
+    ),
+    VORBIS_COMMENT(
+        AudioFileType.OGG,
+        { mockk<VorbisCommentTag>() },
+        { VorbisCommentTag() },
+        oggFile
     );
 
     val fileType: AudioFileType

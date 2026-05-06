@@ -26,6 +26,14 @@ ktlint = "14.0.1"
 sonarqube = "7.0.1.6134"
 axion-release = "1.21.0"
 javafx-plugin = "0.1.0"
+javasound-mp3 = "1.9.8"
+mp3spi = "1.9.5.4"
+javasound-flac = "1.4.1"
+javasound-vorbis = "2.1.0"
+javasound-aac = "0.9.8"
+javasound-resloader = "0.1.3"
+jaad = "0.8.7"
+tritonus-share = "0.3.7.4"
 
 [libraries]
 kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
@@ -42,8 +50,6 @@ lirp-sql = { module = "net.transgressoft:lirp-sql", version.ref = "lirp" }
 lirp-fx = { module = "net.transgressoft:lirp-fx", version.ref = "lirp" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 jaudiotagger = { module = "net.jthink:jaudiotagger", version.ref = "jaudiotagger" }
-jave-core = { module = "ws.schild:jave-core", version.ref = "jave" }
-jave-nativebin-linux64 = { module = "ws.schild:jave-nativebin-linux64", version.ref = "jave" }
 nv-i18n = { module = "com.neovisionaries:nv-i18n", version.ref = "nv-i18n" }
 dd-plist = { module = "com.googlecode.plist:dd-plist", version.ref = "ddplist" }
 kotlin-logging = { module = "io.github.microutils:kotlin-logging-jvm", version.ref = "kotlin-logging" }
@@ -62,6 +68,14 @@ testfx-core = { module = "org.testfx:testfx-core", version.ref = "testfx" }
 testfx-junit5 = { module = "org.testfx:testfx-junit5", version.ref = "testfx" }
 openjfx-monocle = { module = "org.testfx:openjfx-monocle", version.ref = "monocle" }
 javafx-controls = { module = "org.openjfx:javafx-controls", version.ref = "javafx-controls" }
+javasound-mp3 = { module = "com.tianscar.javasound:javasound-mp3", version.ref = "javasound-mp3" }
+mp3spi = { module = "com.googlecode.soundlibs:mp3spi", version.ref = "mp3spi" }
+javasound-flac = { module = "com.tianscar.javasound:javasound-flac", version.ref = "javasound-flac" }
+javasound-vorbis = { module = "com.tianscar.javasound:javasound-vorbis", version.ref = "javasound-vorbis" }
+javasound-aac = { module = "com.tianscar.javasound:javasound-aac", version.ref = "javasound-aac" }
+javasound-resloader = { module = "com.tianscar.javasound:javasound-resloader", version.ref = "javasound-resloader" }
+jaad = { module = "de.sfuhrm:jaad", version.ref = "jaad" }
+tritonus-share = { module = "com.googlecode.soundlibs:tritonus-share", version.ref = "tritonus-share" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

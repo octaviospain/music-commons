@@ -30,7 +30,7 @@ import java.io.Serial
  *
  * [seekRatio] is always clamped to [0.0, 1.0] before the event is constructed.
  * Consumers must multiply by the total duration in the units their player expects
- * (e.g., milliseconds for [net.transgressoft.commons.fx.music.player.JavaFxPlayer.seek]).
+ * (e.g., milliseconds for [net.transgressoft.commons.fx.music.player.FXAudioItemPlayer.seek]).
  */
 class SeekEvent(
     source: Any,

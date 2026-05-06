@@ -5,7 +5,6 @@
         </encoder>
     </appender>
     <logger name="org.jaudiotagger.audio" level="OFF" />
-    <logger name="ws.schild.jave" level="WARN" />
     <logger name="io.mockk" level="OFF"/>
 
     <root level="INFO">

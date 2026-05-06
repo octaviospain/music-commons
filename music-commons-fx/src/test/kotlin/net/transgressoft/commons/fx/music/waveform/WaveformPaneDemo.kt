@@ -1,28 +1,84 @@
 package net.transgressoft.commons.fx.music.waveform
 
-import net.transgressoft.commons.music.waveform.ScalableAudioWaveform
+import net.transgressoft.commons.media.waveform.ScalableAudioWaveform
 import javafx.application.Application
+import javafx.collections.FXCollections
 import javafx.scene.Scene
+import javafx.scene.control.ComboBox
 import javafx.scene.layout.AnchorPane
+import javafx.scene.layout.HBox
 import javafx.scene.paint.Color
 import javafx.stage.Stage
-import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 
+/**
+ * Interactive demo application for [WaveformPane].
+ *
+ * Tests waveform generation across all supported audio formats and codec variants.
+ * Resources are loaded from the classpath (typically the music-commons-test JAR) and
+ * extracted to temp files so that AudioSystem can decode them.
+ */
 class WaveformPaneDemo : Application() {
 
     private lateinit var waveformPane: WaveformPane
 
+    private val formats = FXCollections.observableArrayList(TEST_FIXTURES)
+    private val extractedFiles = mutableMapOf<String, Path>()
+
     override fun start(primaryStage: Stage) {
         waveformPane = WaveformPane()
         val anchorPane = AnchorPane(waveformPane)
-        anchorPane.setPrefSize(500.0, 200.0)
-        waveformPane.heightProperty().bind(anchorPane.heightProperty())
+        anchorPane.setPrefSize(600.0, 250.0)
+        waveformPane.heightProperty().bind(anchorPane.heightProperty().subtract(40))
         waveformPane.widthProperty().bind(anchorPane.widthProperty())
-        val uri = javaClass.getResource("/testfiles/testeable.flac")?.toURI()!!
 
+        val formatSelector =
+            ComboBox(formats).apply {
+                value = "testeable.flac"
+                setOnAction { loadWaveformForFixture(value) }
+            }
+
+        val controls =
+            HBox(10.0, formatSelector).apply {
+                AnchorPane.setBottomAnchor(this, 10.0)
+                AnchorPane.setLeftAnchor(this, 10.0)
+            }
+
+        anchorPane.children.add(controls)
+
+        primaryStage.title = "WaveformPane Demo - All Formats"
         primaryStage.scene = Scene(anchorPane)
         primaryStage.show()
-        waveformPane.drawWaveformAsync(ScalableAudioWaveform(1, File(uri).toPath()), Color.GREEN, Color.MAGENTA)
+
+        loadWaveformForFixture("testeable.flac")
+    }
+
+    private fun loadWaveformForFixture(fixtureName: String) {
+        val path =
+            extractToTempFile(fixtureName) ?: run {
+                println("Test file not found: $fixtureName")
+                return
+            }
+        waveformPane.drawWaveformAsync(
+            ScalableAudioWaveform(1, path),
+            Color.GREEN,
+            Color.MAGENTA
+        )
+    }
+
+    private fun extractToTempFile(fixtureName: String): Path? {
+        extractedFiles[fixtureName]?.let { return it }
+        val stream = javaClass.getResourceAsStream("/testfiles/$fixtureName") ?: return null
+        return stream.use {
+            val ext = fixtureName.substringAfterLast('.')
+            Files.createTempFile("waveform-demo-", ".$ext").apply {
+                toFile().deleteOnExit()
+                Files.copy(it, this, StandardCopyOption.REPLACE_EXISTING)
+                extractedFiles[fixtureName] = this
+            }
+        }
     }
 
     override fun stop() {

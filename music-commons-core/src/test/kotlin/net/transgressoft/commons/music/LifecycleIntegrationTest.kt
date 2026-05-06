@@ -1,16 +1,18 @@
 package net.transgressoft.commons.music
 
+import net.transgressoft.commons.media.waveform.AudioWaveformMapSerializer
+import net.transgressoft.commons.media.waveform.ScalableAudioWaveform
+import net.transgressoft.commons.media.waveform.audioWaveformRepository
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemMapSerializer
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
+import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import net.transgressoft.commons.music.playlist.AudioPlaylistMapSerializer
 import net.transgressoft.commons.music.playlist.DefaultPlaylistHierarchy
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
 import net.transgressoft.commons.music.waveform.AudioWaveform
-import net.transgressoft.commons.music.waveform.AudioWaveformMapSerializer
-import net.transgressoft.commons.music.waveform.DefaultAudioWaveformRepository
-import net.transgressoft.commons.music.waveform.ScalableAudioWaveform
+import net.transgressoft.commons.music.waveform.AudioWaveformRepository
 import net.transgressoft.lirp.event.ReactiveScope
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.json.JsonRepository
@@ -43,7 +45,7 @@ internal class LifecycleIntegrationTest : StringSpec({
     lateinit var waveformsRepository: JsonRepository<Int, AudioWaveform>
 
     lateinit var audioLibrary: DefaultAudioLibrary
-    lateinit var waveforms: DefaultAudioWaveformRepository<AudioItem>
+    lateinit var waveforms: AudioWaveformRepository<AudioWaveform, AudioItem>
     lateinit var playlistHierarchy: DefaultPlaylistHierarchy
 
     beforeSpec {
@@ -61,7 +63,8 @@ internal class LifecycleIntegrationTest : StringSpec({
         playlistHierarchyRepository = JsonFileRepository(playlistsFile, AudioPlaylistMapSerializer)
 
         audioLibrary = DefaultAudioLibrary(audioLibraryRepository)
-        waveforms = DefaultAudioWaveformRepository(waveformsRepository)
+        val subscriber = AudioItemEventSubscriber<AudioItem>("LifecycleTestSubscriber")
+        waveforms = audioWaveformRepository(waveformsRepository, subscriber) { subscriber.cancelSubscription() }
         playlistHierarchy = DefaultPlaylistHierarchy(playlistHierarchyRepository)
     }
 

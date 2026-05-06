@@ -66,6 +66,9 @@ internal class MutableAudioItemTest : FunSpec({
                 "a m4a file" to Arb.realAudioFile(MP4_INFO, expectedAttributes).next(),
                 "a wav file" to Arb.realAudioFile(WAV, expectedAttributes).next(),
                 "a flac file" to Arb.realAudioFile(FLAC, expectedAttributes).next()
+                // Note: OGG/VorbisComment is excluded from metadata round-trip tests because
+                // jaudiotagger cannot re-read OGG files with vorbis-comment headers after writing.
+                // OGG is tested separately for playback and waveform generation.
             )
         ) { filePath ->
             val date = LocalDateTime.now()
