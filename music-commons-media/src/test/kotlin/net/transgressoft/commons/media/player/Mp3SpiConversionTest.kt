@@ -37,7 +37,6 @@ class Mp3SpiConversionTest : StringSpec({
                 if (bytesRead > 0) totalBytes += bytesRead
                 bytesRead = pcmStream.read(buffer)
             }
-            pcmStream.close()
             println("MP3 PCM bytes produced: $totalBytes")
             totalBytes shouldBeGreaterThan 0
         }

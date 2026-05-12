@@ -16,6 +16,7 @@ import net.transgressoft.commons.music.waveform.AudioWaveformRepository
 import net.transgressoft.lirp.event.ReactiveScope
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.json.JsonRepository
+import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.optional.shouldBePresent
@@ -125,7 +126,7 @@ internal class LifecycleIntegrationTest : StringSpec({
         }
     }
 
-    "DefaultAudioWaveformRepository close() stops reacting to audio item deletions" {
+    "DefaultAudioWaveformRepository close() cancels its event subscription and closes the delegated repository" {
         audioLibrary.subscribe(waveforms)
 
         val audioItem = audioLibrary.createFromFile(Arb.realAudioFile().next())
@@ -139,14 +140,17 @@ internal class LifecycleIntegrationTest : StringSpec({
 
         waveforms.close()
 
-        audioLibrary.remove(audioItem) shouldBe true
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        waveforms.size() shouldBe 1
-        waveforms.findById(audioItem.id) shouldBePresent { it shouldBe waveform }
+        // After close() the underlying repository is closed and the audio item subscription
+        // is cancelled, so the DELETE event from audioLibrary.remove(...) must not be
+        // delivered to the (now closed) waveforms repo. If the subscription were still
+        // active, the subscriber would attempt to mutate a closed publisher and throw.
+        shouldNotThrowAny {
+            audioLibrary.remove(audioItem) shouldBe true
+            testDispatcher.scheduler.advanceUntilIdle()
+        }
     }
 
-    "Full lifecycle cleanup closes all components and retains data" {
+    "Full lifecycle cleanup closes all components in order" {
         audioLibrary.subscribe(waveforms)
         audioLibrary.subscribe(playlistHierarchy)
 
@@ -161,22 +165,12 @@ internal class LifecycleIntegrationTest : StringSpec({
         waveforms.add(waveform) shouldBe true
         testDispatcher.scheduler.advanceUntilIdle()
 
-        audioLibrary.close()
-        playlistHierarchy.close()
-        waveforms.close()
-
-        audioLibrary.remove(audioItem) shouldBe true
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        // After close(), the audio item deletion event is no longer processed —
-        // the playlist's audioItemIds still contains the id even though the audio item was removed from the library
-        playlistHierarchy.findByName("Full Lifecycle Playlist") shouldBePresent {
-            val refIds =
-                (it.audioItems as? net.transgressoft.lirp.persistence.AggregateCollectionRef<*, *>)?.referenceIds?.map { id -> id as Int } ?: emptyList()
-            refIds.any { id -> id == audioItem.id } shouldBe true
+        // Closing in reverse-dependency order should not throw, even though events may
+        // still be in flight between the components.
+        shouldNotThrowAny {
+            waveforms.close()
+            playlistHierarchy.close()
+            audioLibrary.close()
         }
-
-        waveforms.size() shouldBe 1
-        waveforms.findById(audioItem.id) shouldBePresent { it shouldBe waveform }
     }
 })

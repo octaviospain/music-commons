@@ -150,11 +150,11 @@ subprojects {
 
     // Cross-platform test tag filtering. See CONTRIBUTING.md "Cross-Platform Testing".
     //
-    //   Tag                Purpose                              Default
-    //   linux-only         Needs Linux (jave-nativebin-linux64) Included
-    //   posix-only         Needs POSIX (chmod, /tmp semantics)  Included
-    //   windows-only       Needs real Windows host              EXCLUDED
-    //   requires-playback  Needs audio playback (JavaFX media)  Included
+    //   Tag                Purpose                                       Default
+    //   linux-only         Needs Linux-JDK path semantics                Included
+    //   posix-only         Needs POSIX (chmod, /tmp semantics)           Included
+    //   windows-only       Needs real Windows host                       EXCLUDED
+    //   requires-playback  Needs a working audio output device           Included
     //
     //   -PexcludeLinuxOnly=true     skip linux-only tests   (use on macOS, Windows)
     //   -PexcludePosixOnly=true     skip posix-only tests   (use on Windows)

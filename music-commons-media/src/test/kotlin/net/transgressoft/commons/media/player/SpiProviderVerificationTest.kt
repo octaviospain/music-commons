@@ -58,7 +58,7 @@ class SpiProviderVerificationTest : FunSpec({
             stream.close()
         }
 
-        test("MP3 decodes via javasound-mp3 SPI") {
+        test("MP3 decodes via mp3spi SPI") {
             val file = getTestFile("testeable.mp3")
             val stream = AudioSystem.getAudioInputStream(file)
             stream.format.toString() shouldContainString "MPEG"
@@ -102,7 +102,7 @@ class SpiProviderVerificationTest : FunSpec({
             // OGG via javasound-vorbis
             extensions shouldContain "ogg"
 
-            // Note: MP3 and M4A/MP4 SPIs (javasound-mp3, javasound-aac) handle stream conversion
+            // Note: MP3 and M4A/MP4 SPIs (mp3spi, javasound-aac) handle stream conversion
             // via getAudioInputStream() but do NOT register in getAudioFileTypes().
             // This is a known limitation of these SPI implementations.
             // The individual decode tests above verify they work correctly.

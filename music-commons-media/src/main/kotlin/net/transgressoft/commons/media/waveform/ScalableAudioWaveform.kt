@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ * Copyright (C) 2026  Octavio Calleya Garcia                                 *
  *                                                                            *
  * This program is free software: you can redistribute it and/or modify       *
  * it under the terms of the GNU General Public License as published by       *
@@ -30,6 +30,7 @@ import java.nio.file.Path
 import javax.imageio.ImageIO
 import kotlin.io.path.exists
 import kotlin.io.path.extension
+import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineDispatcher
@@ -102,6 +103,7 @@ class ScalableAudioWaveform(
         }
         return try {
             val pcmStream = decodeToPcmStream(audioFilePath)
+            val isBigEndian = pcmStream.format.isBigEndian
             val pcmBytes: ByteArray =
                 pcmStream.use { stream ->
                     val buf = ByteArrayOutputStream()
@@ -121,9 +123,15 @@ class ScalableAudioWaveform(
             val sampleCount = pcmBytes.size / 2
             IntArray(sampleCount) { i ->
                 val byteOffset = i * 2
-                val low = pcmBytes[byteOffset].toInt() and 0xFF
-                val high = pcmBytes[byteOffset + 1].toInt()
-                (high shl 8) or low
+                if (isBigEndian) {
+                    val high = pcmBytes[byteOffset].toInt()
+                    val low = pcmBytes[byteOffset + 1].toInt() and 0xFF
+                    (high shl 8) or low
+                } else {
+                    val low = pcmBytes[byteOffset].toInt() and 0xFF
+                    val high = pcmBytes[byteOffset + 1].toInt()
+                    (high shl 8) or low
+                }
             }
         } catch (exception: AudioWaveformProcessingException) {
             throw exception
@@ -152,7 +160,7 @@ class ScalableAudioWaveform(
                     .coerceAtMost(pcm.size)
             var amplitude = 0.0f
             for (i in start until endExclusive) {
-                amplitude += kotlin.math.abs(pcm[i]) / divisor
+                amplitude += abs(pcm[i]) / divisor
             }
             amplitude / (endExclusive - start).toFloat()
         }

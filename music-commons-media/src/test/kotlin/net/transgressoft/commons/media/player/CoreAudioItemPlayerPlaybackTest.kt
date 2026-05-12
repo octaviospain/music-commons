@@ -38,9 +38,7 @@ import io.kotest.property.arbitrary.next
 import java.nio.file.Files.createTempFile
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.delay
 
 /**
  * Tests that exercise actual JavaSound SPI playback through [CoreAudioItemPlayer].
@@ -125,7 +123,7 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
         }
     }
 
-    context("WAV playback completes and transitions to READY") {
+    test("WAV playback completes and transitions to READY") {
         val player = CoreAudioItemPlayer()
         val realAudioPath = Arb.realAudioFile(WAV).next()
         val audioItem = Arb.audioItem { path = realAudioPath }.next()
@@ -135,7 +133,8 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
             player.play(audioItem)
             player.status() shouldBe Status.PLAYING
 
-            // Wait for the WAV track (~9s) to finish playing back
+            // Wait for the WAV track (~9s) to finish playing back. The timeout is generous
+            // because audio output is real-time and CI runners can add latency.
             eventually(15.seconds) {
                 player.status() shouldBe Status.READY
             }
@@ -144,7 +143,7 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
         }
     }
 
-    context("seek changes current time for WAV") {
+    test("seek changes current time for WAV") {
         val player = CoreAudioItemPlayer()
         val realAudioPath = Arb.realAudioFile(WAV).next()
         val audioItem = Arb.audioItem { path = realAudioPath }.next()
@@ -158,16 +157,16 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
 
             // Seek to 500ms
             player.seek(Duration.ofMillis(500))
-            delay(200.milliseconds)
-
-            // Current time should be around 500ms
-            player.getCurrentTime().toMillis() shouldBeGreaterThanLong 400L
+            eventually(1.seconds) {
+                // Current time should be around 500ms
+                player.getCurrentTime().toMillis() shouldBeGreaterThanLong 400L
+            }
         } finally {
             player.dispose()
         }
     }
 
-    context("dispose transitions to DISPOSED and is idempotent") {
+    test("dispose transitions to DISPOSED and is idempotent") {
         val player = CoreAudioItemPlayer()
         val realAudioPath = Arb.realAudioFile(WAV).next()
         val audioItem = Arb.audioItem { path = realAudioPath }.next()
@@ -184,7 +183,7 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
         player.status() shouldBe Status.DISPOSED
     }
 
-    context("play after dispose is ignored") {
+    test("play after dispose is ignored") {
         val player = CoreAudioItemPlayer()
         val realAudioPath = Arb.realAudioFile(WAV).next()
         val audioItem = Arb.audioItem { path = realAudioPath }.next()
@@ -198,7 +197,7 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
         player.status() shouldBe Status.DISPOSED
     }
 
-    context("play throws UnsupportedAudioPlaybackException for non-existent file") {
+    test("play throws UnsupportedAudioPlaybackException for non-existent file") {
         val player = CoreAudioItemPlayer()
         val audioItem =
             Arb.audioItem {

@@ -6,7 +6,6 @@ lirp = "2.4.2"
 ksp = "2.3.6"
 guava = "33.5.0-jre"
 jaudiotagger = "3.0.1"
-jave = "3.5.0"
 nv-i18n = "1.29"
 ddplist = "1.29"
 kotlin-logging = "3.0.5"
@@ -26,7 +25,6 @@ ktlint = "14.0.1"
 sonarqube = "7.0.1.6134"
 axion-release = "1.21.0"
 javafx-plugin = "0.1.0"
-javasound-mp3 = "1.9.8"
 mp3spi = "1.9.5.4"
 javasound-flac = "1.4.1"
 javasound-vorbis = "2.1.0"
@@ -68,7 +66,6 @@ testfx-core = { module = "org.testfx:testfx-core", version.ref = "testfx" }
 testfx-junit5 = { module = "org.testfx:testfx-junit5", version.ref = "testfx" }
 openjfx-monocle = { module = "org.testfx:openjfx-monocle", version.ref = "monocle" }
 javafx-controls = { module = "org.openjfx:javafx-controls", version.ref = "javafx-controls" }
-javasound-mp3 = { module = "com.tianscar.javasound:javasound-mp3", version.ref = "javasound-mp3" }
 mp3spi = { module = "com.googlecode.soundlibs:mp3spi", version.ref = "mp3spi" }
 javasound-flac = { module = "com.tianscar.javasound:javasound-flac", version.ref = "javasound-flac" }
 javasound-vorbis = { module = "com.tianscar.javasound:javasound-vorbis", version.ref = "javasound-vorbis" }

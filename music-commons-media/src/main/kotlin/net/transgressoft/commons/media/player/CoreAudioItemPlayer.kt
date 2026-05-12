@@ -32,6 +32,7 @@ import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.time.Duration
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
@@ -46,7 +47,8 @@ import javax.sound.sampled.UnsupportedAudioFileException
  * Uses [SourceDataLine] for PCM output. The pump thread is a daemon with explicit drain-and-close
  * in [dispose] to prevent JVM hang.
  *
- * [stop] preserves playback position — a subsequent [play] resumes from the same position.
+ * [stop] resets the playback position to the start; a subsequent [play] begins from the
+ * beginning. Use [pause]/[resume] to preserve position across playback control changes.
  * [dispose] is idempotent (callable multiple times without error).
  *
  * @see AudioItemPlayer
@@ -74,6 +76,13 @@ open class CoreAudioItemPlayer(
     private val internalStatus = AtomicReference(Status.UNKNOWN)
     private val pcmData = AtomicReference<ByteArray?>(null)
     private val pcmFormat = AtomicReference<AudioFormat?>(null)
+
+    // Monotonically incremented for each new play() invocation. The pump thread
+    // captures its session id at start; only the still-active session is permitted
+    // to mutate shared playback state from its completion handler. Prevents an
+    // interrupted older pump from clobbering state set up for a new playback.
+    private val sessionId = AtomicLong(0L)
+    private val activeSessionId = AtomicLong(-1L)
 
     @Volatile
     private var sourceDurationMillis: Long = 0L
@@ -122,18 +131,21 @@ open class CoreAudioItemPlayer(
         if (state.get() == InternalState.DISPOSED) return
         val file = audioItem.path.toFile()
         if (!file.exists() || file.isDirectory) {
-            throw UnsupportedAudioPlaybackException("Cannot play audio item '${audioItem.fileName}': file not found")
+            throw UnsupportedAudioPlaybackException("Cannot play audio item '${audioItem.path.fileName}': file not found")
         }
         try {
             AudioSystem.getAudioFileFormat(file)
         } catch (e: Exception) {
-            throw UnsupportedAudioPlaybackException("Cannot play audio item '${audioItem.fileName}': unsupported format", e)
+            throw UnsupportedAudioPlaybackException("Cannot play audio item '${audioItem.path.fileName}': unsupported format", e)
         }
         stopCurrentPlayback()
         seekTargetMillis = -1L
+        framePosition = 0L
         currentAudioItem.set(audioItem)
+        val mySession = sessionId.incrementAndGet()
+        activeSessionId.set(mySession)
         internalStatus.set(Status.PLAYING)
-        pumpThread.set(createPumpThread(audioItem))
+        pumpThread.set(createPumpThread(audioItem, mySession))
         pumpThread.get()?.start()
     }
 
@@ -156,11 +168,11 @@ open class CoreAudioItemPlayer(
     }
 
     override fun stop() {
+        if (state.get() == InternalState.DISPOSED) return
         stopCurrentPlayback()
         framePosition = 0L
-        pcmData.set(null)
-        pcmFormat.set(null)
-        sourceDurationMillis = 0L
+        lineStartFrameOffset = 0L
+        seekTargetMillis = -1L
         internalStatus.set(Status.STOPPED)
     }
 
@@ -176,14 +188,17 @@ open class CoreAudioItemPlayer(
     }
 
     override fun setVolume(value: Double) {
+        if (state.get() == InternalState.DISPOSED) return
         volume = value.coerceIn(0.0, 1.0)
     }
 
     override fun seek(position: Duration) {
+        if (state.get() == InternalState.DISPOSED) return
         seekTargetMillis = position.toMillis()
     }
 
     override fun onFinish(value: Runnable) {
+        if (state.get() == InternalState.DISPOSED) return
         onFinishCallback.set(value)
     }
 
@@ -209,28 +224,43 @@ open class CoreAudioItemPlayer(
     private fun flushAndClose() {
         val line = lineRef.getAndSet(null)
         if (line != null) {
-            line.flush()
-            line.close()
+            try {
+                line.flush()
+            } finally {
+                line.close()
+            }
         }
     }
 
-    private fun createPumpThread(audioItem: ReactiveAudioItem<*>): Thread {
+    private fun createPumpThread(audioItem: ReactiveAudioItem<*>, mySession: Long): Thread {
         val file = audioItem.path.toFile()
         return Thread({
+            var hadError = false
+            var halted = false
             try {
                 decodeAndCachePcm(file)
                 state.set(InternalState.PLAYING)
                 playPcmFromCache()
             } catch (_: InterruptedException) {
-                logger.debug { "Playback interrupted for '${audioItem.fileName}'" }
+                logger.debug { "Playback interrupted for '${audioItem.path.fileName}'" }
+                hadError = true
             } catch (e: UnsupportedAudioFileException) {
                 logger.error(e) { "Unsupported audio format: '$file'" }
+                hadError = true
+                halted = true
             } catch (e: Exception) {
-                if (state.get() != InternalState.STOPPED && state.get() != InternalState.DISPOSED) {
-                    logger.error(e) { "Error playing '${audioItem.fileName}'" }
+                val current = state.get()
+                if (current != InternalState.STOPPED && current != InternalState.DISPOSED) {
+                    logger.error(e) { "Error playing '${audioItem.path.fileName}'" }
+                    halted = true
                 }
+                hadError = true
             } finally {
-                onPlaybackComplete(wasNaturalEnd = state.get() == InternalState.PLAYING)
+                onPlaybackComplete(
+                    mySession,
+                    wasNaturalEnd = !hadError && state.get() == InternalState.PLAYING,
+                    halted = halted
+                )
             }
         }, "CoreAudioPlayer-pump").apply {
             isDaemon = true
@@ -274,7 +304,13 @@ open class CoreAudioItemPlayer(
         try {
             var offset = framePosition.toInt()
             val buffer = ByteArray(4096)
-            while (state.get() == InternalState.PLAYING && offset < data.size) {
+            while (offset < data.size) {
+                val currentState = state.get()
+                if (currentState == InternalState.STOPPED || currentState == InternalState.DISPOSED) break
+                if (currentState == InternalState.PAUSED) {
+                    Thread.sleep(20)
+                    continue
+                }
                 if (seekTargetMillis >= 0L) {
                     flushAndClose()
                     val frameSz = (pcmFormat.get()?.frameSize ?: format.frameSize).toLong()
@@ -290,8 +326,7 @@ open class CoreAudioItemPlayer(
                 val chunk = minOf(buffer.size, remaining)
                 System.arraycopy(data, offset, buffer, 0, chunk)
                 applyVolume(buffer, chunk, format)
-                line.write(buffer, 0, chunk)
-                framePosition += chunk
+                framePosition += line.write(buffer, 0, chunk)
                 offset = framePosition.toInt()
             }
         } finally {
@@ -322,7 +357,7 @@ open class CoreAudioItemPlayer(
                 val bb = ByteBuffer.wrap(buffer, 0, chunk).order(byteOrder)
                 val sb = bb.asShortBuffer()
                 for (j in 0 until sb.remaining()) {
-                    val sample = sb.get(j)
+                    val sample = sb[j]
                     val scaled = (sample * gain).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
                     sb.put(j, scaled)
                 }
@@ -334,19 +369,29 @@ open class CoreAudioItemPlayer(
                     buffer[i] = (scaled + 128).toByte()
                 }
             }
+            else ->
+                logger.debug {
+                    "Volume control skipped: sample size ${format.sampleSizeInBits}-bit not supported (only 8/16-bit)"
+                }
         }
     }
 
-    private fun onPlaybackComplete(wasNaturalEnd: Boolean) {
+    private fun onPlaybackComplete(mySession: Long, wasNaturalEnd: Boolean, halted: Boolean) {
         drainAndClose()
-        val item = currentAudioItem.getAndSet(null)
-        if (wasNaturalEnd && item != null) {
+        // Stale pump (a newer play() has already started): do not mutate shared state
+        // or fire callbacks that belong to the newly started playback.
+        if (activeSessionId.get() != mySession) return
+        val item = if (wasNaturalEnd) currentAudioItem.getAndSet(null) else null
+        if (item != null) {
             publisher.emitAsync(Played(item))
+            onFinishCallback.get()?.run()
         }
-        onFinishCallback.getAndSet(null)?.let { it.run() }
+        if (wasNaturalEnd) {
+            onFinishCallback.set(null)
+        }
         if (state.get() != InternalState.DISPOSED) {
             state.set(InternalState.IDLE)
-            internalStatus.set(Status.READY)
+            internalStatus.set(if (halted) Status.HALTED else Status.READY)
         }
     }
 }

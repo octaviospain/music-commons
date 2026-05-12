@@ -25,7 +25,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.javafx.JavaFx
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -85,10 +84,13 @@ class WaveformPane : Canvas() {
                     gc.fillRect(0.0, 0.0, width, height)
 
                     try {
-                        val amplitudes = waveform.amplitudes(width.toInt(), height.toInt())
-                        withContext(Dispatchers.JavaFx) {
-                            drawWaveform(amplitudes, waveformColor)
-                        }
+                        val w = width.toInt()
+                        val h = height.toInt()
+                        val amplitudes =
+                            withContext(Dispatchers.Default) {
+                                waveform.amplitudes(w, h)
+                            }
+                        drawWaveform(amplitudes, waveformColor)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {

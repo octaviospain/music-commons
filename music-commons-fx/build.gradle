@@ -7,7 +7,7 @@ description = 'Transgressoft Music Commons - JavaFX'
 
 javafx {
     version = JavaVersion.VERSION_21
-    modules = ['javafx.controls', 'javafx.media']
+    modules = ['javafx.controls']
 }
 
 tasks.register('runWaveformPaneDemo', JavaExec) {
@@ -77,7 +77,6 @@ dependencies {
     kspTest libs.lirp.ksp.get()
 
     testApi project(path: ':music-commons-fx-test')
-    testImplementation project(path: ':music-commons-test')
     testImplementation(platform(libs.junit.bom.get()))
     testImplementation(libs.junit.jupiter.get())
     testImplementation libs.jimfs.get()

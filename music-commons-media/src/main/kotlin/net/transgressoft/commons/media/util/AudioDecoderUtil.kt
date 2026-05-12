@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ * Copyright (C) 2026  Octavio Calleya Garcia                                 *
  *                                                                            *
  * This program is free software: you can redistribute it and/or modify       *
  * it under the terms of the GNU General Public License as published by       *
@@ -21,7 +21,6 @@ import java.nio.file.Path
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioInputStream
 import javax.sound.sampled.AudioSystem
-import kotlin.io.path.extension
 
 /**
  * Decodes supported audio files to PCM_SIGNED data.
@@ -38,16 +37,10 @@ import kotlin.io.path.extension
  */
 fun decodeToPcmStream(path: Path): AudioInputStream {
     val rawStream = AudioSystem.getAudioInputStream(path.toFile())
-    val baseFormat = rawStream.format
-
-    // M4A/AAC special handling: JAAD SPI returns MP4AudioInputStream (raw AAC-encoded bytes).
-    // AACFormatConversionProvider converts it to DecodedMP4AudioInputStream (decoded PCM)
-    // when the target format matches channels, sample size, and endianness of the source.
-    if (path.extension.equals("m4a", ignoreCase = true) ||
-        baseFormat.encoding.toString().equals("AAC", ignoreCase = true)
-    ) {
+    try {
+        val baseFormat = rawStream.format
         val sampleSize = baseFormat.sampleSizeInBits.takeIf { it > 0 } ?: 16
-        val pcmFormat =
+        val targetFormat =
             AudioFormat(
                 AudioFormat.Encoding.PCM_SIGNED,
                 baseFormat.sampleRate,
@@ -57,20 +50,14 @@ fun decodeToPcmStream(path: Path): AudioInputStream {
                 baseFormat.sampleRate,
                 baseFormat.isBigEndian
             )
-        // Triggers AACFormatConversionProvider → DecodedMP4AudioInputStream
-        return AudioSystem.getAudioInputStream(pcmFormat, rawStream)
-    }
 
-    // Standard format conversion for WAV, FLAC, OGG, MP3 (via their respective SPIs)
-    val targetFormat =
-        AudioFormat(
-            AudioFormat.Encoding.PCM_SIGNED,
-            baseFormat.sampleRate,
-            baseFormat.sampleSizeInBits.takeIf { it > 0 } ?: 16,
-            baseFormat.channels,
-            baseFormat.channels * 2,
-            baseFormat.sampleRate,
-            baseFormat.isBigEndian
-        )
-    return AudioSystem.getAudioInputStream(targetFormat, rawStream)
+        // M4A/AAC special handling: JAAD SPI returns MP4AudioInputStream (raw AAC-encoded bytes).
+        // AACFormatConversionProvider converts it to DecodedMP4AudioInputStream (decoded PCM)
+        // when the target format matches channels, sample size, and endianness of the source.
+        // Standard format conversion otherwise covers WAV, FLAC, OGG, MP3 (via their respective SPIs)
+        return AudioSystem.getAudioInputStream(targetFormat, rawStream)
+    } catch (e: Throwable) {
+        runCatching { rawStream.close() }
+        throw e
+    }
 }

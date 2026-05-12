@@ -31,10 +31,11 @@ class AacPcmQualityDiagnosticTest : StringSpec({
         val stream =
             javaClass.getResourceAsStream("/testfiles/$name")
                 ?: throw IllegalArgumentException("Resource not found: $name")
-        val temp = Files.createTempFile("audio_", "_${name.substringAfterLast('.')}")
-        Files.copy(stream, temp, StandardCopyOption.REPLACE_EXISTING)
-        stream.close()
-        return temp
+        return stream.use {
+            val temp = Files.createTempFile("audio_", ".${name.substringAfterLast('.')}")
+            Files.copy(it, temp, StandardCopyOption.REPLACE_EXISTING)
+            temp
+        }
     }
 
     "decodeToPcmStream produces valid PCM for AAC (not raw AAC bytes)" {

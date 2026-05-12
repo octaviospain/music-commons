@@ -19,13 +19,11 @@ package net.transgressoft.commons.fx.music.player
 
 import net.transgressoft.commons.media.player.CoreAudioItemPlayer
 import net.transgressoft.commons.music.audio.AudioFileCodec
-import net.transgressoft.commons.music.audio.AudioFileTagType.FLAC
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.player.AudioItemPlayer
 import net.transgressoft.commons.music.player.UnsupportedAudioPlaybackException
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -43,9 +41,6 @@ import kotlin.time.Duration.Companion.seconds
  *
  * Uses mocked [CoreAudioItemPlayer] to avoid heavy playback operations while verifying
  * that FX properties (volume, status, currentTime) correctly reflect core player state.
- *
- * Class-level [Tags] of `linux-only` means these tests are skipped when
- * `-PexcludeLinuxOnly=true` is set.
  */
 internal class FXAudioItemPlayerTest : FunSpec({
     isolationMode = IsolationMode.SingleInstance
@@ -248,7 +243,7 @@ internal class FXAudioItemPlayerTest : FunSpec({
                     every { encoding } returns "AAC"
                     every { encoder } returns null
                 }
-            val codec = FXAudioItemPlayer.detectCodec(m4a)
+            val codec = AudioItemPlayer.detectCodec(m4a)
             codec shouldBe AudioItemPlayer.detectCodec(m4a)
             codec shouldBe AudioFileCodec.AAC
         }
@@ -280,9 +275,91 @@ internal class FXAudioItemPlayerTest : FunSpec({
                 }
 
             AudioItemPlayer.detectCodec(mp3) shouldBe AudioFileCodec.MP3
+            AudioItemPlayer.detectCodec(mp3) shouldBe AudioFileCodec.MP3
+            AudioItemPlayer.detectCodec(wav) shouldBe AudioFileCodec.PCM
             AudioItemPlayer.detectCodec(wav) shouldBe AudioFileCodec.PCM
             AudioItemPlayer.detectCodec(flac) shouldBe AudioFileCodec.FLAC
+            AudioItemPlayer.detectCodec(flac) shouldBe AudioFileCodec.FLAC
             AudioItemPlayer.detectCodec(ogg) shouldBe AudioFileCodec.VORBIS
+            AudioItemPlayer.detectCodec(ogg) shouldBe AudioFileCodec.VORBIS
+        }
+
+        test("detects ALAC by Apple encoding prefix") {
+            val item =
+                mockk<ReactiveAudioItem<*>>(relaxed = true) {
+                    every { extension } returns "m4a"
+                    every { encoding } returns "Apple ALAC"
+                    every { encoder } returns null
+                }
+            AudioItemPlayer.detectCodec(item) shouldBe AudioFileCodec.ALAC
+            AudioItemPlayer.isPlayable(item) shouldBe false
+        }
+
+        test("iTunes-encoded AAC files remain playable and detected as AAC") {
+            // Regression: encoder = "iTunes ..." must not be treated as proof of ALAC;
+            // a regular AAC M4A from iTunes has encoder set to "iTunes ..." as well.
+            val item =
+                mockk<ReactiveAudioItem<*>>(relaxed = true) {
+                    every { extension } returns "m4a"
+                    every { encoding } returns "AAC"
+                    every { encoder } returns "iTunes 12.10"
+                }
+            AudioItemPlayer.detectCodec(item) shouldBe AudioFileCodec.AAC
+            AudioItemPlayer.isPlayable(item) shouldBe true
+        }
+
+        test("detects Opus encoding regardless of container") {
+            val item =
+                mockk<ReactiveAudioItem<*>>(relaxed = true) {
+                    every { extension } returns "ogg"
+                    every { encoding } returns "Opus"
+                    every { encoder } returns null
+                }
+            AudioItemPlayer.detectCodec(item) shouldBe AudioFileCodec.OPUS
+            AudioItemPlayer.isPlayable(item) shouldBe false
+        }
+
+        test("detects FLAC-in-M4A as FLAC and marks it unplayable") {
+            val item =
+                mockk<ReactiveAudioItem<*>>(relaxed = true) {
+                    every { extension } returns "m4a"
+                    every { encoding } returns "FLAC"
+                    every { encoder } returns null
+                }
+            AudioItemPlayer.detectCodec(item) shouldBe AudioFileCodec.FLAC
+            AudioItemPlayer.isPlayable(item) shouldBe false
+        }
+
+        test("native FLAC files remain playable") {
+            val item =
+                mockk<ReactiveAudioItem<*>>(relaxed = true) {
+                    every { extension } returns "flac"
+                    every { encoding } returns "FLAC"
+                    every { encoder } returns null
+                }
+            AudioItemPlayer.detectCodec(item) shouldBe AudioFileCodec.FLAC
+            AudioItemPlayer.isPlayable(item) shouldBe true
+        }
+
+        test("codec patterns match case-insensitively") {
+            val lowerApple =
+                mockk<ReactiveAudioItem<*>>(relaxed = true) {
+                    every { extension } returns "m4a"
+                    every { encoding } returns "apple alac"
+                    every { encoder } returns null
+                }
+            AudioItemPlayer.detectCodec(lowerApple) shouldBe AudioFileCodec.ALAC
+        }
+
+        test("detects AAC via MPEG-4 encoding prefix") {
+            val item =
+                mockk<ReactiveAudioItem<*>>(relaxed = true) {
+                    every { extension } returns "m4a"
+                    every { encoding } returns "MPEG-4 AAC"
+                    every { encoder } returns null
+                }
+            AudioItemPlayer.detectCodec(item) shouldBe AudioFileCodec.AAC
+            AudioItemPlayer.isPlayable(item) shouldBe true
         }
     }
 })

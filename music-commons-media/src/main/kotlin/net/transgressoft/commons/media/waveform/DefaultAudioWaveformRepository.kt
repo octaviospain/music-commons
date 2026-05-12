@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ * Copyright (C) 2026  Octavio Calleya Garcia                                 *
  *                                                                            *
  * This program is free software: you can redistribute it and/or modify       *
  * it under the terms of the GNU General Public License as published by       *
@@ -74,11 +74,16 @@ internal class DefaultAudioWaveformRepository<I: ReactiveAudioItem<I>>(
             }
 
     /**
-     * Closes the waveform repository and invokes [onClose] to allow the caller to cancel
-     * the audio item event subscription that feeds this repository.
+     * Closes the waveform repository: invokes [onClose] to cancel the audio item event
+     * subscription and then closes the delegated [repository]. After this call any
+     * mutating or querying operation on the repository will fail.
      */
     override fun close() {
-        onClose()
+        try {
+            onClose()
+        } finally {
+            repository.close()
+        }
     }
 
     override fun hashCode() = repository.hashCode()

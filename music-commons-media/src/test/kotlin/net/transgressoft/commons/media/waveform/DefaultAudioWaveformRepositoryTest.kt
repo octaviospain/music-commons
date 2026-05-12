@@ -47,6 +47,7 @@ internal class DefaultAudioWaveformRepositoryTest : StringSpec({
     }
 
     afterEach {
+        audioWaveformRepository.close()
         jsonFileRepository.close()
     }
 

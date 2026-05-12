@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ * Copyright (C) 2026  Octavio Calleya Garcia                                 *
  *                                                                            *
  * This program is free software: you can redistribute it and/or modify       *
  * it under the terms of the GNU General Public License as published by       *
@@ -18,10 +18,8 @@
 package net.transgressoft.commons.fx.music.player
 
 import net.transgressoft.commons.media.player.CoreAudioItemPlayer
-import net.transgressoft.commons.music.audio.AudioFileCodec
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.player.AudioItemPlayer
-import java.time.Duration as JavaDuration
 import javafx.animation.AnimationTimer
 import javafx.application.Platform
 import javafx.beans.property.DoubleProperty
@@ -34,38 +32,17 @@ import javafx.util.Duration as FxDuration
 /**
  * JavaFX wrapper around [CoreAudioItemPlayer] that exposes JavaFX observable properties
  * for volume, status, and current time on the JavaFX Application Thread.
- *
- * Delegates [isPlayable] and [detectCodec] to the [AudioItemPlayer] companion object.
  */
 class FXAudioItemPlayer(
     private val corePlayer: CoreAudioItemPlayer = CoreAudioItemPlayer()
 ) : AudioItemPlayer by corePlayer {
 
-    companion object {
-        /**
-         * Determines if an audio item is playable based on its file type and codec.
-         *
-         * Delegates to [AudioItemPlayer.isPlayable].
-         *
-         * @param audioItem the audio item to check
-         * @return true if the item's format and codec are supported for playback
-         */
-        fun isPlayable(audioItem: ReactiveAudioItem<*>): Boolean = AudioItemPlayer.isPlayable(audioItem)
-
-        /**
-         * Returns the detected [AudioFileCodec] for the given audio item.
-         *
-         * Delegates to [AudioItemPlayer.detectCodec].
-         *
-         * @param audioItem the audio item to analyze
-         * @return the detected codec or null
-         */
-        fun detectCodec(audioItem: ReactiveAudioItem<*>): AudioFileCodec? = AudioItemPlayer.detectCodec(audioItem)
-    }
-
     private val _volumeProperty: DoubleProperty = SimpleDoubleProperty(this, "volume", 1.0)
     private val _statusProperty: ObjectProperty<AudioItemPlayer.Status> = SimpleObjectProperty(this, "status", AudioItemPlayer.Status.UNKNOWN)
     private val _currentTimeProperty: ObjectProperty<FxDuration> = SimpleObjectProperty(this, "currentTime", FxDuration.ZERO)
+
+    @Volatile
+    private var externalOnFinish: Runnable? = null
 
     private val progressTicker: AnimationTimer =
         object : AnimationTimer() {
@@ -81,8 +58,15 @@ class FXAudioItemPlayer(
         _volumeProperty.addListener { _, _, newValue ->
             corePlayer.setVolume(newValue.toDouble())
         }
-        corePlayer.onFinish { syncStatus() }
+        corePlayer.onFinish {
+            syncStatus()
+            externalOnFinish?.run()
+        }
         progressTicker.start()
+    }
+
+    override fun onFinish(value: Runnable) {
+        externalOnFinish = value
     }
 
     val volumeProperty: DoubleProperty = _volumeProperty
@@ -116,10 +100,6 @@ class FXAudioItemPlayer(
 
     override fun setVolume(value: Double) {
         Platform.runLater { _volumeProperty.set(value) }
-    }
-
-    override fun seek(position: JavaDuration) {
-        corePlayer.seek(position)
     }
 
     private fun syncStatus() {

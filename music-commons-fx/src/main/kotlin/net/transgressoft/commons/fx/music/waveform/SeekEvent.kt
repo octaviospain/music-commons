@@ -26,11 +26,12 @@ import java.io.Serial
  * JavaFX event fired by [PlayableWaveformPane] when the user commits a seek gesture
  * (mouse release after press or drag). Routes through the standard JavaFX event
  * dispatch chain; consumers attach handlers via
- * `addEventHandler(SeekEvent.SEEK) { e -> player.seek(e.seekRatio * totalDurationMs) }`.
+ * `addEventHandler(SeekEvent.SEEK) { e -> player.seek(Duration.ofMillis((e.seekRatio * totalDurationMs).toLong())) }`.
  *
  * [seekRatio] is always clamped to [0.0, 1.0] before the event is constructed.
- * Consumers must multiply by the total duration in the units their player expects
- * (e.g., milliseconds for [net.transgressoft.commons.fx.music.player.FXAudioItemPlayer.seek]).
+ * Consumers must multiply by the player's total duration and convert to the type
+ * their player expects (e.g., a [java.time.Duration] for
+ * [net.transgressoft.commons.fx.music.player.FXAudioItemPlayer.seek]).
  */
 class SeekEvent(
     source: Any,

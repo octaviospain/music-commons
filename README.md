@@ -223,7 +223,7 @@ Bridges core module with JavaFX's property binding system.
 - `FXMusicLibrary` -- Unified facade for JavaFX audio management implementing `MusicLibrary<ObservableAudioItem, ObservablePlaylist>` with observable properties (builder-based entry point)
 - `ObservableAudioLibrary` -- Narrowed `ReactiveAudioLibrary` with JavaFX observable properties for UI binding
 - `ObservablePlaylistHierarchy` -- Narrowed `ReactivePlaylistHierarchy` with a JavaFX observable playlists collection
-- `JavaFxPlayer` -- Native JavaFX MediaPlayer wrapper with reactive events
+- `FXAudioItemPlayer` -- JavaFX wrapper around `CoreAudioItemPlayer` exposing volume, status, and current-time as observable properties
 - `WaveformPane` -- Custom Canvas component for static waveform visualization
 - `PlayableWaveformPane` -- Region component with progress fill, playhead, seek, and shimmer loading
 - `SeekEvent` -- Custom JavaFX event fired on click-to-seek and drag-to-scrub interactions
@@ -404,7 +404,7 @@ Music Commons is free software under GNU GPL version 3 license, available [here]
 This project builds upon several excellent open-source libraries:
 
 - **[JAudioTagger](https://github.com/ericfarng/jaudiotagger)**: Audio metadata reading and writing library
-- **[Jave](https://github.com/a-schild/jave2)**: Java Audio Video Encoder for audio transcoding
+- **JavaSound SPI providers** ([mp3spi](https://github.com/umjammer/mp3spi), [javasound-flac](https://github.com/Tianscar/javasound-flac), [javasound-vorbis](https://github.com/Tianscar/javasound-vorbis), [javasound-aac](https://github.com/Tianscar/javasound-aac), [JAAD](https://github.com/Almax/jaad)): pure-Java audio decoders for MP3, FLAC, OGG Vorbis, and AAC/M4A
 - **[Kotlin Coroutines](https://github.com/Kotlin/kotlinx.coroutines)**: Library support for Kotlin coroutines
 - **[kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization)**: Kotlin multiplatform serialization
 - **[Guava](https://github.com/google/guava)**: Google Core Libraries for Java
