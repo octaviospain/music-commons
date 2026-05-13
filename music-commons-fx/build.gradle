@@ -7,7 +7,7 @@ description = 'Transgressoft Music Commons - JavaFX'
 
 javafx {
     version = JavaVersion.VERSION_21
-    modules = ['javafx.controls', 'javafx.media']
+    modules = ['javafx.controls']
 }
 
 tasks.register('runWaveformPaneDemo', JavaExec) {
@@ -62,6 +62,7 @@ test {
 
 dependencies {
     api project(path: ':music-commons-core')
+    implementation project(':music-commons-media')
     api 'org.jetbrains.kotlinx:kotlinx-coroutines-core'
     api 'org.jetbrains.kotlinx:kotlinx-coroutines-javafx'
 
@@ -82,6 +83,7 @@ dependencies {
     testImplementation libs.kotest.assertions.json.get()
     testImplementation libs.kotest.runner.junit5.get()
     testImplementation libs.kotest.property.get()
+    testImplementation libs.kotest.framework.datatest.get()
     testImplementation libs.mockk.get()
     testImplementation libs.testfx.core.get()
     testImplementation libs.testfx.junit5.get()

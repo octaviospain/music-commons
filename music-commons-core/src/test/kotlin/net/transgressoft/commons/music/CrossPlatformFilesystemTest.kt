@@ -26,8 +26,6 @@ import net.transgressoft.commons.music.audio.MutableAudioItemTestBridge
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.commons.music.playlist.AudioPlaylistMapSerializer
 import net.transgressoft.commons.music.playlist.MutablePlaylist
-import net.transgressoft.commons.music.waveform.AudioWaveformMapSerializer
-import net.transgressoft.commons.music.waveform.ScalableAudioWaveform
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import com.neovisionaries.i18n.CountryCode
@@ -45,7 +43,7 @@ import kotlinx.serialization.json.jsonPrimitive
 /**
  * Cross-platform regression safety net for JSON round-trip of path-bearing entities.
  *
- * Exercises [AudioItem], [ScalableAudioWaveform], and [MutablePlaylist] under Jimfs
+ * Exercises [AudioItem] and [MutablePlaylist] under Jimfs
  * unix, windows, and osx configurations so that Windows-only path parsing bugs
  * (e.g. native [java.nio.file.Paths.get] rejecting characters or separators that the
  * unix-based JimFs fixture accepted) are caught during local Linux builds instead of
@@ -105,28 +103,6 @@ internal class CrossPlatformFilesystemTest : StringSpec({
                 decoded.title shouldBe original.title
                 decoded.artist.name shouldBe original.artist.name
                 decoded.album.name shouldBe original.album.name
-            }
-        }
-
-        "AudioWaveform JSON round-trip preserves audioFilePath on $label Jimfs" {
-            Jimfs.newFileSystem(config).use { fs ->
-                val path =
-                    Arb.virtualAudioFile(fileSystem = fs) {
-                        this.title = "Waveform $label"
-                        this.artist = asciiArtist
-                        this.album = asciiAlbum
-                    }.next()
-                val amplitudes = floatArrayOf(0.0f, 0.5f, 1.0f, 0.25f)
-                val originalId = 2000 + offset
-                val original = ScalableAudioWaveform(originalId, path, amplitudes.size, amplitudes)
-
-                val encoded = json.encodeToString(AudioWaveformMapSerializer, mapOf(original.id to original))
-                val decoded = json.decodeFromString(AudioWaveformMapSerializer, encoded).getValue(original.id) as ScalableAudioWaveform
-
-                decoded.audioFilePath.toString() shouldBe original.audioFilePath.toString()
-                decoded.id shouldBe original.id
-                decoded.cachedWidth shouldBe original.cachedWidth
-                decoded.normalizedAmplitudesSnapshot!!.toList() shouldBe amplitudes.toList()
             }
         }
 

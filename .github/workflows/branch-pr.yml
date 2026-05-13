@@ -76,7 +76,13 @@ jobs:
 
             -   name: Build (Windows, skip Linux-only and playback tests)
                 if: matrix.os == 'windows-latest'
-                run: ./gradlew check -PexcludeLinuxOnly=true -PexcludePosixOnly=true -PincludeWindowsOnly=true
+                # windows-latest GitHub runners ship without a usable audio output device:
+                # AudioSystem.getLine(SourceDataLine.class, format) throws IllegalArgumentException
+                # ("No line matching interface SourceDataLine supporting format … is supported")
+                # for every PCM_SIGNED 44100 Hz / 16-bit / stereo combo, regardless of endianness.
+                # That makes any test that opens a real line fail on the runner, so we skip them
+                # via the requires-playback tag.
+                run: ./gradlew check -PexcludeLinuxOnly=true -PexcludePosixOnly=true -PincludeWindowsOnly=true -PexcludePlaybackTests=true
 
             -   name: Upload coverage to Codecov
                 if: matrix.os == 'ubuntu-latest' && !env.ACT

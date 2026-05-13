@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ * Copyright (C) 2026  Octavio Calleya Garcia                                 *
  *                                                                            *
  * This program is free software: you can redistribute it and/or modify       *
  * it under the terms of the GNU General Public License as published by       *
@@ -15,33 +15,21 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.music.waveform
+package net.transgressoft.commons.media.waveform
 
+import net.transgressoft.commons.media.util.decodeToPcmStream
 import net.transgressoft.commons.music.audio.AudioFileType
-import net.transgressoft.commons.music.audio.AudioFileType.FLAC
-import net.transgressoft.commons.music.audio.AudioFileType.M4A
-import net.transgressoft.commons.music.audio.AudioFileType.MP3
-import net.transgressoft.commons.music.audio.AudioFileType.WAV
-import net.transgressoft.commons.music.audio.toAudioFileType
-import net.transgressoft.commons.music.common.WindowsLongPathSupport
-import net.transgressoft.commons.music.common.WindowsPathValidator
+import net.transgressoft.commons.music.waveform.AudioWaveform
+import net.transgressoft.commons.music.waveform.AudioWaveformProcessingException
 import net.transgressoft.lirp.entity.ReactiveEntityBase
-import ws.schild.jave.Encoder
-import ws.schild.jave.MultimediaObject
-import ws.schild.jave.encode.AudioAttributes
-import ws.schild.jave.encode.EncodingAttributes
 import java.awt.Color
 import java.awt.image.BufferedImage
+import java.io.ByteArrayOutputStream
 import java.io.File
-import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 import javax.imageio.ImageIO
-import javax.sound.sampled.AudioFormat
-import javax.sound.sampled.AudioSystem
 import kotlin.io.path.exists
 import kotlin.io.path.extension
-import kotlin.io.path.nameWithoutExtension
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -101,11 +89,8 @@ class ScalableAudioWaveform(
         this.normalizedAmplitudes = normalizedAmplitudes
     }
 
-    private fun AudioFileType.Companion.supportedAudioTypes() =
-        setOf(MP3.extension, M4A.extension, FLAC.extension, WAV.extension)
-
     init {
-        check(audioFilePath.extension in AudioFileType.supportedAudioTypes()) {
+        check(audioFilePath.extension in AudioFileType.entries.map(AudioFileType::extension)) {
             "File extension '${audioFilePath.extension}' not supported"
         }
     }
@@ -117,14 +102,35 @@ class ScalableAudioWaveform(
             throw AudioWaveformProcessingException("File '$audioFilePath' does not exist")
         }
         return try {
-            when (audioFilePath.extension.toAudioFileType()) {
-                WAV -> getRawPulseCodeModulation(audioFilePath.toFile())
-                else -> {
-                    transcodeToWav(audioFilePath).let { convertedFile ->
-                        getRawPulseCodeModulation(convertedFile).also {
-                            Files.delete(convertedFile.toPath())
-                        }
+            val pcmStream = decodeToPcmStream(audioFilePath)
+            val isBigEndian = pcmStream.format.isBigEndian
+            val pcmBytes: ByteArray =
+                pcmStream.use { stream ->
+                    val buf = ByteArrayOutputStream()
+                    val buffer = ByteArray(8192)
+                    var bytesRead = stream.read(buffer)
+                    while (bytesRead != -1) {
+                        if (bytesRead > 0) buf.write(buffer, 0, bytesRead)
+                        bytesRead = stream.read(buffer)
                     }
+                    buf.toByteArray()
+                }
+            if (pcmBytes.isEmpty()) {
+                throw AudioWaveformProcessingException(
+                    "No PCM data produced for '$audioFilePath' — format conversion may not be supported"
+                )
+            }
+            val sampleCount = pcmBytes.size / 2
+            IntArray(sampleCount) { i ->
+                val byteOffset = i * 2
+                if (isBigEndian) {
+                    val high = pcmBytes[byteOffset].toInt()
+                    val low = pcmBytes[byteOffset + 1].toInt() and 0xFF
+                    (high shl 8) or low
+                } else {
+                    val low = pcmBytes[byteOffset].toInt() and 0xFF
+                    val high = pcmBytes[byteOffset + 1].toInt()
+                    (high shl 8) or low
                 }
             }
         } catch (exception: AudioWaveformProcessingException) {
@@ -132,62 +138,6 @@ class ScalableAudioWaveform(
         } catch (exception: Exception) {
             throw AudioWaveformProcessingException("Error processing waveform", exception)
         }
-    }
-
-    private fun transcodeToWav(path: Path): File {
-        // Strip the original extension before sanitizing so temp files are
-        // "decoded_song.wav" rather than "decoded_song.mp3<rand>.wav".
-        val safeName = WindowsPathValidator.sanitizeForTempFile(path.nameWithoutExtension)
-        val originalExtension = path.extension
-        val safePath = WindowsLongPathSupport.toLongPathSafe(path)
-        val decodedFile = File.createTempFile("decoded_$safeName", "." + WAV.extension)
-        val copiedFile = File.createTempFile("original_$safeName", ".$originalExtension")
-        Files.copy(safePath, copiedFile.toPath(), StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING)
-        try {
-            Encoder().encode(
-                MultimediaObject(copiedFile), decodedFile,
-                EncodingAttributes().apply {
-                    setOutputFormat(WAV.extension)
-                    setAudioAttributes(
-                        AudioAttributes().apply {
-                            setCodec("pcm_s16le")
-                            setBitRate(16000)
-                            setChannels(2)
-                            setSamplingRate(44100)
-                        }
-                    )
-                }
-            )
-        } finally {
-            Files.delete(copiedFile.toPath())
-        }
-        return decodedFile
-    }
-
-    private fun getRawPulseCodeModulation(file: File): IntArray {
-        var audioPcm: IntArray
-        AudioSystem.getAudioInputStream(file).use { input ->
-            val baseFormat = input.format
-            val encoding = AudioFormat.Encoding.PCM_UNSIGNED
-            val sampleRate = baseFormat.sampleRate
-            val sampleSizeInBits = 16
-            val numChannels = baseFormat.channels
-            val frameSize = numChannels * 2
-            val decodedFormat = AudioFormat(encoding, sampleRate, sampleSizeInBits, numChannels, frameSize, sampleRate, false)
-            val available = input.available()
-            audioPcm = IntArray(available / 2)
-            AudioSystem.getAudioInputStream(decodedFormat, input).use { pcmDecodedInput ->
-                val buffer = ByteArray(available)
-                if (pcmDecodedInput.read(buffer, 0, available) > 0) {
-                    for (i in 0 until available / 2) {
-                        val byteOffset = i * 2
-                        audioPcm[i] = buffer[byteOffset + 1].toInt() shl 8 or (buffer[byteOffset].toInt() and 0xff) shl 16
-                        audioPcm[i] /= 32767
-                    }
-                }
-            }
-        }
-        return audioPcm
     }
 
     /**
@@ -200,10 +150,14 @@ class ScalableAudioWaveform(
      */
     private fun computeNormalized(width: Int): FloatArray {
         val pcm = rawAudioPcm ?: getRawAudioPcm(audioFilePath).also { rawAudioPcm = it }
-        val divisor = (Byte.SIZE_BITS * 2.0).pow(amplitudeCoefficient).toFloat()
+        if (pcm.isEmpty()) return FloatArray(width) { 0f }
+        val divisor = 32767.0f * 2.0.pow(amplitudeCoefficient).toFloat()
         return FloatArray(width) { w ->
             val start = (w.toLong() * pcm.size / width).toInt()
-            val endExclusive = (((w + 1).toLong() * pcm.size / width).toInt()).coerceAtLeast(start + 1).coerceAtMost(pcm.size)
+            val endExclusive =
+                (((w + 1).toLong() * pcm.size / width).toInt())
+                    .coerceAtLeast(start + 1)
+                    .coerceAtMost(pcm.size)
             var amplitude = 0.0f
             for (i in start until endExclusive) {
                 amplitude += abs(pcm[i]) / divisor

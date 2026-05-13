@@ -102,17 +102,17 @@ gate platform-specific suites.
 
 ### Cross-Platform Testing
 
-Music Commons bundles FFmpeg native binaries for **Linux 64-bit only** (via
-`jave-nativebin-linux64`). The test suite uses four Kotest tags to gate platform-specific
+Audio decoding and playback now run on pure-JDK JavaSound SPI providers, so the library
+itself is cross-platform. The test suite uses four Kotest tags to gate platform-specific
 or environment-specific tests. Each tag is paired with a Gradle property that toggles its
 filter:
 
 | Tag                 | Purpose                                                      | Default      | Flag to flip default                |
 | ------------------- | ------------------------------------------------------------ | ------------ | ----------------------------------- |
-| `linux-only`        | Needs Linux specifically (`jave-nativebin-linux64` for audio transcoding, waveform generation) | included     | `-PexcludeLinuxOnly=true`           |
+| `linux-only`        | Needs Linux-JDK path semantics (assertions written against Linux `Path.toString()` formatting of `\\?\…` prefixes) | included     | `-PexcludeLinuxOnly=true`           |
 | `posix-only`        | Needs POSIX semantics (POSIX file permissions like `chmod`) -- works on Linux *and* macOS | included     | `-PexcludePosixOnly=true`           |
 | `windows-only`      | Needs a real Windows host (NTFS, Windows JVM filesystem provider) | **EXCLUDED** | `-PincludeWindowsOnly=true`         |
-| `requires-playback` | Needs JavaFX MediaPlayer with audio output (fragile in headless CI) | included     | `-PexcludePlaybackTests=true`       |
+| `requires-playback` | Needs a working audio output device (opens a real `SourceDataLine`; fragile in headless CI) | included     | `-PexcludePlaybackTests=true`       |
 
 #### Examples
 
@@ -120,7 +120,7 @@ filter:
 # Local Linux dev (everything except windows-only)
 gradle build
 
-# Local macOS dev (no Linux-only transcoding tests, no Windows tests)
+# Local macOS dev (skip Linux-JDK-path-specific tests, no Windows tests)
 gradle build -PexcludeLinuxOnly=true
 
 # Local Windows dev (no POSIX permission tests, no Linux-only tests, include Windows-only tests)

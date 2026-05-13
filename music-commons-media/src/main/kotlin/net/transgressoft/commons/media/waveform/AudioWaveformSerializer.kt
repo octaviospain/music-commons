@@ -15,10 +15,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.music.waveform
+package net.transgressoft.commons.media.waveform
 
 import net.transgressoft.commons.music.common.toJsonUri
 import net.transgressoft.commons.music.common.toPathFromJsonUri
+import net.transgressoft.commons.music.waveform.AudioWaveform
 import java.nio.ByteBuffer
 import java.util.Base64
 import kotlinx.serialization.KSerializer

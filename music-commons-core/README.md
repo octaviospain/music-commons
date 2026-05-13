@@ -111,8 +111,9 @@ All components support JSON serialization through kotlinx.serialization, with au
 
 - **kotlinx.serialization** - JSON serialization support
 - **JAudioTagger** - Audio file metadata reading/writing
-- **Jave** - Audio transcoding for waveform generation
 - **transgressoft-commons** - Base repository and reactive event infrastructure
+
+Audio decoding and waveform PCM generation live in the separate `music-commons-media` module (JavaSound SPI).
 
 ## Testing
 

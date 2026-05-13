@@ -2,36 +2,79 @@ package net.transgressoft.commons.fx.music.waveform
 
 import net.transgressoft.commons.fx.music.FXMusicLibrary
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
-import net.transgressoft.commons.fx.music.player.JavaFxPlayer
-import net.transgressoft.commons.music.waveform.ScalableAudioWaveform
+import net.transgressoft.commons.fx.music.player.FXAudioItemPlayer
+import net.transgressoft.commons.media.waveform.ScalableAudioWaveform
+import net.transgressoft.commons.music.player.AudioItemPlayer
 import javafx.application.Application
+import javafx.collections.FXCollections
 import javafx.scene.Scene
 import javafx.scene.control.Button
+import javafx.scene.control.ComboBox
+import javafx.scene.control.Label
+import javafx.scene.control.Slider
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.HBox
 import javafx.stage.Stage
-import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import java.time.Duration
 
 /**
  * Interactive demo application for [PlayableWaveformPane].
  *
- * Launches a JavaFX window showing the waveform component bound to a [JavaFxPlayer].
- * Demonstrates progress binding, seek-on-click, drag-to-scrub, playhead rendering,
- * and the shimmer loading animation. Use [runPlayableWaveformPaneDemo] Gradle task to run.
+ * Provides a single Play/Pause toggle plus a Stop button (resets to start) so that
+ * playback behavior matches user expectations across all supported audio fixtures.
  */
 class PlayableWaveformPaneDemo : Application() {
 
     private lateinit var playableWaveformPane: PlayableWaveformPane
     private lateinit var library: FXMusicLibrary
-    private val player = JavaFxPlayer()
+    private val player = FXAudioItemPlayer()
+    private lateinit var statusLabel: Label
+    private lateinit var playPauseButton: Button
+    private lateinit var volumeSlider: Slider
+
+    private val formats = FXCollections.observableArrayList(TEST_FIXTURES)
+    private val extractedFiles = mutableMapOf<String, Path>()
+    private var currentAudioItem: ObservableAudioItem? = null
 
     override fun start(primaryStage: Stage) {
         playableWaveformPane = PlayableWaveformPane()
         val borderPane = BorderPane(playableWaveformPane)
-        borderPane.setPrefSize(500.0, 200.0)
+        borderPane.setPrefSize(700.0, 300.0)
 
-        val flacUri = javaClass.getResource("/testfiles/testeable.flac")?.toURI()!!
-        val mp3Uri = javaClass.getResource("/testfiles/testeable.mp3")?.toURI()!!
+        statusLabel = Label("Select a fixture to load")
+
+        val formatSelector =
+            ComboBox(formats).apply {
+                value = "testeable.flac"
+                setOnAction { loadFixture(value) }
+            }
+
+        playPauseButton =
+            Button("Play").apply {
+                setOnAction { togglePlayPause() }
+            }
+        val stopButton =
+            Button("Stop").apply {
+                setOnAction { stopPlayback() }
+            }
+
+        player.statusProperty.addListener { _, _, status ->
+            playPauseButton.text = if (status == AudioItemPlayer.Status.PLAYING) "Pause" else "Play"
+        }
+
+        volumeSlider =
+            Slider(0.0, 1.0, 1.0).apply {
+                prefWidth = 100.0
+                valueProperty().addListener { _, _, newValue ->
+                    player.setVolume(newValue.toDouble())
+                }
+            }
+
+        val controls = HBox(10.0, Label("Fixture:"), formatSelector, playPauseButton, stopButton, Label("Vol:"), volumeSlider, statusLabel)
+        borderPane.bottom = controls
 
         player.currentTimeProperty.addListener { _, _, newTime ->
             val total = player.totalDuration.toMillis()
@@ -41,26 +84,68 @@ class PlayableWaveformPaneDemo : Application() {
         }
 
         playableWaveformPane.addEventHandler(SeekEvent.SEEK) { event ->
-            player.seek(event.seekRatio * player.totalDuration.toMillis())
+            val seekMillis = (event.seekRatio * player.totalDuration.toMillis()).toLong()
+            player.seek(Duration.ofMillis(seekMillis))
+            playableWaveformPane.progressProperty.set(event.seekRatio)
         }
 
         library = FXMusicLibrary.builder().build()
-        val audioItem = library.audioItemFromFile(File(mp3Uri).toPath())
 
-        borderPane.bottom = buildControls(audioItem)
-        primaryStage.title = "PlayableWaveformPane Demo"
+        primaryStage.title = "PlayableWaveformPane Demo - All Fixtures"
         primaryStage.scene = Scene(borderPane)
         primaryStage.show()
 
-        playableWaveformPane.loadWaveform(ScalableAudioWaveform(1, File(flacUri).toPath()))
+        loadFixture("testeable.flac")
     }
 
-    private fun buildControls(audioItem: ObservableAudioItem): HBox {
-        val playButton = Button("Play").apply { setOnAction { player.play(audioItem) } }
-        val pauseButton = Button("Pause").apply { setOnAction { player.pause() } }
-        val resumeButton = Button("Resume").apply { setOnAction { player.resume() } }
-        val stopButton = Button("Stop").apply { setOnAction { player.stop() } }
-        return HBox(10.0, playButton, pauseButton, resumeButton, stopButton)
+    private fun togglePlayPause() {
+        val item = currentAudioItem ?: return
+        try {
+            when (player.status()) {
+                AudioItemPlayer.Status.PLAYING -> player.pause()
+                AudioItemPlayer.Status.PAUSED -> player.resume()
+                else -> player.play(item)
+            }
+        } catch (e: Exception) {
+            statusLabel.text = "Cannot play ${item.fileName}: ${e.message}"
+            e.printStackTrace()
+        }
+    }
+
+    private fun stopPlayback() {
+        player.stop()
+        playableWaveformPane.progressProperty.set(0.0)
+        playPauseButton.text = "Play"
+    }
+
+    private fun loadFixture(fixtureName: String) {
+        try {
+            val path = extractedFiles[fixtureName] ?: extractToTempFile(fixtureName)?.also { extractedFiles[fixtureName] = it }
+            if (path == null) {
+                statusLabel.text = "Test file not found: $fixtureName"
+                return
+            }
+            // Reset playback state so the new fixture starts cleanly.
+            stopPlayback()
+            currentAudioItem = library.audioItemFromFile(path)
+            playableWaveformPane.loadWaveform(ScalableAudioWaveform(1, path))
+            statusLabel.text = "Loaded: $fixtureName"
+        } catch (e: Exception) {
+            statusLabel.text = "Error loading $fixtureName: ${e.message}"
+            currentAudioItem = null
+            e.printStackTrace()
+        }
+    }
+
+    private fun extractToTempFile(fixtureName: String): Path? {
+        val stream = javaClass.getResourceAsStream("/testfiles/$fixtureName") ?: return null
+        return stream.use {
+            val ext = fixtureName.substringAfterLast('.')
+            Files.createTempFile("waveform-demo-", ".$ext").apply {
+                toFile().deleteOnExit()
+                Files.copy(it, this, StandardCopyOption.REPLACE_EXISTING)
+            }
+        }
     }
 
     override fun stop() {
@@ -71,7 +156,6 @@ class PlayableWaveformPaneDemo : Application() {
     }
 
     companion object {
-
         @JvmStatic
         fun main(args: Array<String>) {
             launch(PlayableWaveformPaneDemo::class.java, *args)

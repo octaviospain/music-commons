@@ -17,12 +17,15 @@
 
 package net.transgressoft.commons.music
 
+import net.transgressoft.commons.media.waveform.AudioWaveformMapSerializer
+import net.transgressoft.commons.media.waveform.audioWaveformRepository
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.ArtistCatalog
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemMapSerializer
 import net.transgressoft.commons.music.audio.AudioLibrary
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
+import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import net.transgressoft.commons.music.common.WindowsPathValidator
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
 import net.transgressoft.commons.music.playlist.AudioPlaylistMapSerializer
@@ -30,9 +33,7 @@ import net.transgressoft.commons.music.playlist.DefaultPlaylistHierarchy
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
 import net.transgressoft.commons.music.playlist.PlaylistHierarchy
 import net.transgressoft.commons.music.waveform.AudioWaveform
-import net.transgressoft.commons.music.waveform.AudioWaveformMapSerializer
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
-import net.transgressoft.commons.music.waveform.DefaultAudioWaveformRepository
 import net.transgressoft.lirp.entity.IdentifiableEntity
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.LirpEventPublisher
@@ -237,11 +238,12 @@ class CoreMusicLibrary private constructor(
             val audioRepo = createAudioRepository()
             val audioLibrary = DefaultAudioLibrary(audioRepo)
 
-            var waveformRepository: DefaultAudioWaveformRepository<AudioItem>? = null
+            var waveformRepository: AudioWaveformRepository<AudioWaveform, AudioItem>? = null
             try {
-                // 2. Waveform repository
+                // 2. Waveform repository with audio item event subscriber
                 val waveformRepo = createWaveformRepository()
-                waveformRepository = DefaultAudioWaveformRepository(waveformRepo)
+                val audioItemSubscriber = AudioItemEventSubscriber<AudioItem>("AudioWaveformRepositorySubscriber")
+                waveformRepository = audioWaveformRepository(waveformRepo, audioItemSubscriber) { audioItemSubscriber.cancelSubscription() }
 
                 // 3. Playlist hierarchy last — needs AudioItem already registered in LirpContext
                 val playlistHierarchy = createPlaylistHierarchy()

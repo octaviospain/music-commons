@@ -26,14 +26,15 @@ import net.transgressoft.commons.fx.music.playlist.FXPlaylistHierarchy
 import net.transgressoft.commons.fx.music.playlist.ObservablePlaylist
 import net.transgressoft.commons.fx.music.playlist.ObservablePlaylistHierarchy
 import net.transgressoft.commons.fx.music.playlist.ObservablePlaylistMapSerializer
+import net.transgressoft.commons.media.waveform.AudioWaveformMapSerializer
+import net.transgressoft.commons.media.waveform.audioWaveformRepository
 import net.transgressoft.commons.music.MusicLibrary
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
+import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import net.transgressoft.commons.music.common.WindowsPathValidator
 import net.transgressoft.commons.music.waveform.AudioWaveform
-import net.transgressoft.commons.music.waveform.AudioWaveformMapSerializer
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
-import net.transgressoft.commons.music.waveform.audioWaveformRepository
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.LirpEventPublisher
 import net.transgressoft.lirp.persistence.PersistentRepository
@@ -228,7 +229,12 @@ class FXMusicLibrary private constructor(
             var waveformRepository: AudioWaveformRepository<AudioWaveform, ObservableAudioItem>? = null
             try {
                 val waveformRepo = createWaveformRepository()
-                waveformRepository = audioWaveformRepository(waveformRepo)
+                val audioItemSubscriber = AudioItemEventSubscriber<ObservableAudioItem>("AudioWaveformRepositorySubscriber")
+                waveformRepository =
+                    audioWaveformRepository<ObservableAudioItem>(
+                        waveformRepo,
+                        audioItemSubscriber
+                    ) { audioItemSubscriber.cancelSubscription() }
 
                 val playlistRepo = createPlaylistRepository()
                 if (playlistRepo is PersistentRepository<*, *>) {

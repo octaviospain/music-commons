@@ -23,8 +23,8 @@ import java.nio.file.Path
 /**
  * Transparently applies the extended-length path prefix on Windows when a path reaches
  * the MAX_PATH (260) boundary. Consumers pass paths through this utility before handing
- * them to filesystem APIs (Jave2, `Files.*`); the prefix is never visible to callers or
- * persisted in JSON.
+ * them to filesystem APIs (`Files.*`, JavaSound SPI decoders, JAudioTagger); the prefix
+ * is never visible to callers or persisted in JSON.
  *
  * Local volume paths are prefixed with `\\?\` (e.g. `\\?\C:\very\long\path`).
  * UNC paths (`\\server\share\...`) are rewritten with the `\\?\UNC\` prefix

@@ -10,8 +10,8 @@ This module bridges the reactive music-commons-core with JavaFX's property bindi
 
 - **ObservableAudioLibrary** - Audio library with observable collections for TableView/ListView binding
 - **ObservablePlaylistHierarchy** - Playlist manager with observable playlist sets
-- **JavaFxPlayer** - Native JavaFX MediaPlayer wrapper with reactive playback events
-- **WaveformPane** - Canvas component for visualizing audio waveforms
+- **FXAudioItemPlayer** - JavaFX wrapper around `CoreAudioItemPlayer` (JavaSound SPI playback) exposing volume, status, and current-time as observable properties
+- **WaveformPane** / **PlayableWaveformPane** - Canvas components for visualizing audio waveforms, with optional progress fill, playhead, and seek interactions
 
 ## Quick Start
 

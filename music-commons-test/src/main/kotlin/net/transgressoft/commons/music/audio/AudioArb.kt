@@ -288,3 +288,13 @@ fun Arb.Companion.audioAttributes(
     }
 
 private val atomicInteger = AtomicInteger(Integer.MAX_VALUE)
+
+/**
+ * Returns an [Arb] that always produces the OGG Vorbis test fixture path.
+ *
+ * OGG uses Vorbis comments for metadata which are structurally different from ID3/MP4 tags.
+ * This generator provides a constant path to the real OGG test file rather than a mocked
+ * audio item, suitable for SPI verification and format-specific waveform/player tests.
+ */
+fun Arb.Companion.oggTestFile(): Arb<Path> =
+    arbitrary { oggFile.toPath() }
