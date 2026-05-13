@@ -6,6 +6,7 @@ import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist.Companion.of
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.commons.music.audio.shouldEqual
+import net.transgressoft.lirp.entity.toIds
 import net.transgressoft.lirp.event.ReactiveScope
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.json.JsonRepository
@@ -107,7 +108,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
 
         testDispatcher.scheduler.advanceUntilIdle()
 
-        val expectedIds = createdItems.map { it.id }.toSet()
+        val expectedIds = createdItems.toIds()
         val expectedArtists = createdItems.flatMap { it.artistsInvolved }.toSet()
 
         // Close the existing library before recreating from the same repository
@@ -146,7 +147,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
 
         eventually(1.seconds) {
             repository.audioItemsProperty.size shouldBe 50
-            repository.audioItemsProperty.map { it: ObservableAudioItem -> it.id } shouldContainOnly addedItems.map { it.id }
+            repository.audioItemsProperty.map { it: ObservableAudioItem -> it.id } shouldContainOnly addedItems.toIds()
         }
 
         // Rapid removals

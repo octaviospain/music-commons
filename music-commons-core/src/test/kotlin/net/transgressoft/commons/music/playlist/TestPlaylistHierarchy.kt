@@ -2,6 +2,7 @@ package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.lirp.entity.CascadeAction
+import net.transgressoft.lirp.entity.toIds
 import net.transgressoft.lirp.persistence.AggregateCollectionRef
 import net.transgressoft.lirp.persistence.CollectionRefEntry
 import net.transgressoft.lirp.persistence.LirpRefAccessor
@@ -35,7 +36,7 @@ internal class TestPlaylistHierarchy(
     }
 
     override fun createPlaylist(name: String, audioItems: List<AudioItem>): MutableAudioPlaylist =
-        createPlaylist(name, audioItems.map { it.id })
+        createPlaylist(name, audioItems.toIds())
 
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("createPlaylistWithIds")
@@ -51,7 +52,7 @@ internal class TestPlaylistHierarchy(
 
     override fun createPlaylistDirectory(name: String, audioItems: List<AudioItem>): MutableAudioPlaylist {
         require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
-        return TestMutablePlaylist(newId(), name, true, audioItems.map { it.id }).also(::add)
+        return TestMutablePlaylist(newId(), name, true, audioItems.toIds()).also(::add)
     }
 
     override fun close() {

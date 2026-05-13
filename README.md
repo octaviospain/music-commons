@@ -76,6 +76,7 @@ Unknown genre strings are preserved as `Genre.Custom(name)` instead of being dis
 
 - **Hierarchical organization**: Nested playlist structures with directories
 - **M3U export**: Export playlists preserving directory structure
+- **M3U import**: Import `.m3u` and `.m3u8` playlists, including nested playlist references and cycle detection
 - **Automatic synchronization**: Playlists update when audio items are modified or removed
 
 ### Waveform Visualization
@@ -236,6 +237,7 @@ Use `CoreMusicLibrary.builder()` as the single entry point for headless audio ma
 
 ```kotlin
 import net.transgressoft.commons.music.CoreMusicLibrary
+import net.transgressoft.commons.music.m3u.M3uImportService
 
 // In-memory (volatile) storage -- no files needed
 val library = CoreMusicLibrary.builder().build()
@@ -271,6 +273,10 @@ val waveform = library
 
 // Export playlist to M3U
 playlist.exportToM3uFile(Path.of("favorites.m3u"))
+
+// Import playlist from M3U
+val importedPlaylist = M3uImportService(library)
+    .import(Path.of("/path/to/favorites.m3u"))
 
 // Lifecycle
 library.close()

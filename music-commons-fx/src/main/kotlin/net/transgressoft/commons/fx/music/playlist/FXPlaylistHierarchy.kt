@@ -20,6 +20,7 @@ package net.transgressoft.commons.fx.music.playlist
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.music.playlist.PlaylistHierarchyBase
 import net.transgressoft.commons.music.playlist.event.AudioPlaylistEventSubscriber
+import net.transgressoft.lirp.entity.toIds
 import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
@@ -118,7 +119,7 @@ internal class FXPlaylistHierarchy(
     override fun createPlaylist(
         name: String,
         audioItems: List<ObservableAudioItem>
-    ): ObservablePlaylist = createPlaylist(name, audioItems.map { it.id })
+    ): ObservablePlaylist = createPlaylist(name, audioItems.toIds())
 
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("createPlaylistWithIds")
@@ -145,7 +146,7 @@ internal class FXPlaylistHierarchy(
         audioItems: List<ObservableAudioItem>
     ): ObservablePlaylist {
         require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
-        return FXPlaylist(newId(), name, true, audioItems.map { it.id }).also {
+        return FXPlaylist(newId(), name, true, audioItems.toIds()).also {
             logger.debug { "Created playlist $it" }
             add(it)
             it.triggerCoverHydration()

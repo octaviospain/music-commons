@@ -20,6 +20,7 @@ package net.transgressoft.commons.fx.music.playlist
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.music.playlist.AudioPlaylist
 import net.transgressoft.commons.music.playlist.MutablePlaylistBase
+import net.transgressoft.lirp.entity.toIds
 import net.transgressoft.lirp.persistence.fx.fxAggregateList
 import net.transgressoft.lirp.persistence.fx.fxAggregateSet
 import javafx.beans.property.ReadOnlyBooleanProperty
@@ -199,7 +200,7 @@ internal class FXPlaylist(
     }
 
     private fun reconcileChildRecursiveListeners() {
-        val currentChildIds = playlistsAggregate.map { it.id }.toSet()
+        val currentChildIds = playlistsAggregate.toIds()
         val staleIds = attachedChildListeners.keys.toSet() - currentChildIds
         staleIds.forEach { id ->
             attachedChildListeners.remove(id)?.audioItemsRecursiveProperty?.removeListener(childRecursiveListener)
@@ -245,7 +246,7 @@ internal class FXPlaylist(
         audioItemsAggregate.toList().stream().anyMatch { predicate.test(it) }
 
     override fun addAudioItems(audioItems: Collection<ObservableAudioItem>): Boolean {
-        val currentIds = audioItemsAggregate.map { it.id }.toSet()
+        val currentIds = audioItemsAggregate.toIds()
         val itemsToAdd = audioItems.filter { it.id !in currentIds }
         if (itemsToAdd.isEmpty()) return false
         audioItemsAggregate.addAll(itemsToAdd)
