@@ -18,6 +18,7 @@
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.lirp.entity.toIds
 import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.Repository
 import net.transgressoft.lirp.persistence.VolatileRepository
@@ -51,7 +52,7 @@ internal class DefaultPlaylistHierarchy(
     override fun createPlaylist(
         name: String,
         audioItems: List<AudioItem>
-    ): MutableAudioPlaylist = createPlaylist(name, audioItems.map { it.id })
+    ): MutableAudioPlaylist = createPlaylist(name, audioItems.toIds())
 
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("createPlaylistWithIds")
@@ -73,7 +74,7 @@ internal class DefaultPlaylistHierarchy(
         audioItems: List<AudioItem>
     ): MutableAudioPlaylist {
         require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
-        return MutablePlaylist(newId(), name, true, audioItems.map { it.id }).also {
+        return MutablePlaylist(newId(), name, true, audioItems.toIds()).also {
             logger.debug { "Created playlist directory $it" }
             add(it)
         }

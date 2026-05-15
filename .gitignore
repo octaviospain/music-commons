@@ -39,6 +39,7 @@ replay_pid*
 .planning
 .codexignore
 .codex
+tasks/
 AGENTS.md
 CLAUDE.md
 .mcp.json

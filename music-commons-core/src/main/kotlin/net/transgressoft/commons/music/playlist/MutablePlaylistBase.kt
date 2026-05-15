@@ -20,6 +20,7 @@ package net.transgressoft.commons.music.playlist
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.common.WindowsPathValidator
 import net.transgressoft.lirp.entity.ReactiveEntityBase
+import net.transgressoft.lirp.entity.toIds
 import mu.KotlinLogging
 
 /**
@@ -59,7 +60,7 @@ abstract class MutablePlaylistBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPl
     abstract override val playlists: MutableSet<P>
 
     override fun addAudioItems(audioItems: Collection<I>): Boolean {
-        val currentIds = this.audioItems.map { it.id }.toSet()
+        val currentIds = this.audioItems.toIds()
         val toAdd = audioItems.filter { it.id !in currentIds }
         if (toAdd.isEmpty()) return false
         this.audioItems.addAll(toAdd)
