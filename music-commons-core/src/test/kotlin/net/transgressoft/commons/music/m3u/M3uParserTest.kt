@@ -49,7 +49,7 @@ internal class M3uParserTest : StringSpec({
             val baseDir = fs.getPath("/music")
             Files.createDirectories(baseDir)
             val m3u = baseDir.resolve("bom.m3u")
-            Files.writeString(m3u, "#EXTM3U\ntrack1.mp3\n")
+            Files.writeString(m3u, "\uFEFF#EXTM3U\ntrack1.mp3\n")
 
             val result = M3uParser(baseDir).parse(m3u)
 

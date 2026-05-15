@@ -169,6 +169,6 @@ internal class M3uParser(private val baseDir: Path) {
     private fun String.lineSequence(): Sequence<String> = splitToSequence('\n').map { it.removeSuffix("\r") }
 
     companion object {
-        private const val BOM = ""
+        private const val BOM = "\uFEFF"
     }
 }

@@ -274,9 +274,10 @@ val waveform = library
 // Export playlist to M3U
 playlist.exportToM3uFile(Path.of("favorites.m3u"))
 
-// Import playlist from M3U
-val importedPlaylist = M3uImportService(library)
-    .import(Path.of("/path/to/favorites.m3u"))
+// Import playlist from M3U (M3uImportService is AutoCloseable — close to release its coroutine scope)
+val importedPlaylist = M3uImportService(library).use { importer ->
+    importer.import(Path.of("/path/to/favorites.m3u"))
+}
 
 // Lifecycle
 library.close()

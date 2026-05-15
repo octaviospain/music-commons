@@ -194,7 +194,15 @@ class M3uImportService(
         }
 
     private fun rejectCollisions(plan: PlannedPlaylist) {
-        plan.walk().map { it.name }.firstOrNull { musicLibrary.findPlaylistByName(it).isPresent }?.let { name ->
+        val names = plan.walk().map { it.name }.toList()
+        names.groupingBy { it }
+            .eachCount()
+            .entries
+            .firstOrNull { (_, count) -> count > 1 }
+            ?.let { (name, _) ->
+                throw M3uImportException("Imported tree contains duplicate playlist name '$name'")
+            }
+        names.firstOrNull { musicLibrary.findPlaylistByName(it).isPresent }?.let { name ->
             throw M3uImportException("Playlist with name '$name' already exists")
         }
     }

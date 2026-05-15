@@ -293,6 +293,6 @@ object M3uTestFixtures {
 
         private fun String.lineSequence(): Sequence<String> = splitToSequence('\n').map { it.removeSuffix("\r") }
 
-        private const val BOM_STRING = ""
+        private const val BOM_STRING = "\uFEFF"
     }
 }

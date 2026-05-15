@@ -140,6 +140,24 @@ internal class M3uImportServiceTest : StringSpec({
         library.playlistHierarchy().numberOfPlaylists() shouldBe playlistCountBefore
     }
 
+    "rejects duplicate playlist names within the import tree itself" {
+        // Two nested children whose filenames yield the same derived playlist name "Mix".
+        val baseDir = fs.getPath("/music/Playlists")
+        Files.createDirectories(baseDir.resolve("a"))
+        Files.createDirectories(baseDir.resolve("b"))
+        Files.writeString(baseDir.resolve("a/Mix.m3u"), "#EXTM3U\n")
+        Files.writeString(baseDir.resolve("b/Mix.m3u"), "#EXTM3U\n")
+        val root = baseDir.resolve("Root.m3u")
+        Files.writeString(root, "#EXTM3U\na/Mix.m3u\nb/Mix.m3u\n")
+
+        val ex = shouldThrow<M3uImportException> { service.import(root) }
+        ex.message!! shouldContain "duplicate playlist name 'Mix'"
+
+        // Nothing in the conflicting tree should have been materialized.
+        library.findPlaylistByName("Root").isPresent shouldBe false
+        library.findPlaylistByName("Mix").isPresent shouldBe false
+    }
+
     "throws M3uCycleException on direct self-reference" {
         val selfPath = fs.getPath("/music/Playlists/self.m3u")
         Files.createDirectories(selfPath.parent)

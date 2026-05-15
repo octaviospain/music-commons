@@ -152,7 +152,7 @@ internal class M3uRoundTripTest : StringSpec({
         val playlistPath = tmpDir.resolve("BomCrlf.m3u")
         Files.writeString(
             playlistPath,
-            "#EXTM3U\r\n#EXTINF:$mp3Duration,$mp3Title\r\n${mp3File.toAbsolutePath()}\r\n"
+            "\uFEFF#EXTM3U\r\n#EXTINF:$mp3Duration,$mp3Title\r\n${mp3File.toAbsolutePath()}\r\n"
         )
 
         CoreMusicLibrary.builder().build().use { lib1 ->
