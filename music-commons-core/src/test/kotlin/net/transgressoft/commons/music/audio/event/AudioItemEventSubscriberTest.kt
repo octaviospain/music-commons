@@ -6,6 +6,7 @@ import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.persistence.VolatileRepository
+import io.kotest.core.annotation.Isolate
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -17,6 +18,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
  * Tests for [AudioItemEventSubscriber] verifying event reaction and subscription cancellation.
  */
 @ExperimentalCoroutinesApi
+@Isolate
 internal class AudioItemEventSubscriberTest : StringSpec({
 
     val reactive = reactiveScope()

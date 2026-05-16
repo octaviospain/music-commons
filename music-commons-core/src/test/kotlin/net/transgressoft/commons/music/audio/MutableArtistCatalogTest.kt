@@ -22,6 +22,7 @@ import net.transgressoft.commons.music.audio.VirtualFiles.virtualAlbumAudioFiles
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.event.MutationEvent
+import io.kotest.core.annotation.Isolate
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainOnly
@@ -37,6 +38,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 typealias ArtistCatalogMutation = MutationEvent<Artist, ArtistCatalog<AudioItem>>
 
 @ExperimentalCoroutinesApi
+@Isolate
 class MutableArtistCatalogTest : StringSpec({
 
     val reactive = reactiveScope()

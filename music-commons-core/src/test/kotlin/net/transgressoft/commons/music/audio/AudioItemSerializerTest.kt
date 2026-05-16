@@ -4,6 +4,7 @@ import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.DisplayName
+import io.kotest.core.annotation.Isolate
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -22,6 +23,7 @@ import kotlinx.serialization.json.put
  * serialization fidelity.
  */
 @DisplayName("AudioItemSerializer")
+@Isolate
 internal class AudioItemSerializerTest : StringSpec({
 
     val json =

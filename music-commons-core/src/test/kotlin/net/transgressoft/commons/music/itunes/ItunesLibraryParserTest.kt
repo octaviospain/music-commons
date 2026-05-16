@@ -7,6 +7,7 @@ import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.DisplayName
+import io.kotest.core.annotation.Isolate
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldHaveSize
@@ -21,6 +22,7 @@ import java.nio.file.Paths
  * filtering, missing location filtering, folder hierarchy, NSDate handling, and error cases.
  */
 @DisplayName("ItunesLibraryParser")
+@Isolate
 internal class ItunesLibraryParserTest : StringSpec({
 
     val fixturePath = Paths.get(ItunesLibraryParserTest::class.java.getResource("/testfiles/itunes-library.xml")!!.toURI())

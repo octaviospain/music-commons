@@ -8,6 +8,7 @@ import net.transgressoft.commons.music.testing.reactiveScope
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.core.annotation.Isolate
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.optional.shouldBePresent
@@ -18,6 +19,7 @@ import io.kotest.property.arbitrary.next
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalCoroutinesApi
+@Isolate
 internal class MusicLibraryTest : StringSpec({
 
     val reactive = reactiveScope()

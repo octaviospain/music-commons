@@ -13,6 +13,7 @@ import net.transgressoft.lirp.persistence.json.JsonRepository
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.common.ExperimentalKotest
+import io.kotest.core.annotation.Isolate
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
@@ -35,6 +36,7 @@ import kotlinx.serialization.json.jsonObject
 
 @ExperimentalKotest
 @ExperimentalCoroutinesApi
+@Isolate
 internal class DefaultAudioLibraryTest: StringSpec({
 
     val reactive = reactiveScope()

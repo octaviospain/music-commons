@@ -3,6 +3,7 @@ package net.transgressoft.commons.music.audio
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.persistence.VolatileRepository
+import io.kotest.core.annotation.Isolate
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.optional.shouldBeEmpty
@@ -14,6 +15,7 @@ import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalCoroutinesApi
+@Isolate
 internal class AudioLibraryBaseTest : StringSpec({
 
     val reactive = reactiveScope()

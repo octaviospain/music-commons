@@ -6,6 +6,7 @@ import net.transgressoft.commons.music.audio.AudioFileType
 import net.transgressoft.commons.music.common.OsDetector
 import net.transgressoft.commons.music.testing.reactiveScope
 import io.kotest.core.annotation.DisplayName
+import io.kotest.core.annotation.Isolate
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContain
@@ -29,6 +30,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalCoroutinesApi
 @DisplayName("ItunesImportService")
+@Isolate
 internal class ItunesImportServiceTest : StringSpec({
 
     val reactive = reactiveScope()

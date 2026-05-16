@@ -30,6 +30,7 @@ import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.core.annotation.DisplayName
+import io.kotest.core.annotation.Isolate
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
@@ -53,6 +54,7 @@ import kotlinx.serialization.json.jsonPrimitive
  * output immediately identifies the failing platform.
  */
 @DisplayName("Cross-platform Jimfs filesystem")
+@Isolate
 internal class CrossPlatformFilesystemTest : StringSpec({
 
     val configs: Map<String, Configuration> =
