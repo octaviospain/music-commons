@@ -53,6 +53,7 @@ test {
     ]
 
     systemProperty 'testfx.setup.timeout', '60000'
+    systemProperty 'kotest.framework.config.fqn', 'net.transgressoft.commons.fx.music.testing.FxKotestProjectConfig'
 
     testLogging {
         events 'passed', 'skipped', 'failed'

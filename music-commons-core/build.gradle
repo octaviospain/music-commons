@@ -31,4 +31,5 @@ dependencies {
 
 tasks.withType(Test).configureEach {
     systemProperty 'java.awt.headless', 'true'
+    systemProperty 'kotest.framework.config.fqn', 'net.transgressoft.commons.music.testing.CoreKotestProjectConfig'
 }
