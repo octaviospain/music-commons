@@ -1,14 +1,11 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.DisplayName
-import io.kotest.core.annotation.Isolate
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
-import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -23,8 +20,8 @@ import kotlinx.serialization.json.put
  * serialization fidelity.
  */
 @DisplayName("AudioItemSerializer")
-@Isolate
 internal class AudioItemSerializerTest : StringSpec({
+    val files = virtualFiles()
 
     val json =
         Json {
@@ -38,7 +35,7 @@ internal class AudioItemSerializerTest : StringSpec({
         val album = ImmutableAlbum("Abbey Road", artist, false, 1969.toShort(), label)
 
         val path =
-            Arb.virtualAudioFile {
+            files.virtualAudioFile {
                 this.title = "Come Together"
                 this.artist = artist
                 this.album = album
@@ -71,7 +68,7 @@ internal class AudioItemSerializerTest : StringSpec({
         val album = ImmutableAlbum("Test Album", artist, true, 2010.toShort(), label)
 
         val path =
-            Arb.virtualAudioFile {
+            files.virtualAudioFile {
                 this.title = "Round Trip Song"
                 this.artist = artist
                 this.album = album
@@ -115,7 +112,7 @@ internal class AudioItemSerializerTest : StringSpec({
         val artist = ImmutableArtist.of("Solo Artist", CountryCode.DE)
 
         val path =
-            Arb.virtualAudioFile {
+            files.virtualAudioFile {
                 this.artist = artist
             }.next()
 
@@ -130,7 +127,7 @@ internal class AudioItemSerializerTest : StringSpec({
 
     "AudioItemSerializer throws SerializationException with field name for missing required field" {
         val path =
-            Arb.virtualAudioFile {
+            files.virtualAudioFile {
                 this.title = "Test Song"
             }.next()
 
@@ -163,7 +160,7 @@ internal class AudioItemSerializerTest : StringSpec({
         // encoder/encoding are immutable (val) initialized from audio file metadata, so they always
         // reflect the file, not the JSON. Only the mutable fields are tested here.
         val path =
-            Arb.virtualAudioFile {
+            files.virtualAudioFile {
                 this.title = "Nullable Test"
                 this.comments = "some comment"
                 this.trackNumber = 5
@@ -199,7 +196,7 @@ internal class AudioItemSerializerTest : StringSpec({
     }
 
     "AudioItemSerializer writes path as file:// URI in JSON" {
-        val path = Arb.virtualAudioFile().next()
+        val path = files.virtualAudioFile().next()
         val audioItem: AudioItem = MutableAudioItemTestBridge.createAudioItem(path, 200)
 
         val encoded = json.encodeToString(AudioItemMapSerializer, mapOf(200 to audioItem))

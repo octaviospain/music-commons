@@ -2,11 +2,10 @@ package net.transgressoft.commons.music.m3u
 
 import net.transgressoft.commons.music.CoreMusicLibrary
 import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.m3u.M3uTestFixtures.PlaylistFixture
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
 import net.transgressoft.commons.music.testing.reactiveScope
-import com.google.common.jimfs.Configuration
-import com.google.common.jimfs.Jimfs
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
@@ -28,13 +27,13 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 internal class M3uImportServiceTest : StringSpec({
 
     val reactive = reactiveScope()
+    val files = virtualFiles()
+    val fs: FileSystem = files.fileSystem
 
-    lateinit var fs: FileSystem
     lateinit var library: CoreMusicLibrary
     lateinit var service: M3uImportService
 
     beforeEach {
-        fs = Jimfs.newFileSystem(Configuration.unix())
         library = CoreMusicLibrary.builder().build()
         service = M3uImportService(library)
     }
@@ -42,18 +41,17 @@ internal class M3uImportServiceTest : StringSpec({
     afterEach {
         service.close()
         library.close()
-        fs.close()
     }
 
     fun preseed(tracks: List<M3uTestFixtures.TrackInfo>) {
         tracks.forEach { trackInfo ->
-            val spyPath = M3uTestFixtures.materializeTrack(trackInfo, fs)
+            val spyPath = M3uTestFixtures.materializeTrack(trackInfo, files)
             library.audioItemFromFile(spyPath)
         }
     }
 
     fun importFromResource(resource: String): Pair<PlaylistFixture, MutableAudioPlaylist> {
-        val fixture = M3uTestFixtures.loadPlaylist(resource, fs)
+        val fixture = M3uTestFixtures.loadPlaylist(resource, files)
         preseed(fixture.tracks)
         return fixture to service.import(fixture.rootPath)
     }
@@ -91,7 +89,7 @@ internal class M3uImportServiceTest : StringSpec({
         val duplicateRoot =
             M3uTestFixtures.loadPlaylist(
                 "Kobayashi.m3u",
-                fileSystem = fs,
+                virtualFiles = files,
                 playlistsDir = "/music/Playlists2"
             ).rootPath
 
@@ -230,7 +228,7 @@ internal class M3uImportServiceTest : StringSpec({
     }
 
     "importAsync resolves to playlist via static fixture" {
-        val fixture = M3uTestFixtures.loadPlaylist("Simple.m3u", fs)
+        val fixture = M3uTestFixtures.loadPlaylist("Simple.m3u", files)
         preseed(fixture.tracks)
 
         val future = service.importAsync(fixture.rootPath, reactive.dispatcher)
@@ -241,7 +239,7 @@ internal class M3uImportServiceTest : StringSpec({
     }
 
     "importAsync cancellation surfaces CancellationException through CompletableFuture" {
-        val fixture = M3uTestFixtures.loadPlaylist("Simple.m3u", fs)
+        val fixture = M3uTestFixtures.loadPlaylist("Simple.m3u", files)
         preseed(fixture.tracks)
 
         val future: CompletableFuture<*> = service.importAsync(fixture.rootPath, reactive.dispatcher)
@@ -261,9 +259,9 @@ internal class M3uImportServiceTest : StringSpec({
     }
 
     "reuses existing audio items by normalized absolute path" {
-        val fixture = M3uTestFixtures.loadPlaylist("Simple.m3u", fs)
+        val fixture = M3uTestFixtures.loadPlaylist("Simple.m3u", files)
         // Pre-seed manually to capture the item id of an existing entry.
-        val firstSpy = M3uTestFixtures.materializeTrack(fixture.tracks.first(), fs)
+        val firstSpy = M3uTestFixtures.materializeTrack(fixture.tracks.first(), files)
         val existing: AudioItem = library.audioItemFromFile(firstSpy)
         val sizeBeforeImport = library.audioLibrary().size()
 

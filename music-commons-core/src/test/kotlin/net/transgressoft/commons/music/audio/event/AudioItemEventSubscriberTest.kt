@@ -2,15 +2,13 @@ package net.transgressoft.commons.music.audio.event
 
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.persistence.VolatileRepository
-import io.kotest.core.annotation.Isolate
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
-import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
@@ -18,10 +16,10 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
  * Tests for [AudioItemEventSubscriber] verifying event reaction and subscription cancellation.
  */
 @ExperimentalCoroutinesApi
-@Isolate
 internal class AudioItemEventSubscriberTest : StringSpec({
 
     val reactive = reactiveScope()
+    val files = virtualFiles()
     lateinit var repository: VolatileRepository<Int, AudioItem>
     lateinit var library: DefaultAudioLibrary
 
@@ -42,7 +40,7 @@ internal class AudioItemEventSubscriberTest : StringSpec({
         }
         repository.subscribe(subscriber)
 
-        library.createFromFile(Arb.virtualAudioFile().next())
+        library.createFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         createEventReceived shouldBe true
@@ -56,7 +54,7 @@ internal class AudioItemEventSubscriberTest : StringSpec({
         }
         repository.subscribe(subscriber)
 
-        val audioItem = library.createFromFile(Arb.virtualAudioFile().next())
+        val audioItem = library.createFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         library.remove(audioItem)
@@ -73,14 +71,14 @@ internal class AudioItemEventSubscriberTest : StringSpec({
         }
         repository.subscribe(subscriber)
 
-        library.createFromFile(Arb.virtualAudioFile().next())
+        library.createFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         val countAfterFirst = eventCount
 
         subscriber.cancelSubscription()
 
-        library.createFromFile(Arb.virtualAudioFile().next())
+        library.createFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         eventCount shouldBe countAfterFirst

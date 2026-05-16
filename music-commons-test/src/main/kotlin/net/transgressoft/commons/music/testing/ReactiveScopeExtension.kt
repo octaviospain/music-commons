@@ -19,7 +19,6 @@
  * VENDORED FROM lirp.
  *
  * Source: `lirp-core/src/test/kotlin/net/transgressoft/lirp/testing/ReactiveScopeExtension.kt`
- * at lirp commit `0563e10` (2026-05-16).
  *
  * Do not edit locally. Upstream lirp does not yet publish a `lirp-testing` Maven artifact,
  * so music-commons cannot consume this through normal Gradle dependencies (it depends on

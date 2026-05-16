@@ -5,7 +5,7 @@ import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioLibrary
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.common.toJsonUri
 import net.transgressoft.commons.music.playlist.PlaylistHierarchy
 import net.transgressoft.commons.music.playlist.asJsonKeyValues
@@ -14,7 +14,6 @@ import net.transgressoft.commons.music.waveform.AudioWaveform
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
 import io.kotest.assertions.json.shouldContainJsonKeyValue
 import io.kotest.assertions.json.shouldEqualJson
-import io.kotest.core.annotation.Isolate
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.collections.shouldContainOnly
@@ -29,10 +28,10 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asExecutor
 
 @ExperimentalCoroutinesApi
-@Isolate
 internal class MusicLibraryIntegrationTest : StringSpec({
 
     val reactive = reactiveScope()
+    val files = virtualFiles()
 
     lateinit var audioFile: File
     lateinit var playlistsFile: File
@@ -126,21 +125,21 @@ internal class MusicLibraryIntegrationTest : StringSpec({
 
         val itemA1 =
             audioLibrary.createFromFile(
-                Arb.virtualAudioFile {
+                files.virtualAudioFile {
                     artist = artistA
                     album = albumA1
                 }.next()
             )
         val itemA2 =
             audioLibrary.createFromFile(
-                Arb.virtualAudioFile {
+                files.virtualAudioFile {
                     artist = artistA
                     album = albumA2
                 }.next()
             )
         val itemB =
             audioLibrary.createFromFile(
-                Arb.virtualAudioFile {
+                files.virtualAudioFile {
                     artist = artistB
                     album = albumB
                 }.next()
@@ -165,8 +164,8 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     }
 
     "Playlist multi-item lifecycle — multiple playlists sharing items, remove item, verify removal from all playlists" {
-        val item1 = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
-        val item2 = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
+        val item1 = audioLibrary.createFromFile(files.virtualAudioFile().next())
+        val item2 = audioLibrary.createFromFile(files.virtualAudioFile().next())
 
         reactive.advance()
 
@@ -196,7 +195,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     }
 
     "Lifecycle close integration — subscribe, close library, verify no further events propagate" {
-        val audioItem = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
+        val audioItem = audioLibrary.createFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         val playlist = playlistHierarchy.createPlaylist("Close Integration Playlist")
@@ -208,7 +207,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         audioLibrary.close()
 
         // After close, newly created items are no longer indexed in the artist catalog
-        val item2 = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
+        val item2 = audioLibrary.createFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         audioLibrary.findAlbumAudioItems(item2.artist, item2.album.name).none { it.id == item2.id } shouldBe true

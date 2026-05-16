@@ -2,7 +2,7 @@ package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.TestAudioLibrary
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.persistence.AggregateCollectionRef
 import net.transgressoft.lirp.persistence.RegistryBase.Companion.deregisterRepository
@@ -13,7 +13,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.optional.shouldBeEmpty
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
-import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
@@ -21,6 +20,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 internal class PlaylistHierarchyBaseTest : StringSpec({
 
     val reactive = reactiveScope()
+    val files = virtualFiles()
     lateinit var playlistHierarchy: TestPlaylistHierarchy
 
     beforeEach {
@@ -56,7 +56,7 @@ internal class PlaylistHierarchyBaseTest : StringSpec({
         val audioLibrary = TestAudioLibrary(audioLibraryRepository)
         audioLibrary.subscribe(playlistHierarchy)
 
-        val audioItem = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
+        val audioItem = audioLibrary.createFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         val playlist = playlistHierarchy.createPlaylist("Sync Test Playlist")
@@ -105,7 +105,7 @@ internal class PlaylistHierarchyBaseTest : StringSpec({
         val audioLibrary = TestAudioLibrary(audioLibraryRepository)
         audioLibrary.subscribe(playlistHierarchy)
 
-        val audioItem = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
+        val audioItem = audioLibrary.createFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         val playlist = playlistHierarchy.createPlaylist("Close Test Playlist")

@@ -1,14 +1,13 @@
 package net.transgressoft.commons.music
 
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.commons.music.audio.WindowsPathException
+import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.common.OsDetector
 import net.transgressoft.commons.music.testing.reactiveScope
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.core.annotation.Isolate
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.optional.shouldBePresent
@@ -19,10 +18,10 @@ import io.kotest.property.arbitrary.next
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalCoroutinesApi
-@Isolate
 internal class MusicLibraryTest : StringSpec({
 
     val reactive = reactiveScope()
+    val files = virtualFiles()
 
     "MusicLibrary builder creates volatile library by default" {
         val library = CoreMusicLibrary.builder().build()
@@ -60,7 +59,7 @@ internal class MusicLibraryTest : StringSpec({
     "MusicLibrary curated methods delegate to components" {
         val library = CoreMusicLibrary.builder().build()
 
-        val audioItem = library.audioItemFromFile(Arb.virtualAudioFile().next())
+        val audioItem = library.audioItemFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         library.createPlaylist("Curated Playlist")
@@ -75,7 +74,7 @@ internal class MusicLibraryTest : StringSpec({
     "MusicLibrary close disposes all components" {
         val library = CoreMusicLibrary.builder().build()
 
-        val audioItem = library.audioItemFromFile(Arb.virtualAudioFile().next())
+        val audioItem = library.audioItemFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         val playlist = library.createPlaylist("Close Test Playlist")
@@ -88,7 +87,7 @@ internal class MusicLibraryTest : StringSpec({
         library.close()
 
         // After close, newly created items are no longer indexed in the artist catalog
-        val item2 = library.audioItemFromFile(Arb.virtualAudioFile().next())
+        val item2 = library.audioItemFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         library.audioLibrary().findAlbumAudioItems(item2.artist, item2.album.name)

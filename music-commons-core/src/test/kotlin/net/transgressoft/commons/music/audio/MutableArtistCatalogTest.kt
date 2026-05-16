@@ -18,11 +18,9 @@
 package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.music.audio.MutableAudioItemTestBridge.createAudioItem
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAlbumAudioFiles
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.event.MutationEvent
-import io.kotest.core.annotation.Isolate
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainOnly
@@ -38,14 +36,13 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 typealias ArtistCatalogMutation = MutationEvent<Artist, ArtistCatalog<AudioItem>>
 
 @ExperimentalCoroutinesApi
-@Isolate
 class MutableArtistCatalogTest : StringSpec({
 
     val reactive = reactiveScope()
+    val files = virtualFiles()
 
     afterSpec {
         unmockkAll()
-        VirtualFiles.installStaticMocks()
     }
 
     "MUTATE event is published when audio item is added to empty catalog" {
@@ -170,7 +167,7 @@ class MutableArtistCatalogTest : StringSpec({
     }
 
     "MUTATE event is published when album audio items ordering changed due to a audio item track number changed" {
-        val albumAudioItems = Arb.virtualAlbumAudioFiles().next().map(::createAudioItem)
+        val albumAudioItems = files.virtualAlbumAudioFiles().next().map(::createAudioItem)
 
         val catalog = MutableArtistCatalog(albumAudioItems)
         val receivedEvents = mutableListOf<ArtistCatalogMutation>()
@@ -208,7 +205,7 @@ class MutableArtistCatalogTest : StringSpec({
     }
 
     "MUTATE event is not published when audio item track number is changed via merge and is the only one in the catalog" {
-        val audioItem = createAudioItem(Arb.virtualAudioFile().next())
+        val audioItem = createAudioItem(files.virtualAudioFile().next())
 
         val catalog = MutableArtistCatalog(audioItem)
         val receivedEvents = mutableListOf<ArtistCatalogMutation>()
@@ -224,7 +221,7 @@ class MutableArtistCatalogTest : StringSpec({
     }
 
     "MUTATE event is published when album audio items ordering changed due to an audio item disc number changed" {
-        val albumAudioItems = Arb.virtualAlbumAudioFiles().next().map(::createAudioItem)
+        val albumAudioItems = files.virtualAlbumAudioFiles().next().map(::createAudioItem)
 
         val catalog = MutableArtistCatalog(albumAudioItems)
         val receivedEvents = mutableListOf<ArtistCatalogMutation>()
@@ -262,7 +259,7 @@ class MutableArtistCatalogTest : StringSpec({
     }
 
     "MUTATE event is not published when audio item disc number is changed via merge and is the only one in the catalog" {
-        val audioItem = createAudioItem(Arb.virtualAudioFile().next())
+        val audioItem = createAudioItem(files.virtualAudioFile().next())
 
         val catalog = MutableArtistCatalog(audioItem)
         val receivedEvents = mutableListOf<ArtistCatalogMutation>()
@@ -278,7 +275,7 @@ class MutableArtistCatalogTest : StringSpec({
     }
 
     "MUTATE event is published when audio item is removed from catalog with multiple items" {
-        val albumAudioItems = Arb.virtualAlbumAudioFiles().next().map(::createAudioItem)
+        val albumAudioItems = files.virtualAlbumAudioFiles().next().map(::createAudioItem)
 
         val catalog = MutableArtistCatalog(albumAudioItems)
         val receivedEvents = mutableListOf<ArtistCatalogMutation>()
@@ -329,8 +326,8 @@ class MutableArtistCatalogTest : StringSpec({
     }
 
     "MUTATE event is published when removing audio item from one album leaves another album" {
-        val album1 = Arb.virtualAlbumAudioFiles().next().map(::createAudioItem)
-        val album2 = Arb.virtualAlbumAudioFiles().next().map(::createAudioItem)
+        val album1 = files.virtualAlbumAudioFiles().next().map(::createAudioItem)
+        val album2 = files.virtualAlbumAudioFiles().next().map(::createAudioItem)
         val catalog = MutableArtistCatalog(album1 + album2)
 
         val receivedEvents = mutableListOf<ArtistCatalogMutation>()

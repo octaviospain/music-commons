@@ -22,8 +22,7 @@ import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
-import io.kotest.property.Arb
+import net.transgressoft.commons.music.audio.VirtualFiles
 import io.kotest.property.arbitrary.next
 
 /**
@@ -32,10 +31,12 @@ import io.kotest.property.arbitrary.next
  * Each artist gets a default album named "{artistName} Album". All items are added to the library
  * via [ObservableAudioLibrary.createFromFile].
  *
+ * @param virtualFiles the per-spec [VirtualFiles] fixture obtained from `virtualFiles()`
  * @param artistConfigs Map of artist name to number of items to create for that artist
  * @return Map of [Artist] to list of created [ObservableAudioItem] instances
  */
 fun ObservableAudioLibrary.createItemsByArtist(
+    virtualFiles: VirtualFiles,
     artistConfigs: Map<String, Int>
 ): Map<Artist, List<ObservableAudioItem>> =
     artistConfigs.flatMap { (artistName, itemCount) ->
@@ -43,7 +44,7 @@ fun ObservableAudioLibrary.createItemsByArtist(
         val album = ImmutableAlbum("$artistName Album", artist)
         List(itemCount) {
             createFromFile(
-                Arb.virtualAudioFile {
+                virtualFiles.virtualAudioFile {
                     this.artist = artist
                     this.album = album
                 }.next()
@@ -54,11 +55,13 @@ fun ObservableAudioLibrary.createItemsByArtist(
 /**
  * Creates audio items for one artist across multiple albums in an [ObservableAudioLibrary].
  *
+ * @param virtualFiles the per-spec [VirtualFiles] fixture obtained from `virtualFiles()`
  * @param artistName The artist name
  * @param albumItemCounts Map of album name to number of items to create per album
  * @return List of all created [ObservableAudioItem] instances
  */
 fun ObservableAudioLibrary.createItemsWithMultipleAlbums(
+    virtualFiles: VirtualFiles,
     artistName: String,
     albumItemCounts: Map<String, Int>
 ): List<ObservableAudioItem> {
@@ -67,7 +70,7 @@ fun ObservableAudioLibrary.createItemsWithMultipleAlbums(
         val album = ImmutableAlbum(albumName, artist)
         List(count) {
             createFromFile(
-                Arb.virtualAudioFile {
+                virtualFiles.virtualAudioFile {
                     this.artist = artist
                     this.album = album
                 }.next()

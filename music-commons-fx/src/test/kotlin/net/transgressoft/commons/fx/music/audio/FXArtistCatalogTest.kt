@@ -2,12 +2,11 @@ package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import org.testfx.api.FxToolkit
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -20,6 +19,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 internal class FXArtistCatalogTest : StringSpec({
 
     val reactive = reactiveScope()
+    val files = virtualFiles()
 
     val artist = ImmutableArtist.of("Test Artist")
     val album = ImmutableAlbum("Test Album", artist)
@@ -33,7 +33,7 @@ internal class FXArtistCatalogTest : StringSpec({
         val catalog2 = FXArtistCatalog(artist)
 
         val path =
-            Arb.virtualAudioFile {
+            files.virtualAudioFile {
                 this.artist = artist
                 this.album = album
             }.next()
@@ -49,7 +49,7 @@ internal class FXArtistCatalogTest : StringSpec({
         val catalog2 = FXArtistCatalog(artist)
 
         val path =
-            Arb.virtualAudioFile {
+            files.virtualAudioFile {
                 this.artist = artist
                 this.album = album
             }.next()
@@ -66,7 +66,7 @@ internal class FXArtistCatalogTest : StringSpec({
         val catalog2 = FXArtistCatalog(artist)
 
         val path =
-            Arb.virtualAudioFile {
+            files.virtualAudioFile {
                 this.artist = artist
                 this.album = album
             }.next()
@@ -82,7 +82,7 @@ internal class FXArtistCatalogTest : StringSpec({
         val cloneBefore = catalog.clone()
 
         val path =
-            Arb.virtualAudioFile {
+            files.virtualAudioFile {
                 this.artist = artist
                 this.album = album
             }.next()

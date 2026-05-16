@@ -1,24 +1,22 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.persistence.VolatileRepository
-import io.kotest.core.annotation.Isolate
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.optional.shouldBeEmpty
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
-import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalCoroutinesApi
-@Isolate
 internal class AudioLibraryBaseTest : StringSpec({
 
     val reactive = reactiveScope()
+    val files = virtualFiles()
     lateinit var repository: VolatileRepository<Int, AudioItem>
     lateinit var audioLibrary: TestAudioLibrary
 
@@ -29,13 +27,10 @@ internal class AudioLibraryBaseTest : StringSpec({
 
     afterSpec {
         unmockkAll()
-        // unmockkAll() also tears down the JVM-wide static interceptors that VirtualFiles relies on.
-        // Re-install them so the next spec to call into VirtualFiles starts with the same baseline.
-        VirtualFiles.installStaticMocks()
     }
 
     "AudioLibraryBase adds audio item and syncs artist catalog" {
-        val audioItem = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
+        val audioItem = audioLibrary.createFromFile(files.virtualAudioFile().next())
 
         reactive.advance()
 
@@ -46,7 +41,7 @@ internal class AudioLibraryBaseTest : StringSpec({
     }
 
     "AudioLibraryBase removes audio item and cleans up artist catalog" {
-        val audioItem = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
+        val audioItem = audioLibrary.createFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         audioLibrary.remove(audioItem) shouldBe true
@@ -57,7 +52,7 @@ internal class AudioLibraryBaseTest : StringSpec({
     }
 
     "AudioLibraryBase updates artist catalog on item mutation" {
-        val audioItem = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
+        val audioItem = audioLibrary.createFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         audioItem.title = "New Title"
@@ -68,14 +63,14 @@ internal class AudioLibraryBaseTest : StringSpec({
     }
 
     "AudioLibraryBase close() stops event delivery" {
-        val audioItem = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
+        val audioItem = audioLibrary.createFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         val artistBeforeClose = audioItem.artist
         audioLibrary.close()
 
         // Add another item directly to repository after close — catalog should not pick it up
-        val virtualPath = Arb.virtualAudioFile().next()
+        val virtualPath = files.virtualAudioFile().next()
         val newItem = MutableAudioItem(virtualPath, Int.MAX_VALUE - 1)
         repository.add(newItem)
         reactive.advance()
@@ -91,14 +86,14 @@ internal class AudioLibraryBaseTest : StringSpec({
         val abbeyRoad = ImmutableAlbum("Abbey Road", theBeatles)
 
         val file1 =
-            Arb.virtualAudioFile {
+            files.virtualAudioFile {
                 artist = theBeatles
                 album = abbeyRoad
             }.next()
         val item1 = audioLibrary.createFromFile(file1)
 
         val file2 =
-            Arb.virtualAudioFile {
+            files.virtualAudioFile {
                 artist = theBeatles
                 album = abbeyRoad
             }.next()

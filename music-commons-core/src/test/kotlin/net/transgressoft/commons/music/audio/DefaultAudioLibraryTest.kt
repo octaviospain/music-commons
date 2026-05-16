@@ -1,8 +1,7 @@
 package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.music.AudioUtils
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAlbumAudioFiles
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
@@ -13,7 +12,6 @@ import net.transgressoft.lirp.persistence.json.JsonRepository
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.common.ExperimentalKotest
-import io.kotest.core.annotation.Isolate
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
@@ -36,10 +34,10 @@ import kotlinx.serialization.json.jsonObject
 
 @ExperimentalKotest
 @ExperimentalCoroutinesApi
-@Isolate
 internal class DefaultAudioLibraryTest: StringSpec({
 
     val reactive = reactiveScope()
+    val files = virtualFiles()
     lateinit var jsonFile: File
     lateinit var jsonFileRepository: JsonRepository<Int, AudioItem>
     lateinit var audioRepository: AudioLibrary
@@ -57,11 +55,10 @@ internal class DefaultAudioLibraryTest: StringSpec({
 
     afterSpec {
         unmockkAll()
-        VirtualFiles.installStaticMocks()
     }
 
     "Creates an audio item and allow to query it on creation and after modification" {
-        val audioFile = Arb.virtualAudioFile().next()
+        val audioFile = files.virtualAudioFile().next()
         val audioItem: AudioItem = audioRepository.createFromFile(audioFile)
 
         reactive.advance()
@@ -108,7 +105,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
     }
 
     "Reflects changes on a JsonFileRepository" {
-        val audioFile = Arb.virtualAudioFile().next()
+        val audioFile = files.virtualAudioFile().next()
         val audioItem: AudioItem = audioRepository.createFromFile(audioFile)
         reactive.advance()
 
@@ -125,7 +122,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
     "Creates audio items from the same album" {
         val theBeatles = ImmutableArtist.of("The Beatles")
         val abbeyRoad = ImmutableAlbum("Abbey Road", theBeatles)
-        val albumAudioFiles = Arb.virtualAlbumAudioFiles(theBeatles, abbeyRoad).next()
+        val albumAudioFiles = files.virtualAlbumAudioFiles(theBeatles, abbeyRoad).next()
 
         albumAudioFiles.forEach(audioRepository::createFromFile)
         reactive.advance()
@@ -136,7 +133,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
     }
 
     "Creates a batch of audio items asynchronously" {
-        val filePaths = Arb.list(Arb.virtualAudioFile(), 50..100).next()
+        val filePaths = Arb.list(files.virtualAudioFile(), 50..100).next()
 
         val result: List<AudioItem> = audioRepository.createFromFileBatchAsync(filePaths, reactive.dispatcher.asExecutor()).get()
 
@@ -161,7 +158,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
     }
 
     "Creates a batch of audio items asynchronously with custom batch size" {
-        val filePaths = Arb.list(Arb.virtualAudioFile(), 10..20).next()
+        val filePaths = Arb.list(files.virtualAudioFile(), 10..20).next()
 
         val result: List<AudioItem> = audioRepository.createFromFileBatchAsync(filePaths, reactive.dispatcher.asExecutor(), batchSize = 1000).get()
 
@@ -172,7 +169,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
     }
 
     "Batch async coerces batch size below 500 to 500" {
-        val filePaths = Arb.list(Arb.virtualAudioFile(), 10..20).next()
+        val filePaths = Arb.list(files.virtualAudioFile(), 10..20).next()
 
         val result: List<AudioItem> = audioRepository.createFromFileBatchAsync(filePaths, reactive.dispatcher.asExecutor(), batchSize = 100).get()
 
@@ -194,7 +191,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         // Create some audio items and save them to the JSON file
         val theBeatles = ImmutableArtist.of("The Beatles")
         val abbeyRoad = ImmutableAlbum("Abbey Road", theBeatles)
-        val albumAudioFiles = Arb.virtualAlbumAudioFiles(theBeatles, abbeyRoad).next()
+        val albumAudioFiles = files.virtualAlbumAudioFiles(theBeatles, abbeyRoad).next()
 
         albumAudioFiles.forEach(audioRepository::createFromFile)
         reactive.advance()
@@ -233,7 +230,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
             receivedEvents.add(event)
         }
 
-        val audioFile = Arb.virtualAudioFile().next()
+        val audioFile = files.virtualAudioFile().next()
         val audioItem = audioRepository.createFromFile(audioFile)
         reactive.advance()
 
@@ -245,7 +242,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
     "Artist catalog publisher does NOT emit UPDATE events when single audio item ordering is modified" {
         val receivedEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
 
-        val audioFile = Arb.virtualAudioFile().next()
+        val audioFile = files.virtualAudioFile().next()
         val audioItem = audioRepository.createFromFile(audioFile)
         reactive.advance()
 
@@ -265,7 +262,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         val abbeyRoad = ImmutableAlbum("Abbey Road", theBeatles)
 
         val audioFile1 =
-            Arb.virtualAudioFile {
+            files.virtualAudioFile {
                 artist = theBeatles
                 album = abbeyRoad
                 trackNumber = 1
@@ -274,7 +271,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         val audioItem1 = audioRepository.createFromFile(audioFile1)
 
         val audioFile2 =
-            Arb.virtualAudioFile {
+            files.virtualAudioFile {
                 artist = theBeatles
                 album = abbeyRoad
                 trackNumber = 2
@@ -310,7 +307,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
     "Artist catalog publisher emits DELETE events when all artist items are removed" {
         val receivedEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
 
-        val audioFile = Arb.virtualAudioFile().next()
+        val audioFile = files.virtualAudioFile().next()
         val audioItem = audioRepository.createFromFile(audioFile)
         reactive.advance()
 
@@ -335,7 +332,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
 
         audioRepository.artistCatalogPublisher.subscribe(DELETE) { deleteEvents.add(it) }
 
-        val audioFile = Arb.virtualAudioFile().next()
+        val audioFile = files.virtualAudioFile().next()
         val audioItem = audioRepository.createFromFile(audioFile)
         reactive.advance()
 
@@ -364,7 +361,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
 
         val theBeatles = ImmutableArtist.of("The Beatles")
         val abbeyRoad = ImmutableAlbum("Abbey Road", theBeatles)
-        val albumFiles = Arb.virtualAlbumAudioFiles(theBeatles, abbeyRoad).next()
+        val albumFiles = files.virtualAlbumAudioFiles(theBeatles, abbeyRoad).next()
 
         albumFiles.forEach { audioRepository.createFromFile(it) }
         reactive.advance()

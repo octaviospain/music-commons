@@ -4,8 +4,8 @@ import net.transgressoft.commons.fx.music.createItemsByArtist
 import net.transgressoft.commons.fx.music.createItemsWithMultipleAlbums
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist.Companion.of
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.commons.music.audio.shouldEqual
+import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.entity.toIds
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
@@ -21,7 +21,6 @@ import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContainOnlyOnce
-import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
@@ -33,6 +32,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 internal class ObservableAudioLibraryTest : StringSpec({
 
     val reactive = reactiveScope()
+    val files = virtualFiles()
     lateinit var jsonFile: File
     lateinit var jsonFileRepository: JsonRepository<Int, ObservableAudioItem>
     lateinit var repository: FXAudioLibrary
@@ -53,7 +53,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
     }
 
     "Creates an observable audio item and serialize itself" {
-        val fxAudioItem = repository.createFromFile(Arb.virtualAudioFile().next())
+        val fxAudioItem = repository.createFromFile(files.virtualAudioFile().next())
 
         reactive.advance()
 
@@ -74,7 +74,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
         repository.emptyLibraryProperty.get() shouldBe true
         repository.audioItemsProperty.isEmpty() shouldBe true
 
-        val fxAudioItem = repository.createFromFile(Arb.virtualAudioFile().next())
+        val fxAudioItem = repository.createFromFile(files.virtualAudioFile().next())
 
         reactive.advance()
 
@@ -94,7 +94,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
     }
 
     "Contains expected items after loading from JsonFileRepository" {
-        val createdItems = List(10) { repository.createFromFile(Arb.virtualAudioFile().next()) }
+        val createdItems = List(10) { repository.createFromFile(files.virtualAudioFile().next()) }
 
         reactive.advance()
 
@@ -124,7 +124,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
     }
 
     "Rapid concurrent additions to library maintain consistency" {
-        val audioFiles = List(50) { Arb.virtualAudioFile().next() }
+        val audioFiles = List(50) { files.virtualAudioFile().next() }
 
         // Rapid additions that could trigger concurrent modifications
         val addedItems =
@@ -154,6 +154,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
     "ObservableAudioLibrary contains catalogs for all artists after adding items" {
         val itemsByArtist =
             repository.createItemsByArtist(
+                files,
                 mapOf("Alpha" to 2, "Beta" to 3, "Gamma" to 1)
             )
 
@@ -180,6 +181,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
         val album2 = ImmutableAlbum("Second Album", artist)
 
         repository.createItemsWithMultipleAlbums(
+            files,
             artistName,
             mapOf("First Album" to 3, "Second Album" to 2)
         )
@@ -204,6 +206,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
     "ObservableAudioLibrary removes catalog when all items for artist are deleted" {
         val itemsByArtist =
             repository.createItemsByArtist(
+                files,
                 mapOf("Keep Artist" to 2, "Remove Artist" to 3)
             )
 
@@ -230,7 +233,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
 
     "ObservableAudioLibrary catalog sizeProperty decreases when item removed but artist remains" {
         val artistName = "Partial Remove"
-        val items = repository.createItemsByArtist(mapOf(artistName to 3))[of(artistName)]!!
+        val items = repository.createItemsByArtist(files, mapOf(artistName to 3))[of(artistName)]!!
 
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
@@ -257,8 +260,8 @@ internal class ObservableAudioLibraryTest : StringSpec({
         val album1B = ImmutableAlbum("Album 1B", artist1)
         val album2A = ImmutableAlbum("Album 2A", artist2)
 
-        repository.createItemsWithMultipleAlbums("Artist One", mapOf("Album 1A" to 2, "Album 1B" to 1))
-        repository.createItemsWithMultipleAlbums("Artist Two", mapOf("Album 2A" to 2))
+        repository.createItemsWithMultipleAlbums(files, "Artist One", mapOf("Album 1A" to 2, "Album 1B" to 1))
+        repository.createItemsWithMultipleAlbums(files, "Artist Two", mapOf("Album 2A" to 2))
 
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
@@ -272,6 +275,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
     "ObservableAudioLibrary artistCatalogsProperty reflects correct state after rapid multi-artist operations" {
         val itemsByArtist =
             repository.createItemsByArtist(
+                files,
                 mapOf("Rapid A" to 3, "Rapid B" to 2, "Rapid C" to 4, "Rapid D" to 1)
             )
 
@@ -307,6 +311,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
     "Artists are removed from artistsProperty only when all items with that artist are removed" {
         val itemsByArtist =
             repository.createItemsByArtist(
+                files,
                 mapOf(
                     "Shared Artist A" to 3, // 3 with "Shared Artist A",
                     "Unique Artist B" to 1, // 1 with "Unique Artist B",
