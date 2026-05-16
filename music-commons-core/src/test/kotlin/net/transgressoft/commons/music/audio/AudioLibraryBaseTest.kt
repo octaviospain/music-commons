@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
-import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.persistence.VolatileRepository
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainOnly
@@ -11,22 +11,14 @@ import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import io.mockk.unmockkAll
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @ExperimentalCoroutinesApi
 internal class AudioLibraryBaseTest : StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher)
+    val reactive = reactiveScope()
     lateinit var repository: VolatileRepository<Int, AudioItem>
     lateinit var audioLibrary: TestAudioLibrary
-
-    beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
-    }
 
     beforeEach {
         repository = VolatileRepository("AudioLibraryBaseTest")
@@ -34,8 +26,6 @@ internal class AudioLibraryBaseTest : StringSpec({
     }
 
     afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
         unmockkAll()
         // unmockkAll() also tears down the JVM-wide static interceptors that VirtualFiles relies on.
         // Re-install them so the next spec to call into VirtualFiles starts with the same baseline.
@@ -45,7 +35,7 @@ internal class AudioLibraryBaseTest : StringSpec({
     "AudioLibraryBase adds audio item and syncs artist catalog" {
         val audioItem = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioLibrary.getArtistCatalog(audioItem.artist) shouldBePresent { catalog ->
             catalog.artist shouldBe audioItem.artist
@@ -55,10 +45,10 @@ internal class AudioLibraryBaseTest : StringSpec({
 
     "AudioLibraryBase removes audio item and cleans up artist catalog" {
         val audioItem = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioLibrary.remove(audioItem) shouldBe true
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioLibrary.getArtistCatalog(audioItem.artist).shouldBeEmpty()
         audioLibrary.findAlbumAudioItems(audioItem.artist, audioItem.album.name).isEmpty() shouldBe true
@@ -66,10 +56,10 @@ internal class AudioLibraryBaseTest : StringSpec({
 
     "AudioLibraryBase updates artist catalog on item mutation" {
         val audioItem = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioItem.title = "New Title"
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioLibrary.contains { it.title == "New Title" } shouldBe true
         audioLibrary.size() shouldBe 1
@@ -77,7 +67,7 @@ internal class AudioLibraryBaseTest : StringSpec({
 
     "AudioLibraryBase close() stops event delivery" {
         val audioItem = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val artistBeforeClose = audioItem.artist
         audioLibrary.close()
@@ -86,7 +76,7 @@ internal class AudioLibraryBaseTest : StringSpec({
         val virtualPath = Arb.virtualAudioFile().next()
         val newItem = MutableAudioItem(virtualPath, Int.MAX_VALUE - 1)
         repository.add(newItem)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         // The catalog for the new item's artist should not exist because subscription was cancelled
         audioLibrary.getArtistCatalog(newItem.artist).shouldBeEmpty()
@@ -112,7 +102,7 @@ internal class AudioLibraryBaseTest : StringSpec({
             }.next()
         val item2 = audioLibrary.createFromFile(file2)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val result = audioLibrary.findAlbumAudioItems(theBeatles, abbeyRoad.name)
         result.size shouldBe 2

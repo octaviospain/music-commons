@@ -9,9 +9,9 @@ import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.commons.music.common.toJsonUri
 import net.transgressoft.commons.music.playlist.PlaylistHierarchy
 import net.transgressoft.commons.music.playlist.asJsonKeyValues
+import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
-import net.transgressoft.lirp.event.ReactiveScope
 import io.kotest.assertions.json.shouldContainJsonKeyValue
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.core.spec.style.StringSpec
@@ -24,16 +24,13 @@ import io.kotest.matchers.string.shouldContain
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import java.io.File
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asExecutor
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @ExperimentalCoroutinesApi
 internal class MusicLibraryIntegrationTest : StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher)
+    val reactive = reactiveScope()
 
     lateinit var audioFile: File
     lateinit var playlistsFile: File
@@ -44,11 +41,6 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     lateinit var audioLibrary: AudioLibrary
     lateinit var waveforms: AudioWaveformRepository<AudioWaveform, AudioItem>
     lateinit var playlistHierarchy: PlaylistHierarchy
-
-    beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
-    }
 
     beforeEach {
         audioFile = tempfile("audioLibrary-test", ".json").apply { deleteOnExit() }
@@ -70,23 +62,18 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         musicLibrary.close()
     }
 
-    afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
-    }
-
     "Operations on audio items impact subscribed repositories" {
         val audioItem = audioLibrary.createFromFile(Arb.realAudioFile().next())
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         // Compare via JSON key/value using the file:// URI form that toJsonUri() serializes.
         audioFile.readText().shouldContainJsonKeyValue("${audioItem.id}.path", audioItem.path.toJsonUri())
         audioLibrary.findAlbumAudioItems(audioItem.artist, audioItem.album.name).shouldContainOnly(audioItem)
 
-        val waveform = waveforms.getOrCreateWaveformAsync(audioItem, 780, 335, testDispatcher.asExecutor())
+        val waveform = waveforms.getOrCreateWaveformAsync(audioItem, 780, 335, reactive.dispatcher.asExecutor())
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         waveform.get() shouldNotBe null
         waveform.get().id shouldBe audioItem.id
@@ -95,13 +82,13 @@ internal class MusicLibraryIntegrationTest : StringSpec({
 
         playlistHierarchy.createPlaylist("Test Playlist").also { it.addAudioItem(audioItem) }
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         playlistsFile.readText() shouldContain "Test Playlist"
         playlistsFile.readText() shouldContain audioItem.id.toString()
 
         audioItem.title = "New title"
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioLibrary.contains { it.title == "New title" }
         audioLibrary.size() shouldBe 1
@@ -114,7 +101,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         audioLibrary.remove(audioItem) shouldBe true
         audioLibrary.isEmpty shouldBe true
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioLibrary.findAlbumAudioItems(audioItem.artist, audioItem.album.name).isEmpty() shouldBe true
         audioFile.readText() shouldBe "{}"
@@ -157,14 +144,14 @@ internal class MusicLibraryIntegrationTest : StringSpec({
                 }.next()
             )
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioLibrary.getArtistCatalog(artistA) shouldBePresent { it.artist shouldBe artistA }
         audioLibrary.getArtistCatalog(artistB) shouldBePresent { it.artist shouldBe artistB }
         audioLibrary.size() shouldBe 3
 
         audioLibrary.remove(itemB) shouldBe true
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioLibrary.getArtistCatalog(artistB).isEmpty shouldBe true
         audioLibrary.getArtistCatalog(artistA) shouldBePresent { catalog ->
@@ -179,17 +166,17 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         val item1 = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
         val item2 = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val playlistA = playlistHierarchy.createPlaylist("Playlist A")
         val playlistB = playlistHierarchy.createPlaylist("Playlist B")
         playlistA.addAudioItems(listOf(item1, item2))
         playlistB.addAudioItems(listOf(item1, item2))
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioLibrary.remove(item1) shouldBe true
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         playlistHierarchy.findByName("Playlist A") shouldBePresent { playlist ->
             // item1 is no longer in the registry — use referenceIds to avoid NoSuchElementException
@@ -208,11 +195,11 @@ internal class MusicLibraryIntegrationTest : StringSpec({
 
     "Lifecycle close integration — subscribe, close library, verify no further events propagate" {
         val audioItem = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val playlist = playlistHierarchy.createPlaylist("Close Integration Playlist")
         playlist.addAudioItem(audioItem)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioLibrary.findAlbumAudioItems(audioItem.artist, audioItem.album.name).any { it.id == audioItem.id } shouldBe true
 
@@ -220,7 +207,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
 
         // After close, newly created items are no longer indexed in the artist catalog
         val item2 = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioLibrary.findAlbumAudioItems(item2.artist, item2.album.name).none { it.id == item2.id } shouldBe true
         // Playlist still holds audioItem because playlist hierarchy subscription is separate
@@ -233,12 +220,12 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         val item1 = audioLibrary.createFromFile(Arb.realAudioFile().next())
         val item2 = audioLibrary.createFromFile(Arb.realAudioFile().next())
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val playlist = playlistHierarchy.createPlaylist("Persisted Playlist")
         playlist.addAudioItems(listOf(item1, item2))
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val originalSize = audioLibrary.size()
         val originalPlaylistId = playlist.id
@@ -253,7 +240,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
                 .playlistHierarchyJsonFile(playlistsFile)
                 .waveformRepositoryJsonFile(waveformsFile)
                 .build()
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         restoredLibrary.audioLibrary().size() shouldBe originalSize
 

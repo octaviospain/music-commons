@@ -20,8 +20,8 @@ package net.transgressoft.commons.music.audio
 import net.transgressoft.commons.music.audio.MutableAudioItemTestBridge.createAudioItem
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAlbumAudioFiles
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.event.MutationEvent
-import net.transgressoft.lirp.event.ReactiveScope
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainOnly
@@ -32,26 +32,16 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import io.mockk.unmockkAll
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 typealias ArtistCatalogMutation = MutationEvent<Artist, ArtistCatalog<AudioItem>>
 
 @ExperimentalCoroutinesApi
 class MutableArtistCatalogTest : StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher)
-
-    beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
-    }
+    val reactive = reactiveScope()
 
     afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
         unmockkAll()
         VirtualFiles.installStaticMocks()
     }
@@ -78,7 +68,7 @@ class MutableArtistCatalogTest : StringSpec({
             it.first().shouldContainOnly(audioItem)
         }
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedEvents.size shouldBe 1
         receivedEvents[0].shouldBeInstanceOf<ArtistCatalogMutation>()
@@ -126,7 +116,7 @@ class MutableArtistCatalogTest : StringSpec({
             it.first().shouldContainOnly(firstAudioItem, secondAudioItem)
         }
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedEvents.size shouldBe 1
         receivedEvents[0].newEntity should { catalogSnapshot ->
@@ -164,7 +154,7 @@ class MutableArtistCatalogTest : StringSpec({
 
         catalog.addAudioItem(audioItem2) shouldBe true
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedEvents.size shouldBe 1
         receivedEvents[0].newEntity should { catalogSnapshot ->
@@ -198,7 +188,7 @@ class MutableArtistCatalogTest : StringSpec({
 
         val album = albumAudioItems.first().album.name
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedEvents.size shouldBe 1
         receivedEvents[0].newEntity should { catalogSnapshot ->
@@ -226,7 +216,7 @@ class MutableArtistCatalogTest : StringSpec({
         audioItem.trackNumber = audioItem.trackNumber?.plus(1)?.toShort()
         catalog.mergeAudioItem(audioItem) shouldBe false
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedEvents.isEmpty() shouldBe true
     }
@@ -252,7 +242,7 @@ class MutableArtistCatalogTest : StringSpec({
 
         val album = albumAudioItems.first().album.name
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedEvents.size shouldBe 1
         receivedEvents[0].newEntity should { catalogSnapshot ->
@@ -280,7 +270,7 @@ class MutableArtistCatalogTest : StringSpec({
         audioItem.discNumber = audioItem.discNumber?.plus(1)?.toShort()
         catalog.mergeAudioItem(audioItem) shouldBe false
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedEvents.isEmpty() shouldBe true
     }
@@ -299,7 +289,7 @@ class MutableArtistCatalogTest : StringSpec({
 
         catalog.containsAudioItem(firstAudioItem) shouldBe false
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val album = firstAudioItem.album.name
         receivedEvents.size shouldBe 1
@@ -323,7 +313,7 @@ class MutableArtistCatalogTest : StringSpec({
 
         catalog.removeAudioItem(audioItem) shouldBe true
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedEvents.size shouldBe 1
         receivedEvents[0].newEntity should { catalogSnapshot ->
@@ -349,7 +339,7 @@ class MutableArtistCatalogTest : StringSpec({
         val audioItem = album1.first()
         catalog.removeAudioItem(audioItem) shouldBe true
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val album = audioItem.album.name
         receivedEvents.size shouldBe 1
@@ -385,7 +375,7 @@ class MutableArtistCatalogTest : StringSpec({
 
         catalog.addAudioItem(audioItem) shouldBe true
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         subscriber1Events.size shouldBe 1
         subscriber2Events.size shouldBe 1

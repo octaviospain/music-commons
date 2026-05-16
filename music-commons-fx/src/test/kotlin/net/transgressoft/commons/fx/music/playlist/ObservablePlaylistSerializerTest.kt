@@ -1,14 +1,12 @@
 package net.transgressoft.commons.fx.music.playlist
 
-import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.persistence.json.lirpSerializer
 import io.kotest.assertions.json.shouldContainJsonKey
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import org.testfx.api.FxToolkit
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.serialization.json.Json
 
 /**
@@ -17,22 +15,14 @@ import kotlinx.serialization.json.Json
 @ExperimentalCoroutinesApi
 internal class ObservablePlaylistSerializerTest : StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher)
+    val reactive = reactiveScope()
     val json = Json.Default
 
     @Suppress("UNCHECKED_CAST")
     val serializer = lirpSerializer(FXPlaylist(0, "", false)) as kotlinx.serialization.KSerializer<ObservablePlaylist>
 
     beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
         FxToolkit.registerPrimaryStage()
-    }
-
-    afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
     }
 
     "FXPlaylist lirpSerializer encodes all required JSON fields" {

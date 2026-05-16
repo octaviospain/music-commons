@@ -3,16 +3,14 @@ package net.transgressoft.commons.fx.music.audio
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
-import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.commons.music.testing.reactiveScope
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import org.testfx.api.FxToolkit
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 /**
  * Tests for [FXArtistCatalog] equality and hash code behavior, ensuring
@@ -21,21 +19,13 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 @ExperimentalCoroutinesApi
 internal class FXArtistCatalogTest : StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher + kotlinx.coroutines.SupervisorJob())
+    val reactive = reactiveScope()
 
     val artist = ImmutableArtist.of("Test Artist")
     val album = ImmutableAlbum("Test Album", artist)
 
     beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
         FxToolkit.registerPrimaryStage()
-    }
-
-    afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
     }
 
     "FXArtistCatalog returns false for equals when audioItemsByAlbumName differs" {

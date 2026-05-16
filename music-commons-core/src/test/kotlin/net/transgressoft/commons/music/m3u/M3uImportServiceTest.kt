@@ -4,7 +4,7 @@ import net.transgressoft.commons.music.CoreMusicLibrary
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.m3u.M3uTestFixtures.PlaylistFixture
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
-import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.commons.music.testing.reactiveScope
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import io.kotest.assertions.throwables.shouldThrow
@@ -21,30 +21,17 @@ import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @ExperimentalCoroutinesApi
 @DisplayName("M3uImportService")
 internal class M3uImportServiceTest : StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher)
+    val reactive = reactiveScope()
 
     lateinit var fs: FileSystem
     lateinit var library: CoreMusicLibrary
     lateinit var service: M3uImportService
-
-    beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
-    }
-
-    afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
-    }
 
     beforeEach {
         fs = Jimfs.newFileSystem(Configuration.unix())
@@ -246,7 +233,7 @@ internal class M3uImportServiceTest : StringSpec({
         val fixture = M3uTestFixtures.loadPlaylist("Simple.m3u", fs)
         preseed(fixture.tracks)
 
-        val future = service.importAsync(fixture.rootPath, testDispatcher)
+        val future = service.importAsync(fixture.rootPath, reactive.dispatcher)
         val playlist = future.get()
 
         playlist.shouldBeInstanceOf<MutableAudioPlaylist>()
@@ -257,7 +244,7 @@ internal class M3uImportServiceTest : StringSpec({
         val fixture = M3uTestFixtures.loadPlaylist("Simple.m3u", fs)
         preseed(fixture.tracks)
 
-        val future: CompletableFuture<*> = service.importAsync(fixture.rootPath, testDispatcher)
+        val future: CompletableFuture<*> = service.importAsync(fixture.rootPath, reactive.dispatcher)
         future.cancel(true)
 
         // Cancellation may race with completion. If completion won, the result is a valid playlist

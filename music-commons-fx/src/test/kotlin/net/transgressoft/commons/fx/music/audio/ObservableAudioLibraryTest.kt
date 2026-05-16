@@ -6,8 +6,8 @@ import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist.Companion.of
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.commons.music.audio.shouldEqual
+import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.entity.toIds
-import net.transgressoft.lirp.event.ReactiveScope
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.json.JsonRepository
 import io.kotest.assertions.json.shouldEqualJson
@@ -27,22 +27,17 @@ import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
 import java.io.File
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @ExperimentalCoroutinesApi
 internal class ObservableAudioLibraryTest : StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher + kotlinx.coroutines.SupervisorJob())
+    val reactive = reactiveScope()
     lateinit var jsonFile: File
     lateinit var jsonFileRepository: JsonRepository<Int, ObservableAudioItem>
     lateinit var repository: FXAudioLibrary
 
     beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
         FxToolkit.registerPrimaryStage()
     }
 
@@ -57,21 +52,16 @@ internal class ObservableAudioLibraryTest : StringSpec({
         jsonFileRepository.close()
     }
 
-    afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
-    }
-
     "Creates an observable audio item and serialize itself" {
         val fxAudioItem = repository.createFromFile(Arb.virtualAudioFile().next())
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         jsonFile shouldEqual fxAudioItem.asJsonKeyValue()
 
         fxAudioItem.title = "New title"
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         jsonFile.readText() should {
             it.shouldEqualJson(fxAudioItem.asJsonKeyValue())
@@ -86,14 +76,14 @@ internal class ObservableAudioLibraryTest : StringSpec({
 
         val fxAudioItem = repository.createFromFile(Arb.virtualAudioFile().next())
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioItemsProperty.contains(fxAudioItem) shouldBe true
         repository.emptyLibraryProperty.get() shouldBe false
 
         fxAudioItem.title = "New title"
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         var foundItem = audioItemsProperty.get().find { it.id == fxAudioItem.id }
         foundItem.shouldNotBeNull()
         foundItem.title shouldBe "New title"
@@ -106,7 +96,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
     "Contains expected items after loading from JsonFileRepository" {
         val createdItems = List(10) { repository.createFromFile(Arb.virtualAudioFile().next()) }
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val expectedIds = createdItems.toIds()
         val expectedArtists = createdItems.flatMap { it.artistsInvolved }.toSet()
@@ -115,7 +105,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
         repository.close()
         repository = FXAudioLibrary(jsonFileRepository)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         // Assert items are all present after reloading
@@ -142,7 +132,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
                 repository.createFromFile(file)
             }
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventually(1.seconds) {
@@ -153,7 +143,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
         // Rapid removals
         addedItems.take(25).forEach { repository.remove(it) }
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventually(1.seconds) {
@@ -167,7 +157,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
                 mapOf("Alpha" to 2, "Beta" to 3, "Gamma" to 1)
             )
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventually(1.seconds) {
@@ -194,7 +184,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
             mapOf("First Album" to 3, "Second Album" to 2)
         )
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventually(1.seconds) {
@@ -221,7 +211,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
         val removeArtist = itemsByArtist.keys.first { it.name == "Remove Artist" }
         val removeItems = itemsByArtist[removeArtist]!!
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventually(1.seconds) {
@@ -229,7 +219,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
         }
 
         removeItems.forEach { repository.remove(it) }
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventually(1.seconds) {
@@ -242,7 +232,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
         val artistName = "Partial Remove"
         val items = repository.createItemsByArtist(mapOf(artistName to 3))[of(artistName)]!!
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventually(1.seconds) {
@@ -251,7 +241,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
         }
 
         repository.remove(items[0])
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventually(1.seconds) {
@@ -270,7 +260,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
         repository.createItemsWithMultipleAlbums("Artist One", mapOf("Album 1A" to 2, "Album 1B" to 1))
         repository.createItemsWithMultipleAlbums("Artist Two", mapOf("Album 2A" to 2))
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventually(1.seconds) {
@@ -285,7 +275,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
                 mapOf("Rapid A" to 3, "Rapid B" to 2, "Rapid C" to 4, "Rapid D" to 1)
             )
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventually(1.seconds) {
@@ -298,7 +288,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
         itemsByArtist[rapidB]!!.forEach { repository.remove(it) }
         itemsByArtist[rapidD]!!.forEach { repository.remove(it) }
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventually(1.seconds) {
@@ -335,7 +325,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
         val itemsC = itemsByArtist[artistC]!!
         val itemsD = itemsByArtist[artistD]!!
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         eventually(1.seconds) {
             repository.artistsProperty shouldContainOnly setOf(artistA, artistB, artistC, artistD)
@@ -343,7 +333,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
 
         // Remove one item with "Shared Artist A" - artist should still be in artistsProperty
         repository.remove(itemsA[0])
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         eventually(1.seconds) {
             repository.artistsProperty shouldContainOnly
@@ -357,7 +347,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
 
         // Remove another item with "Shared Artist A" - artist should still be in artistsProperty
         repository.remove(itemsA[1])
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         eventually(1.seconds) {
             repository.artistsProperty shouldContainOnly
@@ -371,7 +361,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
 
         // Remove the unique artist item - artist should be removed from artistsProperty
         repository.remove(itemsB[0])
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         eventually(1.seconds) {
             repository.artistsProperty shouldContainOnly
@@ -384,7 +374,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
 
         // Remove the last item with "Shared Artist A" - now artist should be removed
         repository.remove(itemsA[2])
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         eventually(1.seconds) {
             repository.artistsProperty shouldContainOnly
@@ -396,7 +386,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
 
         // Remove one of the "Shared Artist C" items - artist should remain
         repository.remove(itemsC[0])
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         eventually(1.seconds) {
             repository.artistsProperty shouldContainOnly
@@ -409,7 +399,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
         // Remove remaining items
         repository.remove(itemsC[1])
         repository.remove(itemsD[0])
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         eventually(1.seconds) {
             repository.artistsProperty.isEmpty() shouldBe true

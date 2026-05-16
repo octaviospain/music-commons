@@ -3,14 +3,12 @@ package net.transgressoft.commons.music.playlist.event
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.playlist.DefaultPlaylistHierarchy
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
+import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.event.CrudEvent
-import net.transgressoft.lirp.event.ReactiveScope
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 /**
  * Tests for [AudioPlaylistEventSubscriber] verifying event reaction and subscription cancellation.
@@ -18,14 +16,8 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 @ExperimentalCoroutinesApi
 internal class AudioPlaylistEventSubscriberTest : StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher)
+    val reactive = reactiveScope()
     lateinit var hierarchy: DefaultPlaylistHierarchy
-
-    beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
-    }
 
     beforeEach {
         hierarchy = DefaultPlaylistHierarchy()
@@ -33,11 +25,6 @@ internal class AudioPlaylistEventSubscriberTest : StringSpec({
 
     afterEach {
         hierarchy.close()
-    }
-
-    afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
     }
 
     "AudioPlaylistEventSubscriber reacts to CREATE event" {
@@ -49,7 +36,7 @@ internal class AudioPlaylistEventSubscriberTest : StringSpec({
         hierarchy.subscribe(subscriber)
 
         hierarchy.createPlaylist("My Playlist")
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         createEventReceived shouldBe true
     }
@@ -63,10 +50,10 @@ internal class AudioPlaylistEventSubscriberTest : StringSpec({
         hierarchy.subscribe(subscriber)
 
         val playlist = hierarchy.createPlaylist("My Playlist")
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         hierarchy.remove(playlist)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         deleteEventReceived shouldBe true
     }
@@ -80,14 +67,14 @@ internal class AudioPlaylistEventSubscriberTest : StringSpec({
         hierarchy.subscribe(subscriber)
 
         hierarchy.createPlaylist("Playlist One")
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val countAfterFirst = eventCount
 
         subscriber.cancelSubscription()
 
         hierarchy.createPlaylist("Playlist Two")
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         eventCount shouldBe countAfterFirst
     }

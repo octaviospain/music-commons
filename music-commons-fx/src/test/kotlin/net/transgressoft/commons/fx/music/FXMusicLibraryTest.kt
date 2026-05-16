@@ -3,7 +3,7 @@ package net.transgressoft.commons.fx.music
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.commons.music.audio.WindowsPathException
 import net.transgressoft.commons.music.common.OsDetector
-import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.commons.music.testing.reactiveScope
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import io.kotest.assertions.nondeterministic.eventually
@@ -20,9 +20,7 @@ import io.kotest.property.arbitrary.next
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
 import kotlin.time.Duration.Companion.milliseconds
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 /**
  * Tests for [FXMusicLibrary] verifying builder construction, JavaFX property exposure, and lifecycle.
@@ -30,18 +28,13 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 @ExperimentalCoroutinesApi
 internal class FXMusicLibraryTest : StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher)
+    val reactive = reactiveScope()
 
     beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
         FxToolkit.registerPrimaryStage()
     }
 
     afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
         FxToolkit.cleanupStages()
     }
 
@@ -88,7 +81,7 @@ internal class FXMusicLibraryTest : StringSpec({
         val audioPath = Arb.virtualAudioFile().next()
         val audioItem = library.audioItemFromFile(audioPath)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         audioItem.shouldNotBeNull()
@@ -102,7 +95,7 @@ internal class FXMusicLibraryTest : StringSpec({
         val playlist = library.createPlaylist("My Playlist")
         playlist.addAudioItem(audioItem)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         library.findPlaylistByName("My Playlist") shouldBePresent {
@@ -118,12 +111,12 @@ internal class FXMusicLibraryTest : StringSpec({
         val audioPath = Arb.virtualAudioFile().next()
         val audioItem = library.audioItemFromFile(audioPath)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         val playlist = library.playlistHierarchy().createPlaylist("Imported", listOf(audioItem.id))
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyAfterFxEvents {
@@ -149,7 +142,7 @@ internal class FXMusicLibraryTest : StringSpec({
                 .playlistHierarchyJsonFile(playlistFile)
                 .build()
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         val root = library.findPlaylistByName("ROOT")
@@ -166,7 +159,7 @@ internal class FXMusicLibraryTest : StringSpec({
 
         val audioItem = library.audioItemFromFile(Arb.virtualAudioFile().next())
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         library.audioLibrary().size() shouldBe 1
         WaitForAsyncUtils.waitForFxEvents()
@@ -177,7 +170,7 @@ internal class FXMusicLibraryTest : StringSpec({
         // After close, the library retains already-added items but does not track new ones
         library.audioLibrary().size() shouldBe 1
         library.audioLibrary().add(library.audioItemFromFile(Arb.virtualAudioFile().next()))
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         library.audioItemsProperty.size shouldBe sizeBeforeClose

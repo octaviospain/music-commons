@@ -3,11 +3,11 @@ package net.transgressoft.commons.music.audio
 import net.transgressoft.commons.music.AudioUtils
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAlbumAudioFiles
 import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
-import net.transgressoft.lirp.event.ReactiveScope
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.json.JsonRepository
 import io.kotest.assertions.nondeterministic.eventually
@@ -28,10 +28,8 @@ import io.kotest.property.arbitrary.next
 import io.mockk.unmockkAll
 import java.io.File
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asExecutor
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
@@ -39,16 +37,10 @@ import kotlinx.serialization.json.jsonObject
 @ExperimentalCoroutinesApi
 internal class DefaultAudioLibraryTest: StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher)
+    val reactive = reactiveScope()
     lateinit var jsonFile: File
     lateinit var jsonFileRepository: JsonRepository<Int, AudioItem>
     lateinit var audioRepository: AudioLibrary
-
-    beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
-    }
 
     beforeEach {
         jsonFile = tempfile("audioLibrary-test", ".json").also { it.deleteOnExit() }
@@ -62,8 +54,6 @@ internal class DefaultAudioLibraryTest: StringSpec({
     }
 
     afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
         unmockkAll()
         VirtualFiles.installStaticMocks()
     }
@@ -72,7 +62,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         val audioFile = Arb.virtualAudioFile().next()
         val audioItem: AudioItem = audioRepository.createFromFile(audioFile)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioItem should {
 
@@ -92,7 +82,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
 
         audioItem.title = "New title"
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioItem should {
 
@@ -118,12 +108,12 @@ internal class DefaultAudioLibraryTest: StringSpec({
     "Reflects changes on a JsonFileRepository" {
         val audioFile = Arb.virtualAudioFile().next()
         val audioItem: AudioItem = audioRepository.createFromFile(audioFile)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         jsonFile shouldEqual audioItem.asJsonKeyValue()
 
         audioRepository.findById(audioItem.id).ifPresent { it.bpm = 135f }
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioItem.bpm shouldBe 135f
         audioRepository.search { it.bpm == 135f }.shouldContainOnly(audioItem)
@@ -136,7 +126,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         val albumAudioFiles = Arb.virtualAlbumAudioFiles(theBeatles, abbeyRoad).next()
 
         albumAudioFiles.forEach(audioRepository::createFromFile)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val audioItems = audioRepository.search { it.album.name == abbeyRoad.name }
         audioItems.size shouldBe albumAudioFiles.size
@@ -146,9 +136,9 @@ internal class DefaultAudioLibraryTest: StringSpec({
     "Creates a batch of audio items asynchronously" {
         val filePaths = Arb.list(Arb.virtualAudioFile(), 50..100).next()
 
-        val result: List<AudioItem> = audioRepository.createFromFileBatchAsync(filePaths, testDispatcher.asExecutor()).get()
+        val result: List<AudioItem> = audioRepository.createFromFileBatchAsync(filePaths, reactive.dispatcher.asExecutor()).get()
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         result.size shouldBe filePaths.size
         audioRepository.size() shouldBe filePaths.size
@@ -171,9 +161,9 @@ internal class DefaultAudioLibraryTest: StringSpec({
     "Creates a batch of audio items asynchronously with custom batch size" {
         val filePaths = Arb.list(Arb.virtualAudioFile(), 10..20).next()
 
-        val result: List<AudioItem> = audioRepository.createFromFileBatchAsync(filePaths, testDispatcher.asExecutor(), batchSize = 1000).get()
+        val result: List<AudioItem> = audioRepository.createFromFileBatchAsync(filePaths, reactive.dispatcher.asExecutor(), batchSize = 1000).get()
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         result.size shouldBe filePaths.size
         audioRepository.size() shouldBe filePaths.size
@@ -182,19 +172,19 @@ internal class DefaultAudioLibraryTest: StringSpec({
     "Batch async coerces batch size below 500 to 500" {
         val filePaths = Arb.list(Arb.virtualAudioFile(), 10..20).next()
 
-        val result: List<AudioItem> = audioRepository.createFromFileBatchAsync(filePaths, testDispatcher.asExecutor(), batchSize = 100).get()
+        val result: List<AudioItem> = audioRepository.createFromFileBatchAsync(filePaths, reactive.dispatcher.asExecutor(), batchSize = 100).get()
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         result.size shouldBe filePaths.size
     }
 
     "Batch async rejects non-positive batch size" {
         shouldThrow<IllegalArgumentException> {
-            audioRepository.createFromFileBatchAsync(listOf(), testDispatcher.asExecutor(), batchSize = 0)
+            audioRepository.createFromFileBatchAsync(listOf(), reactive.dispatcher.asExecutor(), batchSize = 0)
         }
         shouldThrow<IllegalArgumentException> {
-            audioRepository.createFromFileBatchAsync(listOf(), testDispatcher.asExecutor(), batchSize = -1)
+            audioRepository.createFromFileBatchAsync(listOf(), reactive.dispatcher.asExecutor(), batchSize = -1)
         }
     }
 
@@ -205,7 +195,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         val albumAudioFiles = Arb.virtualAlbumAudioFiles(theBeatles, abbeyRoad).next()
 
         albumAudioFiles.forEach(audioRepository::createFromFile)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val originalAudioItems = audioRepository.search { it.album.name == abbeyRoad.name }
         originalAudioItems.size shouldBe albumAudioFiles.size
@@ -217,7 +207,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         val loadedJsonFileRepository = JsonFileRepository(jsonFile, AudioItemMapSerializer)
         val loadedAudioRepository = DefaultAudioLibrary(loadedJsonFileRepository)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         // The loaded repository should have the same number of items
         loadedAudioRepository.size() shouldBe albumAudioFiles.size
@@ -243,7 +233,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
 
         val audioFile = Arb.virtualAudioFile().next()
         val audioItem = audioRepository.createFromFile(audioFile)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedEvents.size shouldBe 1
         receivedEvents[0].entities.size shouldBe 1
@@ -255,13 +245,13 @@ internal class DefaultAudioLibraryTest: StringSpec({
 
         val audioFile = Arb.virtualAudioFile().next()
         val audioItem = audioRepository.createFromFile(audioFile)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioRepository.artistCatalogPublisher.subscribe(UPDATE) { receivedEvents.add(it) }
 
         // Modify track number on single item - should NOT trigger catalog UPDATE (no reordering possible)
         audioRepository.findById(audioItem.id).ifPresent { it.trackNumber = 5 }
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedEvents.size shouldBe 0
     }
@@ -289,13 +279,13 @@ internal class DefaultAudioLibraryTest: StringSpec({
                 discNumber = 1
             }.next()
         val audioItem2 = audioRepository.createFromFile(audioFile2)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioRepository.artistCatalogPublisher.subscribe(UPDATE) { receivedEvents.add(it) }
 
         // Modify track number on first item to make it last - should trigger catalog UPDATE (reordering)
         audioRepository.findById(audioItem1.id).ifPresent { it.trackNumber = 5 }
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         eventually(1.seconds) {
             receivedEvents.size shouldBe 1
@@ -320,12 +310,12 @@ internal class DefaultAudioLibraryTest: StringSpec({
 
         val audioFile = Arb.virtualAudioFile().next()
         val audioItem = audioRepository.createFromFile(audioFile)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioRepository.artistCatalogPublisher.subscribe(DELETE) { receivedEvents.add(it) }
 
         audioRepository.removeAll(listOf(audioItem))
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedEvents.size shouldBe 1
         receivedEvents[0].entities.size shouldBe 1
@@ -345,7 +335,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
 
         val audioFile = Arb.virtualAudioFile().next()
         val audioItem = audioRepository.createFromFile(audioFile)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val originalArtist = audioItem.artist
         createEvents.size shouldBe 1
@@ -353,7 +343,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         // Change artist - should delete old catalog and create new one
         val newArtist = ImmutableArtist.of("New Artist")
         audioRepository.findById(audioItem.id).ifPresent { it.artist = newArtist }
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         eventually(1.seconds) {
             createEvents.size shouldBe 2
@@ -375,7 +365,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         val albumFiles = Arb.virtualAlbumAudioFiles(theBeatles, abbeyRoad).next()
 
         albumFiles.forEach { audioRepository.createFromFile(it) }
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedCatalogs.size shouldBe 1
         receivedCatalogs[0] should { catalog ->

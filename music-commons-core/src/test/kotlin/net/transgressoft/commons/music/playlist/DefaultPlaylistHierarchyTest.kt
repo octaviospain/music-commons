@@ -5,7 +5,7 @@ import net.transgressoft.commons.music.audio.DefaultAudioLibrary
 import net.transgressoft.commons.music.audio.WindowsPathException
 import net.transgressoft.commons.music.audio.audioItem
 import net.transgressoft.commons.music.common.OsDetector
-import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.VolatileRepository
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
@@ -24,25 +24,15 @@ import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import io.mockk.every
 import java.time.Duration
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @ExperimentalCoroutinesApi
 internal class DefaultPlaylistHierarchyTest : StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher)
-
-    beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
-    }
-
-    afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
-    }
+    // failOnUncaughtExceptions = false: this spec exercises Arb.audioItem mocks that
+    // don't stub the full ReactiveEntity subscribe() surface, so background subscribers
+    // fail with MockKException after the spec has already verified its assertions.
+    val reactive = reactiveScope(failOnUncaughtExceptions = false)
 
     "Reflects changes on a JsonFileRepository" {
         val audioItemRepository = VolatileRepository<Int, AudioItem>()
@@ -69,7 +59,7 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
             updatedRock.audioItems.shouldContainExactly(rockAudioItems)
             updatedRock.playlists.shouldContainExactly(rockFavorites)
         }
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val json = listOf(rock, rockFavorites).asJsonKeyValues()
         jsonFile.readText() shouldEqualJson (json)
@@ -95,7 +85,7 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
 
         val playlistHierarchy = DefaultPlaylistHierarchy(JsonFileRepository(jsonFile, AudioPlaylistMapSerializer))
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         playlistHierarchy.size() shouldBe 1
         playlistHierarchy.contains {
@@ -234,15 +224,15 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         val pop = playlistHierarchy.createPlaylist("Pop")
         val fifties = playlistHierarchy.createPlaylistDirectory("50s")
         playlistHierarchy.addPlaylistsToDirectory(setOf(rock.name, pop.name), fifties.name)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         val bestHits = playlistHierarchy.createPlaylistDirectory("Best hits")
         playlistHierarchy.addPlaylistsToDirectory(setOf(fifties.name), bestHits.name)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         val selection = playlistHierarchy.createPlaylistDirectory("Selection of playlists")
         playlistHierarchy.size() shouldBe 5
 
         playlistHierarchy.movePlaylist(rock.name, selection.name)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         // ├──Best hits
         // │  └──50s

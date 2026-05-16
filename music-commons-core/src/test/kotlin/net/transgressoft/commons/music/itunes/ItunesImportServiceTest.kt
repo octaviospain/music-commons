@@ -4,7 +4,7 @@ import net.transgressoft.commons.music.CoreMusicLibrary
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile
 import net.transgressoft.commons.music.audio.AudioFileType
 import net.transgressoft.commons.music.common.OsDetector
-import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.commons.music.testing.reactiveScope
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -25,16 +25,13 @@ import java.nio.file.StandardCopyOption
 import java.time.LocalDateTime
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @ExperimentalCoroutinesApi
 @DisplayName("ItunesImportService")
 internal class ItunesImportServiceTest : StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher)
+    val reactive = reactiveScope()
 
     lateinit var musicLibrary: CoreMusicLibrary
     lateinit var service: ItunesImportService
@@ -79,16 +76,6 @@ internal class ItunesImportServiceTest : StringSpec({
         parentId: String? = null
     ): ItunesPlaylist =
         ItunesPlaylist(name = name, persistentId = persistentId, parentPersistentId = parentId, isFolder = isFolder, trackIds = trackIds)
-
-    beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
-    }
-
-    afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
-    }
 
     beforeEach {
         musicLibrary = CoreMusicLibrary.builder().build()
