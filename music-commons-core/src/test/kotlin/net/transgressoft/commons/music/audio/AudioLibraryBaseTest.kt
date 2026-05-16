@@ -9,7 +9,6 @@ import io.kotest.matchers.optional.shouldBeEmpty
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import io.kotest.property.arbitrary.next
-import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalCoroutinesApi
@@ -23,10 +22,6 @@ internal class AudioLibraryBaseTest : StringSpec({
     beforeEach {
         repository = VolatileRepository("AudioLibraryBaseTest")
         audioLibrary = TestAudioLibrary(repository)
-    }
-
-    afterSpec {
-        unmockkAll()
     }
 
     "AudioLibraryBase adds audio item and syncs artist catalog" {

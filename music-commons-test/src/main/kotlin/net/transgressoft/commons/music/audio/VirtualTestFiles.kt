@@ -314,8 +314,9 @@ class VirtualFiles internal constructor() {
 
 /**
  * Kotest [SpecExtension] that wraps a spec's execution in [virtualFilesMutex] and installs
- * the [VirtualFiles] static mocks before [execute] runs, then unmocks them after [execute]
- * returns. Register per-spec via the [virtualFiles] convenience factory.
+ * the [VirtualFiles] static mocks before [execute] runs, then unmocks them and closes the
+ * per-spec Jimfs filesystem after [execute] returns. Register per-spec via the
+ * [virtualFiles] convenience factory.
  */
 class VirtualFilesExtension : SpecExtension {
 
@@ -327,7 +328,13 @@ class VirtualFilesExtension : SpecExtension {
             try {
                 execute(spec)
             } finally {
-                files.uninstallStaticMocks()
+                try {
+                    files.uninstallStaticMocks()
+                } finally {
+                    // Jimfs FileSystem is Closeable; without this each spec leaks one in-memory
+                    // filesystem (inode/page caches included) for the lifetime of the JVM.
+                    files.fileSystem.close()
+                }
             }
         }
     }

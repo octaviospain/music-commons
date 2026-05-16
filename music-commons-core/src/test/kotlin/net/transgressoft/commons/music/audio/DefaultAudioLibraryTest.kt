@@ -24,7 +24,6 @@ import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.list
 import io.kotest.property.arbitrary.next
-import io.mockk.unmockkAll
 import java.io.File
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -51,10 +50,6 @@ internal class DefaultAudioLibraryTest: StringSpec({
     afterEach {
         (audioRepository as? AutoCloseable)?.close()
         jsonFileRepository.close()
-    }
-
-    afterSpec {
-        unmockkAll()
     }
 
     "Creates an audio item and allow to query it on creation and after modification" {

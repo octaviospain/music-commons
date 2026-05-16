@@ -13,7 +13,6 @@ import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import io.kotest.property.arbitrary.next
-import io.mockk.unmockkAll
 import java.io.File
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
@@ -41,10 +40,6 @@ internal class DefaultAudioWaveformRepositoryTest : StringSpec({
     afterEach {
         audioWaveformRepository.close()
         jsonFileRepository.close()
-    }
-
-    afterSpec {
-        unmockkAll()
     }
 
     "DefaultAudioWaveformRepository add and findById in media module" {

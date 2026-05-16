@@ -30,7 +30,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
-import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 typealias ArtistCatalogMutation = MutationEvent<Artist, ArtistCatalog<AudioItem>>
@@ -40,10 +39,6 @@ class MutableArtistCatalogTest : StringSpec({
 
     val reactive = reactiveScope()
     val files = virtualFiles()
-
-    afterSpec {
-        unmockkAll()
-    }
 
     "MUTATE event is published when audio item is added to empty catalog" {
         val expectedArtist = Arb.artist().next()
