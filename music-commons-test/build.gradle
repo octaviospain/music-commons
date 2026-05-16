@@ -15,6 +15,7 @@ tasks.matching { it.name.startsWith("ktlint") || it.name.startsWith("jacoco")}.c
 
 dependencies {
     api project(path: ':music-commons-core')
+    api libs.dd.plist.get()
     // Vendored ReactiveScopeExtension references net.transgressoft.lirp.event.ReactiveScope on its
     // public surface, so lirp-core must be visible to consumer test classpaths.
     api libs.lirp.core.get()

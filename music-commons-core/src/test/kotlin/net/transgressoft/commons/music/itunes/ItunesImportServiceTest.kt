@@ -3,7 +3,10 @@ package net.transgressoft.commons.music.itunes
 import net.transgressoft.commons.music.CoreMusicLibrary
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile
 import net.transgressoft.commons.music.audio.AudioFileType
+import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.common.OsDetector
+import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
 import net.transgressoft.commons.music.testing.reactiveScope
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.annotation.Isolate
@@ -36,7 +39,7 @@ internal class ItunesImportServiceTest : StringSpec({
     val reactive = reactiveScope()
 
     lateinit var musicLibrary: CoreMusicLibrary
-    lateinit var service: ItunesImportService
+    lateinit var service: ItunesImportService<AudioItem, MutableAudioPlaylist>
 
     val mp3File = ArbitraryAudioFile.getResourceAsFile("/testfiles/testeable.mp3").toPath()
     val flacFile = ArbitraryAudioFile.getResourceAsFile("/testfiles/testeable.flac").toPath()
@@ -118,6 +121,12 @@ internal class ItunesImportServiceTest : StringSpec({
         item.title shouldBe "iTunes Title Override"
         item.artist.name shouldBe "iTunes Artist Override"
         item.album.name shouldBe "iTunes Album Override"
+        musicLibrary
+            .audioLibrary()
+            .getArtistCatalog(ImmutableArtist.of("iTunes Artist Override"))
+            .shouldBePresent { catalog ->
+                catalog.albums.map { it.albumName } shouldContain "iTunes Album Override"
+            }
     }
 
     "ItunesImportService applies holdPlayCount from iTunes data" {
