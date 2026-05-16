@@ -17,10 +17,9 @@ dependencies {
     api project(path: ':music-commons-core')
     implementation libs.jimfs.get()
     implementation libs.mockk.get()
-    implementation libs.kotest.runner.junit5.get()
+    implementation libs.kotest.runner.junit6.get()
     implementation libs.kotest.assertions.core.get()
     implementation libs.kotest.property.get()
-    implementation libs.kotest.framework.datatest.get()
     implementation libs.kotest.assertions.json.get()
     implementation libs.jaudiotagger.get()
 }

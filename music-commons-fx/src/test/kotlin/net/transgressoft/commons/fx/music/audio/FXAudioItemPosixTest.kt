@@ -3,7 +3,7 @@ package net.transgressoft.commons.fx.music.audio
 import net.transgressoft.commons.music.audio.InvalidAudioFilePathException
 import net.transgressoft.commons.music.common.OsDetector
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.core.annotation.EnabledCondition
+import io.kotest.core.annotation.Condition
 import io.kotest.core.annotation.EnabledIf
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.Spec
@@ -44,6 +44,6 @@ internal class FXAudioItemPosixTest : StringSpec({
     }
 })
 
-internal class IsPosixCondition : EnabledCondition {
-    override fun enabled(kclass: KClass<out Spec>): Boolean = !OsDetector.isWindows
+internal class IsPosixCondition : Condition {
+    override fun evaluate(kclass: KClass<out Spec>): Boolean = !OsDetector.isWindows
 }

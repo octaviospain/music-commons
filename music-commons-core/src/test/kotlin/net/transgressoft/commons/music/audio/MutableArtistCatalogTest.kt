@@ -53,6 +53,7 @@ class MutableArtistCatalogTest : StringSpec({
         ReactiveScope.resetDefaultFlowScope()
         ReactiveScope.resetDefaultIoScope()
         unmockkAll()
+        VirtualFiles.installStaticMocks()
     }
 
     "MUTATE event is published when audio item is added to empty catalog" {

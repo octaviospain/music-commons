@@ -47,6 +47,16 @@ object VirtualFiles {
     internal val fileSystem = Jimfs.newFileSystem(Configuration.unix())
 
     init {
+        installStaticMocks()
+    }
+
+    // Re-installs the JVM-global static mocks needed by `createPathAt`. Specs that call
+    // `unmockkAll()` in their teardown (a JVM-wide reset) MUST call this in their
+    // `beforeSpec` to restore the interception that `every { Paths.get(...) }` and
+    // `every { AudioFileIO.read(...) }` require. Calling `mockkStatic` more than
+    // once per spec is unsafe — per the MockK contract it cancels previously-recorded
+    // `every` answers — so this entry point is invoked at most once per spec lifecycle.
+    fun installStaticMocks() {
         mockkStatic("kotlin.io.FilesKt__FileReadWriteKt")
         mockkStatic("kotlin.io.FilesKt__UtilsKt")
         mockkStatic("java.nio.file.Paths")

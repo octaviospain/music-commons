@@ -65,6 +65,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         ReactiveScope.resetDefaultFlowScope()
         ReactiveScope.resetDefaultIoScope()
         unmockkAll()
+        VirtualFiles.installStaticMocks()
     }
 
     "Creates an audio item and allow to query it on creation and after modification" {

@@ -37,6 +37,9 @@ internal class AudioLibraryBaseTest : StringSpec({
         ReactiveScope.resetDefaultFlowScope()
         ReactiveScope.resetDefaultIoScope()
         unmockkAll()
+        // unmockkAll() also tears down the JVM-wide static interceptors that VirtualFiles relies on.
+        // Re-install them so the next spec to call into VirtualFiles starts with the same baseline.
+        VirtualFiles.installStaticMocks()
     }
 
     "AudioLibraryBase adds audio item and syncs artist catalog" {
