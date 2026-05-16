@@ -153,7 +153,7 @@ object FxAudioItemTestFactory {
             // Immutable test fixture: play count changes are not needed by current consumers.
         }
 
-        override fun writeMetadata(): Job = Job()
+        override fun writeMetadata(): Job = Job().apply { complete() }
 
         override fun compareTo(other: ObservableAudioItem): Int =
             audioItemTrackDiscNumberComparator<ObservableAudioItem>().compare(this, other)

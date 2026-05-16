@@ -320,6 +320,17 @@ class MutableArtistCatalogTest : StringSpec({
         }
     }
 
+    "MutableArtistCatalog removes the resolved fallback album bucket when an item's album name changed before removal" {
+        val renamedAlbum = Arb.album().next()
+        val audioItem = createAudioItem(files.virtualAudioFile().next())
+        val catalog = MutableArtistCatalog(audioItem)
+
+        audioItem.album = renamedAlbum
+
+        catalog.removeAudioItem(audioItem) shouldBe true
+        catalog.albums shouldBe emptySet()
+    }
+
     "MUTATE event is published when removing audio item from one album leaves another album" {
         val album1 = files.virtualAlbumAudioFiles().next().map(::createAudioItem)
         val album2 = files.virtualAlbumAudioFiles().next().map(::createAudioItem)

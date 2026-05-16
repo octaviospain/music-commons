@@ -137,18 +137,21 @@ internal class MutableArtistCatalog<I>(override val artist: Artist)
         synchronized(this) {
             mutateAndPublish {
                 val albumName = audioItem.album.name
-                val audioItems =
+                val (resolvedAlbumName, audioItems) =
                     audioItemsByAlbumName[albumName]
-                        ?: audioItemsByAlbumName.values.firstOrNull { items ->
-                            items.any { it.uniqueId == audioItem.uniqueId }
-                        }
+                        ?.let { albumName to it }
+                        ?: audioItemsByAlbumName.entries
+                            .firstOrNull { (_, items) ->
+                                items.any { it.uniqueId == audioItem.uniqueId }
+                            }
+                            ?.let { (key, items) -> key to items }
                         ?: return@mutateAndPublish false
 
                 val removed = audioItems.removeIf { it.uniqueId == audioItem.uniqueId }
 
                 if (removed) {
                     if (audioItems.isEmpty()) {
-                        audioItemsByAlbumName.remove(albumName)
+                        audioItemsByAlbumName.remove(resolvedAlbumName)
                         logger.debug { "Album ${audioItem.album} was removed from artist catalog of $artist" }
                     } else {
                         logger.debug { "AudioItem $audioItem was removed from album ${audioItem.album}" }
