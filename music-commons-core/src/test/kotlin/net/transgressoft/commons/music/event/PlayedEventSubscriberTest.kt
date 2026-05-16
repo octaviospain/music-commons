@@ -3,15 +3,13 @@ package net.transgressoft.commons.music.event
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
+import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.event.FlowEventPublisher
-import net.transgressoft.lirp.event.ReactiveScope
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.mockk.mockk
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 /**
  * Tests for [PlayedEventSubscriber] verifying event reaction and subscription cancellation.
@@ -19,18 +17,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 @ExperimentalCoroutinesApi
 internal class PlayedEventSubscriberTest : StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher)
-
-    beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
-    }
-
-    afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
-    }
+    val reactive = reactiveScope()
 
     "PlayedEventSubscriber reacts to PLAYED event type" {
         var playedEventReceived = false
@@ -45,7 +32,7 @@ internal class PlayedEventSubscriberTest : StringSpec({
 
         val audioItem = mockk<AudioItem>(relaxed = true)
         publisher.emitAsync(AudioItemPlayerEvent.Played<AudioItem>(audioItem))
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         playedEventReceived shouldBe true
     }
@@ -63,14 +50,14 @@ internal class PlayedEventSubscriberTest : StringSpec({
 
         val audioItem = mockk<AudioItem>(relaxed = true)
         publisher.emitAsync(AudioItemPlayerEvent.Played<AudioItem>(audioItem))
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val countAfterFirst = eventCount
 
         subscriber.cancelSubscription()
 
         publisher.emitAsync(AudioItemPlayerEvent.Played<AudioItem>(audioItem))
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         eventCount shouldBe countAfterFirst
     }

@@ -3,7 +3,7 @@ package net.transgressoft.commons.music.common
 import net.transgressoft.commons.music.audio.WindowsPathException
 import net.transgressoft.commons.music.audio.WindowsViolation
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.core.annotation.EnabledCondition
+import io.kotest.core.annotation.Condition
 import io.kotest.core.annotation.EnabledIf
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.Spec
@@ -130,7 +130,7 @@ class WindowsIntegrationTest : StringSpec({
 /**
  * Kotest [io.kotest.core.annotation.EnabledIf] condition that enables specs only on Windows hosts.
  */
-class IsWindowsCondition : EnabledCondition {
-    override fun enabled(kclass: KClass<out Spec>): Boolean =
+class IsWindowsCondition : Condition {
+    override fun evaluate(kclass: KClass<out Spec>): Boolean =
         System.getProperty("os.name").lowercase().contains("windows")
 }

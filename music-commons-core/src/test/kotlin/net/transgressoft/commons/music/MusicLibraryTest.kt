@@ -1,10 +1,10 @@
 package net.transgressoft.commons.music
 
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.commons.music.audio.WindowsPathException
+import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.common.OsDetector
-import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.commons.music.testing.reactiveScope
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import io.kotest.assertions.throwables.shouldThrow
@@ -15,25 +15,13 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @ExperimentalCoroutinesApi
 internal class MusicLibraryTest : StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher)
-
-    beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
-    }
-
-    afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
-    }
+    val reactive = reactiveScope()
+    val files = virtualFiles()
 
     "MusicLibrary builder creates volatile library by default" {
         val library = CoreMusicLibrary.builder().build()
@@ -58,7 +46,7 @@ internal class MusicLibraryTest : StringSpec({
                 .build()
 
         val audioItem = library.audioItemFromFile(Arb.realAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         library.createPlaylist("Test Playlist")
 
@@ -71,8 +59,8 @@ internal class MusicLibraryTest : StringSpec({
     "MusicLibrary curated methods delegate to components" {
         val library = CoreMusicLibrary.builder().build()
 
-        val audioItem = library.audioItemFromFile(Arb.virtualAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        val audioItem = library.audioItemFromFile(files.virtualAudioFile().next())
+        reactive.advance()
 
         library.createPlaylist("Curated Playlist")
 
@@ -86,12 +74,12 @@ internal class MusicLibraryTest : StringSpec({
     "MusicLibrary close disposes all components" {
         val library = CoreMusicLibrary.builder().build()
 
-        val audioItem = library.audioItemFromFile(Arb.virtualAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        val audioItem = library.audioItemFromFile(files.virtualAudioFile().next())
+        reactive.advance()
 
         val playlist = library.createPlaylist("Close Test Playlist")
         playlist.addAudioItem(audioItem)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         library.audioLibrary().findAlbumAudioItems(audioItem.artist, audioItem.album.name)
             .any { it.id == audioItem.id } shouldBe true
@@ -99,8 +87,8 @@ internal class MusicLibraryTest : StringSpec({
         library.close()
 
         // After close, newly created items are no longer indexed in the artist catalog
-        val item2 = library.audioItemFromFile(Arb.virtualAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        val item2 = library.audioItemFromFile(files.virtualAudioFile().next())
+        reactive.advance()
 
         library.audioLibrary().findAlbumAudioItems(item2.artist, item2.album.name)
             .none { it.id == item2.id } shouldBe true
@@ -120,11 +108,11 @@ internal class MusicLibraryTest : StringSpec({
 
         val item1 = library.audioItemFromFile(Arb.realAudioFile().next())
         val item2 = library.audioItemFromFile(Arb.realAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val playlist = library.createPlaylist("Round Trip Playlist")
         playlist.addAudioItems(listOf(item1, item2))
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val originalSize = library.audioLibrary().size()
         val originalPlaylistId = playlist.id
@@ -139,7 +127,7 @@ internal class MusicLibraryTest : StringSpec({
                 .playlistHierarchyJsonFile(playlistsFile)
                 .waveformRepositoryJsonFile(waveformsFile)
                 .build()
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         restoredLibrary.audioLibrary().size() shouldBe originalSize
 

@@ -17,7 +17,6 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.enum
 import io.kotest.property.arbitrary.next
@@ -27,8 +26,8 @@ import java.util.function.Consumer
 object VirtualTestFileFactory {
 
     @JvmStatic
-    fun createVirtualAudioFile(attributes: Consumer<AudioItemTestAttributes>): Path =
-        Arb.virtualAudioFile(
+    fun createVirtualAudioFile(virtualFiles: VirtualFiles, attributes: Consumer<AudioItemTestAttributes>): Path =
+        virtualFiles.virtualAudioFile(
             audioFileTagType = Arb.enum<AudioFileTagType>().next(),
             attributesAction = attributes::accept
         ).next()

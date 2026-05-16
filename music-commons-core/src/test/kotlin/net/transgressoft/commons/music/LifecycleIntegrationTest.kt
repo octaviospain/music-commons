@@ -11,9 +11,9 @@ import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import net.transgressoft.commons.music.playlist.AudioPlaylistMapSerializer
 import net.transgressoft.commons.music.playlist.DefaultPlaylistHierarchy
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
+import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
-import net.transgressoft.lirp.event.ReactiveScope
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.json.JsonRepository
 import io.kotest.assertions.throwables.shouldNotThrowAny
@@ -23,9 +23,7 @@ import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 /**
  * Integration tests verifying that [AutoCloseable.close] stops event propagation
@@ -34,8 +32,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 @ExperimentalCoroutinesApi
 internal class LifecycleIntegrationTest : StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher)
+    val reactive = reactiveScope()
 
     lateinit var audioFile: java.io.File
     lateinit var playlistsFile: java.io.File
@@ -48,11 +45,6 @@ internal class LifecycleIntegrationTest : StringSpec({
     lateinit var audioLibrary: DefaultAudioLibrary
     lateinit var waveforms: AudioWaveformRepository<AudioWaveform, AudioItem>
     lateinit var playlistHierarchy: DefaultPlaylistHierarchy
-
-    beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
-    }
 
     beforeEach {
         audioFile = tempfile("lifecycle-audioLibrary", ".json").also { it.deleteOnExit() }
@@ -78,21 +70,16 @@ internal class LifecycleIntegrationTest : StringSpec({
         playlistHierarchyRepository.close()
     }
 
-    afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
-    }
-
     "AudioLibrary close() stops reacting to repository events" {
         val audioItem = audioLibrary.createFromFile(Arb.realAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         audioLibrary.findAlbumAudioItems(audioItem.artist, audioItem.album.name).size shouldBe 1
 
         audioLibrary.close()
 
         val audioItem2 = audioLibrary.createFromFile(Arb.realAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         // After close(), the artist catalog registry subscription is cancelled
         // so newly added items are not indexed in the catalog
@@ -104,18 +91,18 @@ internal class LifecycleIntegrationTest : StringSpec({
         audioLibrary.subscribe(playlistHierarchy)
 
         val audioItem = audioLibrary.createFromFile(Arb.realAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val playlist = playlistHierarchy.createPlaylist("Lifecycle Test Playlist")
         playlist.addAudioItem(audioItem)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         playlist.audioItems.size shouldBe 1
 
         playlistHierarchy.close()
 
         audioLibrary.remove(audioItem) shouldBe true
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         // After close(), the audio item deletion event is no longer processed —
         // the playlist's audioItemIds still contains the id even though the audio item was removed from the library
@@ -130,11 +117,11 @@ internal class LifecycleIntegrationTest : StringSpec({
         audioLibrary.subscribe(waveforms)
 
         val audioItem = audioLibrary.createFromFile(Arb.realAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val waveform = ScalableAudioWaveform(audioItem.id, audioItem.path)
         waveforms.add(waveform) shouldBe true
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         waveforms.size() shouldBe 1
 
@@ -146,7 +133,7 @@ internal class LifecycleIntegrationTest : StringSpec({
         // active, the subscriber would attempt to mutate a closed publisher and throw.
         shouldNotThrowAny {
             audioLibrary.remove(audioItem) shouldBe true
-            testDispatcher.scheduler.advanceUntilIdle()
+            reactive.advance()
         }
     }
 
@@ -155,15 +142,15 @@ internal class LifecycleIntegrationTest : StringSpec({
         audioLibrary.subscribe(playlistHierarchy)
 
         val audioItem = audioLibrary.createFromFile(Arb.realAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val playlist = playlistHierarchy.createPlaylist("Full Lifecycle Playlist")
         playlist.addAudioItem(audioItem)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val waveform = ScalableAudioWaveform(audioItem.id, audioItem.path)
         waveforms.add(waveform) shouldBe true
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         // Closing in reverse-dependency order should not throw, even though events may
         // still be in flight between the components.

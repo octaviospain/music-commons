@@ -14,6 +14,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.core.annotation.Isolate
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.date.shouldBeAfter
@@ -30,6 +31,7 @@ import kotlin.io.path.extension
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.serialization.json.Json
 
+@Isolate
 internal class MutableAudioItemTest : FunSpec({
 
     val json =

@@ -7,11 +7,11 @@ import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.ImmutableLabel
 import net.transgressoft.commons.music.audio.InvalidAudioFilePathException
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
 import net.transgressoft.commons.music.audio.WindowsPathException
 import net.transgressoft.commons.music.audio.audioItemChange
 import net.transgressoft.commons.music.audio.testCoverBytes
 import net.transgressoft.commons.music.audio.update
+import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.common.OsDetector
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
@@ -38,6 +38,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.serialization.json.Json
 
 internal class FXAudioItemTest : StringSpec({
+    val files = virtualFiles()
 
     val json =
         Json {
@@ -46,7 +47,7 @@ internal class FXAudioItemTest : StringSpec({
         }
 
     "Changes its properties when observable properties are updated" {
-        val path = Arb.virtualAudioFile().next()
+        val path = files.virtualAudioFile().next()
 
         val fxAudioItem = FXAudioItem(path)
         assertSoftly {

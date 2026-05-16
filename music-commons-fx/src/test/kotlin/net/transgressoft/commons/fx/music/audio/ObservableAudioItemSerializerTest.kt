@@ -3,13 +3,12 @@ package net.transgressoft.commons.fx.music.audio
 import net.transgressoft.commons.music.audio.AudioItemTestFactory
 import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.InvalidAudioFilePathException
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.commons.music.audio.virtualFiles
 import io.kotest.assertions.json.shouldContainJsonKey
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
-import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import java.nio.file.Files
 import java.time.temporal.ChronoUnit.SECONDS
@@ -22,6 +21,7 @@ import kotlinx.serialization.json.put
  * Tests for [ObservableAudioItemSerializer] verifying golden JSON structure and round-trip fidelity.
  */
 internal class ObservableAudioItemSerializerTest : StringSpec({
+    val files = virtualFiles()
 
     val json =
         Json {
@@ -29,7 +29,7 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
         }
 
     "ObservableAudioItemSerializer encodes all required JSON fields" {
-        val path = Arb.virtualAudioFile().next()
+        val path = files.virtualAudioFile().next()
         val fxAudioItem = FXAudioItem(path, AudioItemTestFactory.nextTestId())
 
         val encoded = json.encodeToString(ObservableAudioItemSerializer, fxAudioItem)
@@ -48,7 +48,7 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
     }
 
     "ObservableAudioItemSerializer round-trip preserves all fields" {
-        val path = Arb.virtualAudioFile().next()
+        val path = files.virtualAudioFile().next()
         val original = FXAudioItem(path, AudioItemTestFactory.nextTestId())
 
         val encoded = json.encodeToString(ObservableAudioItemSerializer, original)
@@ -75,7 +75,7 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
 
     "ObservableAudioItemSerializer deserializes legacy single-genre field into genres set" {
         val path =
-            Arb.virtualAudioFile {
+            files.virtualAudioFile {
                 this.genres = setOf(Genre.Rock)
             }.next()
         val original = FXAudioItem(path, AudioItemTestFactory.nextTestId())
@@ -97,7 +97,7 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
     }
 
     "ObservableAudioItemSerializer inherits file:// URI format from ReactiveAudioItem.toJsonObject" {
-        val path = Arb.virtualAudioFile().next()
+        val path = files.virtualAudioFile().next()
         val fxAudioItem = FXAudioItem(path, AudioItemTestFactory.nextTestId())
 
         val encoded = json.encodeToString(ObservableAudioItemSerializer, fxAudioItem)
@@ -143,8 +143,8 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
     }
 
     "ObservableAudioItemMapSerializer round-trip preserves the map entries" {
-        val path1 = Arb.virtualAudioFile().next()
-        val path2 = Arb.virtualAudioFile().next()
+        val path1 = files.virtualAudioFile().next()
+        val path2 = files.virtualAudioFile().next()
         val id1 = AudioItemTestFactory.nextTestId()
         val id2 = AudioItemTestFactory.nextTestId()
         val item1 = FXAudioItem(path1, id1)

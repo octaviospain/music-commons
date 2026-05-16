@@ -23,7 +23,7 @@ import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.ImmutableLabel
 import net.transgressoft.commons.music.audio.MutableAudioItemTestBridge
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.playlist.AudioPlaylistMapSerializer
 import net.transgressoft.commons.music.playlist.MutablePlaylist
 import com.google.common.jimfs.Configuration
@@ -32,7 +32,6 @@ import com.neovisionaries.i18n.CountryCode
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.int
@@ -54,6 +53,7 @@ import kotlinx.serialization.json.jsonPrimitive
  */
 @DisplayName("Cross-platform Jimfs filesystem")
 internal class CrossPlatformFilesystemTest : StringSpec({
+    val files = virtualFiles()
 
     val configs: Map<String, Configuration> =
         mapOf(
@@ -85,7 +85,7 @@ internal class CrossPlatformFilesystemTest : StringSpec({
         "AudioItem JSON round-trip preserves path and key fields on $label Jimfs" {
             Jimfs.newFileSystem(config).use { fs ->
                 val path =
-                    Arb.virtualAudioFile(fileSystem = fs) {
+                    files.virtualAudioFile(fileSystem = fs) {
                         this.title = "Round Trip $label"
                         this.artist = asciiArtist
                         this.album = asciiAlbum
@@ -109,7 +109,7 @@ internal class CrossPlatformFilesystemTest : StringSpec({
         "AudioPlaylist JSON round-trip preserves tracked audio item ids on $label Jimfs" {
             Jimfs.newFileSystem(config).use { fs ->
                 val path =
-                    Arb.virtualAudioFile(fileSystem = fs) {
+                    files.virtualAudioFile(fileSystem = fs) {
                         this.title = "Playlist Item $label"
                         this.artist = asciiArtist
                         this.album = asciiAlbum

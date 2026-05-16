@@ -15,12 +15,17 @@ tasks.matching { it.name.startsWith("ktlint") || it.name.startsWith("jacoco")}.c
 
 dependencies {
     api project(path: ':music-commons-core')
+    // Vendored ReactiveScopeExtension references net.transgressoft.lirp.event.ReactiveScope on its
+    // public surface, so lirp-core must be visible to consumer test classpaths.
+    api libs.lirp.core.get()
     implementation libs.jimfs.get()
     implementation libs.mockk.get()
-    implementation libs.kotest.runner.junit5.get()
-    implementation libs.kotest.assertions.core.get()
-    implementation libs.kotest.property.get()
-    implementation libs.kotest.framework.datatest.get()
-    implementation libs.kotest.assertions.json.get()
+    // Promoted to api so consumer test source sets see the vendored ReactiveScopeExtension and
+    // its kotlinx-coroutines-test dependencies on their compile classpath.
+    api libs.kotest.runner.junit6.get()
+    api libs.kotest.assertions.core.get()
+    api libs.kotest.property.get()
+    api libs.kotest.assertions.json.get()
+    api libs.coroutines.test.get()
     implementation libs.jaudiotagger.get()
 }

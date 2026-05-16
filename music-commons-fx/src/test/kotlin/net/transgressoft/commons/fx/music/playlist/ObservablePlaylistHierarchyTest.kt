@@ -4,7 +4,7 @@ import net.transgressoft.commons.fx.music.audio.FXAudioLibrary
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.fx.music.fxAudioItem
 import net.transgressoft.commons.music.playlist.asJsonKeyValues
-import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.persistence.VolatileRepository
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import io.kotest.assertions.json.shouldEqualJson
@@ -28,25 +28,15 @@ import org.testfx.util.WaitForAsyncUtils
 import java.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @ExperimentalCoroutinesApi
 internal class ObservablePlaylistHierarchyTest : StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher)
+    val reactive = reactiveScope()
 
     beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
         FxToolkit.registerPrimaryStage()
-    }
-
-    afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
     }
 
     suspend fun eventuallyOnFxThread(
@@ -69,7 +59,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         val rockAudioItems = listOf(rockAudioItem)
         val rock = playlistHierarchy.createPlaylist("Rock", rockAudioItems)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -82,7 +72,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         playlistHierarchy.movePlaylist(rockFavorites.name, rock.name)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -97,14 +87,14 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
             }
         }
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         jsonFile.readText().shouldEqualJson(listOf(rock, rockFavorites).asJsonKeyValues())
 
         rock.isDirectory = true
         rock.name = "Rock directory"
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -114,7 +104,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
             }
         }
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         eventually(2.seconds) {
             jsonFile.readText().shouldEqualJson(listOf(rock, rockFavorites).asJsonKeyValues())
@@ -132,7 +122,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         val writeHierarchy = FXPlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
         val writtenPlaylist = writeHierarchy.createPlaylistDirectory("Rock")
         writtenPlaylist.addAudioItem(audioItem)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         writeHierarchy.close()
 
         // No audio library registered — audio item IDs are preserved but entities cannot be resolved
@@ -154,7 +144,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         val writeHierarchy = FXPlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
         val writtenPlaylist = writeHierarchy.createPlaylistDirectory("Rock")
         writtenPlaylist.addAudioItem(audioItem)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         writeHierarchy.close()
 
         val audioItemRepository = VolatileRepository<Int, ObservableAudioItem>()
@@ -221,7 +211,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
             playlistHierarchy.search { it.audioItemsAllMatch { audioItem -> audioItem.title.contains("50s") } }
         playlistsThatContainsAllAudioItemsWith50sInTitle.shouldContainOnly(rock)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -232,7 +222,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         playlistHierarchy.size() shouldBe 2
         playlistHierarchy.numberOfPlaylists() shouldBe 2
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -243,7 +233,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         playlistHierarchy.addPlaylistToDirectory(rock, fifties.name)
         playlistHierarchy.addPlaylistToDirectory(pop.name, fifties.name)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -256,7 +246,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         val sixties = playlistHierarchy.createPlaylistDirectory("60s")
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -269,7 +259,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         val bestHits = playlistHierarchy.createPlaylistDirectory("Best hits")
         playlistHierarchy.addPlaylistsToDirectory(setOf(fifties, sixties), bestHits.name)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -288,7 +278,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         playlistHierarchy.size() shouldBe 6
         playlistHierarchy.search { it.isDirectory.not() } shouldContainExactly setOf(rock, pop, thisWeeksFavorites)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -312,7 +302,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         playlistHierarchy.addAudioItemToPlaylist(fiftiesItems[0], fifties.name)
         playlistHierarchy.addAudioItemsToPlaylist(fiftiesItems, fifties.name)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -328,7 +318,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         playlistHierarchy.removeAudioItemFromPlaylist(fiftiesItems[0], fifties.name)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -341,7 +331,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         fifties.clearAudioItems()
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -352,7 +342,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         playlistHierarchy.forEach { it.removeAudioItems(rockAudioItems) }
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -364,7 +354,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         playlistHierarchy.clear()
         playlistHierarchy.isEmpty shouldBe true
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -395,7 +385,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         val selection = playlistHierarchy.createPlaylistDirectory("Selection of playlists")
         playlistHierarchy.size() shouldBe 5
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -412,7 +402,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         // └──Selection of playlists
         //    └──Rock
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -440,7 +430,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         //       └──Selection of playlists
         //          └──Rock
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -456,7 +446,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         playlistHierarchy.removeAll(setOf(bestHits)) shouldBe true
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -482,7 +472,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         val rock = playlistHierarchy.createPlaylist("Rock")
         val selection = playlistHierarchy.createPlaylistDirectory("Selection of playlists").also { it.addPlaylist(rock) }
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -514,7 +504,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         // └──Selection of playlists
         //    └──Rock
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -531,7 +521,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         // ├──Best hits
         // └──Selection of playlists
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -541,7 +531,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
             playlistHierarchy.playlistsProperty shouldContainExactly setOf(bestHits, selection)
         }
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -585,7 +575,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         //    └──Rock
         //        └──Rock Favorites
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -601,7 +591,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         //
         // Rock Favorites (playlist remains in the playlistHierarchy)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -617,7 +607,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         // Rock (playlist remains in the playlistHierarchy)
         // Rock Favorites
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -638,7 +628,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         // └──50s
         //    └──Rock
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -650,7 +640,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         // └──50s
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -667,7 +657,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         val playlist = hierarchy.createPlaylist("Test Playlist", listOf(audioItem))
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -685,7 +675,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         playlist.addAudioItem(item)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -704,7 +694,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         // Start with one item so the playlist already has audioItems
         playlist.addAudioItem(item1)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -714,7 +704,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         // addAudioItems must wrap update in mutateAndPublish so the observable property updates on FX thread
         playlist.addAudioItem(item2)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -733,7 +723,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         // Rapid additions
         audioItems.forEach { playlist.addAudioItem(it) }
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -743,7 +733,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         // Rapid removals
         audioItems.take(5).forEach { playlist.removeAudioItem(it) }
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -761,7 +751,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         parent.addPlaylist(child)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -782,7 +772,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         // Add to dir1
         dir1.addPlaylist(playlist)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -792,7 +782,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         // Move to dir2
         dir2.addPlaylist(playlist)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -810,7 +800,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         val playlist = hierarchy.createPlaylist("To Clear", audioItems)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -819,7 +809,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         playlist.clearAudioItems()
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -841,7 +831,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         parent.addPlaylist(child)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -860,7 +850,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         folder.addPlaylist(leaf)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         folder.audioItemsRecursiveProperty.size shouldBe 0
@@ -869,7 +859,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         val late2 = Arb.fxAudioItem { title = "Late2" }.next()
         leaf.addAudioItems(listOf(late1, late2))
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         leaf.audioItemsRecursiveProperty.size shouldBe 2
@@ -878,7 +868,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         leaf.removeAudioItems(listOf(late1))
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         folder.audioItemsRecursiveProperty.size shouldBe 1
@@ -897,7 +887,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         middle.addPlaylist(grandchild)
         top.addPlaylist(middle)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         top.audioItemsRecursiveProperty.size shouldBe 0
@@ -905,7 +895,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         val deep = Arb.fxAudioItem { title = "Deep" }.next()
         grandchild.addAudioItems(listOf(deep))
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         middle.audioItemsRecursiveProperty.size shouldBe 1
@@ -928,7 +918,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         folder.addPlaylist(leaf)
         leaf.addAudioItems(listOf(seed, seed2))
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         folder.audioItemsRecursiveProperty.size shouldBe 2
@@ -944,7 +934,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         val readHierarchy = FXPlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         val reloadedFolder = readHierarchy.findByName("Folder").get()
@@ -959,7 +949,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         audioItemRepository.add(late)
         reloadedLeaf.addAudioItems(listOf(late))
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         reloadedFolder.audioItemsRecursiveProperty.size shouldBe 3
@@ -983,14 +973,14 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         val seed = Arb.fxAudioItem { title = "Seed" }.next()
         leaf.addAudioItems(listOf(seed))
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         folder.audioItemsRecursiveProperty.size shouldBe 1
 
         folder.removePlaylist(leaf)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         folder.audioItemsRecursiveProperty.size shouldBe 0
@@ -999,7 +989,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         val late = Arb.fxAudioItem { title = "Late" }.next()
         leaf.addAudioItems(listOf(late))
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         leaf.audioItemsRecursiveProperty.size shouldBe 2
@@ -1013,7 +1003,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         val playlist = hierarchy.createPlaylist("Test")
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -1022,7 +1012,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
         hierarchy.remove(playlist)
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {
@@ -1043,7 +1033,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         audioItems.drop(10).forEach { playlist.addAudioItem(it) }
         audioItems.take(5).forEach { playlist.removeAudioItem(it) }
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
         eventuallyOnFxThread {

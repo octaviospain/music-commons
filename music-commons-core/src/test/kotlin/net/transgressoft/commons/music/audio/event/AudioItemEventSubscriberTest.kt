@@ -2,18 +2,15 @@ package net.transgressoft.commons.music.audio.event
 
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.commons.music.audio.virtualFiles
+import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.event.CrudEvent
-import net.transgressoft.lirp.event.ReactiveScope
 import net.transgressoft.lirp.persistence.VolatileRepository
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
-import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 /**
  * Tests for [AudioItemEventSubscriber] verifying event reaction and subscription cancellation.
@@ -21,15 +18,10 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 @ExperimentalCoroutinesApi
 internal class AudioItemEventSubscriberTest : StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher)
+    val reactive = reactiveScope()
+    val files = virtualFiles()
     lateinit var repository: VolatileRepository<Int, AudioItem>
     lateinit var library: DefaultAudioLibrary
-
-    beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
-    }
 
     beforeEach {
         repository = VolatileRepository("TestRepo")
@@ -40,11 +32,6 @@ internal class AudioItemEventSubscriberTest : StringSpec({
         library.close()
     }
 
-    afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
-    }
-
     "AudioItemEventSubscriber reacts to CREATE event" {
         var createEventReceived = false
         val subscriber = AudioItemEventSubscriber<AudioItem>("TestSubscriber")
@@ -53,8 +40,8 @@ internal class AudioItemEventSubscriberTest : StringSpec({
         }
         repository.subscribe(subscriber)
 
-        library.createFromFile(Arb.virtualAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        library.createFromFile(files.virtualAudioFile().next())
+        reactive.advance()
 
         createEventReceived shouldBe true
     }
@@ -67,11 +54,11 @@ internal class AudioItemEventSubscriberTest : StringSpec({
         }
         repository.subscribe(subscriber)
 
-        val audioItem = library.createFromFile(Arb.virtualAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        val audioItem = library.createFromFile(files.virtualAudioFile().next())
+        reactive.advance()
 
         library.remove(audioItem)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         deleteEventReceived shouldBe true
     }
@@ -84,15 +71,15 @@ internal class AudioItemEventSubscriberTest : StringSpec({
         }
         repository.subscribe(subscriber)
 
-        library.createFromFile(Arb.virtualAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        library.createFromFile(files.virtualAudioFile().next())
+        reactive.advance()
 
         val countAfterFirst = eventCount
 
         subscriber.cancelSubscription()
 
-        library.createFromFile(Arb.virtualAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        library.createFromFile(files.virtualAudioFile().next())
+        reactive.advance()
 
         eventCount shouldBe countAfterFirst
     }

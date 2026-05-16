@@ -24,8 +24,6 @@ import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.VirtualFiles
 import net.transgressoft.commons.music.audio.audioAttributes
-import com.google.common.jimfs.Configuration
-import com.google.common.jimfs.Jimfs
 import io.kotest.property.arbitrary.next
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileSystem
@@ -54,30 +52,29 @@ object M3uTestFixtures {
 
     /**
      * Loads the M3U fixture at the given classpath [resourceName] and prepares a
-     * [PlaylistFixture] backed by [fileSystem]. Nested M3U references are
-     * recursively copied to the same filesystem.
+     * [PlaylistFixture] backed by [virtualFiles]'s Jimfs filesystem. Nested M3U
+     * references are recursively copied to the same filesystem.
      */
     fun loadPlaylist(
         resourceName: String,
-        fileSystem: FileSystem = Jimfs.newFileSystem(Configuration.unix()),
+        virtualFiles: VirtualFiles,
         playlistsDir: String = DEFAULT_PLAYLISTS_DIR
     ): PlaylistFixture {
-        val baseDir = fileSystem.getPath(playlistsDir)
+        val baseDir = virtualFiles.fileSystem.getPath(playlistsDir)
         Files.createDirectories(baseDir)
         val rootPath = copyResource(resourceName, baseDir.resolve(resourceName.substringAfterLast('/')))
-        val tracks = materializeTracks(resourceName, rootPath, baseDir)
-        return PlaylistFixture(fileSystem, rootPath, baseDir, tracks)
+        val tracks = materializeTracks(resourceName, rootPath, baseDir, virtualFiles)
+        return PlaylistFixture(virtualFiles.fileSystem, rootPath, baseDir, tracks)
     }
 
     /**
-     * Materializes a virtual audio file for [trackInfo] on the given [fileSystem]
-     * and returns the resulting [Path]. Useful when tests need to extend a fixture
-     * with extra tracks.
+     * Materializes a virtual audio file for [trackInfo] on [virtualFiles] and returns
+     * the resulting [Path]. Useful when tests need to extend a fixture with extra tracks.
      */
-    fun materializeTrack(trackInfo: TrackInfo, fileSystem: FileSystem): Path {
-        val targetPath = fileSystem.getPath(trackInfo.targetPath)
+    fun materializeTrack(trackInfo: TrackInfo, virtualFiles: VirtualFiles): Path {
+        val targetPath = virtualFiles.fileSystem.getPath(trackInfo.targetPath)
         val attributes = trackInfo.toAttributes()
-        return VirtualFiles.createAt(targetPath, attributes, trackInfo.tagType, fileSystem)
+        return virtualFiles.createAt(targetPath, attributes, trackInfo.tagType)
     }
 
     private fun copyResource(resourceName: String, targetPath: Path): Path {
@@ -99,11 +96,12 @@ object M3uTestFixtures {
     private fun materializeTracks(
         rootResource: String,
         rootM3uOnFs: Path,
-        baseDir: Path
+        baseDir: Path,
+        virtualFiles: VirtualFiles
     ): List<TrackInfo> {
         val visited = mutableSetOf<String>()
         val collected = mutableListOf<TrackInfo>()
-        materializeRecursive(rootResource, rootM3uOnFs, baseDir, visited, collected)
+        materializeRecursive(rootResource, rootM3uOnFs, baseDir, virtualFiles, visited, collected)
         return collected.toList()
     }
 
@@ -111,6 +109,7 @@ object M3uTestFixtures {
         resourceName: String,
         m3uOnFs: Path,
         baseDir: Path,
+        virtualFiles: VirtualFiles,
         visited: MutableSet<String>,
         collected: MutableList<TrackInfo>
     ) {
@@ -122,10 +121,10 @@ object M3uTestFixtures {
                 val nestedResource = resolveNestedResource(resourceName, entry.rawPath)
                 Files.createDirectories(resolved.parent)
                 copyResource(nestedResource, resolved)
-                materializeRecursive(nestedResource, resolved, baseDir, visited, collected)
+                materializeRecursive(nestedResource, resolved, baseDir, virtualFiles, visited, collected)
             } else {
                 val info = TrackInfo.from(entry, resolved)
-                VirtualFiles.createAt(resolved, info.toAttributes(), info.tagType, baseDir.fileSystem)
+                virtualFiles.createAt(resolved, info.toAttributes(), info.tagType, baseDir.fileSystem)
                 collected.add(info)
             }
         }

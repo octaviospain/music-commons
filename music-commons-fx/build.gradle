@@ -53,6 +53,7 @@ test {
     ]
 
     systemProperty 'testfx.setup.timeout', '60000'
+    systemProperty 'kotest.framework.config.fqn', 'net.transgressoft.commons.fx.music.testing.FxKotestProjectConfig'
 
     testLogging {
         events 'passed', 'skipped', 'failed'
@@ -81,9 +82,9 @@ dependencies {
     testImplementation(libs.junit.jupiter.get())
     testImplementation libs.jimfs.get()
     testImplementation libs.kotest.assertions.json.get()
-    testImplementation libs.kotest.runner.junit5.get()
+    testImplementation libs.kotest.runner.junit6.get()
     testImplementation libs.kotest.property.get()
-    testImplementation libs.kotest.framework.datatest.get()
+    testImplementation libs.coroutines.test.get()
     testImplementation libs.mockk.get()
     testImplementation libs.testfx.core.get()
     testImplementation libs.testfx.junit5.get()

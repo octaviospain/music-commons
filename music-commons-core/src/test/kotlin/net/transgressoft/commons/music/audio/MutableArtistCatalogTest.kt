@@ -18,10 +18,9 @@
 package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.music.audio.MutableAudioItemTestBridge.createAudioItem
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAlbumAudioFiles
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
+import net.transgressoft.commons.music.audio.virtualFiles
+import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.event.MutationEvent
-import net.transgressoft.lirp.event.ReactiveScope
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainOnly
@@ -31,29 +30,15 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
-import io.mockk.unmockkAll
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 typealias ArtistCatalogMutation = MutationEvent<Artist, ArtistCatalog<AudioItem>>
 
 @ExperimentalCoroutinesApi
 class MutableArtistCatalogTest : StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher)
-
-    beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
-    }
-
-    afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
-        unmockkAll()
-    }
+    val reactive = reactiveScope()
+    val files = virtualFiles()
 
     "MUTATE event is published when audio item is added to empty catalog" {
         val expectedArtist = Arb.artist().next()
@@ -77,7 +62,7 @@ class MutableArtistCatalogTest : StringSpec({
             it.first().shouldContainOnly(audioItem)
         }
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedEvents.size shouldBe 1
         receivedEvents[0].shouldBeInstanceOf<ArtistCatalogMutation>()
@@ -125,7 +110,7 @@ class MutableArtistCatalogTest : StringSpec({
             it.first().shouldContainOnly(firstAudioItem, secondAudioItem)
         }
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedEvents.size shouldBe 1
         receivedEvents[0].newEntity should { catalogSnapshot ->
@@ -163,7 +148,7 @@ class MutableArtistCatalogTest : StringSpec({
 
         catalog.addAudioItem(audioItem2) shouldBe true
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedEvents.size shouldBe 1
         receivedEvents[0].newEntity should { catalogSnapshot ->
@@ -177,7 +162,7 @@ class MutableArtistCatalogTest : StringSpec({
     }
 
     "MUTATE event is published when album audio items ordering changed due to a audio item track number changed" {
-        val albumAudioItems = Arb.virtualAlbumAudioFiles().next().map(::createAudioItem)
+        val albumAudioItems = files.virtualAlbumAudioFiles().next().map(::createAudioItem)
 
         val catalog = MutableArtistCatalog(albumAudioItems)
         val receivedEvents = mutableListOf<ArtistCatalogMutation>()
@@ -197,7 +182,7 @@ class MutableArtistCatalogTest : StringSpec({
 
         val album = albumAudioItems.first().album.name
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedEvents.size shouldBe 1
         receivedEvents[0].newEntity should { catalogSnapshot ->
@@ -215,7 +200,7 @@ class MutableArtistCatalogTest : StringSpec({
     }
 
     "MUTATE event is not published when audio item track number is changed via merge and is the only one in the catalog" {
-        val audioItem = createAudioItem(Arb.virtualAudioFile().next())
+        val audioItem = createAudioItem(files.virtualAudioFile().next())
 
         val catalog = MutableArtistCatalog(audioItem)
         val receivedEvents = mutableListOf<ArtistCatalogMutation>()
@@ -225,13 +210,13 @@ class MutableArtistCatalogTest : StringSpec({
         audioItem.trackNumber = audioItem.trackNumber?.plus(1)?.toShort()
         catalog.mergeAudioItem(audioItem) shouldBe false
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedEvents.isEmpty() shouldBe true
     }
 
     "MUTATE event is published when album audio items ordering changed due to an audio item disc number changed" {
-        val albumAudioItems = Arb.virtualAlbumAudioFiles().next().map(::createAudioItem)
+        val albumAudioItems = files.virtualAlbumAudioFiles().next().map(::createAudioItem)
 
         val catalog = MutableArtistCatalog(albumAudioItems)
         val receivedEvents = mutableListOf<ArtistCatalogMutation>()
@@ -251,7 +236,7 @@ class MutableArtistCatalogTest : StringSpec({
 
         val album = albumAudioItems.first().album.name
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedEvents.size shouldBe 1
         receivedEvents[0].newEntity should { catalogSnapshot ->
@@ -269,7 +254,7 @@ class MutableArtistCatalogTest : StringSpec({
     }
 
     "MUTATE event is not published when audio item disc number is changed via merge and is the only one in the catalog" {
-        val audioItem = createAudioItem(Arb.virtualAudioFile().next())
+        val audioItem = createAudioItem(files.virtualAudioFile().next())
 
         val catalog = MutableArtistCatalog(audioItem)
         val receivedEvents = mutableListOf<ArtistCatalogMutation>()
@@ -279,13 +264,13 @@ class MutableArtistCatalogTest : StringSpec({
         audioItem.discNumber = audioItem.discNumber?.plus(1)?.toShort()
         catalog.mergeAudioItem(audioItem) shouldBe false
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedEvents.isEmpty() shouldBe true
     }
 
     "MUTATE event is published when audio item is removed from catalog with multiple items" {
-        val albumAudioItems = Arb.virtualAlbumAudioFiles().next().map(::createAudioItem)
+        val albumAudioItems = files.virtualAlbumAudioFiles().next().map(::createAudioItem)
 
         val catalog = MutableArtistCatalog(albumAudioItems)
         val receivedEvents = mutableListOf<ArtistCatalogMutation>()
@@ -298,7 +283,7 @@ class MutableArtistCatalogTest : StringSpec({
 
         catalog.containsAudioItem(firstAudioItem) shouldBe false
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val album = firstAudioItem.album.name
         receivedEvents.size shouldBe 1
@@ -322,7 +307,7 @@ class MutableArtistCatalogTest : StringSpec({
 
         catalog.removeAudioItem(audioItem) shouldBe true
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         receivedEvents.size shouldBe 1
         receivedEvents[0].newEntity should { catalogSnapshot ->
@@ -336,8 +321,8 @@ class MutableArtistCatalogTest : StringSpec({
     }
 
     "MUTATE event is published when removing audio item from one album leaves another album" {
-        val album1 = Arb.virtualAlbumAudioFiles().next().map(::createAudioItem)
-        val album2 = Arb.virtualAlbumAudioFiles().next().map(::createAudioItem)
+        val album1 = files.virtualAlbumAudioFiles().next().map(::createAudioItem)
+        val album2 = files.virtualAlbumAudioFiles().next().map(::createAudioItem)
         val catalog = MutableArtistCatalog(album1 + album2)
 
         val receivedEvents = mutableListOf<ArtistCatalogMutation>()
@@ -348,7 +333,7 @@ class MutableArtistCatalogTest : StringSpec({
         val audioItem = album1.first()
         catalog.removeAudioItem(audioItem) shouldBe true
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         val album = audioItem.album.name
         receivedEvents.size shouldBe 1
@@ -384,7 +369,7 @@ class MutableArtistCatalogTest : StringSpec({
 
         catalog.addAudioItem(audioItem) shouldBe true
 
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         subscriber1Events.size shouldBe 1
         subscriber2Events.size shouldBe 1

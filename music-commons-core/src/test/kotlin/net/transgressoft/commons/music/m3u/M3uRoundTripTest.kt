@@ -2,7 +2,7 @@ package net.transgressoft.commons.music.m3u
 
 import net.transgressoft.commons.music.CoreMusicLibrary
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile
-import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.commons.music.testing.reactiveScope
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempdir
@@ -12,9 +12,7 @@ import io.kotest.matchers.shouldBe
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 /**
  * Integration tests verifying M3U import/export round-trip parity.
@@ -26,8 +24,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 @DisplayName("M3U Round-trip")
 internal class M3uRoundTripTest : StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher)
+    val reactive = reactiveScope()
 
     val mp3Source = ArbitraryAudioFile.getResourceAsFile("/testfiles/testeable.mp3").toPath()
     val flacSource = ArbitraryAudioFile.getResourceAsFile("/testfiles/testeable.flac").toPath()
@@ -36,16 +33,6 @@ internal class M3uRoundTripTest : StringSpec({
     val mp3Duration = 17L
     val flacTitle = "Heaviest Fucking Acid Trip In The Universe"
     val flacDuration = 28L
-
-    beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
-    }
-
-    afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
-    }
 
     fun writePlaylist(path: Path, content: String): Path {
         Files.writeString(path, content)

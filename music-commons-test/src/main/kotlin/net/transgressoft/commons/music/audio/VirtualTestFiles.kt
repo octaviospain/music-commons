@@ -20,6 +20,8 @@ package net.transgressoft.commons.music.audio
 import net.transgressoft.commons.music.common.toJsonUri
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
+import io.kotest.core.extensions.SpecExtension
+import io.kotest.core.spec.Spec
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.arbitrary
 import io.kotest.property.arbitrary.enum
@@ -29,6 +31,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.spyk
+import io.mockk.unmockkStatic
 import org.jaudiotagger.audio.AudioFile
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.tag.FieldKey
@@ -41,28 +44,47 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.absolutePathString
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
-object VirtualFiles {
+// Process-wide mutex shared by every [VirtualFilesExtension] instance. Serializes any pair
+// of specs whose `virtualFiles()` factories race on the JVM-global `mockkStatic` interceptors
+// (java.nio.file.Paths, org.jaudiotagger.audio.AudioFileIO, kotlin.io.FilesKt__*, and the
+// PathJsonExtensions extension functions). Mirrors lirp's `reactiveScopeMutex`.
+internal val virtualFilesMutex = Mutex()
 
-    internal val fileSystem = Jimfs.newFileSystem(Configuration.unix())
+private val STATIC_MOCK_TARGETS =
+    listOf(
+        "kotlin.io.FilesKt__FileReadWriteKt",
+        "kotlin.io.FilesKt__UtilsKt",
+        "java.nio.file.Paths",
+        "org.jaudiotagger.audio.AudioFileIO",
+        "net.transgressoft.commons.music.common.PathJsonExtensionsKt"
+    )
 
-    init {
-        mockkStatic("kotlin.io.FilesKt__FileReadWriteKt")
-        mockkStatic("kotlin.io.FilesKt__UtilsKt")
-        mockkStatic("java.nio.file.Paths")
-        mockkStatic("org.jaudiotagger.audio.AudioFileIO")
-        mockkStatic("net.transgressoft.commons.music.common.PathJsonExtensionsKt")
-    }
+/**
+ * Per-spec test fixture that materializes Jimfs-backed virtual audio files with mocked
+ * JAudioTagger metadata. One instance is created per spec by [virtualFiles], and lifecycle
+ * (mockkStatic install/uninstall) is managed by [VirtualFilesExtension].
+ *
+ * Each instance owns its own in-memory [FileSystem], so two specs never collide on Jimfs
+ * inodes. Static interceptors are JVM-global and shared between concurrent specs via
+ * [virtualFilesMutex] — specs using `virtualFiles()` run serialized against each other, but
+ * remain free to run in parallel with specs that don't use this fixture.
+ */
+class VirtualFiles internal constructor() {
 
-    fun Arb.Companion.virtualAlbumAudioFiles(
+    val fileSystem: FileSystem = Jimfs.newFileSystem(Configuration.unix())
+
+    fun virtualAlbumAudioFiles(
         artist: Artist? = null,
         album: Album? = null,
         size: IntRange = 20..50,
-        fileSystem: FileSystem = VirtualFiles.fileSystem
+        fileSystem: FileSystem = this.fileSystem
     ): Arb<List<Path>> =
         arbitrary {
-            val arbitraryArtist = artist ?: artist().bind()
-            val arbitraryAlbum = album ?: album().bind()
+            val arbitraryArtist = artist ?: Arb.artist().bind()
+            val arbitraryAlbum = album ?: Arb.album().bind()
             buildList {
                 repeat(Arb.int(size).bind()) {
                     add(
@@ -78,13 +100,13 @@ object VirtualFiles {
             }
         }
 
-    fun Arb.Companion.virtualAudioFile(
+    fun virtualAudioFile(
         audioFileTagType: AudioFileTagType = Arb.enum<AudioFileTagType>().next(),
-        fileSystem: FileSystem = VirtualFiles.fileSystem,
+        fileSystem: FileSystem = this.fileSystem,
         attributesAction: AudioItemTestAttributes.() -> Unit = {}
     ): Arb<Path> =
         arbitrary {
-            val attributes = audioAttributes().bind()
+            val attributes = Arb.audioAttributes().bind()
             attributesAction(attributes)
             create(audioFileTagType, attributes, fileSystem)
         }
@@ -130,6 +152,14 @@ object VirtualFiles {
     ): Path {
         val tag = createMockedTag(tagType.newMockedTag(), attributes)
         return createPathAt(targetPath, tag, fileSystem)
+    }
+
+    internal fun installStaticMocks() {
+        STATIC_MOCK_TARGETS.forEach { mockkStatic(it) }
+    }
+
+    internal fun uninstallStaticMocks() {
+        STATIC_MOCK_TARGETS.forEach { unmockkStatic(it) }
     }
 
     // Strips characters forbidden in Windows path segments (< > : " / \ | ? * and control chars 0-31),
@@ -280,6 +310,51 @@ object VirtualFiles {
 
         return filePath
     }
+}
+
+/**
+ * Kotest [SpecExtension] that wraps a spec's execution in [virtualFilesMutex] and installs
+ * the [VirtualFiles] static mocks before [execute] runs, then unmocks them and closes the
+ * per-spec Jimfs filesystem after [execute] returns. Register per-spec via the
+ * [virtualFiles] convenience factory.
+ */
+class VirtualFilesExtension : SpecExtension {
+
+    val files: VirtualFiles = VirtualFiles()
+
+    override suspend fun intercept(spec: Spec, execute: suspend (Spec) -> Unit) {
+        virtualFilesMutex.withLock {
+            files.installStaticMocks()
+            try {
+                execute(spec)
+            } finally {
+                try {
+                    files.uninstallStaticMocks()
+                } finally {
+                    // Jimfs FileSystem is Closeable; without this each spec leaks one in-memory
+                    // filesystem (inode/page caches included) for the lifetime of the JVM.
+                    files.fileSystem.close()
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Convenience factory: constructs a [VirtualFilesExtension], registers it on the spec, and
+ * returns the per-spec [VirtualFiles] instance.
+ *
+ *     class FooTest : StringSpec({
+ *         val files = virtualFiles()
+ *         "test" {
+ *             val path = files.virtualAudioFile().next()
+ *         }
+ *     })
+ */
+fun Spec.virtualFiles(): VirtualFiles {
+    val ext = VirtualFilesExtension()
+    extension(ext)
+    return ext.files
 }
 
 internal class JimfsFileAdapter(private val path: Path) : File(path.toString()) {

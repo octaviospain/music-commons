@@ -2,8 +2,8 @@ package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.TestAudioLibrary
-import net.transgressoft.commons.music.audio.VirtualFiles.virtualAudioFile
-import net.transgressoft.lirp.event.ReactiveScope
+import net.transgressoft.commons.music.audio.virtualFiles
+import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.persistence.AggregateCollectionRef
 import net.transgressoft.lirp.persistence.RegistryBase.Companion.deregisterRepository
 import net.transgressoft.lirp.persistence.RegistryBase.Companion.registerRepository
@@ -13,23 +13,15 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.optional.shouldBeEmpty
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
-import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @ExperimentalCoroutinesApi
 internal class PlaylistHierarchyBaseTest : StringSpec({
 
-    val testDispatcher = UnconfinedTestDispatcher()
-    val testScope = CoroutineScope(testDispatcher)
+    val reactive = reactiveScope()
+    val files = virtualFiles()
     lateinit var playlistHierarchy: TestPlaylistHierarchy
-
-    beforeSpec {
-        ReactiveScope.flowScope = testScope
-        ReactiveScope.ioScope = testScope
-    }
 
     beforeEach {
         playlistHierarchy = TestPlaylistHierarchy()
@@ -37,11 +29,6 @@ internal class PlaylistHierarchyBaseTest : StringSpec({
 
     afterEach {
         playlistHierarchy.close()
-    }
-
-    afterSpec {
-        ReactiveScope.resetDefaultFlowScope()
-        ReactiveScope.resetDefaultIoScope()
     }
 
     "PlaylistHierarchyBase creates playlist and stores in repository" {
@@ -69,17 +56,17 @@ internal class PlaylistHierarchyBaseTest : StringSpec({
         val audioLibrary = TestAudioLibrary(audioLibraryRepository)
         audioLibrary.subscribe(playlistHierarchy)
 
-        val audioItem = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        val audioItem = audioLibrary.createFromFile(files.virtualAudioFile().next())
+        reactive.advance()
 
         val playlist = playlistHierarchy.createPlaylist("Sync Test Playlist")
         playlist.addAudioItem(audioItem)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         playlist.audioItems.any { it.id == audioItem.id } shouldBe true
 
         audioLibrary.remove(audioItem) shouldBe true
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         playlistHierarchy.findByName("Sync Test Playlist") shouldBePresent { found ->
             // Use referenceIds instead of iterating the proxy: the audio item was removed from
@@ -118,17 +105,17 @@ internal class PlaylistHierarchyBaseTest : StringSpec({
         val audioLibrary = TestAudioLibrary(audioLibraryRepository)
         audioLibrary.subscribe(playlistHierarchy)
 
-        val audioItem = audioLibrary.createFromFile(Arb.virtualAudioFile().next())
-        testDispatcher.scheduler.advanceUntilIdle()
+        val audioItem = audioLibrary.createFromFile(files.virtualAudioFile().next())
+        reactive.advance()
 
         val playlist = playlistHierarchy.createPlaylist("Close Test Playlist")
         playlist.addAudioItem(audioItem)
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         playlistHierarchy.close()
 
         audioLibrary.remove(audioItem) shouldBe true
-        testDispatcher.scheduler.advanceUntilIdle()
+        reactive.advance()
 
         // After close(), the audio item deletion event is no longer processed —
         // the playlist's audioItemIds still contains the id even though the audio item was removed from the library
