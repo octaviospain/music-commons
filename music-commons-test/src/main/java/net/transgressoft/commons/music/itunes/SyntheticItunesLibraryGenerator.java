@@ -3,6 +3,7 @@ package net.transgressoft.commons.music.itunes;
 import net.transgressoft.commons.music.audio.AudioFileType;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
@@ -258,7 +259,7 @@ public final class SyntheticItunesLibraryGenerator {
 
     private static String persistentId(String input) {
         try {
-            byte[] digest = MessageDigest.getInstance("SHA-1").digest(input.getBytes());
+            byte[] digest = MessageDigest.getInstance("SHA-1").digest(input.getBytes(StandardCharsets.UTF_8));
             StringBuilder hex = new StringBuilder();
             for (int i = 0; i < 8; i++) {
                 hex.append("%02X".formatted(digest[i]));
