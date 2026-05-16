@@ -12,6 +12,8 @@ import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.WindowsPathException
 import net.transgressoft.commons.music.audio.WindowsViolation
 import net.transgressoft.commons.music.common.WindowsPathValidator
+import net.transgressoft.commons.music.playlist.ReactiveAudioPlaylist
+import net.transgressoft.lirp.event.ReactiveMutationEvent
 import mu.KotlinLogging
 import java.net.URI
 import java.nio.file.Files
@@ -49,7 +51,9 @@ import kotlinx.coroutines.future.future
  *
  * @param musicLibrary The target library to import into.
  */
-class ItunesImportService(private val musicLibrary: MusicLibrary<*, *>) {
+class ItunesImportService<I, P>(private val musicLibrary: MusicLibrary<I, P>)
+    where I : ReactiveAudioItem<I>,
+          P : ReactiveAudioPlaylist<I, P> {
 
     private val logger = KotlinLogging.logger {}
 
@@ -162,7 +166,7 @@ class ItunesImportService(private val musicLibrary: MusicLibrary<*, *>) {
         return fileType == null || fileType !in policy.acceptedFileTypes
     }
 
-    private suspend fun importTrack(track: ItunesTrack, path: Path, policy: ItunesImportPolicy): ReactiveAudioItem<*> {
+    private suspend fun importTrack(track: ItunesTrack, path: Path, policy: ItunesImportPolicy): I {
         val audioItem = musicLibrary.audioItemFromFile(path)
 
         if (!policy.useFileMetadata) {
@@ -180,7 +184,9 @@ class ItunesImportService(private val musicLibrary: MusicLibrary<*, *>) {
         return audioItem
     }
 
-    private fun applyItunesMetadata(audioItem: ReactiveAudioItem<*>, track: ItunesTrack) {
+    private fun applyItunesMetadata(audioItem: I, track: ItunesTrack) {
+        @Suppress("UNCHECKED_CAST")
+        val audioItemBeforeUpdate = audioItem.clone() as I
         val (artist, album, genres) = resolveItunesMetadata(track)
         audioItem.withEventsDisabled {
             audioItem.title = track.title
@@ -192,6 +198,7 @@ class ItunesImportService(private val musicLibrary: MusicLibrary<*, *>) {
             audioItem.discNumber = track.discNumber
             audioItem.bpm = track.bpm
         }
+        audioItem.emitAsync(ReactiveMutationEvent(audioItem, audioItemBeforeUpdate))
     }
 
     private fun resolveItunesMetadata(track: ItunesTrack): ItunesMetadata {

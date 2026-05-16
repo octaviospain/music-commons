@@ -103,7 +103,7 @@ Unknown genre strings are preserved as `Genre.Custom(name)` instead of being dis
 ### JavaFX Integration
 
 - **Observable properties**: Direct binding to JavaFX TableView, ListView, and other controls
-- **Thread safety**: Audio item collections use `FxAggregateList` delegates that auto-dispatch listener notifications to the JavaFX Application Thread; artist catalog and album properties are updated via `Platform.runLater` from CRUD subscriptions
+- **Thread safety**: JavaFX-facing library and artist-catalog projections coalesce burst updates onto the JavaFX Application Thread, keeping large imports responsive while converging to the correct observable state
 - **Custom controls**: `WaveformPane` for static waveforms, `PlayableWaveformPane` for playback-aware visualization with seek
 
 ### Typed Path Validation Exceptions
@@ -306,6 +306,9 @@ val fxLibrary = FXMusicLibrary.builder()
 // Bind directly to JavaFX UI components
 tableView.itemsProperty().bind(fxLibrary.audioItemsProperty)
 label.textProperty().bind(fxLibrary.albumCountProperty.asString())
+
+// Large create bursts are coalesced before the FX-facing projections refresh,
+// so bound controls converge after import bursts instead of repainting per item.
 
 // Reactive playlist updates
 fxLibrary.playlistsProperty.addListener { _, _, _ -> /* refresh UI */ }

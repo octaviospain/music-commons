@@ -56,7 +56,7 @@ object AudioItemTestFactory {
     @JvmStatic
     @JvmOverloads
     fun createAlbum(name: String? = null, albumArtist: Artist? = null, isCompilation: Boolean? = null, year: Short? = null, label: Label? = null): Album =
-        Arb.album(name, albumArtist, isCompilation, year).next()
+        Arb.album(name, albumArtist, isCompilation, year, label).next()
 
     @JvmStatic
     @JvmOverloads

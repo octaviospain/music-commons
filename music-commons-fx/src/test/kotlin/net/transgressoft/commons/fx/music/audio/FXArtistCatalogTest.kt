@@ -9,6 +9,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.property.arbitrary.next
 import org.testfx.api.FxToolkit
+import org.testfx.util.WaitForAsyncUtils
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 /**
@@ -90,6 +92,28 @@ internal class FXArtistCatalogTest : StringSpec({
         catalog.addAudioItem(audioItem)
 
         cloneBefore shouldNotBe catalog
+    }
+
+    "FXArtistCatalog coalesces burst mutations into one JavaFX property refresh" {
+        val catalog = FXArtistCatalog(artist)
+        val sizeChangeCount = AtomicInteger()
+        catalog.sizeProperty.addListener { _, _, _ -> sizeChangeCount.incrementAndGet() }
+
+        repeat(50) {
+            val path =
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = album
+                }.next()
+            catalog.addAudioItem(FXAudioItem(path))
+        }
+
+        reactive.advance()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        catalog.sizeProperty.get() shouldBe 50
+        catalog.albumCountProperty.get() shouldBe 1
+        sizeChangeCount.get() shouldBe 1
     }
 
     "FXArtistCatalog returns false for equals with different types or null" {

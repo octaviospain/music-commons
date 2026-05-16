@@ -137,7 +137,12 @@ internal class MutableArtistCatalog<I>(override val artist: Artist)
         synchronized(this) {
             mutateAndPublish {
                 val albumName = audioItem.album.name
-                val audioItems = audioItemsByAlbumName[albumName] ?: return@mutateAndPublish false
+                val audioItems =
+                    audioItemsByAlbumName[albumName]
+                        ?: audioItemsByAlbumName.values.firstOrNull { items ->
+                            items.any { it.uniqueId == audioItem.uniqueId }
+                        }
+                        ?: return@mutateAndPublish false
 
                 val removed = audioItems.removeIf { it.uniqueId == audioItem.uniqueId }
 
@@ -161,8 +166,7 @@ internal class MutableArtistCatalog<I>(override val artist: Artist)
      */
     internal fun containsAudioItem(audioItem: I): Boolean =
         synchronized(this) {
-            audioItemsByAlbumName[audioItem.album.name]?.contains(audioItem)
-                ?: return@synchronized false
+            artist == audioItem.artist && (audioItemsByAlbumName[audioItem.album.name]?.contains(audioItem) ?: false)
         }
 
     /**

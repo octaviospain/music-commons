@@ -22,9 +22,11 @@ import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContainOnlyOnce
 import io.kotest.property.arbitrary.next
+import javafx.collections.ListChangeListener
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
@@ -89,6 +91,9 @@ internal class ObservableAudioLibraryTest : StringSpec({
         foundItem.title shouldBe "New title"
 
         repository.remove(fxAudioItem)
+        reactive.advance()
+        WaitForAsyncUtils.waitForFxEvents()
+
         audioItemsProperty.isEmpty() shouldBe true
         repository.emptyLibraryProperty.get() shouldBe true
     }
@@ -149,6 +154,38 @@ internal class ObservableAudioLibraryTest : StringSpec({
         eventually(1.seconds) {
             repository.audioItemsProperty.size shouldBe 25
         }
+    }
+
+    "ObservableAudioLibrary coalesces create bursts while preserving derived observable state" {
+        val audioItemsChangeCount = AtomicInteger()
+        repository.audioItemsProperty.addListener(
+            ListChangeListener<ObservableAudioItem> {
+                audioItemsChangeCount.incrementAndGet()
+            }
+        )
+
+        val itemsByArtist =
+            repository.createItemsByArtist(
+                files,
+                mapOf("Burst Alpha" to 25, "Burst Beta" to 25, "Burst Gamma" to 25)
+            )
+        val expectedItems = itemsByArtist.values.flatten()
+        val expectedArtists = itemsByArtist.keys
+        val expectedAlbums = expectedItems.map { it.album }.toSet()
+
+        reactive.advance()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventually(1.seconds) {
+            repository.audioItemsProperty.size shouldBe expectedItems.size
+            repository.audioItemsProperty.map { audioItem: ObservableAudioItem -> audioItem.id } shouldContainOnly expectedItems.toIds()
+            repository.artistsProperty shouldContainOnly expectedArtists
+            repository.artistCatalogsProperty.map { catalog: ObservableArtistCatalog -> catalog.artist }.toSet() shouldContainOnly expectedArtists
+            repository.albumsProperty shouldContainOnly expectedAlbums
+            repository.albumCountProperty.get() shouldBe expectedAlbums.size
+        }
+
+        audioItemsChangeCount.get() shouldBe 1
     }
 
     "ObservableAudioLibrary contains catalogs for all artists after adding items" {

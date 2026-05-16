@@ -23,6 +23,7 @@ import net.transgressoft.commons.music.audio.AlbumView
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.id
 import net.transgressoft.lirp.entity.ReactiveEntityBase
+import net.transgressoft.lirp.event.ReactiveScope
 import javafx.application.Platform
 import javafx.beans.property.ReadOnlyBooleanProperty
 import javafx.beans.property.ReadOnlyBooleanWrapper
@@ -40,14 +41,17 @@ import mu.KotlinLogging
 import java.util.*
 import java.util.Collections.synchronizedSortedMap
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * JavaFX implementation of [ObservableArtistCatalog] that owns its audio item state directly.
  *
  * Maintains audio items organized by album in a synchronized sorted map, mirroring the
  * structure of the core [net.transgressoft.commons.music.audio.MutableArtistCatalog].
- * All mutations update both the internal data structure and the JavaFX observable properties,
- * with property updates dispatched on the JavaFX Application Thread via [Platform.runLater].
+ * Mutations update the internal data structure immediately and coalesce JavaFX observable-property
+ * refreshes so large import bursts do not dispatch one [Platform.runLater] task per audio item.
  * The dispatches intentionally omit error handling because they perform only simple property mutations;
  * any exception indicates a programming error that should surface through the default uncaught exception handler.
  *
@@ -61,7 +65,13 @@ internal class FXArtistCatalog(
 
     private val logger = KotlinLogging.logger {}
 
+    private companion object {
+        const val FX_REFRESH_DEBOUNCE_MILLIS = 16L
+    }
+
     private val audioItemsByAlbumName: MutableMap<String, MutableList<ObservableAudioItem>> = synchronizedSortedMap(sortedMapOf())
+    private val fxRefreshQueued = AtomicBoolean(false)
+    private val fxRefreshRequested = AtomicBoolean(false)
 
     private val _albumsProperty = SimpleSetProperty<Album>(this, "albums", observableSet())
     override val albumsProperty: ReadOnlySetProperty<Album> = _albumsProperty
@@ -130,7 +140,7 @@ internal class FXArtistCatalog(
                     val insertionPoint = -(existingIndex + 1)
                     audioItems.add(insertionPoint, audioItem)
                     logger.debug { "AudioItem $audioItem was added to album ${audioItem.album}" }
-                    Platform.runLater { updateFXProperties() }
+                    queueFxRefresh()
                     true
                 } else {
                     false
@@ -153,7 +163,7 @@ internal class FXArtistCatalog(
                     } else {
                         logger.debug { "AudioItem $audioItem was removed from album ${audioItem.album}" }
                     }
-                    Platform.runLater { updateFXProperties() }
+                    queueFxRefresh()
                 }
                 removed
             }
@@ -192,7 +202,7 @@ internal class FXArtistCatalog(
 
                 val reordered = insertionPoint != currentIndex
                 if (reordered) {
-                    Platform.runLater { updateFXProperties() }
+                    queueFxRefresh()
                 }
                 reordered
             }
@@ -205,6 +215,27 @@ internal class FXArtistCatalog(
         albumItemProperties.getOrPut(albumName) {
             SimpleListProperty(this, "album-$albumName", FXCollections.observableArrayList())
         }
+
+    private fun queueFxRefresh() {
+        fxRefreshRequested.set(true)
+        if (!fxRefreshQueued.compareAndSet(false, true)) {
+            return
+        }
+        ReactiveScope.flowScope.launch {
+            delay(FX_REFRESH_DEBOUNCE_MILLIS)
+            Platform.runLater {
+                try {
+                    fxRefreshRequested.set(false)
+                    updateFXProperties()
+                } finally {
+                    fxRefreshQueued.set(false)
+                    if (fxRefreshRequested.get()) {
+                        queueFxRefresh()
+                    }
+                }
+            }
+        }
+    }
 
     private fun updateFXProperties() {
         val currentAlbums = albums
