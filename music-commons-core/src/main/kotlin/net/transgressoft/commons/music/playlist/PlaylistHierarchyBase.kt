@@ -19,6 +19,7 @@ package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
+import net.transgressoft.commons.music.common.SortedMultimap
 import net.transgressoft.lirp.entity.subscribeToCollectionChanges
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
@@ -27,8 +28,6 @@ import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
 import net.transgressoft.lirp.event.LirpEventSubscriber
 import net.transgressoft.lirp.event.LirpEventSubscription
 import net.transgressoft.lirp.persistence.Repository
-import com.google.common.collect.Multimap
-import com.google.common.collect.MultimapBuilder
 import mu.KotlinLogging
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -70,7 +69,7 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
 
     private val logger = KotlinLogging.logger {}
 
-    private val playlistsHierarchyMultiMap: Multimap<String, P> = MultimapBuilder.treeKeys().treeSetValues().build()
+    private val playlistsHierarchyMultiMap = SortedMultimap<String, P>()
 
     // Tracks per-playlist mutation subscriptions so they can be cancelled on remove/close.
     private val playlistMutationSubscriptions = ConcurrentHashMap<Int, LirpEventSubscription<*, *, *>>()

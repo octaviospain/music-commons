@@ -9,7 +9,6 @@ dependencies {
     api 'org.jetbrains.kotlinx:kotlinx-coroutines-core'
 
     implementation project(':music-commons-media')
-    implementation libs.guava.get()
     implementation libs.jaudiotagger.get()
     implementation libs.lirp.core.get()
     implementation libs.lirp.sql.get()

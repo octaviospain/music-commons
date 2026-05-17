@@ -417,7 +417,6 @@ This project builds upon several excellent open-source libraries:
 - **JavaSound SPI providers** ([mp3spi](https://github.com/umjammer/mp3spi), [javasound-flac](https://github.com/Tianscar/javasound-flac), [javasound-vorbis](https://github.com/Tianscar/javasound-vorbis), [javasound-aac](https://github.com/Tianscar/javasound-aac), [JAAD](https://github.com/Almax/jaad)): pure-Java audio decoders for MP3, FLAC, OGG Vorbis, and AAC/M4A
 - **[Kotlin Coroutines](https://github.com/Kotlin/kotlinx.coroutines)**: Library support for Kotlin coroutines
 - **[kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization)**: Kotlin multiplatform serialization
-- **[Guava](https://github.com/google/guava)**: Google Core Libraries for Java
 - **[lirp](https://github.com/octaviospain/lirp)**: Reactive entity framework and persistence infrastructure
 - **[Kotest](https://kotest.io/)**: Kotlin testing framework
 - **[MockK](https://mockk.io/)**: Mocking library for Kotlin
