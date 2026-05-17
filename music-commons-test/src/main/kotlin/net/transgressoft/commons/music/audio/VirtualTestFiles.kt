@@ -137,19 +137,30 @@ class VirtualFiles internal constructor() {
     // through native java.nio.file.Path during JSON deserialization. The fake tag still receives the original
     // (unsanitized) values so round-trip assertions on artist/album/title continue to hold.
     private fun String.sanitizePathSegment(): String {
+        // Truncate before sanitizing so each path segment stays well under Windows MAX_PATH (260
+        // chars). Arb.string() default range is 0..100 chars; three deep segments + path prefix +
+        // extension can otherwise exceed MAX_PATH on Windows. Truncating to ~60 chars per segment
+        // leaves headroom for the directory prefix and filename suffix.
+        val truncated = if (length > 60) substring(0, 60) else this
         val cleaned =
-            replace(Regex("""[<>:"/\\|?*\x00-\x1F]"""), "_")
+            truncated
+                .replace(Regex("""[<>:"/\\|?*\x00-\x1F]"""), "_")
                 .trim('.', ' ')
                 .ifEmpty { "_" }
         val stem = cleaned.substringBefore(".")
         return if (stem.uppercase() in WINDOWS_RESERVED_STEMS) "_$cleaned" else cleaned
     }
 
+    // Must match WindowsPathValidator.RESERVED_NAMES exactly, including the superscript variants —
+    // Arb.string() generates arbitrary Unicode and can produce "COM¹"/"COM²"/"COM³"/"LPT¹" etc.
+    // which the production validator rejects.
     private val WINDOWS_RESERVED_STEMS =
         setOf(
             "CON", "PRN", "AUX", "NUL",
             "COM0", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
-            "LPT0", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+            "COM¹", "COM²", "COM³",
+            "LPT0", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+            "LPT¹", "LPT²", "LPT³"
         )
 
     private fun createPath(
