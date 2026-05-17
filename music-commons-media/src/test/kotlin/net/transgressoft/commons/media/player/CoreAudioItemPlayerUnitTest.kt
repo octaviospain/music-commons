@@ -32,7 +32,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
+import javax.sound.sampled.AudioFileFormat
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioInputStream
 import javax.sound.sampled.SourceDataLine
@@ -180,7 +182,25 @@ internal class CoreAudioItemPlayerUnitTest : StringSpec({
             player.seek(Duration.ofMillis(250))
 
             decodeCount.get() shouldBe 0
-            field("seekTargetMillis").getLong(player) shouldBe 250L
+            (field("seekTargetMillis").get(player) as AtomicLong).get() shouldBe 250L
+        } finally {
+            player.dispose()
+        }
+    }
+
+    "seek target consumption returns the latest target once" {
+        val player = CoreAudioItemPlayer()
+        val consumeSeekTarget =
+            CoreAudioItemPlayer::class.java.getDeclaredMethod("consumeSeekTarget").apply {
+                isAccessible = true
+            }
+
+        try {
+            player.seek(Duration.ofMillis(100))
+            player.seek(Duration.ofMillis(250))
+
+            consumeSeekTarget.invoke(player) shouldBe 250L
+            consumeSeekTarget.invoke(player) shouldBe -1L
         } finally {
             player.dispose()
         }
@@ -217,6 +237,135 @@ internal class CoreAudioItemPlayerUnitTest : StringSpec({
 
             updateStallStatus.invoke(player, 1L)
             player.status() shouldBe Status.PLAYING
+        } finally {
+            player.dispose()
+        }
+    }
+
+    "stalled playback recovers to PAUSED while transport is paused" {
+        val player = CoreAudioItemPlayer()
+        val state = field("state").get(player) as AtomicReference<*>
+        val internalStatus = field("internalStatus").get(player) as AtomicReference<*>
+        @Suppress("UNCHECKED_CAST")
+        (state as AtomicReference<Any>).set(enumValue("PAUSED"))
+        @Suppress("UNCHECKED_CAST")
+        (internalStatus as AtomicReference<Status>).set(Status.STALLED)
+        val recoverFromStallIfNeeded =
+            CoreAudioItemPlayer::class.java.getDeclaredMethod("recoverFromStallIfNeeded").apply {
+                isAccessible = true
+            }
+
+        try {
+            recoverFromStallIfNeeded.invoke(player)
+
+            player.status() shouldBe Status.PAUSED
+        } finally {
+            player.dispose()
+        }
+    }
+
+    "duration prefers metadata and falls back to frame length" {
+        val player = CoreAudioItemPlayer()
+        val durationMillis =
+            CoreAudioItemPlayer::class.java.getDeclaredMethod("durationMillis", AudioFileFormat::class.java).apply {
+                isAccessible = true
+            }
+        val metadataDuration =
+            AudioFileFormat(
+                AudioFileFormat.Type.WAVE,
+                PCM_FORMAT,
+                44_100,
+                mapOf("duration" to 1_234_000L)
+            )
+        val frameDuration = AudioFileFormat(AudioFileFormat.Type.WAVE, PCM_FORMAT, 88_200)
+        val unknownDuration = AudioFileFormat(AudioFileFormat.Type.WAVE, AudioFormat(44_100f, 16, 1, true, false), -1)
+
+        try {
+            durationMillis.invoke(player, metadataDuration) shouldBe 1_234L
+            durationMillis.invoke(player, frameDuration) shouldBe 2_000L
+            durationMillis.invoke(player, unknownDuration) shouldBe 0L
+        } finally {
+            player.dispose()
+        }
+    }
+
+    "streaming reopens the decoder when a pending seek is consumed" {
+        val decodeCount = AtomicInteger()
+        val lineCount = AtomicInteger()
+        val player =
+            CoreAudioItemPlayer(
+                pcmStreamFactory = {
+                    decodeCount.incrementAndGet()
+                    streamOf(ByteArray(16))
+                },
+                lineFactory = {
+                    lineCount.incrementAndGet()
+                    fakeLine()
+                },
+                nanoTime = { 0L },
+                stallThresholdNanos = Long.MAX_VALUE
+            )
+        val state = field("state").get(player) as AtomicReference<*>
+        @Suppress("UNCHECKED_CAST")
+        (state as AtomicReference<Any>).set(enumValue("PLAYING"))
+        val streamPcm =
+            CoreAudioItemPlayer::class.java.getDeclaredMethod("streamPcm", File::class.java).apply {
+                isAccessible = true
+            }
+
+        try {
+            player.seek(Duration.ZERO)
+            streamPcm.invoke(player, File("unused.wav"))
+
+            decodeCount.get() shouldBe 2
+            lineCount.get() shouldBe 2
+        } finally {
+            player.dispose()
+        }
+    }
+
+    "skipFully aborts when playback is already stopped" {
+        val player = CoreAudioItemPlayer()
+        val state = field("state").get(player) as AtomicReference<*>
+        @Suppress("UNCHECKED_CAST")
+        (state as AtomicReference<Any>).set(enumValue("STOPPED"))
+        val skipFully =
+            CoreAudioItemPlayer::class.java.getDeclaredMethod("skipFully", AudioInputStream::class.java, Long::class.javaPrimitiveType).apply {
+                isAccessible = true
+            }
+
+        try {
+            skipFully.invoke(player, streamOf(ByteArray(16)), 8L) shouldBe 0L
+        } finally {
+            player.dispose()
+        }
+    }
+
+    "volume scaling handles muted, 16-bit, and 8-bit buffers" {
+        val player = CoreAudioItemPlayer()
+        val applyVolume =
+            CoreAudioItemPlayer::class.java
+                .getDeclaredMethod("applyVolume", ByteArray::class.java, Int::class.javaPrimitiveType, AudioFormat::class.java)
+                .apply {
+                    isAccessible = true
+                }
+        val volume = field("volume")
+        val muted = byteArrayOf(1, 2, 3, 4)
+        val sixteenBit = byteArrayOf(0x00, 0x40, 0x00, 0xC0.toByte())
+        val eightBit = byteArrayOf(0x00, 0xFF.toByte())
+        val eightBitFormat = AudioFormat(44_100f, 8, 1, false, false)
+
+        try {
+            volume.setDouble(player, 0.0)
+            applyVolume.invoke(player, muted, muted.size, PCM_FORMAT)
+            muted.toList() shouldBe listOf<Byte>(0, 0, 0, 0)
+
+            volume.setDouble(player, 0.5)
+            applyVolume.invoke(player, sixteenBit, sixteenBit.size, PCM_FORMAT)
+            sixteenBit.toList() shouldBe listOf<Byte>(0x00, 0x20, 0x00, 0xE0.toByte())
+
+            applyVolume.invoke(player, eightBit, eightBit.size, eightBitFormat)
+            eightBit.toList() shouldBe listOf<Byte>(0x40, 0xBF.toByte())
         } finally {
             player.dispose()
         }

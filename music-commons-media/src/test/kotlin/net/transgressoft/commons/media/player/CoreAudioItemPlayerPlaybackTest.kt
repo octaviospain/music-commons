@@ -30,8 +30,10 @@ import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.longs.shouldBeGreaterThan as shouldBeGreaterThanLong
+import io.kotest.matchers.longs.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import java.nio.file.Files.createTempFile
@@ -76,7 +78,7 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
                     pcmFormat.get() shouldNotBe null
                 }
 
-                runCatching { CoreAudioItemPlayer::class.java.getDeclaredField("pcmData") }.exceptionOrNull() shouldNotBe null
+                runCatching { CoreAudioItemPlayer::class.java.getDeclaredField("pcmData") }.exceptionOrNull().shouldBeInstanceOf<NoSuchFieldException>()
             } finally {
                 player.dispose()
             }
@@ -154,7 +156,9 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
 
             player.seek(Duration.ofMillis(200))
             eventually(1.seconds) {
-                player.getCurrentTime().toMillis() shouldBeGreaterThanLong 150L
+                val currentMillis = player.getCurrentTime().toMillis()
+                currentMillis shouldBeGreaterThanLong 150L
+                currentMillis shouldBeLessThanOrEqual 450L
             }
         } finally {
             player.dispose()

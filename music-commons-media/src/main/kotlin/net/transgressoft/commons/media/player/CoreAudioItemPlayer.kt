@@ -119,8 +119,7 @@ open class CoreAudioItemPlayer private constructor(
     @Volatile
     private var framePosition: Long = 0L
 
-    @Volatile
-    private var seekTargetMillis: Long = -1L
+    private val seekTargetMillis = AtomicLong(-1L)
 
     // Byte offset in the decoded stream at which the currently-open SourceDataLine began playing.
     // line.microsecondPosition resets to 0 each time a new line is opened (e.g. after pause→resume),
@@ -169,7 +168,7 @@ open class CoreAudioItemPlayer private constructor(
                 throw UnsupportedAudioPlaybackException("Cannot play audio item '${audioItem.path.fileName}': unsupported format", e)
             }
         stopCurrentPlayback()
-        seekTargetMillis = -1L
+        seekTargetMillis.set(-1L)
         framePosition = 0L
         sourceDurationMillis = durationMillis(audioFileFormat)
         currentAudioItem.set(audioItem)
@@ -203,7 +202,7 @@ open class CoreAudioItemPlayer private constructor(
         stopCurrentPlayback()
         framePosition = 0L
         lineStartFrameOffset = 0L
-        seekTargetMillis = -1L
+        seekTargetMillis.set(-1L)
         internalStatus.set(Status.STOPPED)
     }
 
@@ -224,7 +223,7 @@ open class CoreAudioItemPlayer private constructor(
 
     override fun seek(position: Duration) {
         if (state.get() == InternalState.DISPOSED) return
-        seekTargetMillis = position.toMillis()
+        seekTargetMillis.set(position.toMillis())
     }
 
     override fun onFinish(value: Runnable) {
@@ -348,13 +347,7 @@ open class CoreAudioItemPlayer private constructor(
         return StreamSession(stream, format)
     }
 
-    private fun consumeSeekTarget(): Long {
-        val target = seekTargetMillis
-        if (target >= 0L) {
-            seekTargetMillis = -1L
-        }
-        return target
-    }
+    private fun consumeSeekTarget(): Long = seekTargetMillis.getAndSet(-1L)
 
     private fun skipFully(stream: AudioInputStream, requestedBytes: Long): Long {
         var remaining = requestedBytes
