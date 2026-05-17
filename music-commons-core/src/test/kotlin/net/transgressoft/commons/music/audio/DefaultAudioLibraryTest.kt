@@ -28,6 +28,8 @@ import java.io.File
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asExecutor
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
@@ -43,8 +45,8 @@ internal class DefaultAudioLibraryTest: StringSpec({
 
     beforeEach {
         jsonFile = tempfile("audioLibrary-test", ".json").also { it.deleteOnExit() }
-        jsonFileRepository = JsonFileRepository(jsonFile, AudioItemMapSerializer)
-        audioRepository = DefaultAudioLibrary(jsonFileRepository)
+        jsonFileRepository = JsonFileRepository(jsonFile, MapSerializer(Int.serializer(), AudioItemSerializer(files.fileSystem)))
+        audioRepository = DefaultAudioLibrary(jsonFileRepository, files.metadataUtils)
     }
 
     afterEach {
@@ -198,8 +200,8 @@ internal class DefaultAudioLibraryTest: StringSpec({
         // This simulates loading from a persisted file
         jsonFileRepository.close()
 
-        val loadedJsonFileRepository = JsonFileRepository(jsonFile, AudioItemMapSerializer)
-        val loadedAudioRepository = DefaultAudioLibrary(loadedJsonFileRepository)
+        val loadedJsonFileRepository = JsonFileRepository(jsonFile, MapSerializer(Int.serializer(), AudioItemSerializer(files.fileSystem)))
+        val loadedAudioRepository = DefaultAudioLibrary(loadedJsonFileRepository, files.metadataUtils)
 
         reactive.advance()
 

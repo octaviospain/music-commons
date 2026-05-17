@@ -11,4 +11,10 @@ object MutableAudioItemTestBridge {
     fun createAudioItem(path: Path, id: Int): AudioItem = MutableAudioItem(path, id)
 
     fun createAudioItem(path: Path): AudioItem = MutableAudioItem(path, AudioItemTestFactory.nextTestId())
+
+    fun createAudioItem(path: Path, id: Int, metadataUtils: AudioItemMetadataUtils): AudioItem =
+        MutableAudioItem(path, id, metadataUtils)
+
+    fun createAudioItem(path: Path, metadataUtils: AudioItemMetadataUtils): AudioItem =
+        MutableAudioItem(path, AudioItemTestFactory.nextTestId(), metadataUtils)
 }

@@ -16,9 +16,10 @@ import net.transgressoft.commons.music.playlist.ReactiveAudioPlaylist
 import net.transgressoft.lirp.event.ReactiveMutationEvent
 import mu.KotlinLogging
 import java.net.URI
+import java.nio.file.FileSystem
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.text.Normalizer
 import java.util.concurrent.CompletableFuture
 import kotlin.io.path.extension
@@ -51,8 +52,12 @@ import kotlinx.coroutines.future.future
  *
  * @param musicLibrary The target library to import into.
  */
-class ItunesImportService<I, P>(private val musicLibrary: MusicLibrary<I, P>)
-    where I : ReactiveAudioItem<I>,
+class ItunesImportService<I, P>
+    @JvmOverloads
+    constructor(
+        private val musicLibrary: MusicLibrary<I, P>,
+        private val fileSystem: FileSystem = FileSystems.getDefault()
+    ) where I : ReactiveAudioItem<I>,
           P : ReactiveAudioPlaylist<I, P> {
 
     private val logger = KotlinLogging.logger {}
@@ -218,7 +223,7 @@ class ItunesImportService<I, P>(private val musicLibrary: MusicLibrary<I, P>)
 
     private fun resolveTrackPath(track: ItunesTrack): Path {
         val uri = URI(track.location)
-        val rawPath = Paths.get(uri)
+        val rawPath = fileSystem.getPath(uri.path)
         // Normalize filename to NFC: macOS iTunes writes NFD-decomposed Unicode;
         // Linux/Windows expect NFC. Idempotent and no-op for ASCII.
         val normalizedName = Normalizer.normalize(rawPath.fileName.toString(), Normalizer.Form.NFC)

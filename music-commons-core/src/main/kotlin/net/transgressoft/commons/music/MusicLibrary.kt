@@ -23,6 +23,7 @@ import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.ArtistCatalog
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemMapSerializer
+import net.transgressoft.commons.music.audio.AudioItemMetadataUtils
 import net.transgressoft.commons.music.audio.AudioLibrary
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
@@ -42,6 +43,7 @@ import net.transgressoft.lirp.persistence.VolatileRepository
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.sql.SqlRepository
 import net.transgressoft.lirp.persistence.sql.SqlTableDef
+import java.io.File
 import java.nio.file.Path
 import java.util.Optional
 import java.util.concurrent.CompletableFuture
@@ -52,7 +54,7 @@ internal sealed interface StorageConfig
 
 internal data object VolatileStorage : StorageConfig
 
-internal data class JsonFileStorage(val file: java.io.File) : StorageConfig
+internal data class JsonFileStorage(val file: File) : StorageConfig
 
 internal data class SqlStorage<E : IdentifiableEntity<*>>(
     val dataSource: DataSource,
@@ -183,21 +185,30 @@ class CoreMusicLibrary private constructor(
      *     .build()
      * ```
      */
-    class Builder {
+    class Builder() {
 
         private var audioLibraryStorage: StorageConfig = VolatileStorage
         private var playlistHierarchyStorage: StorageConfig = VolatileStorage
         private var waveformRepositoryStorage: StorageConfig = VolatileStorage
+        private var metadataUtils: AudioItemMetadataUtils = AudioItemMetadataUtils()
+
+        // Internal seam for in-module tests: lets a spec construct a Builder whose audio library
+        // routes metadata reads/writes through a FakeAudioMetadataIO-backed AudioItemMetadataUtils.
+        // Not exposed on the public Builder API because end-users don't configure metadata I/O —
+        // they just persist via *JsonFile / *Sql storage and accept the default JAudioTagger seam.
+        internal constructor(metadataUtils: AudioItemMetadataUtils) : this() {
+            this.metadataUtils = metadataUtils
+        }
 
         /** Configures the audio library to persist to [file] using JSON. */
-        fun audioLibraryJsonFile(file: java.io.File): Builder = apply { audioLibraryStorage = JsonFileStorage(file) }
+        fun audioLibraryJsonFile(file: File): Builder = apply { audioLibraryStorage = JsonFileStorage(file) }
 
         /** Configures the playlist hierarchy to persist to [file] using JSON. */
-        fun playlistHierarchyJsonFile(file: java.io.File): Builder =
+        fun playlistHierarchyJsonFile(file: File): Builder =
             apply { playlistHierarchyStorage = JsonFileStorage(file) }
 
         /** Configures the waveform repository to persist to [file] using JSON. */
-        fun waveformRepositoryJsonFile(file: java.io.File): Builder =
+        fun waveformRepositoryJsonFile(file: File): Builder =
             apply { waveformRepositoryStorage = JsonFileStorage(file) }
 
         /**
@@ -236,7 +247,7 @@ class CoreMusicLibrary private constructor(
         fun build(): CoreMusicLibrary {
             // 1. Audio library first — registers AudioItem in LirpContext
             val audioRepo = createAudioRepository()
-            val audioLibrary = DefaultAudioLibrary(audioRepo)
+            val audioLibrary = DefaultAudioLibrary(audioRepo, metadataUtils)
 
             var waveformRepository: AudioWaveformRepository<AudioWaveform, AudioItem>? = null
             try {

@@ -49,7 +49,7 @@ internal class FXAudioItemTest : StringSpec({
     "Changes its properties when observable properties are updated" {
         val path = files.virtualAudioFile().next()
 
-        val fxAudioItem = FXAudioItem(path)
+        val fxAudioItem = FXAudioItem(path, metadataUtils = files.metadataUtils)
         assertSoftly {
             fxAudioItem.titleProperty.value shouldBe fxAudioItem.title
             fxAudioItem.artistProperty.value shouldBe fxAudioItem.artist
@@ -158,9 +158,9 @@ internal class FXAudioItemTest : StringSpec({
         val testAudioFile = Arb.realAudioFile().next()
         val fxAudioItem = FXAudioItem(testAudioFile)
 
-        json.encodeToString(ObservableAudioItemSerializer, fxAudioItem).let {
+        json.encodeToString(ObservableAudioItemSerializer(), fxAudioItem).let {
             it.shouldEqualJson(fxAudioItem.asJsonValue())
-            json.decodeFromString<FXAudioItem>(it) shouldBe fxAudioItem
+            (json.decodeFromString(ObservableAudioItemSerializer(), it) as FXAudioItem) shouldBe fxAudioItem
         }
 
         val audioItemChanges = Arb.audioItemChange().next()
@@ -212,8 +212,8 @@ internal class FXAudioItemTest : StringSpec({
 
         fxAudioItem.writeMetadata().join()
 
-        val encodedAudioItem = json.encodeToString(ObservableAudioItemSerializer, fxAudioItem)
-        val decodedAudioItem = json.decodeFromString<FXAudioItem>(encodedAudioItem)
+        val encodedAudioItem = json.encodeToString(ObservableAudioItemSerializer(), fxAudioItem)
+        val decodedAudioItem = json.decodeFromString(ObservableAudioItemSerializer(), encodedAudioItem) as FXAudioItem
 
         decodedAudioItem.coverImageBytes shouldBe testCoverBytes
         decodedAudioItem.coverImageProperty.value shouldBePresent {

@@ -31,6 +31,7 @@ import net.transgressoft.commons.media.waveform.audioWaveformRepository
 import net.transgressoft.commons.music.MusicLibrary
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
+import net.transgressoft.commons.music.audio.AudioItemMetadataUtils
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import net.transgressoft.commons.music.common.WindowsPathValidator
 import net.transgressoft.commons.music.waveform.AudioWaveform
@@ -178,11 +179,18 @@ class FXMusicLibrary private constructor(
      *     .build()
      * ```
      */
-    class Builder {
+    class Builder() {
 
         private var audioLibraryStorage: StorageConfig = VolatileStorage
         private var playlistHierarchyStorage: StorageConfig = VolatileStorage
         private var waveformRepositoryStorage: StorageConfig = VolatileStorage
+        private var metadataUtils: AudioItemMetadataUtils = AudioItemMetadataUtils()
+
+        // Internal seam for in-module tests: see CoreMusicLibrary.Builder's internal constructor
+        // for rationale. Not exposed on the public Builder API.
+        internal constructor(metadataUtils: AudioItemMetadataUtils) : this() {
+            this.metadataUtils = metadataUtils
+        }
 
         /** Configures the audio library to use JSON file persistence at [file]. */
         fun audioLibraryJsonFile(file: File): Builder = apply { audioLibraryStorage = JsonFileStorage(file) }
@@ -223,7 +231,7 @@ class FXMusicLibrary private constructor(
         /** Builds the [FXMusicLibrary], wiring all event subscriptions between components. */
         fun build(): FXMusicLibrary {
             val audioRepo = createAudioRepository()
-            val audioLibrary = FXAudioLibrary(audioRepo)
+            val audioLibrary = FXAudioLibrary(audioRepo, metadataUtils)
             var playlistRepoRegistered = false
 
             var waveformRepository: AudioWaveformRepository<AudioWaveform, ObservableAudioItem>? = null

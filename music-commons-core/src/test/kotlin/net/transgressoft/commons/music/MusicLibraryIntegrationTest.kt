@@ -49,7 +49,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         waveformsFile = tempfile("waveformRepository-test", ".json").apply { deleteOnExit() }
 
         musicLibrary =
-            CoreMusicLibrary.builder()
+            CoreMusicLibrary.Builder(files.metadataUtils)
                 .audioLibraryJsonFile(audioFile)
                 .playlistHierarchyJsonFile(playlistsFile)
                 .waveformRepositoryJsonFile(waveformsFile)

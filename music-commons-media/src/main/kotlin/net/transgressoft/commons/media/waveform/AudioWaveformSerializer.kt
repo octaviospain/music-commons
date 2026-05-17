@@ -21,6 +21,8 @@ import net.transgressoft.commons.music.common.toJsonUri
 import net.transgressoft.commons.music.common.toPathFromJsonUri
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import java.nio.ByteBuffer
+import java.nio.file.FileSystem
+import java.nio.file.FileSystems
 import java.util.Base64
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
@@ -40,7 +42,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 @get:JvmName("AudioWaveformMapSerializer")
-val AudioWaveformMapSerializer: KSerializer<Map<Int, AudioWaveform>> = MapSerializer(Int.serializer(), AudioWaveformSerializer)
+val AudioWaveformMapSerializer: KSerializer<Map<Int, AudioWaveform>> = MapSerializer(Int.serializer(), AudioWaveformSerializer())
 
 /**
  * Kotlinx serialization serializer for [AudioWaveform] instances.
@@ -51,68 +53,80 @@ val AudioWaveformMapSerializer: KSerializer<Map<Int, AudioWaveform>> = MapSerial
  *
  * All four fields (`id`, `audioFilePath`, `cachedWidth`, `normalizedAmplitudes`) are required.
  * Malformed Base64 payloads and cache size mismatches produce [kotlinx.serialization.SerializationException].
+ *
+ * @param fileSystem the [FileSystem] used to materialize the [java.nio.file.Path] backing
+ *  the deserialized waveform. Defaults to [FileSystems.getDefault]; tests may pass a
+ *  Jimfs filesystem to round-trip waveform JSON against an in-memory tree.
  */
-object AudioWaveformSerializer : KSerializer<AudioWaveform> {
+class AudioWaveformSerializer
+    @JvmOverloads
+    constructor(
+        private val fileSystem: FileSystem = FileSystems.getDefault()
+    ) : KSerializer<AudioWaveform> {
 
-    override val descriptor: SerialDescriptor =
-        buildClassSerialDescriptor("AudioWaveform") {
-            element<String>("id")
-            element<String>("audioFilePath")
-            element<Int>("cachedWidth")
-            element<String>("normalizedAmplitudes")
-        }
-
-    override fun deserialize(decoder: Decoder): AudioWaveform {
-        val jsonInput = decoder as? JsonDecoder ?: throw SerializationException("This class can be saved only by Json")
-        val jsonObject = jsonInput.decodeJsonElement().jsonObject
-        val id =
-            (jsonObject["id"] ?: throw SerializationException("Missing required field 'id' in AudioWaveform JSON"))
-                .jsonPrimitive.int
-        val audioFilePathString =
-            (jsonObject["audioFilePath"] ?: throw SerializationException("Missing required field 'audioFilePath' in AudioWaveform JSON"))
-                .jsonPrimitive.content
-        val cachedWidth =
-            (jsonObject["cachedWidth"] ?: throw SerializationException("Missing required field 'cachedWidth' in AudioWaveform JSON"))
-                .jsonPrimitive.int
-        val normalizedAmplitudesBase64 =
-            (jsonObject["normalizedAmplitudes"] ?: throw SerializationException("Missing required field 'normalizedAmplitudes' in AudioWaveform JSON"))
-                .jsonPrimitive.content
-
-        val decodedAmplitudes =
-            try {
-                normalizedAmplitudesBase64.toFloatArrayFromBase64()
-            } catch (e: IllegalArgumentException) {
-                throw SerializationException("Malformed Base64 in normalizedAmplitudes for AudioWaveform id=$id", e)
+        override val descriptor: SerialDescriptor =
+            buildClassSerialDescriptor("AudioWaveform") {
+                element<String>("id")
+                element<String>("audioFilePath")
+                element<Int>("cachedWidth")
+                element<String>("normalizedAmplitudes")
             }
 
-        if (decodedAmplitudes.size != cachedWidth) {
-            throw SerializationException(
-                "Cache mismatch for AudioWaveform id=$id: cachedWidth=$cachedWidth but decoded ${decodedAmplitudes.size} amplitudes"
+        override fun deserialize(decoder: Decoder): AudioWaveform {
+            val jsonInput = decoder as? JsonDecoder ?: throw SerializationException("This class can be saved only by Json")
+            val jsonObject = jsonInput.decodeJsonElement().jsonObject
+            val id =
+                (jsonObject["id"] ?: throw SerializationException("Missing required field 'id' in AudioWaveform JSON"))
+                    .jsonPrimitive.int
+            val audioFilePathString =
+                (jsonObject["audioFilePath"] ?: throw SerializationException("Missing required field 'audioFilePath' in AudioWaveform JSON"))
+                    .jsonPrimitive.content
+            val cachedWidth =
+                (jsonObject["cachedWidth"] ?: throw SerializationException("Missing required field 'cachedWidth' in AudioWaveform JSON"))
+                    .jsonPrimitive.int
+            val normalizedAmplitudesBase64 =
+                (jsonObject["normalizedAmplitudes"] ?: throw SerializationException("Missing required field 'normalizedAmplitudes' in AudioWaveform JSON"))
+                    .jsonPrimitive.content
+
+            val decodedAmplitudes =
+                try {
+                    normalizedAmplitudesBase64.toFloatArrayFromBase64()
+                } catch (e: IllegalArgumentException) {
+                    throw SerializationException("Malformed Base64 in normalizedAmplitudes for AudioWaveform id=$id", e)
+                }
+
+            if (decodedAmplitudes.size != cachedWidth) {
+                throw SerializationException(
+                    "Cache mismatch for AudioWaveform id=$id: cachedWidth=$cachedWidth but decoded ${decodedAmplitudes.size} amplitudes"
+                )
+            }
+
+            return ScalableAudioWaveform(
+                id,
+                if (fileSystem == FileSystems.getDefault()) {
+                    audioFilePathString.toPathFromJsonUri()
+                } else {
+                    audioFilePathString.toPathFromJsonUri(fileSystem)
+                },
+                cachedWidth,
+                decodedAmplitudes
             )
         }
 
-        return ScalableAudioWaveform(
-            id,
-            audioFilePathString.toPathFromJsonUri(),
-            cachedWidth,
-            decodedAmplitudes
-        )
+        override fun serialize(encoder: Encoder, value: AudioWaveform) {
+            val jsonOutput = encoder as? JsonEncoder ?: throw SerializationException("This class can be saved only by Json")
+            val sw = value as ScalableAudioWaveform
+            val snapshot = sw.normalizedAmplitudesSnapshot ?: FloatArray(0)
+            val jsonObject =
+                buildJsonObject {
+                    put("id", value.id)
+                    put("audioFilePath", value.audioFilePath.toJsonUri())
+                    put("cachedWidth", sw.cachedWidth)
+                    put("normalizedAmplitudes", snapshot.toBase64String())
+                }
+            jsonOutput.encodeJsonElement(jsonObject)
+        }
     }
-
-    override fun serialize(encoder: Encoder, value: AudioWaveform) {
-        val jsonOutput = encoder as? JsonEncoder ?: throw SerializationException("This class can be saved only by Json")
-        val sw = value as ScalableAudioWaveform
-        val snapshot = sw.normalizedAmplitudesSnapshot ?: FloatArray(0)
-        val jsonObject =
-            buildJsonObject {
-                put("id", value.id)
-                put("audioFilePath", value.audioFilePath.toJsonUri())
-                put("cachedWidth", sw.cachedWidth)
-                put("normalizedAmplitudes", snapshot.toBase64String())
-            }
-        jsonOutput.encodeJsonElement(jsonObject)
-    }
-}
 
 /**
  * Encodes this [FloatArray] to a Base64 string using IEEE 754 big-endian byte representation.

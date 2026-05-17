@@ -110,9 +110,9 @@ internal class MutableAudioItemTest : FunSpec({
             audioItem.path.extension.toAudioFileType().toString() shouldBe fileExtension
             audioItem.path.extension.toAudioFileType().extension shouldBe fileExtension
 
-            json.encodeToString(AudioItemSerializer, audioItem).let {
+            json.encodeToString(AudioItemSerializer(), audioItem).let {
                 it shouldEqualJson audioItem.asJsonValue()
-                json.decodeFromString<MutableAudioItem>(it) shouldBe audioItem
+                (json.decodeFromString(AudioItemSerializer(), it) as MutableAudioItem) shouldBe audioItem
             }
 
             val audioItemChanges = Arb.audioItemChange().next()
@@ -177,8 +177,8 @@ internal class MutableAudioItemTest : FunSpec({
         audioItem.writeMetadata()
 
         eventually(200.milliseconds) {
-            val encodedAudioItem = json.encodeToString(AudioItemSerializer, audioItem)
-            val decodedAudioItem = json.decodeFromString<MutableAudioItem>(encodedAudioItem)
+            val encodedAudioItem = json.encodeToString(AudioItemSerializer(), audioItem)
+            val decodedAudioItem = json.decodeFromString(AudioItemSerializer(), encodedAudioItem) as MutableAudioItem
 
             decodedAudioItem.coverImageBytes shouldBe testCoverBytes
         }

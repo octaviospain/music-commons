@@ -76,7 +76,7 @@ internal class FXMusicLibraryTest : StringSpec({
     }
 
     "FXMusicLibrary curated methods work for audio items and playlists" {
-        val library = FXMusicLibrary.builder().build()
+        val library = FXMusicLibrary.Builder(files.metadataUtils).build()
 
         val audioPath = files.virtualAudioFile().next()
         val audioItem = library.audioItemFromFile(audioPath)
@@ -106,7 +106,7 @@ internal class FXMusicLibraryTest : StringSpec({
     }
 
     "FXMusicLibrary createPlaylist with non-empty audioItemIds resolves the playlist cover image after lirp binding" {
-        val library = FXMusicLibrary.builder().build()
+        val library = FXMusicLibrary.Builder(files.metadataUtils).build()
 
         val audioPath = files.virtualAudioFile().next()
         val audioItem = library.audioItemFromFile(audioPath)
@@ -155,7 +155,7 @@ internal class FXMusicLibraryTest : StringSpec({
     }
 
     "FXMusicLibrary close releases all resources" {
-        val library = FXMusicLibrary.builder().build()
+        val library = FXMusicLibrary.Builder(files.metadataUtils).build()
 
         val audioItem = library.audioItemFromFile(files.virtualAudioFile().next())
 
