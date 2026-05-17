@@ -29,10 +29,11 @@ import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
-import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.longs.shouldBeGreaterThan as shouldBeGreaterThanLong
+import io.kotest.matchers.longs.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import java.nio.file.Files.createTempFile
@@ -69,22 +70,15 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
             try {
                 player.play(audioItem)
 
-                // Wait for decoding to complete and verify PCM was decoded
+                // Wait for streaming setup and verify format state is available.
                 eventually(5.seconds) {
-                    val pcmDataField = CoreAudioItemPlayer::class.java.getDeclaredField("pcmData")
-                    pcmDataField.isAccessible = true
-                    val pcmData = pcmDataField.get(player) as AtomicReference<ByteArray>
-                    val data = pcmData.get()
-
-                    data shouldNotBe null
-                    data!!.size shouldBeGreaterThan 0
-
-                    // Verify format was set
                     val pcmFormatField = CoreAudioItemPlayer::class.java.getDeclaredField("pcmFormat")
                     pcmFormatField.isAccessible = true
                     val pcmFormat = pcmFormatField.get(player) as AtomicReference<*>
                     pcmFormat.get() shouldNotBe null
                 }
+
+                runCatching { CoreAudioItemPlayer::class.java.getDeclaredField("pcmData") }.exceptionOrNull().shouldBeInstanceOf<NoSuchFieldException>()
             } finally {
                 player.dispose()
             }
@@ -143,7 +137,7 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
         }
     }
 
-    test("seek changes current time for WAV") {
+    test("forward and backward seek change current time for WAV") {
         val player = CoreAudioItemPlayer()
         val realAudioPath = Arb.realAudioFile(WAV).next()
         val audioItem = Arb.audioItem { path = realAudioPath }.next()
@@ -155,11 +149,16 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
                 player.status() shouldBe Status.PLAYING
             }
 
-            // Seek to 500ms
-            player.seek(Duration.ofMillis(500))
+            player.seek(Duration.ofMillis(700))
             eventually(1.seconds) {
-                // Current time should be around 500ms
-                player.getCurrentTime().toMillis() shouldBeGreaterThanLong 400L
+                player.getCurrentTime().toMillis() shouldBeGreaterThanLong 600L
+            }
+
+            player.seek(Duration.ofMillis(200))
+            eventually(1.seconds) {
+                val currentMillis = player.getCurrentTime().toMillis()
+                currentMillis shouldBeGreaterThanLong 150L
+                currentMillis shouldBeLessThanOrEqual 450L
             }
         } finally {
             player.dispose()

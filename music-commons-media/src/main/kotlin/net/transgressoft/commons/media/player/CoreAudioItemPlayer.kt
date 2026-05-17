@@ -27,14 +27,16 @@ import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Played
 import net.transgressoft.lirp.event.FlowEventPublisher
 import net.transgressoft.lirp.event.LirpEventPublisher
 import mu.KotlinLogging
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
+import javax.sound.sampled.AudioFileFormat
 import javax.sound.sampled.AudioFormat
+import javax.sound.sampled.AudioInputStream
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.DataLine
 import javax.sound.sampled.SourceDataLine
@@ -44,8 +46,8 @@ import javax.sound.sampled.UnsupportedAudioFileException
  * JavaFX-free audio player that decodes and plays audio via `javax.sound.sampled` SPI pipeline.
  *
  * Supports all 5 audio formats (MP3, FLAC, OGG, AAC/M4A, WAV) via JavaSound SPI decoders.
- * Uses [SourceDataLine] for PCM output. The pump thread is a daemon with explicit drain-and-close
- * in [dispose] to prevent JVM hang.
+ * Uses a bounded streaming decoder pipeline with [SourceDataLine] for PCM output. The pump
+ * thread is a daemon with explicit drain-and-close in [dispose] to prevent JVM hang.
  *
  * [stop] resets the playback position to the start; a subsequent [play] begins from the
  * beginning. Use [pause]/[resume] to preserve position across playback control changes.
@@ -54,9 +56,37 @@ import javax.sound.sampled.UnsupportedAudioFileException
  * @see AudioItemPlayer
  * @see SourceDataLine
  */
-open class CoreAudioItemPlayer(
-    private val publisher: LirpEventPublisher<AudioItemPlayerEvent.Type, AudioItemPlayerEvent> = FlowEventPublisher("CoreAudioItemPlayer")
+open class CoreAudioItemPlayer private constructor(
+    private val publisher: LirpEventPublisher<AudioItemPlayerEvent.Type, AudioItemPlayerEvent>,
+    private val pcmStreamFactory: (Path) -> AudioInputStream,
+    private val lineFactory: (AudioFormat) -> SourceDataLine,
+    private val nanoTime: () -> Long,
+    private val stallThresholdNanos: Long
 ) : LirpEventPublisher<AudioItemPlayerEvent.Type, AudioItemPlayerEvent> by publisher, AudioItemPlayer {
+
+    @JvmOverloads
+    constructor(
+        publisher: LirpEventPublisher<AudioItemPlayerEvent.Type, AudioItemPlayerEvent> = FlowEventPublisher("CoreAudioItemPlayer")
+    ) : this(
+        publisher = publisher,
+        pcmStreamFactory = ::decodeToPcmStream,
+        lineFactory = ::createSourceDataLine,
+        nanoTime = System::nanoTime,
+        stallThresholdNanos = DEFAULT_STALL_THRESHOLD_NANOS
+    )
+
+    internal constructor(
+        pcmStreamFactory: (Path) -> AudioInputStream,
+        lineFactory: (AudioFormat) -> SourceDataLine,
+        nanoTime: () -> Long,
+        stallThresholdNanos: Long
+    ) : this(
+        publisher = FlowEventPublisher("CoreAudioItemPlayer"),
+        pcmStreamFactory = pcmStreamFactory,
+        lineFactory = lineFactory,
+        nanoTime = nanoTime,
+        stallThresholdNanos = stallThresholdNanos
+    )
 
     private val logger = KotlinLogging.logger {}
 
@@ -74,7 +104,6 @@ open class CoreAudioItemPlayer(
     private val pumpThread = AtomicReference<Thread?>(null)
     private val onFinishCallback = AtomicReference<Runnable?>(null)
     private val internalStatus = AtomicReference(Status.UNKNOWN)
-    private val pcmData = AtomicReference<ByteArray?>(null)
     private val pcmFormat = AtomicReference<AudioFormat?>(null)
 
     // Monotonically incremented for each new play() invocation. The pump thread
@@ -90,10 +119,9 @@ open class CoreAudioItemPlayer(
     @Volatile
     private var framePosition: Long = 0L
 
-    @Volatile
-    private var seekTargetMillis: Long = -1L
+    private val seekTargetMillis = AtomicLong(-1L)
 
-    // Byte offset in pcmData at which the currently-open SourceDataLine began playing.
+    // Byte offset in the decoded stream at which the currently-open SourceDataLine began playing.
     // line.microsecondPosition resets to 0 each time a new line is opened (e.g. after pause→resume),
     // so absolute playback time = lineStartFrameOffset + line.microsecondPosition.
     @Volatile
@@ -133,14 +161,16 @@ open class CoreAudioItemPlayer(
         if (!file.exists() || file.isDirectory) {
             throw UnsupportedAudioPlaybackException("Cannot play audio item '${audioItem.path.fileName}': file not found")
         }
-        try {
-            AudioSystem.getAudioFileFormat(file)
-        } catch (e: Exception) {
-            throw UnsupportedAudioPlaybackException("Cannot play audio item '${audioItem.path.fileName}': unsupported format", e)
-        }
+        val audioFileFormat =
+            try {
+                AudioSystem.getAudioFileFormat(file)
+            } catch (e: Exception) {
+                throw UnsupportedAudioPlaybackException("Cannot play audio item '${audioItem.path.fileName}': unsupported format", e)
+            }
         stopCurrentPlayback()
-        seekTargetMillis = -1L
+        seekTargetMillis.set(-1L)
         framePosition = 0L
+        sourceDurationMillis = durationMillis(audioFileFormat)
         currentAudioItem.set(audioItem)
         val mySession = sessionId.incrementAndGet()
         activeSessionId.set(mySession)
@@ -172,14 +202,13 @@ open class CoreAudioItemPlayer(
         stopCurrentPlayback()
         framePosition = 0L
         lineStartFrameOffset = 0L
-        seekTargetMillis = -1L
+        seekTargetMillis.set(-1L)
         internalStatus.set(Status.STOPPED)
     }
 
     override fun dispose() {
         if (state.get() == InternalState.DISPOSED) return
         stopCurrentPlayback()
-        pcmData.set(null)
         pcmFormat.set(null)
         sourceDurationMillis = 0L
         state.set(InternalState.DISPOSED)
@@ -194,7 +223,7 @@ open class CoreAudioItemPlayer(
 
     override fun seek(position: Duration) {
         if (state.get() == InternalState.DISPOSED) return
-        seekTargetMillis = position.toMillis()
+        seekTargetMillis.set(position.toMillis())
     }
 
     override fun onFinish(value: Runnable) {
@@ -238,9 +267,8 @@ open class CoreAudioItemPlayer(
             var hadError = false
             var halted = false
             try {
-                decodeAndCachePcm(file)
                 state.set(InternalState.PLAYING)
-                playPcmFromCache()
+                streamPcm(file)
             } catch (_: InterruptedException) {
                 logger.debug { "Playback interrupted for '${audioItem.path.fileName}'" }
                 hadError = true
@@ -270,73 +298,88 @@ open class CoreAudioItemPlayer(
         }
     }
 
-    private fun decodeAndCachePcm(file: File) {
-        val pcmStream = decodeToPcmStream(file.toPath())
-        pcmStream.use { stream ->
-            val buf = ByteArrayOutputStream()
-            val buffer = ByteArray(16384)
-            var bytesRead: Int
-            while (stream.read(buffer).also { bytesRead = it } > 0) {
-                buf.write(buffer, 0, bytesRead)
-            }
-            val data = buf.toByteArray()
-            val format = stream.format
-            pcmData.set(data)
-            pcmFormat.set(format)
-            sourceDurationMillis =
-                (data.size.toDouble() / format.frameSize / format.frameRate * 1000.0).toLong()
-        }
-    }
-
-    private fun playPcmFromCache() {
-        val data = pcmData.get() ?: return
-        val format = pcmFormat.get() ?: return
-
-        if (seekTargetMillis >= 0L) {
-            val bytesPerMillis = (format.frameRate * format.frameSize / 1000.0).toLong()
-            framePosition = seekTargetMillis * bytesPerMillis
-            framePosition -= framePosition % format.frameSize.toLong()
-            seekTargetMillis = -1L
-        }
-
-        var line = openLine(format)
+    private fun streamPcm(file: File) {
+        var session = openStreamSession(file, framePosition)
+        var line = openLine(session.format)
+        val buffer = ByteArray(TRANSFER_BUFFER_SIZE)
 
         try {
-            var offset = framePosition.toInt()
-            val buffer = ByteArray(4096)
-            while (offset < data.size) {
+            while (true) {
                 val currentState = state.get()
                 if (currentState == InternalState.STOPPED || currentState == InternalState.DISPOSED) break
                 if (currentState == InternalState.PAUSED) {
-                    Thread.sleep(20)
+                    Thread.sleep(PAUSE_POLL_MILLIS)
                     continue
                 }
-                if (seekTargetMillis >= 0L) {
+
+                val seekTarget = consumeSeekTarget()
+                if (seekTarget >= 0L) {
+                    session.stream.close()
                     flushAndClose()
-                    val frameSz = (pcmFormat.get()?.frameSize ?: format.frameSize).toLong()
-                    val bytesPerMillis = (pcmFormat.get()?.frameRate ?: format.frameRate) * frameSz / 1000.0
-                    framePosition = (seekTargetMillis * bytesPerMillis).toLong().coerceIn(0, data.size.toLong())
-                    framePosition -= framePosition % frameSz
-                    seekTargetMillis = -1L
-                    line = openLine(format)
-                    offset = framePosition.toInt()
+                    val targetOffset = millisToByteOffset(seekTarget, session.format)
+                    session = openStreamSession(file, targetOffset)
+                    line = openLine(session.format)
                 }
-                if (offset >= data.size) break
-                val remaining = data.size - offset
-                val chunk = minOf(buffer.size, remaining)
-                System.arraycopy(data, offset, buffer, 0, chunk)
-                applyVolume(buffer, chunk, format)
-                framePosition += line.write(buffer, 0, chunk)
-                offset = framePosition.toInt()
+
+                val readStartedAt = nanoTime()
+                val bytesRead = session.stream.read(buffer)
+                val readDuration = nanoTime() - readStartedAt
+                if (bytesRead < 0) break
+                if (bytesRead == 0) continue
+
+                updateStallStatus(readDuration)
+                applyVolume(buffer, bytesRead, session.format)
+                framePosition += line.write(buffer, 0, bytesRead)
             }
         } finally {
+            session.stream.close()
             drainAndClose()
         }
     }
 
+    private fun openStreamSession(file: File, requestedOffset: Long): StreamSession {
+        val stream = pcmStreamFactory(file.toPath())
+        val format = stream.format
+        pcmFormat.set(format)
+        val alignedOffset = requestedOffset.coerceAtLeast(0L).alignDown(format.frameSize.toLong())
+        val skipped = skipFully(stream, alignedOffset)
+        framePosition = skipped.alignDown(format.frameSize.toLong())
+        return StreamSession(stream, format)
+    }
+
+    private fun consumeSeekTarget(): Long = seekTargetMillis.getAndSet(-1L)
+
+    private fun skipFully(stream: AudioInputStream, requestedBytes: Long): Long {
+        var remaining = requestedBytes
+        var skipped = 0L
+        val discard = ByteArray(TRANSFER_BUFFER_SIZE)
+        while (remaining > 0L) {
+            val currentState = state.get()
+            if (currentState == InternalState.STOPPED || currentState == InternalState.DISPOSED) break
+            val step = minOf(remaining, discard.size.toLong()).toInt()
+            val bytesRead = stream.read(discard, 0, step)
+            if (bytesRead < 0) break
+            skipped += bytesRead
+            remaining -= bytesRead
+        }
+        return skipped
+    }
+
+    private fun updateStallStatus(readDurationNanos: Long) {
+        if (readDurationNanos >= stallThresholdNanos && state.get() == InternalState.PLAYING) {
+            internalStatus.set(Status.STALLED)
+        } else {
+            recoverFromStallIfNeeded()
+        }
+    }
+
+    private fun recoverFromStallIfNeeded() {
+        if (internalStatus.get() != Status.STALLED) return
+        internalStatus.set(if (state.get() == InternalState.PAUSED) Status.PAUSED else Status.PLAYING)
+    }
+
     private fun openLine(format: AudioFormat): SourceDataLine {
-        val info = DataLine.Info(SourceDataLine::class.java, format)
-        val line = AudioSystem.getLine(info) as SourceDataLine
+        val line = lineFactory(format)
         lineRef.set(line)
         line.open(format, 4096)
         line.start()
@@ -392,6 +435,42 @@ open class CoreAudioItemPlayer(
         if (state.get() != InternalState.DISPOSED) {
             state.set(InternalState.IDLE)
             internalStatus.set(if (halted) Status.HALTED else Status.READY)
+        }
+    }
+
+    private fun durationMillis(audioFileFormat: AudioFileFormat): Long {
+        val durationMicros = audioFileFormat.properties()["duration"] as? Long
+        if (durationMicros != null && durationMicros > 0L) {
+            return durationMicros / 1000L
+        }
+        val format = audioFileFormat.format
+        return if (audioFileFormat.frameLength > 0 && format.frameRate > 0f) {
+            (audioFileFormat.frameLength * 1000.0 / format.frameRate).toLong()
+        } else {
+            0L
+        }
+    }
+
+    private fun millisToByteOffset(positionMillis: Long, format: AudioFormat): Long {
+        val bytesPerMillis = format.frameRate * format.frameSize / 1000.0
+        return (positionMillis * bytesPerMillis).toLong().alignDown(format.frameSize.toLong())
+    }
+
+    private fun Long.alignDown(step: Long): Long = if (step > 0L) this - this % step else this
+
+    private data class StreamSession(
+        val stream: AudioInputStream,
+        val format: AudioFormat
+    )
+
+    private companion object {
+        const val TRANSFER_BUFFER_SIZE = 4096
+        const val PAUSE_POLL_MILLIS = 20L
+        const val DEFAULT_STALL_THRESHOLD_NANOS = 100_000_000L
+
+        fun createSourceDataLine(format: AudioFormat): SourceDataLine {
+            val info = DataLine.Info(SourceDataLine::class.java, format)
+            return AudioSystem.getLine(info) as SourceDataLine
         }
     }
 }
