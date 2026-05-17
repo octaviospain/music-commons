@@ -126,9 +126,8 @@ class VirtualFiles internal constructor() {
     fun createAt(
         targetPath: Path,
         attributes: AudioItemTestAttributes,
-        tagType: AudioFileTagType,
-        fileSystem: FileSystem = targetPath.fileSystem
-    ): Path = createPathAt(targetPath, tagType, attributes, fileSystem)
+        tagType: AudioFileTagType
+    ): Path = createPathAt(targetPath, tagType, attributes)
 
     // Strips characters forbidden in Windows path segments (< > : " / \ | ? * and control chars 0-31),
     // trims leading/trailing dots and spaces, and prefixes Windows reserved stems (CON, NUL, COM1..9,
@@ -172,14 +171,13 @@ class VirtualFiles internal constructor() {
         Files.createDirectories(dir)
 
         val targetPath = dir.resolve("$fileName.$extension")
-        return createPathAt(targetPath, tagType, attributes, fileSystem)
+        return createPathAt(targetPath, tagType, attributes)
     }
 
     private fun createPathAt(
         targetPath: Path,
         tagType: AudioFileTagType,
-        attributes: AudioItemTestAttributes,
-        @Suppress("UNUSED_PARAMETER") fileSystem: FileSystem
+        attributes: AudioItemTestAttributes
     ): Path {
         val parent = targetPath.parent
         if (parent != null && !Files.exists(parent)) {

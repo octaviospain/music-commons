@@ -21,6 +21,7 @@ import java.net.URI
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
 import java.nio.file.Path
+import java.nio.file.Paths
 import kotlinx.serialization.SerializationException
 
 /**
@@ -81,16 +82,26 @@ fun String.toPathFromJsonUri(fileSystem: FileSystem): Path {
         )
     }
     return try {
-        val rawPath = URI(this).path
-        // Strip the leading slash for Windows-style absolute paths like `/C:\foo\bar` so that
-        // Jimfs windows-config (and the real Windows JDK provider) parse the drive-rooted form.
-        val normalized =
-            if (rawPath.length > 3 && rawPath[0] == '/' && rawPath[2] == ':') {
-                rawPath.substring(1)
-            } else {
-                rawPath
-            }
-        fileSystem.getPath(normalized)
+        val uri = URI(this)
+        if (fileSystem == FileSystems.getDefault()) {
+            // Paths.get(URI) is the URI-aware path on the default provider: it handles
+            // Windows drive letters (file:///C:/... -> C:\...), UNC authority preservation
+            // (file:////server/share/... -> \\server\share\...), and POSIX paths
+            // (file:///home/... -> /home/...) without manual string surgery.
+            Paths.get(uri)
+        } else {
+            // Non-default filesystems (e.g. Jimfs) need explicit FileSystem.getPath. Strip the
+            // leading slash for Windows-style absolute paths like `/C:\foo\bar` so the
+            // Jimfs windows-config parses the drive-rooted form.
+            val rawPath = uri.path
+            val normalized =
+                if (rawPath.length > 3 && rawPath[0] == '/' && rawPath[2] == ':') {
+                    rawPath.substring(1)
+                } else {
+                    rawPath
+                }
+            fileSystem.getPath(normalized)
+        }
     } catch (e: Exception) {
         throw SerializationException("Invalid file:// URI: '$this'", e)
     }

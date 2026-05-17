@@ -66,7 +66,7 @@ class AudioWaveformSerializer
 
         override val descriptor: SerialDescriptor =
             buildClassSerialDescriptor("AudioWaveform") {
-                element<String>("id")
+                element<Int>("id")
                 element<String>("audioFilePath")
                 element<Int>("cachedWidth")
                 element<String>("normalizedAmplitudes")

@@ -20,6 +20,7 @@ import java.nio.file.FileSystem
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.text.Normalizer
 import java.util.concurrent.CompletableFuture
 import kotlin.io.path.extension
@@ -223,7 +224,17 @@ class ItunesImportService<I, P>
 
     private fun resolveTrackPath(track: ItunesTrack): Path {
         val uri = URI(track.location)
-        val rawPath = fileSystem.getPath(uri.path)
+        val rawPath =
+            if (fileSystem == FileSystems.getDefault()) {
+                // Paths.get(URI) handles Windows drive letters (file:///C:/... -> C:\...) and
+                // UNC authority preservation (file:////server/share/... -> \\server\share\...)
+                // correctly on the default filesystem. The earlier fileSystem.getPath(uri.path)
+                // form mangled both because URI.path returns `/C:/...` which Windows' NIO
+                // provider parses ambiguously, and the UNC authority is silently dropped.
+                Paths.get(uri)
+            } else {
+                fileSystem.getPath(uri.path)
+            }
         // Normalize filename to NFC: macOS iTunes writes NFD-decomposed Unicode;
         // Linux/Windows expect NFC. Idempotent and no-op for ASCII.
         val normalizedName = Normalizer.normalize(rawPath.fileName.toString(), Normalizer.Form.NFC)
