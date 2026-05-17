@@ -76,7 +76,7 @@ dependencies {
     ksp libs.lirp.ksp.get()
     kspTest libs.lirp.ksp.get()
 
-    testApi project(path: ':music-commons-fx-test')
+    testImplementation project(path: ':music-commons-fx-test')
     testImplementation(platform(libs.junit.bom.get()))
     testImplementation(libs.junit.jupiter.get())
     testImplementation libs.jimfs.get()
