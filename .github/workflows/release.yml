@@ -98,3 +98,12 @@ jobs:
                     git push --tags origin HEAD
                     ./gradlew publishToMavenCentral -PversionIncrement=${{ inputs.version-increment }}
                     echo "Release completed ${{ steps.release.outputs.released-version }}"
+
+            -   name: Attach SBOM to GitHub Release
+                env:
+                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                run: |
+                    RELEASE_TAG=$(git describe --tags --abbrev=0)
+                    gh release upload "$RELEASE_TAG" build/reports/cyclonedx/bom.json \
+                      --clobber \
+                      --repo ${{ github.repository }}

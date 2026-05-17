@@ -21,7 +21,7 @@
         {
             "description": "Kotlin plugin + Kotlin stdlib/reflect + KSP must move in lockstep (compiler ABI).",
             "matchPackageNames": [
-                "/^org\\.jetbrains\\.kotlin/",
+                "/^org\\.jetbrains\\.kotlin(\\.|$)/",
                 "/^com\\.google\\.devtools\\.ksp/"
             ],
             "groupName": "kotlin"

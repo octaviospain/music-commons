@@ -405,7 +405,7 @@ gradle dokkaHtml
 
 Each GitHub Release includes a CycloneDX SBOM artifact (`music-commons-sbom-cyclonedx`) — an aggregated `bom.json` describing the runtime classpaths of all six modules (`api`, `core`, `fx`, `media`, `test`, `fx-test`). Per-PR builds run GitHub Dependency Review and fail on HIGH+ severity CVEs. A weekly OSV-Scanner job uploads SARIF results to the repository Security tab.
 
-The build also enforces SHA-256 dependency verification via `gradle/verification-metadata.xml`: every resolved artifact is checked against its locked checksum on every Gradle invocation, defeating compromised-mirror and typosquat attacks. See [CONTRIBUTING.md](CONTRIBUTING.md) for the regeneration workflow contributors must follow after a dependency bump.
+The build also enforces SHA-256 dependency verification via `gradle/verification-metadata.xml`: every resolved artifact is checked against its locked checksum on every Gradle invocation, defeating compromised-mirror and typosquat attacks. See [CONTRIBUTING.md](CONTRIBUTING.md) for the regeneration workflow contributors must run when bumping a dependency.
 
 Dependency hygiene is automated via [Renovate](https://docs.renovatebot.com/) (`renovate.json` at the repo root). Renovate opens weekly grouped pull requests — `gradle-libraries` (library bumps in `gradle/libs.versions.toml` and `build.gradle`), `kotlin` (Kotlin plugin + stdlib + KSP in lockstep), `github-actions` (workflow action SHAs, preserving the SHA-pin policy via the `helpers:pinGitHubActionDigests` preset), and `gradle-wrapper`. CVE-driven security PRs (`vulnerabilityAlerts`) bypass the weekly window and open at any time. Auto-merge is **disabled**: every Renovate PR is manually reviewed and merged.
 
