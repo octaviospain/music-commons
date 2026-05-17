@@ -205,7 +205,7 @@ Defines contracts and interfaces for the audio management domain.
 - `ReactiveAudioLibrary<I, AC>` -- Generic CRUD repository with reactive event publishing and `createAudioItem(factory)` for ID-encapsulated construction
 - `ReactiveAudioPlaylist<I, P>` / `ReactivePlaylistHierarchy<I, P>` -- Generic playlist management with M3U export and ID-based `createPlaylist` overload
 - `AudioWaveform` / `AudioWaveformRepository` -- Waveform data and generation
-- `AudioItemPlayer` -- Playback controls with status monitoring
+- `AudioItemPlayer` -- Playback controls with status monitoring, including `STALLED` for sustained streaming starvation
 
 ### music-commons-core
 
@@ -224,7 +224,7 @@ Bridges core module with JavaFX's property binding system.
 - `FXMusicLibrary` -- Unified facade for JavaFX audio management implementing `MusicLibrary<ObservableAudioItem, ObservablePlaylist>` with observable properties (builder-based entry point)
 - `ObservableAudioLibrary` -- Narrowed `ReactiveAudioLibrary` with JavaFX observable properties for UI binding
 - `ObservablePlaylistHierarchy` -- Narrowed `ReactivePlaylistHierarchy` with a JavaFX observable playlists collection
-- `FXAudioItemPlayer` -- JavaFX wrapper around `CoreAudioItemPlayer` exposing volume, status, and current-time as observable properties
+- `FXAudioItemPlayer` -- JavaFX wrapper around the bounded-streaming `CoreAudioItemPlayer`, exposing volume, status, and current-time as observable properties
 - `WaveformPane` -- Custom Canvas component for static waveform visualization
 - `PlayableWaveformPane` -- Region component with progress fill, playhead, seek, and shimmer loading
 - `SeekEvent` -- Custom JavaFX event fired on click-to-seek and drag-to-scrub interactions

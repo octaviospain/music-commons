@@ -52,8 +52,7 @@ interface AudioItemPlayer : Flow.Publisher<AudioItemPlayerEvent> {
      * - [STOPPED]: playback halted by an explicit [stop] call; position is reset to 0 and the
      *   next [play] begins from the start of the audio item.
      * - [STALLED]: playback is starved of decoded data (e.g. buffer underrun in a streaming
-     *   pipeline). Not used by the current in-memory implementation; reserved for streaming
-     *   decoders.
+     *   pipeline).
      * - [HALTED]: playback ended because of an unrecoverable decode or I/O error. The
      *   player must be re-initialized with a new [play] call to recover.
      * - [DISPOSED]: terminal state after [dispose]; all further transport calls are

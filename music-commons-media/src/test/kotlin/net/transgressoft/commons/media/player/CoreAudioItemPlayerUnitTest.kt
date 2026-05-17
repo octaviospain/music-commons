@@ -27,9 +27,23 @@ import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import java.io.File
+import java.lang.reflect.Field
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
+import javax.sound.sampled.AudioFormat
+import javax.sound.sampled.AudioInputStream
+import javax.sound.sampled.SourceDataLine
+
+private val PCM_FORMAT = AudioFormat(44_100f, 16, 1, true, false)
+
+@Suppress("UNCHECKED_CAST")
+private fun enumValue(name: String): Any {
+    val enumClass = CoreAudioItemPlayer::class.java.declaredClasses.single { it.simpleName == "InternalState" }
+    return java.lang.Enum.valueOf(enumClass as Class<out Enum<*>>, name)
+}
 
 /**
  * Unit tests for [CoreAudioItemPlayer] that exercise the public API without triggering
@@ -46,6 +60,22 @@ internal class CoreAudioItemPlayerUnitTest : StringSpec({
             every { encoding } returns null
             every { encoder } returns null
         }
+
+    fun field(name: String): Field =
+        CoreAudioItemPlayer::class.java.getDeclaredField(name).apply {
+            isAccessible = true
+        }
+
+    fun fakeLine(): SourceDataLine =
+        mockk(relaxed = true) {
+            every { isOpen } returns true
+            every { write(any(), any(), any()) } answers { thirdArg() }
+        }
+
+    fun streamOf(vararg chunks: ByteArray): AudioInputStream {
+        val bytes = chunks.flatMap { it.toList() }.toByteArray()
+        return AudioInputStream(bytes.inputStream(), PCM_FORMAT, bytes.size.toLong() / PCM_FORMAT.frameSize)
+    }
 
     "initial status is UNKNOWN" {
         val player = CoreAudioItemPlayer()
@@ -124,6 +154,69 @@ internal class CoreAudioItemPlayerUnitTest : StringSpec({
         try {
             shouldNotThrowAny { player.seek(Duration.ofMillis(500)) }
             player.status() shouldBe Status.UNKNOWN
+        } finally {
+            player.dispose()
+        }
+    }
+
+    "paused seek stores the latest target without opening a decoder" {
+        val decodeCount = AtomicInteger()
+        val player =
+            CoreAudioItemPlayer(
+                pcmStreamFactory = {
+                    decodeCount.incrementAndGet()
+                    streamOf(ByteArray(8))
+                },
+                lineFactory = { fakeLine() },
+                nanoTime = { 0L },
+                stallThresholdNanos = Long.MAX_VALUE
+            )
+        val state = field("state").get(player) as AtomicReference<*>
+        @Suppress("UNCHECKED_CAST")
+        (state as AtomicReference<Any>).set(enumValue("PAUSED"))
+
+        try {
+            player.seek(Duration.ofMillis(100))
+            player.seek(Duration.ofMillis(250))
+
+            decodeCount.get() shouldBe 0
+            field("seekTargetMillis").getLong(player) shouldBe 250L
+        } finally {
+            player.dispose()
+        }
+    }
+
+    "unknown duration may remain ZERO before playback" {
+        val player = CoreAudioItemPlayer()
+        try {
+            player.totalDuration shouldBe Duration.ZERO
+        } finally {
+            player.dispose()
+        }
+    }
+
+    "sustained decoder starvation transitions from STALLED back to PLAYING" {
+        val player =
+            CoreAudioItemPlayer(
+                pcmStreamFactory = { streamOf(ByteArray(8)) },
+                lineFactory = { fakeLine() },
+                nanoTime = { 0L },
+                stallThresholdNanos = 100_000_000L
+            )
+        val state = field("state").get(player) as AtomicReference<*>
+        @Suppress("UNCHECKED_CAST")
+        (state as AtomicReference<Any>).set(enumValue("PLAYING"))
+        val updateStallStatus =
+            CoreAudioItemPlayer::class.java.getDeclaredMethod("updateStallStatus", Long::class.javaPrimitiveType).apply {
+                isAccessible = true
+            }
+
+        try {
+            updateStallStatus.invoke(player, 200_000_000L)
+            player.status() shouldBe Status.STALLED
+
+            updateStallStatus.invoke(player, 1L)
+            player.status() shouldBe Status.PLAYING
         } finally {
             player.dispose()
         }
