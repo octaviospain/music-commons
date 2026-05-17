@@ -17,7 +17,6 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.audio.MutableAudioItemTestBridge.createAudioItem
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.event.MutationEvent
@@ -30,6 +29,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
+import java.nio.file.Path
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 typealias ArtistCatalogMutation = MutationEvent<Artist, ArtistCatalog<AudioItem>>
@@ -39,6 +39,9 @@ class MutableArtistCatalogTest : StringSpec({
 
     val reactive = reactiveScope()
     val files = virtualFiles()
+
+    fun createAudioItem(path: Path): AudioItem =
+        MutableAudioItemTestBridge.createAudioItem(path, files.metadataUtils)
 
     "MUTATE event is published when audio item is added to empty catalog" {
         val expectedArtist = Arb.artist().next()

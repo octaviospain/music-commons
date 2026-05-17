@@ -21,6 +21,8 @@ import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItemSerializerBase
 import net.transgressoft.commons.music.audio.Genre
+import java.nio.file.FileSystem
+import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
@@ -29,7 +31,7 @@ import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 
 @get:JvmName("ObservableAudioItemMapSerializer")
-internal val ObservableAudioItemMapSerializer: KSerializer<Map<Int, ObservableAudioItem>> = MapSerializer(Int.serializer(), ObservableAudioItemSerializer)
+internal val ObservableAudioItemMapSerializer: KSerializer<Map<Int, ObservableAudioItem>> = MapSerializer(Int.serializer(), ObservableAudioItemSerializer())
 
 /**
  * Kotlinx serialization serializer for [ObservableAudioItem] instances.
@@ -37,45 +39,53 @@ internal val ObservableAudioItemMapSerializer: KSerializer<Map<Int, ObservableAu
  * Serializes JavaFX audio items to JSON, preserving all metadata while excluding
  * transient JavaFX properties. Creates [FXAudioItem] instances during deserialization
  * that automatically reconstruct JavaFX property bindings.
+ *
+ * @param fileSystem the [FileSystem] used to materialize [Path] instances during
+ *  deserialization. Defaults to [FileSystems.getDefault]; tests may pass a Jimfs
+ *  filesystem to deserialize against an in-memory tree.
  */
-internal object ObservableAudioItemSerializer : AudioItemSerializerBase<ObservableAudioItem>() {
+internal class ObservableAudioItemSerializer
+    @JvmOverloads
+    constructor(
+        fileSystem: FileSystem = FileSystems.getDefault()
+    ) : AudioItemSerializerBase<ObservableAudioItem>(fileSystem) {
 
-    override fun constructEntity(
-        path: Path,
-        id: Int,
-        title: String,
-        duration: Duration,
-        bitRate: Int,
-        artist: Artist,
-        album: Album,
-        genres: Set<Genre>,
-        comments: String?,
-        trackNumber: Short?,
-        discNumber: Short?,
-        bpm: Float?,
-        encoder: String?,
-        encoding: String?,
-        dateOfCreation: LocalDateTime,
-        lastDateModified: LocalDateTime,
-        playCount: Short
-    ): ObservableAudioItem =
-        FXAudioItem(
-            path = path,
-            id = id,
-            title = title,
-            duration = duration,
-            bitRate = bitRate,
-            artist = artist,
-            album = album,
-            genres = genres,
-            comments = comments,
-            trackNumber = trackNumber,
-            discNumber = discNumber,
-            bpm = bpm,
-            encoder = encoder,
-            encoding = encoding,
-            dateOfCreation = dateOfCreation,
-            lastDateModified = lastDateModified,
-            playCount = playCount
-        )
-}
+        override fun constructEntity(
+            path: Path,
+            id: Int,
+            title: String,
+            duration: Duration,
+            bitRate: Int,
+            artist: Artist,
+            album: Album,
+            genres: Set<Genre>,
+            comments: String?,
+            trackNumber: Short?,
+            discNumber: Short?,
+            bpm: Float?,
+            encoder: String?,
+            encoding: String?,
+            dateOfCreation: LocalDateTime,
+            lastDateModified: LocalDateTime,
+            playCount: Short
+        ): ObservableAudioItem =
+            FXAudioItem(
+                path = path,
+                id = id,
+                title = title,
+                duration = duration,
+                bitRate = bitRate,
+                artist = artist,
+                album = album,
+                genres = genres,
+                comments = comments,
+                trackNumber = trackNumber,
+                discNumber = discNumber,
+                bpm = bpm,
+                encoder = encoder,
+                encoding = encoding,
+                dateOfCreation = dateOfCreation,
+                lastDateModified = lastDateModified,
+                playCount = playCount
+            )
+    }

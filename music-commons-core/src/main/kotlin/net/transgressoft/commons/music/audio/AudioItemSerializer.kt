@@ -20,6 +20,8 @@ package net.transgressoft.commons.music.audio
 import net.transgressoft.commons.music.common.toPathFromJsonUri
 import net.transgressoft.lirp.persistence.json.LirpEntityPolymorphicSerializer
 import com.neovisionaries.i18n.CountryCode
+import java.nio.file.FileSystem
+import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
@@ -48,7 +50,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
 
 @get:JvmName("AudioItemMapSerializer")
-internal val AudioItemMapSerializer: KSerializer<Map<Int, AudioItem>> = MapSerializer(Int.serializer(), AudioItemSerializer)
+internal val AudioItemMapSerializer: KSerializer<Map<Int, AudioItem>> = MapSerializer(Int.serializer(), AudioItemSerializer())
 
 /**
  * Kotlinx serialization serializer for [AudioItem] instances.
@@ -56,36 +58,46 @@ internal val AudioItemMapSerializer: KSerializer<Map<Int, AudioItem>> = MapSeria
  * Handles JSON serialization and deserialization of audio items, preserving all metadata
  * fields including artist, album, and label information. Creates [MutableAudioItem]
  * instances during deserialization to enable metadata modification.
+ *
+ * @param fileSystem the [FileSystem] used to materialize [Path] instances during
+ *  deserialization. Defaults to [FileSystems.getDefault]; tests may pass a Jimfs
+ *  filesystem to deserialize against an in-memory tree.
  */
-internal object AudioItemSerializer : AudioItemSerializerBase<AudioItem>() {
+internal class AudioItemSerializer
+    @JvmOverloads
+    constructor(
+        fileSystem: FileSystem = FileSystems.getDefault()
+    ) : AudioItemSerializerBase<AudioItem>(fileSystem) {
 
-    override fun constructEntity(
-        path: Path,
-        id: Int,
-        title: String,
-        duration: Duration,
-        bitRate: Int,
-        artist: Artist,
-        album: Album,
-        genres: Set<Genre>,
-        comments: String?,
-        trackNumber: Short?,
-        discNumber: Short?,
-        bpm: Float?,
-        encoder: String?,
-        encoding: String?,
-        dateOfCreation: LocalDateTime,
-        lastDateModified: LocalDateTime,
-        playCount: Short
-    ): AudioItem =
-        MutableAudioItem(
-            path, id, title, duration, bitRate, artist, album, genres,
-            comments, trackNumber, discNumber, bpm, encoder, encoding,
-            dateOfCreation, lastDateModified, playCount
-        )
-}
+        override fun constructEntity(
+            path: Path,
+            id: Int,
+            title: String,
+            duration: Duration,
+            bitRate: Int,
+            artist: Artist,
+            album: Album,
+            genres: Set<Genre>,
+            comments: String?,
+            trackNumber: Short?,
+            discNumber: Short?,
+            bpm: Float?,
+            encoder: String?,
+            encoding: String?,
+            dateOfCreation: LocalDateTime,
+            lastDateModified: LocalDateTime,
+            playCount: Short
+        ): AudioItem =
+            MutableAudioItem(
+                path, id, title, duration, bitRate, artist, album, genres,
+                comments, trackNumber, discNumber, bpm, encoder, encoding,
+                dateOfCreation, lastDateModified, playCount
+            )
+    }
 
-abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>> : LirpEntityPolymorphicSerializer<I> {
+abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>>(
+    private val fileSystem: FileSystem = FileSystems.getDefault()
+) : LirpEntityPolymorphicSerializer<I> {
 
     // This serializer is JSON-only: deserialize() reads fields by name via JsonDecoder,
     // so the descriptor serves as a schema identity marker, not for positional decoding.
@@ -149,7 +161,13 @@ abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>> : LirpEntityPol
             obj[key]?.jsonPrimitive?.contentOrNull
                 ?: throw SerializationException("Missing required field '$fullKey' in AudioItem JSON")
 
-        val path = requireString(json, "path").toPathFromJsonUri()
+        val pathString = requireString(json, "path")
+        val path =
+            if (fileSystem == FileSystems.getDefault()) {
+                pathString.toPathFromJsonUri()
+            } else {
+                pathString.toPathFromJsonUri(fileSystem)
+            }
         val id = require("id").jsonPrimitive.int
         val title = requireString(json, "title")
         val duration = Duration.ofSeconds(require("duration").jsonPrimitive.long)

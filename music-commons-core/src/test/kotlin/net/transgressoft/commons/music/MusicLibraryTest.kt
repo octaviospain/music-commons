@@ -57,7 +57,7 @@ internal class MusicLibraryTest : StringSpec({
     }
 
     "MusicLibrary curated methods delegate to components" {
-        val library = CoreMusicLibrary.builder().build()
+        val library = CoreMusicLibrary.Builder(files.metadataUtils).build()
 
         val audioItem = library.audioItemFromFile(files.virtualAudioFile().next())
         reactive.advance()
@@ -72,7 +72,7 @@ internal class MusicLibraryTest : StringSpec({
     }
 
     "MusicLibrary close disposes all components" {
-        val library = CoreMusicLibrary.builder().build()
+        val library = CoreMusicLibrary.Builder(files.metadataUtils).build()
 
         val audioItem = library.audioItemFromFile(files.virtualAudioFile().next())
         reactive.advance()

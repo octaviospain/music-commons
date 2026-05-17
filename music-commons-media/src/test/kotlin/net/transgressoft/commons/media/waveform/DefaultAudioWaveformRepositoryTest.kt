@@ -15,6 +15,8 @@ import io.kotest.matchers.shouldBe
 import io.kotest.property.arbitrary.next
 import java.io.File
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 
 @ExperimentalCoroutinesApi
 internal class DefaultAudioWaveformRepositoryTest : StringSpec({
@@ -27,7 +29,7 @@ internal class DefaultAudioWaveformRepositoryTest : StringSpec({
 
     beforeEach {
         jsonFile = tempfile("audioWaveformRepository-test", ".json").also { it.deleteOnExit() }
-        jsonFileRepository = JsonFileRepository(jsonFile, AudioWaveformMapSerializer)
+        jsonFileRepository = JsonFileRepository(jsonFile, MapSerializer(Int.serializer(), AudioWaveformSerializer(files.fileSystem)))
         val subscriber =
             object : LirpEventSubscriberBase<
                 net.transgressoft.commons.music.audio.AudioItem,

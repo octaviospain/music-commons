@@ -40,44 +40,49 @@ import kotlinx.serialization.modules.subclass
  * lazily through the context. Deregisters on [close] to support repeated construction within the same JVM.
  */
 @LirpRepository
-internal class DefaultAudioLibrary(repository: Repository<Int, AudioItem>) :
-    AudioLibraryBase<AudioItem, ArtistCatalog<AudioItem>>(repository, DefaultArtistCatalogRegistry()),
-    AudioLibrary {
-    private val logger = KotlinLogging.logger {}
+internal class DefaultAudioLibrary
+    @JvmOverloads
+    constructor(
+        repository: Repository<Int, AudioItem>,
+        private val metadataUtils: AudioItemMetadataUtils = AudioItemMetadataUtils()
+    ) : AudioLibraryBase<AudioItem, ArtistCatalog<AudioItem>>(repository, DefaultArtistCatalogRegistry()),
+        AudioLibrary {
+        private val logger = KotlinLogging.logger {}
 
-    init {
-        RegistryBase.deregisterRepository(AudioItem::class.java)
-        RegistryBase.registerRepository(AudioItem::class.java, repository)
-        playerSubscriber.addOnNextEventAction(PLAYED) { event ->
-            val audioItem = event.audioItem
-            logger.info { "Audio item with id ${audioItem.id} was played" }
-            if (audioItem is MutableAudioItem) {
-                val audioItemClone = audioItem.clone()
-                audioItem.incrementPlayCount()
-                repository.emitAsync(Update(audioItem, audioItemClone))
-                logger.debug { "Play count for audio item ${audioItem.id} increased to ${audioItem.playCount}" }
+        init {
+            RegistryBase.deregisterRepository(AudioItem::class.java)
+            RegistryBase.registerRepository(AudioItem::class.java, repository)
+            playerSubscriber.addOnNextEventAction(PLAYED) { event ->
+                val audioItem = event.audioItem
+                logger.info { "Audio item with id ${audioItem.id} was played" }
+                if (audioItem is MutableAudioItem) {
+                    val audioItemClone = audioItem.clone()
+                    audioItem.incrementPlayCount()
+                    repository.emitAsync(Update(audioItem, audioItemClone))
+                    logger.debug { "Play count for audio item ${audioItem.id} increased to ${audioItem.playCount}" }
+                }
             }
         }
+
+        override fun createFromFile(audioItemPath: Path): AudioItem =
+            MutableAudioItem(audioItemPath, newId(), metadataUtils)
+                .also { audioItem ->
+                    add(audioItem)
+                    logger.debug { "New AudioItem was created from file $audioItemPath with id ${audioItem.id}" }
+                }
+
+        override fun close() {
+            super.close()
+            RegistryBase.deregisterRepository(AudioItem::class.java)
+        }
+
+        override fun toString() = "AudioItemJsonRepository(audioItemsCount=${size()})"
     }
-
-    override fun createFromFile(audioItemPath: Path): AudioItem =
-        MutableAudioItem(audioItemPath, newId())
-            .also { audioItem ->
-                add(audioItem)
-                logger.debug { "New AudioItem was created from file $audioItemPath with id ${audioItem.id}" }
-            }
-
-    override fun close() {
-        super.close()
-        RegistryBase.deregisterRepository(AudioItem::class.java)
-    }
-
-    override fun toString() = "AudioItemJsonRepository(audioItemsCount=${size()})"
-}
 
 @get:JvmName("audioItemSerializerModule")
 internal val audioItemSerializerModule =
     SerializersModule {
+        polymorphic(AudioItem::class, AudioItemSerializer())
         polymorphic(Artist::class) {
             subclass(ImmutableArtist.serializer())
         }

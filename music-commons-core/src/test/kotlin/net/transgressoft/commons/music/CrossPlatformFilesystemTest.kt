@@ -18,7 +18,7 @@
 package net.transgressoft.commons.music
 
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.AudioItemMapSerializer
+import net.transgressoft.commons.music.audio.AudioItemSerializer
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.ImmutableLabel
@@ -33,6 +33,8 @@ import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.property.arbitrary.next
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
@@ -93,10 +95,11 @@ internal class CrossPlatformFilesystemTest : StringSpec({
                         this.discNumber = 1
                     }.next()
                 val originalId = 1000 + offset
-                val original: AudioItem = MutableAudioItemTestBridge.createAudioItem(path, originalId)
+                val original: AudioItem = MutableAudioItemTestBridge.createAudioItem(path, originalId, files.metadataUtils)
 
-                val encoded = json.encodeToString(AudioItemMapSerializer, mapOf(original.id to original))
-                val decoded = json.decodeFromString(AudioItemMapSerializer, encoded).getValue(original.id)
+                val mapSerializer = MapSerializer(Int.serializer(), AudioItemSerializer(fs))
+                val encoded = json.encodeToString(mapSerializer, mapOf(original.id to original))
+                val decoded = json.decodeFromString(mapSerializer, encoded).getValue(original.id)
 
                 decoded.path.toString() shouldBe original.path.toString()
                 decoded.id shouldBe original.id
@@ -115,7 +118,7 @@ internal class CrossPlatformFilesystemTest : StringSpec({
                         this.album = asciiAlbum
                     }.next()
                 val audioItemId = 3000 + offset
-                MutableAudioItemTestBridge.createAudioItem(path, audioItemId)
+                MutableAudioItemTestBridge.createAudioItem(path, audioItemId, files.metadataUtils)
 
                 val playlistId = 4000 + offset
                 val playlist =

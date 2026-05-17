@@ -12,10 +12,14 @@ import io.kotest.matchers.string.shouldContain
 import io.kotest.property.arbitrary.next
 import java.nio.file.Files
 import java.time.temporal.ChronoUnit.SECONDS
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
 
 /**
  * Tests for [ObservableAudioItemSerializer] verifying golden JSON structure and round-trip fidelity.
@@ -23,16 +27,23 @@ import kotlinx.serialization.json.put
 internal class ObservableAudioItemSerializerTest : StringSpec({
     val files = virtualFiles()
 
+    // Bind the serializer to the Jimfs filesystem so encoded `file://` URIs deserialize back to
+    // the same Jimfs path tree on round-trip.
+    val fxSerializer = ObservableAudioItemSerializer(files.fileSystem)
     val json =
         Json {
-            serializersModule = observableAudioItemSerializerModule
+            serializersModule =
+                SerializersModule {
+                    polymorphic(ObservableAudioItem::class, fxSerializer)
+                }
         }
+    val fxMapSerializer = MapSerializer(Int.serializer(), fxSerializer)
 
     "ObservableAudioItemSerializer encodes all required JSON fields" {
         val path = files.virtualAudioFile().next()
-        val fxAudioItem = FXAudioItem(path, AudioItemTestFactory.nextTestId())
+        val fxAudioItem = FXAudioItem(path, AudioItemTestFactory.nextTestId(), files.metadataUtils)
 
-        val encoded = json.encodeToString(ObservableAudioItemSerializer, fxAudioItem)
+        val encoded = json.encodeToString(fxSerializer, fxAudioItem)
 
         encoded shouldContainJsonKey "path"
         encoded shouldContainJsonKey "id"
@@ -49,10 +60,10 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
 
     "ObservableAudioItemSerializer round-trip preserves all fields" {
         val path = files.virtualAudioFile().next()
-        val original = FXAudioItem(path, AudioItemTestFactory.nextTestId())
+        val original = FXAudioItem(path, AudioItemTestFactory.nextTestId(), files.metadataUtils)
 
-        val encoded = json.encodeToString(ObservableAudioItemSerializer, original)
-        val decoded = json.decodeFromString(ObservableAudioItemSerializer, encoded)
+        val encoded = json.encodeToString(fxSerializer, original)
+        val decoded = json.decodeFromString(fxSerializer, encoded)
 
         decoded.id shouldBe original.id
         decoded.path shouldBe original.path
@@ -78,9 +89,9 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
             files.virtualAudioFile {
                 this.genres = setOf(Genre.Rock)
             }.next()
-        val original = FXAudioItem(path, AudioItemTestFactory.nextTestId())
+        val original = FXAudioItem(path, AudioItemTestFactory.nextTestId(), files.metadataUtils)
 
-        val encoded = json.encodeToString(ObservableAudioItemSerializer, original)
+        val encoded = json.encodeToString(fxSerializer, original)
 
         // Replace "genres" array with legacy "genre" single-string field
         val jsonTree = Json.parseToJsonElement(encoded).jsonObject
@@ -92,15 +103,15 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
                 put("genre", "Rock")
             }
 
-        val decoded = json.decodeFromString(ObservableAudioItemSerializer, legacyItem.toString())
+        val decoded = json.decodeFromString(fxSerializer, legacyItem.toString())
         decoded.genres shouldBe setOf(Genre.Rock)
     }
 
     "ObservableAudioItemSerializer inherits file:// URI format from ReactiveAudioItem.toJsonObject" {
         val path = files.virtualAudioFile().next()
-        val fxAudioItem = FXAudioItem(path, AudioItemTestFactory.nextTestId())
+        val fxAudioItem = FXAudioItem(path, AudioItemTestFactory.nextTestId(), files.metadataUtils)
 
-        val encoded = json.encodeToString(ObservableAudioItemSerializer, fxAudioItem)
+        val encoded = json.encodeToString(fxSerializer, fxAudioItem)
 
         encoded shouldContain "\"path\":\"file://"
     }
@@ -138,7 +149,7 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
             """.trimIndent()
 
         shouldThrow<InvalidAudioFilePathException> {
-            json.decodeFromString(ObservableAudioItemSerializer, offlineDriveJson)
+            json.decodeFromString(fxSerializer, offlineDriveJson)
         }
     }
 
@@ -147,12 +158,12 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
         val path2 = files.virtualAudioFile().next()
         val id1 = AudioItemTestFactory.nextTestId()
         val id2 = AudioItemTestFactory.nextTestId()
-        val item1 = FXAudioItem(path1, id1)
-        val item2 = FXAudioItem(path2, id2)
+        val item1 = FXAudioItem(path1, id1, files.metadataUtils)
+        val item2 = FXAudioItem(path2, id2, files.metadataUtils)
         val originalMap = mapOf(id1 to item1, id2 to item2)
 
-        val encoded = json.encodeToString(ObservableAudioItemMapSerializer, originalMap)
-        val decoded = json.decodeFromString(ObservableAudioItemMapSerializer, encoded)
+        val encoded = json.encodeToString(fxMapSerializer, originalMap)
+        val decoded = json.decodeFromString(fxMapSerializer, encoded)
 
         decoded.size shouldBe 2
         decoded[id1]!!.id shouldBe item1.id

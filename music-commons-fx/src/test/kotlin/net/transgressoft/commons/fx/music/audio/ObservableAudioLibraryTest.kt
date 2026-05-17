@@ -29,6 +29,8 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 
 @ExperimentalCoroutinesApi
 internal class ObservableAudioLibraryTest : StringSpec({
@@ -45,8 +47,8 @@ internal class ObservableAudioLibraryTest : StringSpec({
 
     beforeEach {
         jsonFile = tempfile("observableAudioLibrary-test", ".json").also { it.deleteOnExit() }
-        jsonFileRepository = JsonFileRepository(jsonFile, ObservableAudioItemMapSerializer)
-        repository = FXAudioLibrary(jsonFileRepository)
+        jsonFileRepository = JsonFileRepository(jsonFile, MapSerializer(Int.serializer(), ObservableAudioItemSerializer(files.fileSystem)))
+        repository = FXAudioLibrary(jsonFileRepository, files.metadataUtils)
     }
 
     afterEach {
@@ -108,7 +110,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
 
         // Close the existing library before recreating from the same repository
         repository.close()
-        repository = FXAudioLibrary(jsonFileRepository)
+        repository = FXAudioLibrary(jsonFileRepository, files.metadataUtils)
 
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
