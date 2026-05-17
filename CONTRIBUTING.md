@@ -154,6 +154,42 @@ Reach for a tag only when neither pattern works: when the test exercises a real 
 behavior that cannot be simulated (POSIX permissions, NTFS long-path handling, native
 binary dependencies).
 
+## Updating dependency verification metadata
+
+This project commits `gradle/verification-metadata.xml`, which locks every resolved
+artifact to a SHA-256 checksum. Gradle enforces these checksums automatically on every
+invocation, defeating compromised-mirror and typosquat-at-resolution attacks.
+
+Whenever you change `gradle/libs.versions.toml`, a plugin version in `build.gradle`, or
+`gradle/wrapper/gradle-wrapper.properties`, regenerate the metadata in the same commit
+as the dependency bump:
+
+```bash
+gradle --write-verification-metadata sha256 help
+```
+
+Review the diff — it should ONLY contain entries for the bumped artifact and its
+transitives. Commit alongside the dependency change:
+
+```bash
+git add gradle/libs.versions.toml gradle/verification-metadata.xml
+```
+
+**Poisoned-cache warning.** If checksums change for artifacts you did not bump, your
+local Gradle cache may be poisoned (a previously downloaded jar was tampered with at
+rest). Wipe the cache and regenerate against a fresh download:
+
+```bash
+gradle --stop
+rm -rf ~/.gradle/caches/modules-2
+gradle --refresh-dependencies --write-verification-metadata sha256 \
+       compileKotlin compileTestKotlin build cyclonedxBom
+```
+
+The full regeneration walk (`compileKotlin compileTestKotlin build cyclonedxBom`) is
+required after a full cache wipe so that plugin marker artifacts and KSP-resolved
+artifacts are captured in the metadata.
+
 ## Style Guidelines
 
 - Use the provided `.editorconfig` and Kotlin style guide settings

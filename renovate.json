@@ -1,0 +1,51 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "config:recommended",
+        ":dependencyDashboard",
+        ":semanticCommitsDisabled",
+        "helpers:pinGitHubActionDigests"
+    ],
+    "timezone": "Europe/Madrid",
+    "schedule": ["* 0-5 * * 1"],
+    "labels": ["dependencies"],
+    "rangeStrategy": "pin",
+    "ignoreUnstable": true,
+    "packageRules": [
+        {
+            "description": "Bundle every non-plugin library bump (libs.versions.toml + dependencies blocks) into a single PR.",
+            "groupName": "gradle-libraries",
+            "matchDepTypes": ["dependencies"],
+            "matchManagers": ["gradle"]
+        },
+        {
+            "description": "Kotlin plugin + Kotlin stdlib/reflect + KSP must move in lockstep (compiler ABI).",
+            "matchPackageNames": [
+                "/^org\\.jetbrains\\.kotlin/",
+                "/^com\\.google\\.devtools\\.ksp/"
+            ],
+            "groupName": "kotlin"
+        },
+        {
+            "description": "Group all GitHub Action updates (digest pinning handled by helpers:pinGitHubActionDigests preset above)",
+            "matchManagers": ["github-actions"],
+            "groupName": "github-actions"
+        },
+        {
+            "description": "Group Gradle wrapper bumps",
+            "matchManagers": ["gradle-wrapper"],
+            "groupName": "gradle-wrapper"
+        }
+    ],
+    "vulnerabilityAlerts": {
+        "labels": ["security", "dependencies"],
+        "schedule": ["at any time"]
+    },
+    "gradle": {
+        "enabled": true
+    },
+    "lockFileMaintenance": {
+        "enabled": false
+    },
+    "dependencyDashboardTitle": "Renovate: dependency dashboard"
+}
