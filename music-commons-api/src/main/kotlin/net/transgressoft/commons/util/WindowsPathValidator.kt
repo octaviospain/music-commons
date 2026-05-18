@@ -15,10 +15,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.music.common
+package net.transgressoft.commons.util
 
-import net.transgressoft.commons.music.audio.WindowsPathException
-import net.transgressoft.commons.music.audio.WindowsViolation
 import java.nio.file.Path
 
 /**

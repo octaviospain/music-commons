@@ -34,7 +34,7 @@ internal class M3uImportServiceTest : StringSpec({
     lateinit var service: M3uImportService
 
     beforeEach {
-        library = CoreMusicLibrary.Builder(files.metadataUtils).build()
+        library = CoreMusicLibrary.builder().metadataIO(files.metadataIO).build()
         service = M3uImportService(library)
     }
 

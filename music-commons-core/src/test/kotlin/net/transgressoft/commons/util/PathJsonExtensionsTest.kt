@@ -1,4 +1,4 @@
-package net.transgressoft.commons.music.common
+package net.transgressoft.commons.util
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec

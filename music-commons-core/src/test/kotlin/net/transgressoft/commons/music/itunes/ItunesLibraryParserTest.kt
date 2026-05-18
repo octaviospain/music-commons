@@ -1,8 +1,8 @@
 package net.transgressoft.commons.music.itunes
 
-import net.transgressoft.commons.music.audio.InvalidAudioFilePathException
-import net.transgressoft.commons.music.audio.WindowsPathException
-import net.transgressoft.commons.music.common.OsDetector
+import net.transgressoft.commons.util.InvalidAudioFilePathException
+import net.transgressoft.commons.util.OsDetector
+import net.transgressoft.commons.util.WindowsPathException
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import io.kotest.assertions.throwables.shouldThrow

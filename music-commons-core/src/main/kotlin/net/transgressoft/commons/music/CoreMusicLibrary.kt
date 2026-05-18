@@ -17,66 +17,48 @@
 
 package net.transgressoft.commons.music
 
-import net.transgressoft.commons.media.waveform.AudioWaveformMapSerializer
 import net.transgressoft.commons.media.waveform.audioWaveformRepository
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.ArtistCatalog
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.AudioItemMapSerializer
-import net.transgressoft.commons.music.audio.AudioItemMetadataUtils
 import net.transgressoft.commons.music.audio.AudioLibrary
+import net.transgressoft.commons.music.audio.AudioMetadataIO
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
+import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
-import net.transgressoft.commons.music.common.WindowsPathValidator
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
-import net.transgressoft.commons.music.playlist.AudioPlaylistMapSerializer
 import net.transgressoft.commons.music.playlist.DefaultPlaylistHierarchy
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
 import net.transgressoft.commons.music.playlist.PlaylistHierarchy
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
-import net.transgressoft.lirp.entity.IdentifiableEntity
+import net.transgressoft.commons.util.WindowsPathValidator
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.LirpEventPublisher
 import net.transgressoft.lirp.persistence.Repository
 import net.transgressoft.lirp.persistence.VolatileRepository
-import net.transgressoft.lirp.persistence.json.JsonFileRepository
-import net.transgressoft.lirp.persistence.sql.SqlRepository
-import net.transgressoft.lirp.persistence.sql.SqlTableDef
-import java.io.File
 import java.nio.file.Path
 import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Flow
-import javax.sql.DataSource
-
-internal sealed interface StorageConfig
-
-internal data object VolatileStorage : StorageConfig
-
-internal data class JsonFileStorage(val file: File) : StorageConfig
-
-internal data class SqlStorage<E : IdentifiableEntity<*>>(
-    val dataSource: DataSource,
-    val tableDef: SqlTableDef<E>
-) : StorageConfig
 
 /**
  * Unified entry point for managing an audio library, playlist hierarchy, and waveform repository.
  *
- * Wraps [DefaultAudioLibrary], [DefaultPlaylistHierarchy], and [DefaultAudioWaveformRepository]
- * with builder-based storage configuration, automatic event wiring, and lifecycle management.
- * Use [builder] to construct an instance and configure persistence for each component independently.
+ * Wraps [DefaultAudioLibrary], [DefaultPlaylistHierarchy], and the waveform repository with
+ * builder-based repository injection, automatic event wiring, and lifecycle management.
+ * Use [builder] to construct an instance and inject the [Repository] of your choice for each
+ * component independently.
  *
  * ```kotlin
  * // In-memory (volatile) library:
  * val library = MusicLibrary.builder().build()
  *
- * // JSON-persisted library:
+ * // JSON-persisted library — consumers construct repositories directly:
  * val library = MusicLibrary.builder()
- *     .audioLibraryJsonFile(audioFile)
- *     .playlistHierarchyJsonFile(playlistsFile)
- *     .waveformRepositoryJsonFile(waveformsFile)
+ *     .audioRepository(JsonFileRepository(audioFile, AudioItemMapSerializer))
+ *     .playlistRepository(JsonFileRepository(playlistsFile, AudioPlaylistMapSerializer))
+ *     .waveformRepository(JsonFileRepository(waveformsFile, AudioWaveformMapSerializer))
  *     .build()
  * ```
  */
@@ -172,136 +154,79 @@ class CoreMusicLibrary private constructor(
     }
 
     /**
-     * Builder for [MusicLibrary] that configures storage for each component independently.
+     * Builder for [CoreMusicLibrary] that accepts a [Repository] implementation directly for each component.
      *
-     * By default all components use in-memory (volatile) storage. Call the appropriate
-     * `*JsonFile` or `*Sql` method to configure persistence for each component:
+     * Each component defaults to a [VolatileRepository] (in-memory). Inject a different repository
+     * implementation — `JsonFileRepository`, `SqlRepository`, or a custom one — to configure
+     * persistence. The `lirp-sql` artifact is now an optional consumer dependency: add it to your
+     * build only if you intend to back any component with a SQL repository.
      *
      * ```kotlin
      * val library = MusicLibrary.builder()
-     *     .audioLibrarySql(dataSource, audioTableDef)
-     *     .playlistHierarchySql(dataSource, playlistTableDef)
-     *     .waveformRepositorySql(dataSource, waveformTableDef)
+     *     .audioRepository(SqlRepository(dataSource, audioTableDef))
+     *     .playlistRepository(SqlRepository(dataSource, playlistTableDef))
+     *     .waveformRepository(SqlRepository(dataSource, waveformTableDef))
      *     .build()
      * ```
      */
-    class Builder() {
+    class Builder {
 
-        private var audioLibraryStorage: StorageConfig = VolatileStorage
-        private var playlistHierarchyStorage: StorageConfig = VolatileStorage
-        private var waveformRepositoryStorage: StorageConfig = VolatileStorage
-        private var metadataUtils: AudioItemMetadataUtils = AudioItemMetadataUtils()
+        private var audioRepository: Repository<Int, AudioItem> = VolatileRepository("AudioLibrary")
+        private var playlistRepository: Repository<Int, MutableAudioPlaylist> = VolatileRepository("PlaylistHierarchy")
+        private var waveformRepository: Repository<Int, AudioWaveform> = VolatileRepository("AudioWaveformRepository")
+        private var metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO()
 
-        // Internal seam for in-module tests: lets a spec construct a Builder whose audio library
-        // routes metadata reads/writes through a FakeAudioMetadataIO-backed AudioItemMetadataUtils.
-        // Not exposed on the public Builder API because end-users don't configure metadata I/O —
-        // they just persist via *JsonFile / *Sql storage and accept the default JAudioTagger seam.
-        internal constructor(metadataUtils: AudioItemMetadataUtils) : this() {
-            this.metadataUtils = metadataUtils
-        }
+        /** Injects the [repository] backing the audio library. */
+        fun audioRepository(repository: Repository<Int, AudioItem>): Builder = apply { audioRepository = repository }
 
-        /** Configures the audio library to persist to [file] using JSON. */
-        fun audioLibraryJsonFile(file: File): Builder = apply { audioLibraryStorage = JsonFileStorage(file) }
+        /** Injects the [repository] backing the playlist hierarchy. */
+        fun playlistRepository(repository: Repository<Int, MutableAudioPlaylist>): Builder =
+            apply { playlistRepository = repository }
 
-        /** Configures the playlist hierarchy to persist to [file] using JSON. */
-        fun playlistHierarchyJsonFile(file: File): Builder =
-            apply { playlistHierarchyStorage = JsonFileStorage(file) }
-
-        /** Configures the waveform repository to persist to [file] using JSON. */
-        fun waveformRepositoryJsonFile(file: File): Builder =
-            apply { waveformRepositoryStorage = JsonFileStorage(file) }
+        /** Injects the [repository] backing the waveform repository. */
+        fun waveformRepository(repository: Repository<Int, AudioWaveform>): Builder =
+            apply { waveformRepository = repository }
 
         /**
-         * Configures the audio library to persist to a SQL database using [dataSource] and [tableDef].
+         * Injects the [AudioMetadataIO] used by the audio library for metadata I/O.
          *
-         * @param dataSource the JDBC data source for database connections
-         * @param tableDef the KSP-generated table definition describing [AudioItem] column mapping
+         * Defaults to the JAudioTagger-backed implementation. Production callers rarely override
+         * this — the seam exists primarily for tests that route reads/writes through a fake.
          */
-        fun audioLibrarySql(dataSource: DataSource, tableDef: SqlTableDef<AudioItem>): Builder =
-            apply { audioLibraryStorage = SqlStorage(dataSource, tableDef) }
+        fun metadataIO(utils: AudioMetadataIO): Builder = apply { metadataIO = utils }
 
         /**
-         * Configures the playlist hierarchy to persist to a SQL database using [dataSource] and [tableDef].
-         *
-         * @param dataSource the JDBC data source for database connections
-         * @param tableDef the KSP-generated table definition describing [MutableAudioPlaylist] column mapping
-         */
-        fun playlistHierarchySql(dataSource: DataSource, tableDef: SqlTableDef<MutableAudioPlaylist>): Builder =
-            apply { playlistHierarchyStorage = SqlStorage(dataSource, tableDef) }
-
-        /**
-         * Configures the waveform repository to persist to a SQL database using [dataSource] and [tableDef].
-         *
-         * @param dataSource the JDBC data source for database connections
-         * @param tableDef the KSP-generated table definition describing [AudioWaveform] column mapping
-         */
-        fun waveformRepositorySql(dataSource: DataSource, tableDef: SqlTableDef<AudioWaveform>): Builder =
-            apply { waveformRepositoryStorage = SqlStorage(dataSource, tableDef) }
-
-        /**
-         * Builds a [MusicLibrary] with the configured storage, wiring event subscriptions automatically.
+         * Builds a [CoreMusicLibrary] by injecting the configured repositories and wiring event
+         * subscriptions automatically.
          *
          * Construction order matters: the audio library is created first so its repository is
          * registered in LirpContext before the playlist hierarchy resolves audio item references.
+         * Rollback on partial failure closes everything constructed so far before rethrowing.
          */
         fun build(): CoreMusicLibrary {
             // 1. Audio library first — registers AudioItem in LirpContext
-            val audioRepo = createAudioRepository()
-            val audioLibrary = DefaultAudioLibrary(audioRepo, metadataUtils)
+            val audioLibrary = DefaultAudioLibrary(audioRepository, metadataIO)
 
-            var waveformRepository: AudioWaveformRepository<AudioWaveform, AudioItem>? = null
+            var waveformRepo: AudioWaveformRepository<AudioWaveform, AudioItem>? = null
             try {
                 // 2. Waveform repository with audio item event subscriber
-                val waveformRepo = createWaveformRepository()
                 val audioItemSubscriber = AudioItemEventSubscriber<AudioItem>("AudioWaveformRepositorySubscriber")
-                waveformRepository = audioWaveformRepository(waveformRepo, audioItemSubscriber) { audioItemSubscriber.cancelSubscription() }
+                waveformRepo = audioWaveformRepository(waveformRepository, audioItemSubscriber) { audioItemSubscriber.cancelSubscription() }
 
                 // 3. Playlist hierarchy last — needs AudioItem already registered in LirpContext
-                val playlistHierarchy = createPlaylistHierarchy()
+                val playlistHierarchy = DefaultPlaylistHierarchy(playlistRepository)
 
                 // 4. Wire subscriptions so audio library events propagate to subscribers
-                audioLibrary.subscribe(waveformRepository)
+                audioLibrary.subscribe(waveformRepo)
                 audioLibrary.subscribe(playlistHierarchy)
 
-                return CoreMusicLibrary(audioLibrary, playlistHierarchy, waveformRepository)
+                return CoreMusicLibrary(audioLibrary, playlistHierarchy, waveformRepo)
             } catch (ex: Exception) {
-                waveformRepository?.close()
+                waveformRepo?.close()
                 audioLibrary.close()
                 throw ex
             }
         }
-
-        // Safe cast: generic type erased at runtime but guaranteed by the builder/serializer contract
-        @Suppress("UNCHECKED_CAST")
-        private fun createAudioRepository(): Repository<Int, AudioItem> =
-            when (val config = audioLibraryStorage) {
-                is VolatileStorage -> VolatileRepository("AudioLibrary")
-                is JsonFileStorage -> JsonFileRepository(config.file, AudioItemMapSerializer)
-                is SqlStorage<*> -> SqlRepository((config as SqlStorage<AudioItem>).dataSource, config.tableDef)
-            }
-
-        @Suppress("UNCHECKED_CAST")
-        private fun createPlaylistHierarchy(): DefaultPlaylistHierarchy =
-            when (val config = playlistHierarchyStorage) {
-                is VolatileStorage -> DefaultPlaylistHierarchy(VolatileRepository("PlaylistHierarchy"))
-                is JsonFileStorage ->
-                    DefaultPlaylistHierarchy(JsonFileRepository(config.file, AudioPlaylistMapSerializer))
-                is SqlStorage<*> ->
-                    DefaultPlaylistHierarchy(
-                        SqlRepository(
-                            (config as SqlStorage<MutableAudioPlaylist>).dataSource,
-                            config.tableDef
-                        )
-                    )
-            }
-
-        @Suppress("UNCHECKED_CAST")
-        private fun createWaveformRepository(): Repository<Int, AudioWaveform> =
-            when (val config = waveformRepositoryStorage) {
-                is VolatileStorage -> VolatileRepository("AudioWaveformRepository")
-                is JsonFileStorage -> JsonFileRepository(config.file, AudioWaveformMapSerializer)
-                is SqlStorage<*> -> SqlRepository((config as SqlStorage<AudioWaveform>).dataSource, config.tableDef)
-            }
     }
 
     companion object {

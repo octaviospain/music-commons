@@ -25,7 +25,7 @@ internal class AudioItemEventSubscriberTest : StringSpec({
 
     beforeEach {
         repository = VolatileRepository("TestRepo")
-        library = DefaultAudioLibrary(repository, files.metadataUtils)
+        library = DefaultAudioLibrary(repository, files.metadataIO)
     }
 
     afterEach {

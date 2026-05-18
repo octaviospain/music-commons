@@ -95,7 +95,7 @@ internal class CrossPlatformFilesystemTest : StringSpec({
                         this.discNumber = 1
                     }.next()
                 val originalId = 1000 + offset
-                val original: AudioItem = MutableAudioItemTestBridge.createAudioItem(path, originalId, files.metadataUtils)
+                val original: AudioItem = MutableAudioItemTestBridge.createAudioItem(path, originalId, files.metadataIO)
 
                 val mapSerializer = MapSerializer(Int.serializer(), AudioItemSerializer(fs))
                 val encoded = json.encodeToString(mapSerializer, mapOf(original.id to original))
@@ -118,7 +118,7 @@ internal class CrossPlatformFilesystemTest : StringSpec({
                         this.album = asciiAlbum
                     }.next()
                 val audioItemId = 3000 + offset
-                MutableAudioItemTestBridge.createAudioItem(path, audioItemId, files.metadataUtils)
+                MutableAudioItemTestBridge.createAudioItem(path, audioItemId, files.metadataIO)
 
                 val playlistId = 4000 + offset
                 val playlist =

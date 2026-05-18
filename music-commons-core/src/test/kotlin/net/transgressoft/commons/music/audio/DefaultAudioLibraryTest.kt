@@ -1,8 +1,7 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.AudioUtils
-import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
+import net.transgressoft.commons.util.InvalidAudioFilePathException
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
@@ -20,11 +19,13 @@ import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.list
 import io.kotest.property.arbitrary.next
 import java.io.File
+import java.nio.file.Files
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asExecutor
@@ -46,7 +47,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
     beforeEach {
         jsonFile = tempfile("audioLibrary-test", ".json").also { it.deleteOnExit() }
         jsonFileRepository = JsonFileRepository(jsonFile, MapSerializer(Int.serializer(), AudioItemSerializer(files.fileSystem)))
-        audioRepository = DefaultAudioLibrary(jsonFileRepository, files.metadataUtils)
+        audioRepository = DefaultAudioLibrary(jsonFileRepository, files.metadataIO)
     }
 
     afterEach {
@@ -62,7 +63,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
 
         audioItem should {
 
-            val artistNames = AudioUtils.getArtistsNamesInvolved(it.title, it.artist.name, it.album.albumArtist.name)
+            val artistNames = getArtistsNamesInvolved(it.title, it.artist.name, it.album.albumArtist.name)
 
             it.id shouldNotBe UNASSIGNED_ID
             audioRepository.add(it) shouldBe false
@@ -82,7 +83,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
 
         audioItem should {
 
-            val artistNames = AudioUtils.getArtistsNamesInvolved(it.title, it.artist.name, it.album.albumArtist.name)
+            val artistNames = getArtistsNamesInvolved(it.title, it.artist.name, it.album.albumArtist.name)
 
             audioRepository.size() shouldBe 1
             audioRepository.contains { audioItem -> it.title == "New title" } shouldBe true
@@ -201,7 +202,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         jsonFileRepository.close()
 
         val loadedJsonFileRepository = JsonFileRepository(jsonFile, MapSerializer(Int.serializer(), AudioItemSerializer(files.fileSystem)))
-        val loadedAudioRepository = DefaultAudioLibrary(loadedJsonFileRepository, files.metadataUtils)
+        val loadedAudioRepository = DefaultAudioLibrary(loadedJsonFileRepository, files.metadataIO)
 
         reactive.advance()
 
@@ -370,5 +371,50 @@ internal class DefaultAudioLibraryTest: StringSpec({
             catalog.albums.first().albumName shouldBe abbeyRoad.name
             catalog.size shouldBe albumFiles.size
         }
+    }
+
+    "DefaultAudioLibrary.createFromFile throws InvalidAudioFilePathException when file does not exist" {
+        val missingPath = files.fileSystem.getPath("/does", "not", "exist.mp3")
+        val ex = shouldThrow<InvalidAudioFilePathException> { audioRepository.createFromFile(missingPath) }
+        ex.message shouldContain "does not exist"
+    }
+
+    "DefaultAudioLibrary.createFromFile throws InvalidAudioFilePathException when path is a directory" {
+        val directoryPath = files.fileSystem.getPath("/").resolve("some-directory")
+        Files.createDirectories(directoryPath)
+        val ex = shouldThrow<InvalidAudioFilePathException> { audioRepository.createFromFile(directoryPath) }
+        ex.message shouldContain "is not a regular file"
+    }
+
+    "DefaultAudioLibrary.createFromFile returns audio item seeded with metadataIO readTag result" {
+        val audioFile = files.virtualAudioFile().next()
+        val audioItem = audioRepository.createFromFile(audioFile)
+
+        // Tag-derived properties (title, artist, album) must reflect what FakeAudioMetadataIO
+        // produced for the virtual file; null-empty tags would indicate the library bypassed readTag.
+        audioItem.path shouldBe audioFile
+        audioItem.id shouldNotBe UNASSIGNED_ID
+        audioItem.title.isNotEmpty() shouldBe true
+    }
+
+    "DefaultAudioLibrary.writeMetadata invokes metadataIO writeMetadata synchronously" {
+        val audioFile = files.virtualAudioFile().next()
+        val audioItem = audioRepository.createFromFile(audioFile)
+        reactive.advance()
+
+        audioItem.title = "Synchronous write title"
+        files.metadataIO.writeMetadata(audioItem)
+
+        files.metadataIO.readMetadata(audioFile).title shouldBe "Synchronous write title"
+    }
+
+    "DefaultAudioLibrary.loadCover returns bytes from metadataIO readCoverBytes" {
+        val audioFile = files.virtualAudioFile().next()
+        val audioItem = audioRepository.createFromFile(audioFile)
+
+        val expected = byteArrayOf(1, 2, 3, 4, 5)
+        files.metadataIO.stubCover(audioFile, expected)
+
+        files.metadataIO.loadCover(audioItem) shouldBe expected
     }
 })

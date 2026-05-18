@@ -17,57 +17,18 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.AudioUtils.audioItemTrackDiscNumberComparator
-import net.transgressoft.commons.music.AudioUtils.getArtistsNamesInvolved
-import net.transgressoft.commons.music.common.WindowsPathValidator
+import net.transgressoft.commons.util.WindowsPathValidator
 import net.transgressoft.lirp.entity.ReactiveEntityBase
-import mu.KotlinLogging
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.Objects
 import kotlin.io.path.extension
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
 const val UNASSIGNED_ID = 0
-
-// MutableAudioItem's primary constructor reads file metadata up-front to populate `metadata` and
-// derived properties. The secondary deserialization constructor overwrites those fields immediately
-// after, making the up-front read redundant on the deserialization path. However the primary still
-// has to produce *some* metadata object, and when called via the secondary path with a non-default
-// filesystem (e.g. Jimfs deserialization through AudioItemSerializer(fileSystem)) the default
-// AudioMetadataIO impl rejects the path with IllegalArgumentException. Swallow that one specific
-// failure so deserialization succeeds; the secondary constructor will overwrite the fields with
-// the values from JSON. Other failures (CannotReadException, NPE) are already handled inside
-// AudioItemMetadataUtils.readMetadata.
-private fun readMetadataSafely(metadataUtils: AudioItemMetadataUtils, path: Path) =
-    try {
-        metadataUtils.readMetadata(path)
-    } catch (_: IllegalArgumentException) {
-        AudioFileMetadata(
-            bitRate = 0,
-            duration = java.time.Duration.ZERO,
-            encoder = null,
-            encoding = null,
-            title = "",
-            artist = ImmutableArtist.UNKNOWN,
-            album = ImmutableAlbum.UNKNOWN,
-            genres = emptySet(),
-            comments = null,
-            trackNumber = null,
-            discNumber = null,
-            bpm = null,
-            coverBytes = null
-        )
-    }
 
 /**
  * Marker interface representing a concrete audio item implementation.
@@ -85,15 +46,12 @@ interface AudioItem : ReactiveAudioItem<AudioItem> {
 // bare `@Serializable(with = ...)` target — kotlinx-serialization requires KSerializer-typed ctor params.
 
 /**
- * Mutable implementation of [AudioItem] that reads and writes audio file metadata.
+ * Mutable implementation of [AudioItem].
  *
- * Reads metadata from audio files using JAudioTagger library and provides reactive
- * change notifications when metadata is modified. Supports asynchronous metadata
- * writing back to audio files while maintaining data integrity through thread-safe operations.
- *
- * The implementation automatically extracts metadata from the file on construction and
- * lazily caches immutable properties like duration and bitrate for performance.
- * All JAudioTagger operations are delegated to [AudioItemMetadataUtils].
+ * Pure value holder: the primary constructor seeds reactive properties from an [AudioItemMetadata]
+ * value object. File-level concerns (existence checks, tag IO) live one layer up in
+ * [DefaultAudioLibrary]; this class only validates the path shape via [WindowsPathValidator] and
+ * exposes reactive mutators.
  *
  * @see <a href=https://www.jthink.net/jaudiotagger/>JAudioTagger website</a>
  */
@@ -102,55 +60,19 @@ internal class MutableAudioItem
     constructor(
         override val path: Path,
         override val id: Int = UNASSIGNED_ID,
-        private val metadataUtils: AudioItemMetadataUtils = AudioItemMetadataUtils()
+        metadata: AudioItemMetadata
     ) : AudioItem, ReactiveEntityBase<Int, AudioItem>() {
-
-        @Transient
-        private val logger = KotlinLogging.logger {}
-
-        private val ioScope =
-            CoroutineScope(
-                Dispatchers.IO + SupervisorJob() +
-                    CoroutineExceptionHandler { _, exception ->
-                        val errorText = "Error writing metadata of $this"
-                        logger.error(errorText, exception)
-                    }
-            )
 
         // Constructor for deserialization & iTunes import
         internal constructor(
             path: Path,
             id: Int,
-            title: String,
-            duration: Duration,
-            bitRate: Int,
-            artist: Artist,
-            album: Album,
-            genres: Set<Genre>,
-            comments: String?,
-            trackNumber: Short?,
-            discNumber: Short?,
-            bpm: Float?,
-            encoder: String?,
-            encoding: String?,
+            metadata: AudioItemMetadata,
             dateOfCreation: LocalDateTime,
             lastDateModified: LocalDateTime,
-            playCount: Short,
-            metadataUtils: AudioItemMetadataUtils = AudioItemMetadataUtils()
-        ) : this(path, id, metadataUtils) {
+            playCount: Short
+        ) : this(path, id, metadata) {
             disableEvents()
-            this.title = title
-            this._duration = duration
-            this.artist = artist
-            this.genres = genres
-            this.comments = comments
-            this.trackNumber = trackNumber
-            this.discNumber = discNumber
-            this.bpm = bpm
-            this.album = album
-            this._bitRate = bitRate
-            this._encoder = encoder
-            this._encoding = encoding
             this._dateOfCreation = dateOfCreation
             this.lastDateModified = lastDateModified
             this._playCount = playCount
@@ -159,19 +81,7 @@ internal class MutableAudioItem
 
         init {
             WindowsPathValidator.validatePath(path)
-            if (!Files.exists(path)) {
-                throw InvalidAudioFilePathException("File '${path.toAbsolutePath()}' does not exist")
-            }
-            if (!Files.isRegularFile(path)) {
-                throw InvalidAudioFilePathException("Path '${path.toAbsolutePath()}' is not a regular file")
-            }
-            if (!Files.isReadable(path)) {
-                throw InvalidAudioFilePathException("File '${path.toAbsolutePath()}' is not readable")
-            }
         }
-
-        @Transient
-        private val metadata = readMetadataSafely(metadataUtils, path)
 
         private var _bitRate: Int = metadata.bitRate
 
@@ -279,24 +189,6 @@ internal class MutableAudioItem
                 setter = { _coverImageBytes = it?.copyOf() }
             )
 
-        /**
-         * Asynchronously writes the current metadata back to the audio file.
-         *
-         * Creates the appropriate tag format based on the file type and commits changes to disk.
-         * Errors during writing are logged but do not throw exceptions to prevent
-         * disrupting the application flow, especially during batch, background operations.
-         */
-        override fun writeMetadata(): Job =
-            ioScope.launch {
-                logger.debug { "Writing metadata of $this to file '${path.toAbsolutePath()}'" }
-                metadataUtils.writeMetadataToFile(
-                    path, title, album, artist, genres,
-                    comments, trackNumber, discNumber, bpm, encoder,
-                    coverImageBytes, fileName, logger
-                )
-                logger.debug { "Metadata of $this successfully written to file" }
-            }
-
         internal fun incrementPlayCount() = _playCount++
 
         override fun setPlayCount(count: Short) {
@@ -326,9 +218,26 @@ internal class MutableAudioItem
 
         override fun clone(): MutableAudioItem =
             MutableAudioItem(
-                path, id, title, duration, bitRate, artist, album, genres,
-                comments, trackNumber, discNumber, bpm, encoder, encoding,
-                dateOfCreation, lastDateModified, _playCount, metadataUtils
+                path,
+                id,
+                AudioItemMetadata(
+                    title = title,
+                    artist = artist,
+                    album = album,
+                    genres = genres,
+                    comments = comments,
+                    trackNumber = trackNumber,
+                    discNumber = discNumber,
+                    bpm = bpm,
+                    encoder = encoder,
+                    encoding = encoding,
+                    bitRate = bitRate,
+                    duration = duration,
+                    coverBytes = _coverImageBytes?.copyOf()
+                ),
+                dateOfCreation,
+                lastDateModified,
+                _playCount
             )
 
         override fun toString() = "AudioItem(id=$id, path=$path, title=$title, artist=${artist.name})"

@@ -1,12 +1,13 @@
 package net.transgressoft.commons.fx.music
 
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
-import net.transgressoft.commons.music.AudioUtils.audioItemTrackDiscNumberComparator
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
+import net.transgressoft.commons.music.audio.AudioItemMetadata
 import net.transgressoft.commons.music.audio.AudioItemTestAttributes
 import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.audioAttributes
+import net.transgressoft.commons.music.audio.audioItemTrackDiscNumberComparator
 import net.transgressoft.lirp.entity.ReactiveEntityBase
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
@@ -30,7 +31,6 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.util.Optional
 import java.util.function.Consumer
-import kotlinx.coroutines.Job
 
 /**
  * Java-friendly factory methods for observable audio item test fixtures.
@@ -75,55 +75,57 @@ object FxAudioItemTestFactory {
         Comparable<ObservableAudioItem>,
         ReactiveEntityBase<Int, ObservableAudioItem>() {
 
+        private val metadata = attributes.metadata
+
         override val id: Int = attributes.id
-        override val uniqueId: String = "${attributes.path.fileName}-${attributes.title}-${attributes.id}"
+        override val uniqueId: String = "${attributes.path.fileName}-${metadata.title}-${attributes.id}"
         override val path: Path = attributes.path
-        override val duration: Duration = attributes.duration
-        override val bitRate: Int = attributes.bitRate
-        override val encoder: String? = attributes.encoder
-        override val encoding: String? = attributes.encoding
+        override val duration: Duration = metadata.duration
+        override val bitRate: Int = metadata.bitRate
+        override val encoder: String? = metadata.encoder
+        override val encoding: String? = metadata.encoding
         override val dateOfCreation: LocalDateTime = attributes.dateOfCreation
         override val playCount: Short = attributes.playCount
         override val fileName: String = path.fileName.toString()
         override val extension: String = path.fileName.toString().substringAfterLast('.', "")
         override val length: Long = 0
 
-        override val titleProperty: StringProperty = SimpleStringProperty(this, "title", attributes.title)
+        override val titleProperty: StringProperty = SimpleStringProperty(this, "title", metadata.title)
         override var title: String
             get() = titleProperty.get()
             set(value) = titleProperty.set(value)
 
-        override val artistProperty: ObjectProperty<Artist> = SimpleObjectProperty(this, "artist", attributes.artist)
+        override val artistProperty: ObjectProperty<Artist> = SimpleObjectProperty(this, "artist", metadata.artist)
         override var artist: Artist
             get() = artistProperty.get()
             set(value) = artistProperty.set(value)
 
-        override val albumProperty: ObjectProperty<Album> = SimpleObjectProperty(this, "album", attributes.album)
+        override val albumProperty: ObjectProperty<Album> = SimpleObjectProperty(this, "album", metadata.album)
         override var album: Album
             get() = albumProperty.get()
             set(value) = albumProperty.set(value)
 
-        override val genresProperty: ObjectProperty<Set<Genre>> = SimpleObjectProperty(this, "genres", attributes.genres)
+        override val genresProperty: ObjectProperty<Set<Genre>> = SimpleObjectProperty(this, "genres", metadata.genres)
         override var genres: Set<Genre>
             get() = genresProperty.get()
             set(value) = genresProperty.set(value)
 
-        override val commentsProperty: StringProperty = SimpleStringProperty(this, "comments", attributes.comments ?: "")
+        override val commentsProperty: StringProperty = SimpleStringProperty(this, "comments", metadata.comments ?: "")
         override var comments: String?
             get() = commentsProperty.get()
             set(value) = commentsProperty.set(value)
 
-        override val trackNumberProperty: IntegerProperty = SimpleIntegerProperty(this, "track number", attributes.trackNumber?.toInt() ?: 0)
+        override val trackNumberProperty: IntegerProperty = SimpleIntegerProperty(this, "track number", metadata.trackNumber?.toInt() ?: 0)
         override var trackNumber: Short?
             get() = trackNumberProperty.get().takeIf { it > 0 }?.toShort()
             set(value) = trackNumberProperty.set(value?.toInt() ?: 0)
 
-        override val discNumberProperty: IntegerProperty = SimpleIntegerProperty(this, "disc number", attributes.discNumber?.toInt() ?: 0)
+        override val discNumberProperty: IntegerProperty = SimpleIntegerProperty(this, "disc number", metadata.discNumber?.toInt() ?: 0)
         override var discNumber: Short?
             get() = discNumberProperty.get().takeIf { it > 0 }?.toShort()
             set(value) = discNumberProperty.set(value?.toInt() ?: 0)
 
-        override val bpmProperty: FloatProperty = SimpleFloatProperty(this, "bpm", attributes.bpm ?: 0f)
+        override val bpmProperty: FloatProperty = SimpleFloatProperty(this, "bpm", metadata.bpm ?: 0f)
         override var bpm: Float?
             get() = bpmProperty.get().takeIf { it > 0f }
             set(value) = bpmProperty.set(value ?: 0f)
@@ -143,7 +145,7 @@ object FxAudioItemTestFactory {
         override val playCountProperty: ReadOnlyIntegerProperty =
             SimpleIntegerProperty(this, "play count", playCount.toInt())
 
-        override var coverImageBytes: ByteArray? = attributes.coverImageBytes?.copyOf()
+        override var coverImageBytes: ByteArray? = metadata.coverBytes?.copyOf()
             get() = field?.copyOf()
             set(value) {
                 field = value?.copyOf()
@@ -153,8 +155,6 @@ object FxAudioItemTestFactory {
             // Immutable test fixture: play count changes are not needed by current consumers.
         }
 
-        override fun writeMetadata(): Job = Job().apply { complete() }
-
         override fun compareTo(other: ObservableAudioItem): Int =
             audioItemTrackDiscNumberComparator<ObservableAudioItem>().compare(this, other)
 
@@ -162,23 +162,26 @@ object FxAudioItemTestFactory {
             TestObservableAudioItem(
                 AudioItemTestAttributes(
                     path = path,
-                    title = title,
-                    duration = duration,
-                    bitRate = bitRate,
-                    artist = artist,
-                    album = album,
-                    genres = genres,
-                    comments = comments,
-                    trackNumber = trackNumber,
-                    discNumber = discNumber,
-                    bpm = bpm,
-                    encoder = encoder,
-                    encoding = encoding,
-                    coverImageBytes = coverImageBytes,
+                    id = id,
+                    metadata =
+                        AudioItemMetadata(
+                            title = title,
+                            artist = artist,
+                            album = album,
+                            genres = genres,
+                            comments = comments,
+                            trackNumber = trackNumber,
+                            discNumber = discNumber,
+                            bpm = bpm,
+                            encoder = encoder,
+                            encoding = encoding,
+                            bitRate = bitRate,
+                            duration = duration,
+                            coverBytes = coverImageBytes
+                        ),
                     dateOfCreation = dateOfCreation,
                     lastDateModified = lastDateModified,
-                    playCount = playCount,
-                    id = id
+                    playCount = playCount
                 ),
                 artistsInvolved
             )

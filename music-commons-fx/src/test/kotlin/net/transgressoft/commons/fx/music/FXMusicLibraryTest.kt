@@ -1,9 +1,12 @@
 package net.transgressoft.commons.fx.music
 
-import net.transgressoft.commons.music.audio.WindowsPathException
+import net.transgressoft.commons.fx.music.playlist.ObservablePlaylistMapSerializer
+import net.transgressoft.commons.music.audio.testCoverBytes
 import net.transgressoft.commons.music.audio.virtualFiles
-import net.transgressoft.commons.music.common.OsDetector
 import net.transgressoft.commons.music.testing.reactiveScope
+import net.transgressoft.commons.util.OsDetector
+import net.transgressoft.commons.util.WindowsPathException
+import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import io.kotest.assertions.nondeterministic.eventually
@@ -76,7 +79,7 @@ internal class FXMusicLibraryTest : StringSpec({
     }
 
     "FXMusicLibrary curated methods work for audio items and playlists" {
-        val library = FXMusicLibrary.Builder(files.metadataUtils).build()
+        val library = FXMusicLibrary.builder().metadataIO(files.metadataIO).build()
 
         val audioPath = files.virtualAudioFile().next()
         val audioItem = library.audioItemFromFile(audioPath)
@@ -106,9 +109,9 @@ internal class FXMusicLibraryTest : StringSpec({
     }
 
     "FXMusicLibrary createPlaylist with non-empty audioItemIds resolves the playlist cover image after lirp binding" {
-        val library = FXMusicLibrary.Builder(files.metadataUtils).build()
+        val library = FXMusicLibrary.builder().metadataIO(files.metadataIO).build()
 
-        val audioPath = files.virtualAudioFile().next()
+        val audioPath = files.virtualAudioFile { coverImageBytes = testCoverBytes }.next()
         val audioItem = library.audioItemFromFile(audioPath)
 
         reactive.advance()
@@ -139,7 +142,7 @@ internal class FXMusicLibraryTest : StringSpec({
 
         val library =
             FXMusicLibrary.builder()
-                .playlistHierarchyJsonFile(playlistFile)
+                .playlistRepository(JsonFileRepository(playlistFile, ObservablePlaylistMapSerializer, loadOnInit = false))
                 .build()
 
         reactive.advance()
@@ -155,7 +158,7 @@ internal class FXMusicLibraryTest : StringSpec({
     }
 
     "FXMusicLibrary close releases all resources" {
-        val library = FXMusicLibrary.Builder(files.metadataUtils).build()
+        val library = FXMusicLibrary.builder().metadataIO(files.metadataIO).build()
 
         val audioItem = library.audioItemFromFile(files.virtualAudioFile().next())
 

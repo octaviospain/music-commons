@@ -21,23 +21,100 @@ import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
 
+/**
+ * Test fixture bag combining production [AudioItemMetadata] with the identity and lifecycle fields
+ * that live on a full [AudioItem] (path, id, creation/modification timestamps, play count).
+ *
+ * The metadata block embeds the production type so there is a single source of truth on what
+ * "metadata" means. Flat property forwarders are provided as convenience accessors so existing
+ * test DSL blocks (`audioItem { artist = X; album = Y }`) keep working — each forwarder rebuilds
+ * [metadata] via [AudioItemMetadata.copy] on write. The forwarder for cover bytes is named
+ * `coverImageBytes` for symmetry with the [ObservableAudioItem] / [AudioItem] property even though
+ * the embedded metadata field is `coverBytes`.
+ */
 data class AudioItemTestAttributes(
     var path: Path,
-    var title: String,
-    var duration: Duration,
-    var bitRate: Int,
-    var artist: Artist,
-    var album: Album,
-    var genres: Set<Genre>,
-    var comments: String? = null,
-    var trackNumber: Short? = null,
-    var discNumber: Short? = null,
-    var bpm: Float? = null,
-    var encoder: String? = null,
-    var encoding: String? = null,
-    var coverImageBytes: ByteArray? = null,
+    var id: Int = UNASSIGNED_ID,
+    var metadata: AudioItemMetadata,
     var dateOfCreation: LocalDateTime,
     var lastDateModified: LocalDateTime,
-    var playCount: Short,
-    var id: Int = UNASSIGNED_ID
-)
+    var playCount: Short
+) {
+    var title: String
+        get() = metadata.title
+        set(value) {
+            metadata = metadata.copy(title = value)
+        }
+
+    var artist: Artist
+        get() = metadata.artist
+        set(value) {
+            metadata = metadata.copy(artist = value)
+        }
+
+    var album: Album
+        get() = metadata.album
+        set(value) {
+            metadata = metadata.copy(album = value)
+        }
+
+    var genres: Set<Genre>
+        get() = metadata.genres
+        set(value) {
+            metadata = metadata.copy(genres = value)
+        }
+
+    var comments: String?
+        get() = metadata.comments
+        set(value) {
+            metadata = metadata.copy(comments = value)
+        }
+
+    var trackNumber: Short?
+        get() = metadata.trackNumber
+        set(value) {
+            metadata = metadata.copy(trackNumber = value)
+        }
+
+    var discNumber: Short?
+        get() = metadata.discNumber
+        set(value) {
+            metadata = metadata.copy(discNumber = value)
+        }
+
+    var bpm: Float?
+        get() = metadata.bpm
+        set(value) {
+            metadata = metadata.copy(bpm = value)
+        }
+
+    var encoder: String?
+        get() = metadata.encoder
+        set(value) {
+            metadata = metadata.copy(encoder = value)
+        }
+
+    var encoding: String?
+        get() = metadata.encoding
+        set(value) {
+            metadata = metadata.copy(encoding = value)
+        }
+
+    var bitRate: Int
+        get() = metadata.bitRate
+        set(value) {
+            metadata = metadata.copy(bitRate = value)
+        }
+
+    var duration: Duration
+        get() = metadata.duration
+        set(value) {
+            metadata = metadata.copy(duration = value)
+        }
+
+    var coverImageBytes: ByteArray?
+        get() = metadata.coverBytes
+        set(value) {
+            metadata = metadata.copy(coverBytes = value)
+        }
+}

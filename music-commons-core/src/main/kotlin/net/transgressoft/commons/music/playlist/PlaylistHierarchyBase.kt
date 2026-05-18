@@ -19,7 +19,7 @@ package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
-import net.transgressoft.commons.music.common.SortedMultimap
+import net.transgressoft.commons.util.SortedMultimap
 import net.transgressoft.lirp.entity.subscribeToCollectionChanges
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.CrudEvent.Type.CREATE

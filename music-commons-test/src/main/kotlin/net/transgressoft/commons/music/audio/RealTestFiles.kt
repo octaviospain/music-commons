@@ -55,21 +55,10 @@ object ArbitraryAudioFile : TestConfiguration() {
         attributesAction: AudioItemTestAttributes
     ): Arb<Path> =
         realAudioFile(audioFileTagType, {
-            this.title = attributesAction.title
-            this.duration = attributesAction.duration
-            this.bitRate = attributesAction.bitRate
-            this.artist = attributesAction.artist
-            this.album = attributesAction.album
-            this.bpm = attributesAction.bpm
-            this.trackNumber = attributesAction.trackNumber
-            this.discNumber = attributesAction.discNumber
-            this.comments = attributesAction.comments
-            this.genres = attributesAction.genres
-            this.encoder = attributesAction.encoder
-            this.dateOfCreation = attributesAction.dateOfCreation
-            this.lastDateModified = attributesAction.lastDateModified
-            this.playCount = attributesAction.playCount
-            this.coverImageBytes = attributesAction.coverImageBytes
+            metadata = attributesAction.metadata
+            dateOfCreation = attributesAction.dateOfCreation
+            lastDateModified = attributesAction.lastDateModified
+            playCount = attributesAction.playCount
         })
 
     fun Arb.Companion.realAudioFile(
@@ -115,27 +104,28 @@ object ArbitraryAudioFile : TestConfiguration() {
             }
         }
 
-        tag.setField(FieldKey.TITLE, attributes.title)
-        tag.setField(FieldKey.ALBUM, attributes.album.name)
-        tag.setField(FieldKey.COUNTRY, attributes.artist.countryCode.name)
-        tag.setField(FieldKey.ALBUM_ARTIST, attributes.album.albumArtist.name)
-        tag.setField(FieldKey.ARTIST, attributes.artist.name)
-        tag.setField(FieldKey.GENRE, Genre.joinGenres(attributes.genres))
-        attributes.comments?.let { tag.setField(FieldKey.COMMENT, it) }
-        attributes.trackNumber?.let { tag.setField(FieldKey.TRACK, it.toString()) }
-        attributes.discNumber?.let { tag.setField(FieldKey.DISC_NO, it.toString()) }
-        attributes.album.year?.let { tag.setField(FieldKey.YEAR, it.toString()) }
-        attributes.encoder?.let { tag.setField(FieldKey.ENCODER, it) }
-        tag.setField(FieldKey.IS_COMPILATION, attributes.album.isCompilation.toString())
-        tag.setField(FieldKey.GROUPING, attributes.album.label.name)
-        attributes.bpm?.let {
+        val metadata = attributes.metadata
+        tag.setField(FieldKey.TITLE, metadata.title)
+        tag.setField(FieldKey.ALBUM, metadata.album.name)
+        tag.setField(FieldKey.COUNTRY, metadata.artist.countryCode.name)
+        tag.setField(FieldKey.ALBUM_ARTIST, metadata.album.albumArtist.name)
+        tag.setField(FieldKey.ARTIST, metadata.artist.name)
+        tag.setField(FieldKey.GENRE, Genre.joinGenres(metadata.genres))
+        metadata.comments?.let { tag.setField(FieldKey.COMMENT, it) }
+        metadata.trackNumber?.let { tag.setField(FieldKey.TRACK, it.toString()) }
+        metadata.discNumber?.let { tag.setField(FieldKey.DISC_NO, it.toString()) }
+        metadata.album.year?.let { tag.setField(FieldKey.YEAR, it.toString()) }
+        metadata.encoder?.let { tag.setField(FieldKey.ENCODER, it) }
+        tag.setField(FieldKey.IS_COMPILATION, metadata.album.isCompilation.toString())
+        tag.setField(FieldKey.GROUPING, metadata.album.label.name)
+        metadata.bpm?.let {
             if (tag is Mp4Tag) {
                 tag.setField(FieldKey.BPM, it.toInt().toString())
             } else {
                 tag.setField(FieldKey.BPM, it.toString())
             }
         }
-        attributes.coverImageBytes?.let { setArtworkTag(tag, it) }
+        metadata.coverBytes?.let { setArtworkTag(tag, it) }
         return tag
     }
 

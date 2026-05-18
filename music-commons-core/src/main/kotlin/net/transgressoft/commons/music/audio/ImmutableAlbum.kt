@@ -76,6 +76,6 @@ class ImmutableAlbum(
 
     companion object {
         @get:JvmName("UNKNOWN")
-        val UNKNOWN = ImmutableAlbum("", ImmutableArtist.UNKNOWN)
+        val UNKNOWN: Album = UnknownAlbum
     }
 }

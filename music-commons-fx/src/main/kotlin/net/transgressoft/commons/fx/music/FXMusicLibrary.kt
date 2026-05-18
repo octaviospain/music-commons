@@ -20,39 +20,32 @@ package net.transgressoft.commons.fx.music
 import net.transgressoft.commons.fx.music.audio.FXAudioLibrary
 import net.transgressoft.commons.fx.music.audio.ObservableArtistCatalog
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
-import net.transgressoft.commons.fx.music.audio.ObservableAudioItemMapSerializer
 import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
 import net.transgressoft.commons.fx.music.playlist.FXPlaylistHierarchy
 import net.transgressoft.commons.fx.music.playlist.ObservablePlaylist
 import net.transgressoft.commons.fx.music.playlist.ObservablePlaylistHierarchy
-import net.transgressoft.commons.fx.music.playlist.ObservablePlaylistMapSerializer
-import net.transgressoft.commons.media.waveform.AudioWaveformMapSerializer
 import net.transgressoft.commons.media.waveform.audioWaveformRepository
 import net.transgressoft.commons.music.MusicLibrary
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
-import net.transgressoft.commons.music.audio.AudioItemMetadataUtils
+import net.transgressoft.commons.music.audio.AudioMetadataIO
+import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
-import net.transgressoft.commons.music.common.WindowsPathValidator
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
+import net.transgressoft.commons.util.WindowsPathValidator
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.LirpEventPublisher
 import net.transgressoft.lirp.persistence.PersistentRepository
 import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.Repository
 import net.transgressoft.lirp.persistence.VolatileRepository
-import net.transgressoft.lirp.persistence.json.JsonFileRepository
-import net.transgressoft.lirp.persistence.sql.SqlRepository
-import net.transgressoft.lirp.persistence.sql.SqlTableDef
 import javafx.beans.property.ReadOnlyBooleanProperty
 import javafx.beans.property.ReadOnlyIntegerProperty
 import javafx.beans.property.ReadOnlyListProperty
 import javafx.beans.property.ReadOnlySetProperty
-import java.io.File
 import java.nio.file.Path
 import java.util.Optional
-import javax.sql.DataSource
 
 /**
  * JavaFX-compatible entry point for managing an observable audio library, playlist hierarchy,
@@ -65,8 +58,8 @@ import javax.sql.DataSource
  * Construct via [builder]:
  * ```kotlin
  * val library = FXMusicLibrary.builder()
- *     .audioLibraryJsonFile(audioFile)
- *     .playlistHierarchyJsonFile(playlistFile)
+ *     .audioRepository(JsonFileRepository(audioFile, ObservableAudioItemMapSerializer))
+ *     .playlistRepository(JsonFileRepository(playlistFile, ObservablePlaylistMapSerializer, loadOnInit = false))
  *     .build()
  * ```
  */
@@ -166,140 +159,87 @@ class FXMusicLibrary private constructor(
     }
 
     /**
-     * Builder for [FXMusicLibrary].
+     * Builder for [FXMusicLibrary] that accepts a [Repository] implementation directly for each component.
      *
-     * All storage configurations default to volatile (in-memory) unless overridden with a JSON file
-     * or SQL data source:
+     * Each component defaults to a [VolatileRepository] (in-memory). Inject a different repository
+     * implementation — `JsonFileRepository`, `SqlRepository`, or a custom one — to configure
+     * persistence. The `lirp-sql` artifact is now an optional consumer dependency: add it to your
+     * build only if you intend to back any component with a SQL repository.
      *
      * ```kotlin
      * val library = FXMusicLibrary.builder()
-     *     .audioLibrarySql(dataSource, audioTableDef)
-     *     .playlistHierarchySql(dataSource, playlistTableDef)
-     *     .waveformRepositorySql(dataSource, waveformTableDef)
+     *     .audioRepository(SqlRepository(dataSource, audioTableDef))
+     *     .playlistRepository(SqlRepository(dataSource, playlistTableDef, loadOnInit = false))
+     *     .waveformRepository(SqlRepository(dataSource, waveformTableDef))
      *     .build()
      * ```
      */
-    class Builder() {
+    class Builder {
 
-        private var audioLibraryStorage: StorageConfig = VolatileStorage
-        private var playlistHierarchyStorage: StorageConfig = VolatileStorage
-        private var waveformRepositoryStorage: StorageConfig = VolatileStorage
-        private var metadataUtils: AudioItemMetadataUtils = AudioItemMetadataUtils()
+        private var audioRepository: Repository<Int, ObservableAudioItem> = VolatileRepository("FXAudioLibrary")
+        private var playlistRepository: Repository<Int, ObservablePlaylist> = VolatileRepository("FXPlaylistHierarchy")
+        private var waveformRepository: Repository<Int, AudioWaveform> = VolatileRepository("FXWaveformRepository")
+        private var metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO()
 
-        // Internal seam for in-module tests: see CoreMusicLibrary.Builder's internal constructor
-        // for rationale. Not exposed on the public Builder API.
-        internal constructor(metadataUtils: AudioItemMetadataUtils) : this() {
-            this.metadataUtils = metadataUtils
-        }
+        /** Injects the [repository] backing the observable audio library. */
+        fun audioRepository(repository: Repository<Int, ObservableAudioItem>): Builder =
+            apply { audioRepository = repository }
 
-        /** Configures the audio library to use JSON file persistence at [file]. */
-        fun audioLibraryJsonFile(file: File): Builder = apply { audioLibraryStorage = JsonFileStorage(file) }
+        /** Injects the [repository] backing the observable playlist hierarchy. */
+        fun playlistRepository(repository: Repository<Int, ObservablePlaylist>): Builder =
+            apply { playlistRepository = repository }
 
-        /** Configures the playlist hierarchy to use JSON file persistence at [file]. */
-        fun playlistHierarchyJsonFile(file: File): Builder = apply { playlistHierarchyStorage = JsonFileStorage(file) }
-
-        /** Configures the waveform repository to use JSON file persistence at [file]. */
-        fun waveformRepositoryJsonFile(file: File): Builder = apply { waveformRepositoryStorage = JsonFileStorage(file) }
+        /** Injects the [repository] backing the waveform repository. */
+        fun waveformRepository(repository: Repository<Int, AudioWaveform>): Builder =
+            apply { waveformRepository = repository }
 
         /**
-         * Configures the audio library to persist to a SQL database using [dataSource] and [tableDef].
+         * Injects the [AudioMetadataIO] used by the audio library for metadata I/O.
          *
-         * @param dataSource the JDBC data source for database connections
-         * @param tableDef the KSP-generated table definition describing [ObservableAudioItem] column mapping
+         * Defaults to the JAudioTagger-backed implementation. Production callers rarely override
+         * this — the seam exists primarily for tests that route reads/writes through a fake.
          */
-        fun audioLibrarySql(dataSource: DataSource, tableDef: SqlTableDef<ObservableAudioItem>): Builder =
-            apply { audioLibraryStorage = SqlStorage(dataSource, tableDef) }
-
-        /**
-         * Configures the playlist hierarchy to persist to a SQL database using [dataSource] and [tableDef].
-         *
-         * @param dataSource the JDBC data source for database connections
-         * @param tableDef the KSP-generated table definition describing [ObservablePlaylist] column mapping
-         */
-        fun playlistHierarchySql(dataSource: DataSource, tableDef: SqlTableDef<ObservablePlaylist>): Builder =
-            apply { playlistHierarchyStorage = SqlStorage(dataSource, tableDef) }
-
-        /**
-         * Configures the waveform repository to persist to a SQL database using [dataSource] and [tableDef].
-         *
-         * @param dataSource the JDBC data source for database connections
-         * @param tableDef the KSP-generated table definition describing [AudioWaveform] column mapping
-         */
-        fun waveformRepositorySql(dataSource: DataSource, tableDef: SqlTableDef<AudioWaveform>): Builder =
-            apply { waveformRepositoryStorage = SqlStorage(dataSource, tableDef) }
+        fun metadataIO(utils: AudioMetadataIO): Builder = apply { metadataIO = utils }
 
         /** Builds the [FXMusicLibrary], wiring all event subscriptions between components. */
         fun build(): FXMusicLibrary {
-            val audioRepo = createAudioRepository()
-            val audioLibrary = FXAudioLibrary(audioRepo, metadataUtils)
+            val audioLibrary = FXAudioLibrary(audioRepository, metadataIO)
             var playlistRepoRegistered = false
 
-            var waveformRepository: AudioWaveformRepository<AudioWaveform, ObservableAudioItem>? = null
+            var waveformRepo: AudioWaveformRepository<AudioWaveform, ObservableAudioItem>? = null
             try {
-                val waveformRepo = createWaveformRepository()
                 val audioItemSubscriber = AudioItemEventSubscriber<ObservableAudioItem>("AudioWaveformRepositorySubscriber")
-                waveformRepository =
+                waveformRepo =
                     audioWaveformRepository<ObservableAudioItem>(
-                        waveformRepo,
+                        waveformRepository,
                         audioItemSubscriber
                     ) { audioItemSubscriber.cancelSubscription() }
 
-                val playlistRepo = createPlaylistRepository()
-                if (playlistRepo is PersistentRepository<*, *>) {
-                    RegistryBase.registerRepository(ObservablePlaylist::class.java, playlistRepo)
+                if (playlistRepository is PersistentRepository<*, *>) {
+                    RegistryBase.registerRepository(ObservablePlaylist::class.java, playlistRepository)
                     playlistRepoRegistered = true
-                    playlistRepo.load()
+                    (playlistRepository as PersistentRepository<*, *>).load()
                 }
-                val playlistHierarchy = FXPlaylistHierarchy(playlistRepo)
+                val playlistHierarchy = FXPlaylistHierarchy(playlistRepository)
 
                 try {
-                    audioLibrary.subscribe(waveformRepository)
+                    audioLibrary.subscribe(waveformRepo)
                     audioLibrary.subscribe(playlistHierarchy)
                 } catch (subscribeEx: Exception) {
                     playlistHierarchy.close()
                     throw subscribeEx
                 }
 
-                return FXMusicLibrary(audioLibrary, playlistHierarchy, waveformRepository)
+                return FXMusicLibrary(audioLibrary, playlistHierarchy, waveformRepo)
             } catch (ex: Exception) {
                 if (playlistRepoRegistered) {
                     RegistryBase.deregisterRepository(ObservablePlaylist::class.java)
                 }
-                waveformRepository?.close()
+                waveformRepo?.close()
                 audioLibrary.close()
                 throw ex
             }
         }
-
-        // Safe cast: generic type erased at runtime but guaranteed by the builder/serializer contract
-        @Suppress("UNCHECKED_CAST")
-        private fun createAudioRepository(): Repository<Int, ObservableAudioItem> =
-            when (val config = audioLibraryStorage) {
-                is VolatileStorage -> VolatileRepository("FXAudioLibrary")
-                is JsonFileStorage -> JsonFileRepository(config.file, ObservableAudioItemMapSerializer)
-                is SqlStorage<*> -> SqlRepository((config as SqlStorage<ObservableAudioItem>).dataSource, config.tableDef)
-            }
-
-        @Suppress("UNCHECKED_CAST")
-        private fun createPlaylistRepository(): Repository<Int, ObservablePlaylist> =
-            when (val config = playlistHierarchyStorage) {
-                is VolatileStorage -> VolatileRepository("FXPlaylistHierarchy")
-                is JsonFileStorage -> JsonFileRepository(config.file, ObservablePlaylistMapSerializer, loadOnInit = false)
-                is SqlStorage<*> ->
-                    SqlRepository(
-                        (config as SqlStorage<ObservablePlaylist>).dataSource,
-                        config.tableDef,
-                        loadOnInit = false
-                    )
-            }
-
-        @Suppress("UNCHECKED_CAST")
-        private fun createWaveformRepository(): Repository<Int, AudioWaveform> =
-            when (val config = waveformRepositoryStorage) {
-                is VolatileStorage -> VolatileRepository("FXWaveformRepository")
-                is JsonFileStorage -> JsonFileRepository(config.file, AudioWaveformMapSerializer)
-                is SqlStorage<*> -> SqlRepository((config as SqlStorage<AudioWaveform>).dataSource, config.tableDef)
-            }
     }
 
     companion object {
@@ -310,12 +250,4 @@ class FXMusicLibrary private constructor(
         @JvmStatic
         fun builder(): Builder = Builder()
     }
-
-    private sealed interface StorageConfig
-
-    private object VolatileStorage : StorageConfig
-
-    private class JsonFileStorage(val file: File) : StorageConfig
-
-    private class SqlStorage<E>(val dataSource: DataSource, val tableDef: SqlTableDef<E>) : StorageConfig
 }

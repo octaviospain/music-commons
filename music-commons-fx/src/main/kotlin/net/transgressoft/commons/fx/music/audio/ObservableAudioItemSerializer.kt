@@ -17,21 +17,39 @@
 
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.music.audio.Album
-import net.transgressoft.commons.music.audio.Artist
+import net.transgressoft.commons.music.audio.AudioItemMetadata
 import net.transgressoft.commons.music.audio.AudioItemSerializerBase
-import net.transgressoft.commons.music.audio.Genre
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
 import java.nio.file.Path
-import java.time.Duration
 import java.time.LocalDateTime
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 
+/**
+ * [KSerializer] for `Map<Int, ObservableAudioItem>` — the JavaFX-typed counterpart of
+ * `AudioItemMapSerializer` for use with the FX `MusicLibrary`.
+ *
+ * Consumers wiring a custom `JsonFileRepository` pass this serializer directly:
+ *
+ * ```
+ * val repository = JsonFileRepository(audioFile, ObservableAudioItemMapSerializer)
+ * FXMusicLibrary.builder().audioRepository(repository).build()
+ * ```
+ *
+ * The element serializer is the polymorphic [ObservableAudioItemSerializer], which materializes
+ * deserialized entries as [FXAudioItem] instances with their JavaFX property bindings
+ * reconstructed. Polymorphic subtypes for `Artist`, `Album`, and `Label` are registered through
+ * [observableAudioItemSerializerModule]; pass it as `serializersModule` when constructing a `Json`
+ * instance manually. `JsonFileRepository` wires it automatically.
+ *
+ * Thread-safety: the serializer is stateless; concurrent reads are safe.
+ *
+ * @see observableAudioItemSerializerModule
+ */
 @get:JvmName("ObservableAudioItemMapSerializer")
-internal val ObservableAudioItemMapSerializer: KSerializer<Map<Int, ObservableAudioItem>> = MapSerializer(Int.serializer(), ObservableAudioItemSerializer())
+val ObservableAudioItemMapSerializer: KSerializer<Map<Int, ObservableAudioItem>> = MapSerializer(Int.serializer(), ObservableAudioItemSerializer())
 
 /**
  * Kotlinx serialization serializer for [ObservableAudioItem] instances.
@@ -53,39 +71,12 @@ internal class ObservableAudioItemSerializer
         override fun constructEntity(
             path: Path,
             id: Int,
-            title: String,
-            duration: Duration,
-            bitRate: Int,
-            artist: Artist,
-            album: Album,
-            genres: Set<Genre>,
-            comments: String?,
-            trackNumber: Short?,
-            discNumber: Short?,
-            bpm: Float?,
-            encoder: String?,
-            encoding: String?,
+            metadata: AudioItemMetadata,
             dateOfCreation: LocalDateTime,
             lastDateModified: LocalDateTime,
             playCount: Short
         ): ObservableAudioItem =
-            FXAudioItem(
-                path = path,
-                id = id,
-                title = title,
-                duration = duration,
-                bitRate = bitRate,
-                artist = artist,
-                album = album,
-                genres = genres,
-                comments = comments,
-                trackNumber = trackNumber,
-                discNumber = discNumber,
-                bpm = bpm,
-                encoder = encoder,
-                encoding = encoding,
-                dateOfCreation = dateOfCreation,
-                lastDateModified = lastDateModified,
-                playCount = playCount
-            )
+            // Cover bytes from JSON are intentionally not seeded here; the FXAudioItem lazy getter
+            // loads them through the library back-ref wired by FXAudioLibrary.add on rehydration.
+            FXAudioItem(path, id, metadata, dateOfCreation, lastDateModified, playCount)
     }

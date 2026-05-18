@@ -17,9 +17,9 @@
 
 package net.transgressoft.commons.media.waveform
 
-import net.transgressoft.commons.music.common.toJsonUri
-import net.transgressoft.commons.music.common.toPathFromJsonUri
 import net.transgressoft.commons.music.waveform.AudioWaveform
+import net.transgressoft.commons.util.toJsonUri
+import net.transgressoft.commons.util.toPathFromJsonUri
 import java.nio.ByteBuffer
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
@@ -41,6 +41,22 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
+/**
+ * [KSerializer] for `Map<Int, AudioWaveform>` used to round-trip a waveform repository through JSON.
+ *
+ * Consumers wiring a custom `JsonFileRepository` pass this serializer directly:
+ *
+ * ```
+ * val repository = JsonFileRepository(waveformsFile, AudioWaveformMapSerializer)
+ * MusicLibrary.builder().waveformRepository(repository).build()
+ * ```
+ *
+ * The element serializer is [AudioWaveformSerializer], which encodes the waveform's id,
+ * audio-file path, cached display width, and Base64-packed normalized amplitudes. No polymorphic
+ * `serializersModule` is required — waveforms are not polymorphic at the JSON level.
+ *
+ * Thread-safety: the serializer is stateless; concurrent reads are safe.
+ */
 @get:JvmName("AudioWaveformMapSerializer")
 val AudioWaveformMapSerializer: KSerializer<Map<Int, AudioWaveform>> = MapSerializer(Int.serializer(), AudioWaveformSerializer())
 

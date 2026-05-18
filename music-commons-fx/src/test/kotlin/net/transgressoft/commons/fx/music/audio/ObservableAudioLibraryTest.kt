@@ -7,11 +7,13 @@ import net.transgressoft.commons.music.audio.ImmutableArtist.Companion.of
 import net.transgressoft.commons.music.audio.shouldEqual
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
+import net.transgressoft.commons.util.InvalidAudioFilePathException
 import net.transgressoft.lirp.entity.toIds
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.json.JsonRepository
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.collections.shouldContainOnly
@@ -20,12 +22,14 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldContainOnlyOnce
 import io.kotest.property.arbitrary.next
 import javafx.collections.ListChangeListener
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
 import java.io.File
+import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -48,7 +52,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
     beforeEach {
         jsonFile = tempfile("observableAudioLibrary-test", ".json").also { it.deleteOnExit() }
         jsonFileRepository = JsonFileRepository(jsonFile, MapSerializer(Int.serializer(), ObservableAudioItemSerializer(files.fileSystem)))
-        repository = FXAudioLibrary(jsonFileRepository, files.metadataUtils)
+        repository = FXAudioLibrary(jsonFileRepository, files.metadataIO)
     }
 
     afterEach {
@@ -110,7 +114,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
 
         // Close the existing library before recreating from the same repository
         repository.close()
-        repository = FXAudioLibrary(jsonFileRepository, files.metadataUtils)
+        repository = FXAudioLibrary(jsonFileRepository, files.metadataIO)
 
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
@@ -448,5 +452,47 @@ internal class ObservableAudioLibraryTest : StringSpec({
         eventually(1.seconds) {
             repository.artistsProperty.isEmpty() shouldBe true
         }
+    }
+
+    "FXAudioLibrary.createFromFile throws InvalidAudioFilePathException when file does not exist" {
+        val missingPath = files.fileSystem.getPath("/no", "such", "file.mp3")
+        val ex = shouldThrow<InvalidAudioFilePathException> { repository.createFromFile(missingPath) }
+        ex.message shouldContain "does not exist"
+    }
+
+    "FXAudioLibrary.createFromFile throws InvalidAudioFilePathException when path is a directory" {
+        val directoryPath = files.fileSystem.getPath("/").resolve("fx-some-directory")
+        Files.createDirectories(directoryPath)
+        val ex = shouldThrow<InvalidAudioFilePathException> { repository.createFromFile(directoryPath) }
+        ex.message shouldContain "is not a regular file"
+    }
+
+    "FXAudioLibrary.createFromFile returns audio item seeded with metadataIO readTag result" {
+        val audioFile = files.virtualAudioFile().next()
+        val fxAudioItem = repository.createFromFile(audioFile)
+
+        fxAudioItem.path shouldBe audioFile
+        fxAudioItem.title.isNotEmpty() shouldBe true
+    }
+
+    "FXAudioLibrary.writeMetadata invokes metadataIO writeMetadata synchronously" {
+        val audioFile = files.virtualAudioFile().next()
+        val fxAudioItem = repository.createFromFile(audioFile)
+        reactive.advance()
+
+        fxAudioItem.title = "Synchronous FX write"
+        files.metadataIO.writeMetadata(fxAudioItem)
+
+        files.metadataIO.readMetadata(audioFile).title shouldBe "Synchronous FX write"
+    }
+
+    "FXAudioLibrary.loadCover returns bytes from metadataIO readCoverBytes" {
+        val audioFile = files.virtualAudioFile().next()
+        val fxAudioItem = repository.createFromFile(audioFile)
+
+        val expected = byteArrayOf(9, 8, 7, 6, 5)
+        files.metadataIO.stubCover(audioFile, expected)
+
+        files.metadataIO.loadCover(fxAudioItem) shouldBe expected
     }
 })

@@ -1,12 +1,12 @@
 /******************************************************************************
- * Copyright (C) 2026  Octavio Calleya Garcia                                 *
+ * Copyright (C) 2025  Octavio Calleya Garcia                                 *
  *                                                                            *
  * This program is free software: you can redistribute it and/or modify       *
  * it under the terms of the GNU General Public License as published by       *
  * the Free Software Foundation, either version 3 of the License, or          *
  * (at your option) any later version.                                        *
  *                                                                            *
- * This program is distributed in the hope that it will be useful,             *
+ * This program is distributed in the hope that it will be useful,            *
  * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
  * GNU General Public License for more details.                               *
@@ -15,9 +15,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.music.common
+package net.transgressoft.commons.util
 
-import java.util.AbstractMap.SimpleImmutableEntry
+import java.util.AbstractMap
 import java.util.TreeMap
 import java.util.TreeSet
 
@@ -64,6 +64,6 @@ internal class SortedMultimap<K : Comparable<K>, V : Comparable<V>> {
 
     fun entries(): Set<Map.Entry<K, V>> =
         valuesByKey.flatMapTo(LinkedHashSet()) { (key, values) ->
-            values.map { value -> SimpleImmutableEntry(key, value) }
+            values.map { value -> AbstractMap.SimpleImmutableEntry(key, value) }
         }
 }

@@ -21,7 +21,7 @@ internal class AudioLibraryBaseTest : StringSpec({
 
     beforeEach {
         repository = VolatileRepository("AudioLibraryBaseTest")
-        audioLibrary = TestAudioLibrary(repository, files.metadataUtils)
+        audioLibrary = TestAudioLibrary(repository, files.metadataIO)
     }
 
     "AudioLibraryBase adds audio item and syncs artist catalog" {
@@ -66,7 +66,7 @@ internal class AudioLibraryBaseTest : StringSpec({
 
         // Add another item directly to repository after close — catalog should not pick it up
         val virtualPath = files.virtualAudioFile().next()
-        val newItem = MutableAudioItem(virtualPath, Int.MAX_VALUE - 1, files.metadataUtils)
+        val newItem = MutableAudioItem(virtualPath, Int.MAX_VALUE - 1, files.metadataIO.readMetadata(virtualPath))
         repository.add(newItem)
         reactive.advance()
 

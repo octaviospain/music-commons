@@ -3,8 +3,8 @@ package net.transgressoft.commons.media.waveform
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.AudioFileTagType.ID3_V_24
 import net.transgressoft.commons.music.audio.AudioFileTagType.WAV
-import net.transgressoft.commons.music.common.toJsonUri
 import net.transgressoft.commons.music.waveform.AudioWaveform
+import net.transgressoft.commons.util.toJsonUri
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec

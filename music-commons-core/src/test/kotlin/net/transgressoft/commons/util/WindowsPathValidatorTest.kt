@@ -1,7 +1,5 @@
-package net.transgressoft.commons.music.common
+package net.transgressoft.commons.util
 
-import net.transgressoft.commons.music.audio.WindowsPathException
-import net.transgressoft.commons.music.audio.WindowsViolation
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import io.kotest.assertions.throwables.shouldThrow

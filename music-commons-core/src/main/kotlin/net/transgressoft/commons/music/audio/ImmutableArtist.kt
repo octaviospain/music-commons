@@ -17,7 +17,10 @@
 
 package net.transgressoft.commons.music.audio
 
+import net.transgressoft.commons.util.expungeStaleEntries
 import com.neovisionaries.i18n.CountryCode
+import java.lang.ref.ReferenceQueue
+import java.lang.ref.SoftReference
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -67,23 +70,38 @@ class ImmutableArtist private constructor(override val name: String, override va
 
         @JvmField
         @get:JvmName("UNKNOWN")
-        val UNKNOWN: Artist = ImmutableArtist("")
+        val UNKNOWN: Artist = UnknownArtist
 
-        private val artistMap: MutableMap<String, Artist> = ConcurrentHashMap(HashMap<String, Artist>().apply { put("", UNKNOWN) })
+        // Soft-reference flyweight cache: entries are eligible for GC under memory pressure, which
+        // prevents long-running JVMs (test suites, library consumers) from accumulating unbounded
+        // entries for transient artists. The UNKNOWN sentinel is held via a strong reference to
+        // guarantee identity stability for the public API.
+        private val artistReferenceQueue = ReferenceQueue<Artist>()
+        private val artistMap: ConcurrentHashMap<String, SoftReference<Artist>> = ConcurrentHashMap()
 
         /**
          * Returns a cached [Artist] instance for the given name and country code.
          *
-         * Uses a flyweight pattern with [ConcurrentHashMap.computeIfAbsent] to ensure exactly one
-         * instance exists per unique artist under concurrent access, preventing duplicate objects
-         * and reducing memory consumption.
+         * Uses a flyweight pattern over soft references so cached instances can be reclaimed under
+         * memory pressure. Under normal load, repeated lookups of the same artist return the same
+         * object instance.
          */
         @JvmStatic
         @JvmOverloads
         fun of(name: String, countryCode: CountryCode = CountryCode.UNDEFINED): Artist {
             val normalizedName = name.trim()
-            return artistMap.computeIfAbsent(id(name.trim(), countryCode)) {
-                ImmutableArtist(normalizedName, countryCode)
+            if (normalizedName.isEmpty() && countryCode == CountryCode.UNDEFINED) return UNKNOWN
+            expungeStaleEntries(artistMap, artistReferenceQueue)
+            val key = id(normalizedName, countryCode)
+            while (true) {
+                val existing = artistMap[key]?.get()
+                if (existing != null) return existing
+                val fresh = ImmutableArtist(normalizedName, countryCode)
+                val ref = SoftReference(fresh as Artist, artistReferenceQueue)
+                val prev = artistMap.putIfAbsent(key, ref) ?: return fresh
+                val prevValue = prev.get()
+                if (prevValue != null) return prevValue
+                artistMap.remove(key, prev)
             }
         }
 

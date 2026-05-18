@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.music.common
+package net.transgressoft.commons.util
 
 import java.io.File
 import java.nio.file.Path
@@ -50,7 +50,7 @@ object WindowsLongPathSupport {
         return Path.of(prefixed)
     }
 
-    /** File-valued overload for call sites using [java.io.File]. Returns the input unchanged on non-Windows. */
+    /** File-valued overload for call sites using [File]. Returns the input unchanged on non-Windows. */
     fun toLongPathSafe(file: File): File {
         if (!OsDetector.isWindows) return file
         val raw = file.path

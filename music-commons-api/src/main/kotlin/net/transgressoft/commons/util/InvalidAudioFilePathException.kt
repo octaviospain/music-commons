@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.music.audio
+package net.transgressoft.commons.util
 
 /**
  * Exception thrown when a path provided to an audio item entry point is invalid.
@@ -23,6 +23,6 @@ package net.transgressoft.commons.music.audio
  * Thrown with a distinct message for each of the three checks performed in sequence:
  * file not found, path is not a regular file, or file is not readable.
  */
-open class InvalidAudioFilePathException(message: String, cause: Throwable?) : AudioItemManipulationException(message, cause) {
+open class InvalidAudioFilePathException(message: String, cause: Throwable?) : Exception(message, cause) {
     constructor(message: String) : this(message, null)
 }

@@ -19,9 +19,11 @@ package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
-import net.transgressoft.commons.music.audio.AudioItemMetadataUtils
 import net.transgressoft.commons.music.audio.AudioLibraryBase
+import net.transgressoft.commons.music.audio.AudioMetadataIO
+import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
+import net.transgressoft.commons.util.InvalidAudioFilePathException
 import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
@@ -42,6 +44,7 @@ import javafx.beans.property.SimpleSetProperty
 import javafx.collections.FXCollections.observableSet
 import javafx.collections.ObservableSet
 import mu.KotlinLogging
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -70,10 +73,11 @@ internal class FXAudioLibrary
     @JvmOverloads
     constructor(
         repository: Repository<Int, ObservableAudioItem>,
-        private val metadataUtils: AudioItemMetadataUtils = AudioItemMetadataUtils()
+        metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO()
     ) : AudioLibraryBase<ObservableAudioItem, ObservableArtistCatalog>(
             repository,
-            FXArtistCatalogRegistry()
+            FXArtistCatalogRegistry(),
+            metadataIO
         ),
         ObservableAudioLibrary {
 
@@ -162,6 +166,10 @@ internal class FXAudioLibrary
 
             // Populate fxAggregateList and artistsProperty from existing items
             val initialAudioItems = toList()
+            // Wire the library back-ref on items rehydrated from JSON so coverImageBytes can lazy-load.
+            initialAudioItems.forEach { item ->
+                if (item is FXAudioItem) item.metadataIO = metadataIO
+            }
             audioItemIds.addAll(initialAudioItems.map { it.id })
             if (initialAudioItems.isNotEmpty()) {
                 Platform.runLater {
@@ -290,12 +298,29 @@ internal class FXAudioLibrary
             queueCatalogRefresh()
         }
 
-        override fun createFromFile(audioItemPath: Path): FXAudioItem =
-            FXAudioItem(audioItemPath, newId(), metadataUtils)
-                .also { fxAudioItem ->
-                    add(fxAudioItem)
-                    logger.debug { "New ObservableAudioItem was created from file $audioItemPath with id ${fxAudioItem.id}" }
-                }
+        override fun createFromFile(audioItemPath: Path): FXAudioItem {
+            if (!Files.exists(audioItemPath)) {
+                throw InvalidAudioFilePathException("File '${audioItemPath.toAbsolutePath()}' does not exist")
+            }
+            if (!Files.isRegularFile(audioItemPath)) {
+                throw InvalidAudioFilePathException("Path '${audioItemPath.toAbsolutePath()}' is not a regular file")
+            }
+            if (!Files.isReadable(audioItemPath)) {
+                throw InvalidAudioFilePathException("File '${audioItemPath.toAbsolutePath()}' is not readable")
+            }
+            val tag = metadataIO.readMetadata(audioItemPath)
+            val cover = metadataIO.loadCover(audioItemPath)
+            val metadata = tag.copy(coverBytes = cover)
+            return FXAudioItem(audioItemPath, newId(), metadata).also { fxAudioItem ->
+                add(fxAudioItem)
+                logger.debug { "New ObservableAudioItem was created from file $audioItemPath with id ${fxAudioItem.id}" }
+            }
+        }
+
+        override fun add(entity: ObservableAudioItem): Boolean {
+            if (entity is FXAudioItem) entity.metadataIO = metadataIO
+            return super.add(entity)
+        }
 
         override fun toString() = "FXAudioLibrary(audioItemsCount=${size()})"
     }

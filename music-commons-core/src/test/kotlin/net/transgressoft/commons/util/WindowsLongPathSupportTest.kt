@@ -1,4 +1,4 @@
-package net.transgressoft.commons.music.common
+package net.transgressoft.commons.util
 
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.IsolationMode

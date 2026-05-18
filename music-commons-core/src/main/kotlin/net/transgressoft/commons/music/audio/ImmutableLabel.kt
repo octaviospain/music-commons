@@ -17,7 +17,10 @@
 
 package net.transgressoft.commons.music.audio
 
+import net.transgressoft.commons.util.expungeStaleEntries
 import com.neovisionaries.i18n.CountryCode
+import java.lang.ref.ReferenceQueue
+import java.lang.ref.SoftReference
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -62,14 +65,30 @@ class ImmutableLabel private constructor(override val name: String, override val
     companion object {
         @JvmField
         @get:JvmName("UNKNOWN")
-        val UNKNOWN = ImmutableLabel("")
+        val UNKNOWN: Label = UnknownLabel
 
-        private val labelMap: MutableMap<String, Label> = ConcurrentHashMap(HashMap<String, Label>().apply { put("", UNKNOWN) })
+        // Soft-reference flyweight cache (see ImmutableArtist for design rationale).
+        private val labelReferenceQueue = ReferenceQueue<Label>()
+        private val labelMap: ConcurrentHashMap<String, SoftReference<Label>> = ConcurrentHashMap()
 
         @JvmStatic
         @JvmOverloads
-        fun of(name: String, countryCode: CountryCode = CountryCode.UNDEFINED) =
-            labelMap.getOrPut(id(name.trim(), countryCode)) { ImmutableLabel(name, countryCode) }
+        fun of(name: String, countryCode: CountryCode = CountryCode.UNDEFINED): Label {
+            val normalizedName = name.trim()
+            if (normalizedName.isEmpty() && countryCode == CountryCode.UNDEFINED) return UNKNOWN
+            expungeStaleEntries(labelMap, labelReferenceQueue)
+            val key = id(normalizedName, countryCode)
+            while (true) {
+                val existing = labelMap[key]?.get()
+                if (existing != null) return existing
+                val fresh = ImmutableLabel(name, countryCode)
+                val ref = SoftReference(fresh as Label, labelReferenceQueue)
+                val prev = labelMap.putIfAbsent(key, ref) ?: return fresh
+                val prevValue = prev.get()
+                if (prevValue != null) return prevValue
+                labelMap.remove(key, prev)
+            }
+        }
 
         internal fun id(name: String, countryCode: CountryCode = CountryCode.UNDEFINED) =
             if (countryCode == CountryCode.UNDEFINED) {

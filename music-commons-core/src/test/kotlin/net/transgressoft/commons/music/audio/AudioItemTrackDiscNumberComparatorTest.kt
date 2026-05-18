@@ -1,7 +1,7 @@
-package net.transgressoft.commons.music
+package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.AudioUtils
 import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.audioItemTrackDiscNumberComparator
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeLessThan
@@ -9,10 +9,10 @@ import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 
-internal class AudioUtilsComparatorTest : StringSpec({
+internal class AudioItemTrackDiscNumberComparatorTest : StringSpec({
 
     "Sorts items with null disc and track numbers" {
-        val comparator = AudioUtils.audioItemTrackDiscNumberComparator<AudioItem>()
+        val comparator = audioItemTrackDiscNumberComparator<AudioItem>()
 
         // Test both disc numbers null
         val item1 =

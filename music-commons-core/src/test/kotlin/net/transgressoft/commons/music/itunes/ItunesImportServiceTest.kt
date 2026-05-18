@@ -5,9 +5,9 @@ import net.transgressoft.commons.music.audio.ArbitraryAudioFile
 import net.transgressoft.commons.music.audio.AudioFileType
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.ImmutableArtist
-import net.transgressoft.commons.music.common.OsDetector
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
 import net.transgressoft.commons.music.testing.reactiveScope
+import net.transgressoft.commons.util.OsDetector
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.annotation.Isolate
 import io.kotest.core.spec.style.StringSpec

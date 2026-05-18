@@ -1,13 +1,12 @@
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.MutableAudioItemTestBridge.createAudioItem
+import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
 import com.neovisionaries.i18n.CountryCode
-import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainOnly
@@ -16,9 +15,11 @@ import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
-import kotlin.time.Duration.Companion.milliseconds
 
 internal class ArtistCatalogRegistryTest : BehaviorSpec({
+
+    val reactive = reactiveScope()
+    val files = virtualFiles()
 
     lateinit var registry: DefaultArtistCatalogRegistry<AudioItem>
 
@@ -28,14 +29,14 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
         When("an audio item that has the same album artist and artist is added") {
             val expectedAlbum = ImmutableAlbum("Play", ImmutableArtist.of("Moby", CountryCode.US))
             val audioFilePath =
-                Arb.realAudioFile {
+                files.virtualAudioFile {
                     artist = ImmutableArtist.of("Moby", CountryCode.US)
                     album = expectedAlbum
                     trackNumber = 1
                     discNumber = 1
                 }.next()
             var audioItem =
-                createAudioItem(audioFilePath).also {
+                createAudioItem(audioFilePath, files.metadataIO).also {
                     registry.addAudioItem(it)
                 }
 
@@ -109,14 +110,13 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
                 registry.updateCatalog(audioItem, audioItemBeforeChange)
 
                 then("the album in the artist catalog should be updated") {
-                    eventually(100.milliseconds) {
-                        registry.findById(audioItem.artist) shouldBePresent { artistCatalog ->
-                            artistCatalog.artist shouldBe audioItem.artist
-                            artistCatalog should {
-                                it.artist shouldBe audioItem.artist
-                                it.size shouldBe 1
-                                it.albumAudioItems(audioItem.album).shouldContainOnly(audioItem)
-                            }
+                    reactive.advance()
+                    registry.findById(audioItem.artist) shouldBePresent { artistCatalog ->
+                        artistCatalog.artist shouldBe audioItem.artist
+                        artistCatalog should {
+                            it.artist shouldBe audioItem.artist
+                            it.size shouldBe 1
+                            it.albumAudioItems(audioItem.album).shouldContainOnly(audioItem)
                         }
                     }
                 }
@@ -185,23 +185,22 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
             val expectedArtist = ImmutableArtist.of("Moby", CountryCode.US)
             val expectedAlbum = ImmutableAlbum("Play", expectedArtist)
             val audioFilePath =
-                Arb.realAudioFile {
+                files.virtualAudioFile {
                     artist = expectedArtist
                     album = expectedAlbum
                 }.next()
-            val audioItem = createAudioItem(audioFilePath)
+            val audioItem = createAudioItem(audioFilePath, files.metadataIO)
 
             registry.addAudioItem(audioItem)
 
             then("CREATE event should be emitted with the new catalog") {
-                eventually(100.milliseconds) {
-                    receivedEvents.size shouldBe 1
-                    receivedEvents[0].entities.size shouldBe 1
-                    receivedEvents[0].entities.values.first() should { catalog ->
-                        catalog.artist shouldBe expectedArtist
-                        catalog.size shouldBe 1
-                        catalog.albumAudioItems(expectedAlbum.name).shouldContainOnly(audioItem)
-                    }
+                reactive.advance()
+                receivedEvents.size shouldBe 1
+                receivedEvents[0].entities.size shouldBe 1
+                receivedEvents[0].entities.values.first() should { catalog ->
+                    catalog.artist shouldBe expectedArtist
+                    catalog.size shouldBe 1
+                    catalog.albumAudioItems(expectedAlbum.name).shouldContainOnly(audioItem)
                 }
             }
         }
@@ -213,14 +212,14 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
             val expectedArtist = ImmutableArtist.of("Radiohead", CountryCode.UK)
             val expectedAlbum = ImmutableAlbum("OK Computer", expectedArtist)
             val audioFilePath =
-                Arb.realAudioFile {
+                files.virtualAudioFile {
                     artist = expectedArtist
                     album = expectedAlbum
                     trackNumber = 1
                     discNumber = 1
                     genres = emptySet()
                 }.next()
-            val audioItem = createAudioItem(audioFilePath)
+            val audioItem = createAudioItem(audioFilePath, files.metadataIO)
 
             registry.addAudioItem(audioItem)
 
@@ -230,25 +229,24 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
                 receivedEvents.clear()
 
                 val secondAudioFilePath =
-                    Arb.realAudioFile {
+                    files.virtualAudioFile {
                         artist = expectedArtist
                         album = expectedAlbum
                         trackNumber = 2
                         discNumber = 1
                     }.next()
-                val secondAudioItem = createAudioItem(secondAudioFilePath)
+                val secondAudioItem = createAudioItem(secondAudioFilePath, files.metadataIO)
 
                 registry.addAudioItem(secondAudioItem)
 
                 then("UPDATE event should be emitted with the updated catalog") {
-                    eventually(100.milliseconds) {
-                        receivedEvents.size shouldBe 1
-                        receivedEvents[0].entities.size shouldBe 1
-                        receivedEvents[0].entities.values.first() should { catalog ->
-                            catalog.artist shouldBe expectedArtist
-                            catalog.size shouldBe 2
-                            catalog.albumAudioItems(expectedAlbum.name).size shouldBe 2
-                        }
+                    reactive.advance()
+                    receivedEvents.size shouldBe 1
+                    receivedEvents[0].entities.size shouldBe 1
+                    receivedEvents[0].entities.values.first() should { catalog ->
+                        catalog.artist shouldBe expectedArtist
+                        catalog.size shouldBe 2
+                        catalog.albumAudioItems(expectedAlbum.name).size shouldBe 2
                     }
                 }
             }
@@ -278,15 +276,14 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
                 registry.updateCatalog(audioItem, audioItemBeforeChange)
 
                 then("UPDATE event should be emitted with the re-sorted catalog") {
-                    eventually(100.milliseconds) {
-                        receivedEvents.size shouldBe 1
-                        receivedEvents[0].entities.size shouldBe 1
-                        receivedEvents[0].entities.values.first() should { catalog ->
-                            catalog.artist shouldBe expectedArtist
-                            catalog.size shouldBe 2
-                            // After changing trackNumber from 1 to 5, the item should be reordered to the last position
-                            catalog.albumAudioItems(expectedAlbum.name).last() shouldBe audioItem
-                        }
+                    reactive.advance()
+                    receivedEvents.size shouldBe 1
+                    receivedEvents[0].entities.size shouldBe 1
+                    receivedEvents[0].entities.values.first() should { catalog ->
+                        catalog.artist shouldBe expectedArtist
+                        catalog.size shouldBe 2
+                        // After changing trackNumber from 1 to 5, the item should be reordered to the last position
+                        catalog.albumAudioItems(expectedAlbum.name).last() shouldBe audioItem
                     }
                 }
             }
@@ -299,11 +296,11 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
             val expectedArtist = ImmutableArtist.of("Bjork", CountryCode.IS)
             val expectedAlbum = ImmutableAlbum("Homogenic", expectedArtist)
             val audioFilePath =
-                Arb.realAudioFile {
+                files.virtualAudioFile {
                     artist = expectedArtist
                     album = expectedAlbum
                 }.next()
-            val audioItem = createAudioItem(audioFilePath)
+            val audioItem = createAudioItem(audioFilePath, files.metadataIO)
 
             registry.addAudioItem(audioItem)
 
@@ -313,13 +310,12 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
                 registry.removeAudioItem(audioItem)
 
                 then("DELETE event should be emitted with the removed catalog") {
-                    eventually(100.milliseconds) {
-                        receivedEvents.size shouldBe 1
-                        receivedEvents[0].entities.size shouldBe 1
-                        receivedEvents[0].entities.values.first() should { catalog ->
-                            catalog.artist shouldBe expectedArtist
-                            catalog.isEmpty shouldBe true
-                        }
+                    reactive.advance()
+                    receivedEvents.size shouldBe 1
+                    receivedEvents[0].entities.size shouldBe 1
+                    receivedEvents[0].entities.values.first() should { catalog ->
+                        catalog.artist shouldBe expectedArtist
+                        catalog.isEmpty shouldBe true
                     }
                 }
             }
@@ -338,29 +334,30 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
 
             val audioItem1 =
                 createAudioItem(
-                    Arb.realAudioFile {
+                    files.virtualAudioFile {
                         artist = artist1
                         album = album1
-                    }.next()
+                    }.next(),
+                    files.metadataIO
                 )
             val audioItem2 =
                 createAudioItem(
-                    Arb.realAudioFile {
+                    files.virtualAudioFile {
                         artist = artist2
                         album = album2
-                    }.next()
+                    }.next(),
+                    files.metadataIO
                 )
 
             registry.addAudioItems(listOf(audioItem1, audioItem2))
 
             then("CREATE events should be emitted for each new artist catalog") {
-                eventually(100.milliseconds) {
-                    receivedEvents.size shouldBe 1
-                    receivedEvents[0].entities.size shouldBe 2
+                reactive.advance()
+                receivedEvents.size shouldBe 1
+                receivedEvents[0].entities.size shouldBe 2
 
-                    val catalogs = receivedEvents[0].entities.values.toList()
-                    catalogs.map { it.artist }.shouldContainOnly(artist1, artist2)
-                }
+                val catalogs = receivedEvents[0].entities.values.toList()
+                catalogs.map { it.artist }.shouldContainOnly(artist1, artist2)
             }
         }
     }

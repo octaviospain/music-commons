@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.music.audio
+package net.transgressoft.commons.util
 
 /**
  * Exception thrown when a path or name violates Windows filename constraints.
@@ -24,10 +24,8 @@ package net.transgressoft.commons.music.audio
  * that was broken, enabling precise diagnostic messages. Only thrown when the JVM is
  * running on a Windows host; pass-through on Linux/macOS.
  */
-class WindowsPathException(
-    val offendingName: String,
-    val violation: WindowsViolation
-) : InvalidAudioFilePathException("Windows filename violation for '$offendingName': $violation")
+class WindowsPathException(val offendingName: String, val violation: WindowsViolation)
+: InvalidAudioFilePathException("Windows filename violation for '$offendingName': $violation")
 
 /**
  * Categorizes Windows filename constraint violations.

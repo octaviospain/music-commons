@@ -4,15 +4,17 @@ import net.transgressoft.commons.music.MusicLibrary
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioFileType
+import net.transgressoft.commons.music.audio.AudioMetadataIO
 import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.ImmutableLabel
+import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
-import net.transgressoft.commons.music.audio.WindowsPathException
-import net.transgressoft.commons.music.audio.WindowsViolation
-import net.transgressoft.commons.music.common.WindowsPathValidator
 import net.transgressoft.commons.music.playlist.ReactiveAudioPlaylist
+import net.transgressoft.commons.util.WindowsPathException
+import net.transgressoft.commons.util.WindowsPathValidator
+import net.transgressoft.commons.util.WindowsViolation
 import net.transgressoft.lirp.event.ReactiveMutationEvent
 import mu.KotlinLogging
 import java.net.URI
@@ -57,6 +59,7 @@ class ItunesImportService<I, P>
     @JvmOverloads
     constructor(
         private val musicLibrary: MusicLibrary<I, P>,
+        private val metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO(),
         private val fileSystem: FileSystem = FileSystems.getDefault()
     ) where I : ReactiveAudioItem<I>,
           P : ReactiveAudioPlaylist<I, P> {
@@ -136,7 +139,7 @@ class ItunesImportService<I, P>
         return accumulator
     }
 
-    private suspend fun processTrack(track: ItunesTrack, trackId: Int, policy: ItunesImportPolicy, accumulator: TrackImportAccumulator) {
+    private fun processTrack(track: ItunesTrack, trackId: Int, policy: ItunesImportPolicy, accumulator: TrackImportAccumulator) {
         try {
             val path = resolveTrackPath(track)
 
@@ -172,7 +175,7 @@ class ItunesImportService<I, P>
         return fileType == null || fileType !in policy.acceptedFileTypes
     }
 
-    private suspend fun importTrack(track: ItunesTrack, path: Path, policy: ItunesImportPolicy): I {
+    private fun importTrack(track: ItunesTrack, path: Path, policy: ItunesImportPolicy): I {
         val audioItem = musicLibrary.audioItemFromFile(path)
 
         if (!policy.useFileMetadata) {
@@ -184,7 +187,7 @@ class ItunesImportService<I, P>
         }
 
         if (policy.writeMetadata && !policy.useFileMetadata) {
-            audioItem.writeMetadata().join()
+            metadataIO.writeMetadata(audioItem)
         }
 
         return audioItem
