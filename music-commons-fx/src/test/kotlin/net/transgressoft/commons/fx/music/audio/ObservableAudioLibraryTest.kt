@@ -85,6 +85,7 @@ internal class ObservableAudioLibraryTest : StringSpec({
         val fxAudioItem = repository.createFromFile(files.virtualAudioFile().next())
 
         reactive.advance()
+        WaitForAsyncUtils.waitForFxEvents()
 
         audioItemsProperty.contains(fxAudioItem) shouldBe true
         repository.emptyLibraryProperty.get() shouldBe false
