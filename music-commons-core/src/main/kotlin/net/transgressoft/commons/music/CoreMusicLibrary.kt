@@ -208,13 +208,14 @@ class CoreMusicLibrary private constructor(
             val audioLibrary = DefaultAudioLibrary(audioRepository, metadataIO)
 
             var waveformRepo: AudioWaveformRepository<AudioWaveform, AudioItem>? = null
+            var playlistHierarchy: DefaultPlaylistHierarchy? = null
             try {
                 // 2. Waveform repository with audio item event subscriber
                 val audioItemSubscriber = AudioItemEventSubscriber<AudioItem>("AudioWaveformRepositorySubscriber")
                 waveformRepo = audioWaveformRepository(waveformRepository, audioItemSubscriber) { audioItemSubscriber.cancelSubscription() }
 
                 // 3. Playlist hierarchy last — needs AudioItem already registered in LirpContext
-                val playlistHierarchy = DefaultPlaylistHierarchy(playlistRepository)
+                playlistHierarchy = DefaultPlaylistHierarchy(playlistRepository)
 
                 // 4. Wire subscriptions so audio library events propagate to subscribers
                 audioLibrary.subscribe(waveformRepo)
@@ -222,6 +223,7 @@ class CoreMusicLibrary private constructor(
 
                 return CoreMusicLibrary(audioLibrary, playlistHierarchy, waveformRepo)
             } catch (ex: Exception) {
+                (playlistHierarchy as? AutoCloseable)?.close()
                 waveformRepo?.close()
                 audioLibrary.close()
                 throw ex

@@ -212,6 +212,22 @@ internal class MutableAudioItemTest : FunSpec({
         }
     }
 
+    context("MutableAudioItem.bpm rejects non-finite Float values") {
+        test("setting bpm = NaN throws IllegalArgumentException") {
+            val audioItem = createAudioItem(Arb.realAudioFile(ID3_V_24).next())
+            shouldThrow<IllegalArgumentException> { audioItem.bpm = Float.NaN }
+        }
+
+        test("setting bpm = POSITIVE_INFINITY throws IllegalArgumentException") {
+            val audioItem = createAudioItem(Arb.realAudioFile(ID3_V_24).next())
+            shouldThrow<IllegalArgumentException> { audioItem.bpm = Float.POSITIVE_INFINITY }
+        }
+
+        test("AudioItemMetadata init rejects NaN bpm") {
+            shouldThrow<IllegalArgumentException> { AudioItemMetadata(bpm = Float.NaN) }
+        }
+    }
+
     context("DefaultAudioLibrary.createFromFile three-check path validation") {
         test("DefaultAudioLibrary.createFromFile throws InvalidAudioFilePathException when file does not exist") {
             Jimfs.newFileSystem(Configuration.unix()).use { fs ->
@@ -237,7 +253,14 @@ internal class MutableAudioItemTest : FunSpec({
             .config(enabled = !OsDetector.isWindows) {
                 val tempFile = Files.createTempFile("unreadable", ".mp3")
                 try {
-                    tempFile.toFile().setReadable(false)
+                    // setReadable(false) is a no-op when running as root or on filesystems that don't
+                    // honor POSIX permissions — skip rather than fail spuriously.
+                    val demoted = tempFile.toFile().setReadable(false) && !tempFile.toFile().canRead()
+                    if (!demoted) {
+                        throw org.opentest4j.TestAbortedException(
+                            "Cannot revoke read permission on this filesystem/user — skipping"
+                        )
+                    }
                     val library = DefaultAudioLibrary(VolatileRepository("AudioLibrary"))
                     val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(tempFile) }
                     ex.message!! shouldContain "is not readable"
@@ -272,10 +295,16 @@ internal class MutableAudioItemTest : FunSpec({
     }
 
     context("MutableAudioItem Windows path validation") {
-        test("MutableAudioItem throws WindowsPathException for a Windows-invalid path when isWindows=true") {
+        test("MutableAudioItem throws WindowsPathException for a reserved-name path when isWindows=true") {
             OsDetector.withOverriddenIsWindows(true) {
-                Jimfs.newFileSystem(Configuration.unix()).use { fs ->
-                    val forbidden = fs.getPath("/tmp/bad|name.mp3")
+                // Use Jimfs windows configuration so the path's filesystem separator is `\`. The
+                // validator only triggers for Windows-style paths now, because Unix-style paths
+                // (e.g. Jimfs unix on a Windows host parsing `file:///C:/...` URIs) don't reach
+                // the Win32 IO layer and use `:` legitimately. Jimfs windows rejects forbidden
+                // chars at parse time, so the test uses a reserved name (parsable, then rejected
+                // by the validator) to exercise the violation path.
+                Jimfs.newFileSystem(Configuration.windows()).use { fs ->
+                    val forbidden = fs.getPath("C:\\tmp\\NUL.mp3")
                     shouldThrow<WindowsPathException> { MutableAudioItem(forbidden, metadata = AudioItemMetadata()) }
                 }
             }
@@ -287,6 +316,19 @@ internal class MutableAudioItemTest : FunSpec({
                     val path = fs.getPath("/music/bad|name.mp3")
                     // WindowsPathValidator is a no-op on Linux, so pipe char is fine and construction succeeds.
                     // Existence checks now live in DefaultAudioLibrary.createFromFile, not the constructor.
+                    val item = MutableAudioItem(path, metadata = AudioItemMetadata())
+                    item.path shouldBe path
+                }
+            }
+        }
+
+        test("MutableAudioItem pass-through for Unix-style path on Jimfs even when isWindows=true") {
+            // Production scenario: deserializing a JSON entry whose path lives on Jimfs unix (e.g.
+            // FX serializer tests) while running on a Windows host. The path uses Unix conventions,
+            // never reaches the Win32 IO layer, and may contain `:` legitimately — validator skips it.
+            OsDetector.withOverriddenIsWindows(true) {
+                Jimfs.newFileSystem(Configuration.unix()).use { fs ->
+                    val path = fs.getPath("/work/C:/Users/runner/Temp/song.mp3")
                     val item = MutableAudioItem(path, metadata = AudioItemMetadata())
                     item.path shouldBe path
                 }

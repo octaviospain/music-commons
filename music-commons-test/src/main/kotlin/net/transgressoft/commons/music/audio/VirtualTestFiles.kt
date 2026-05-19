@@ -108,17 +108,17 @@ class VirtualFiles internal constructor() {
     }
 
     /**
-     * Materializes a virtual audio file at the exact [targetPath] on [fileSystem],
-     * stubbing the [FakeAudioIO] so that downstream services (e.g.
-     * `audioItemFromFile(path)`) see a fully readable audio file with the supplied tag.
+     * Materializes a virtual audio file at the exact [targetPath] on [fileSystem] and stubs
+     * [metadataIO] so downstream services (e.g. `audioItemFromFile(path)`) read deterministic
+     * [AudioItemMetadata] and cover bytes for [targetPath].
      *
-     * The codec/container is derived from the file extension on [targetPath]. The
-     * supplied [attributes] populate the real tag instance returned by
-     * [FakeAudioIO.readTag] for [targetPath].
+     * The codec/container is derived from the file extension on [targetPath]. The supplied
+     * [attributes] are converted to [AudioItemMetadata] and registered with [metadataIO].
      *
      * @param targetPath absolute path on [fileSystem] where the virtual file should appear
-     * @param attributes tag values to expose through the stubbed [Tag]
-     * @param tagType    tag implementation matching the desired codec
+     * @param attributes metadata values exposed through the stubbed [metadataIO]
+     * @param tagType    tag implementation matching the desired codec (currently unused — kept for
+     *   parity with the on-disk fixture API)
      * @return the same [targetPath], usable as the audio item's path
      */
     fun createAt(
@@ -253,7 +253,9 @@ class VirtualFilesExtension : SpecExtension {
  *         val files = virtualFiles()
  *         "test" {
  *             val path = files.virtualAudioFile().next()
- *             val item = MutableAudioItem(path, 1, files.metadataIO)
+ *             val metadata = files.metadataIO.readMetadata(path)
+ *             // Construct items via the library or the metadata-first test bridges; the metadata
+ *             // value object replaces the old `(path, id, metadataIO)` constructor pattern.
  *         }
  *     })
  */

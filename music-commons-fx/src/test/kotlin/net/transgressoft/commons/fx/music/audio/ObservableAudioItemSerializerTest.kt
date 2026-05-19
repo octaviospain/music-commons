@@ -3,12 +3,12 @@ package net.transgressoft.commons.fx.music.audio
 import net.transgressoft.commons.music.audio.AudioItemTestFactory
 import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.virtualFiles
+import net.transgressoft.commons.util.toJsonUri
 import io.kotest.assertions.json.shouldContainJsonKey
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.property.arbitrary.next
-import java.nio.file.Files
 import java.time.temporal.ChronoUnit.SECONDS
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
@@ -118,8 +118,15 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
         // Phase 40-02/03 semantics: existence checks live in FXAudioLibrary.createFromFile; pure-data
         // deserialization succeeds even when the path is offline. Deserialized items arrive with
         // library = null and coverImageBytes = null until the owning library wires the back-ref.
-        val gonePath = Files.createTempFile("offline", ".mp3").also { Files.deleteIfExists(it) }
-        val pathUri = gonePath.toUri().toString()
+        //
+        // The path lives on the Jimfs filesystem the serializer is bound to — the URI must be parseable
+        // by Jimfs's URI handler, so use a Jimfs-native synthetic path rather than a real default-FS
+        // temp file. Mixing filesystems produced `/work/C:/...` style paths on Windows runners that
+        // tripped the Windows path validator with the embedded `:` from the drive letter.
+        val gonePath = files.fileSystem.getPath("/music/offline-ghost.mp3")
+        // toJsonUri synthesizes a file:// URI even for non-default filesystems, matching what
+        // production serialization emits and what toPathFromJsonUri's `file://` guard accepts.
+        val pathUri = gonePath.toJsonUri()
         val offlineDriveJson =
             """
             {

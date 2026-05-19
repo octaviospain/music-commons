@@ -151,8 +151,12 @@ internal class MusicLibraryTest : StringSpec({
     "MusicLibrary.audioItemFromFile throws WindowsPathException before delegating when isWindows=true" {
         OsDetector.withOverriddenIsWindows(true) {
             CoreMusicLibrary.builder().build().use { library ->
-                Jimfs.newFileSystem(Configuration.unix()).use { fs ->
-                    val forbidden = fs.getPath("/tmp/bad|name.mp3")
+                // Jimfs windows configuration so the path's filesystem separator is `\` and the
+                // validator engages. Jimfs unix paths bypass validation per the Phase 40 fix that
+                // skips the validator for non-Windows-style filesystems.
+                Jimfs.newFileSystem(Configuration.windows()).use { fs ->
+                    // Jimfs windows rejects forbidden chars at parse, so use a reserved name.
+                    val forbidden = fs.getPath("C:\\tmp\\NUL.mp3")
                     shouldThrow<WindowsPathException> { library.audioItemFromFile(forbidden) }
                 }
             }

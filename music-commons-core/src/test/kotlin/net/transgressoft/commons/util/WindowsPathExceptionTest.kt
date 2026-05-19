@@ -29,7 +29,10 @@ class WindowsPathExceptionTest : StringSpec({
         ex.shouldBeInstanceOf<InvalidAudioFilePathException>()
     }
 
-    "WindowsPathException is catchable as AudioItemManipulationException (consumer catch-superclass path)" {
+    // Phase 40 moved `InvalidAudioFilePathException` into music-commons-api, decoupling it from the
+    // core-resident `AudioItemManipulationException`. Path-validation failures are now caught via
+    // `InvalidAudioFilePathException` (or its superclass `Exception`), not `AudioItemManipulationException`.
+    "WindowsPathException remains catchable as InvalidAudioFilePathException for ReservedName violations" {
         val ex = WindowsPathException("NUL", WindowsViolation.ReservedName("NUL"))
         ex.shouldBeInstanceOf<InvalidAudioFilePathException>()
     }

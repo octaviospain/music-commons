@@ -279,7 +279,7 @@ fun Arb.Companion.audioAttributes(
                 comments = comments ?: Arb.string().bind(),
                 trackNumber = trackNumber ?: Arb.positiveShort().bind(),
                 discNumber = discNumber ?: Arb.positiveShort().bind(),
-                bpm = bpm ?: Arb.float(10.0f..220.58f).bind(),
+                bpm = bpm ?: Arb.float(10.0f..220.58f, includeNaNs = false).bind(),
                 encoder = encoder ?: Arb.string().bind(),
                 encoding = encoding ?: Arb.string().bind(),
                 bitRate = bitRate ?: Arb.positiveInt().bind(),

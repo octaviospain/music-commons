@@ -309,11 +309,15 @@ internal class FXAudioItemTest : StringSpec({
         shouldThrow<InvalidAudioFilePathException> { library.createFromFile(nonExistent) }
     }
 
-    "FXAudioItem throws WindowsPathException for a path with Windows-forbidden chars when isWindows=true" {
+    "FXAudioItem throws WindowsPathException for a reserved-name path when isWindows=true" {
         OsDetector.withOverriddenIsWindows(true) {
-            val fs = Jimfs.newFileSystem(Configuration.unix())
+            // Jimfs windows configuration: separator is `\` so the validator engages. Unix-style
+            // Jimfs paths bypass validation per the Phase 40 fix (they don't reach Win32 IO).
+            // Jimfs windows rejects most forbidden chars at parse time, so use a reserved name
+            // (which parses fine but the validator still rejects) to exercise the validation path.
+            val fs = Jimfs.newFileSystem(Configuration.windows())
             fs.use { fs ->
-                val forbidden = fs.getPath("/tmp/bad|name.mp3")
+                val forbidden = fs.getPath("C:\\tmp\\NUL.mp3")
                 shouldThrow<WindowsPathException> { FXAudioItem(forbidden, metadata = AudioItemMetadata()) }
             }
         }

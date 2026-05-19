@@ -396,25 +396,4 @@ internal class DefaultAudioLibraryTest: StringSpec({
         audioItem.id shouldNotBe UNASSIGNED_ID
         audioItem.title.isNotEmpty() shouldBe true
     }
-
-    "DefaultAudioLibrary.writeMetadata invokes metadataIO writeMetadata synchronously" {
-        val audioFile = files.virtualAudioFile().next()
-        val audioItem = audioRepository.createFromFile(audioFile)
-        reactive.advance()
-
-        audioItem.title = "Synchronous write title"
-        files.metadataIO.writeMetadata(audioItem)
-
-        files.metadataIO.readMetadata(audioFile).title shouldBe "Synchronous write title"
-    }
-
-    "DefaultAudioLibrary.loadCover returns bytes from metadataIO readCoverBytes" {
-        val audioFile = files.virtualAudioFile().next()
-        val audioItem = audioRepository.createFromFile(audioFile)
-
-        val expected = byteArrayOf(1, 2, 3, 4, 5)
-        files.metadataIO.stubCover(audioFile, expected)
-
-        files.metadataIO.loadCover(audioItem) shouldBe expected
-    }
 })

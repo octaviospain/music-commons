@@ -173,8 +173,17 @@ internal class MutableAudioItem
         @Serializable
         override var discNumber: Short? by reactiveProperty(metadata.discNumber)
 
+        private var _bpm: Float? = metadata.bpm
+
         @Serializable
-        override var bpm: Float? by reactiveProperty(metadata.bpm)
+        override var bpm: Float?
+            by reactiveProperty(
+                getter = { _bpm },
+                setter = { value ->
+                    value?.let { require(it.isFinite()) { "bpm must be a finite Float (got $it)" } }
+                    _bpm = value
+                }
+            )
 
         @Serializable
         override var album: Album by reactiveProperty(metadata.album)

@@ -474,25 +474,4 @@ internal class ObservableAudioLibraryTest : StringSpec({
         fxAudioItem.path shouldBe audioFile
         fxAudioItem.title.isNotEmpty() shouldBe true
     }
-
-    "FXAudioLibrary.writeMetadata invokes metadataIO writeMetadata synchronously" {
-        val audioFile = files.virtualAudioFile().next()
-        val fxAudioItem = repository.createFromFile(audioFile)
-        reactive.advance()
-
-        fxAudioItem.title = "Synchronous FX write"
-        files.metadataIO.writeMetadata(fxAudioItem)
-
-        files.metadataIO.readMetadata(audioFile).title shouldBe "Synchronous FX write"
-    }
-
-    "FXAudioLibrary.loadCover returns bytes from metadataIO readCoverBytes" {
-        val audioFile = files.virtualAudioFile().next()
-        val fxAudioItem = repository.createFromFile(audioFile)
-
-        val expected = byteArrayOf(9, 8, 7, 6, 5)
-        files.metadataIO.stubCover(audioFile, expected)
-
-        files.metadataIO.loadCover(fxAudioItem) shouldBe expected
-    }
 })

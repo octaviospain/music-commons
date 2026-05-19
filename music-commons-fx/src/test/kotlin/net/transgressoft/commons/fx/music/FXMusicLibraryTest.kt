@@ -182,10 +182,11 @@ internal class FXMusicLibraryTest : StringSpec({
     "FXMusicLibrary.audioItemFromFile throws WindowsPathException before delegating when isWindows=true" {
         OsDetector.withOverriddenIsWindows(true) {
             val library = FXMusicLibrary.builder().build()
-            val fs = Jimfs.newFileSystem(Configuration.unix())
+            val fs = Jimfs.newFileSystem(Configuration.windows())
             library.use {
                 fs.use {
-                    val forbidden = fs.getPath("/tmp/bad|name.mp3")
+                    // Jimfs windows rejects forbidden chars at parse, so use a reserved name.
+                    val forbidden = fs.getPath("C:\\tmp\\NUL.mp3")
                     shouldThrow<WindowsPathException> { library.audioItemFromFile(forbidden) }
                 }
             }

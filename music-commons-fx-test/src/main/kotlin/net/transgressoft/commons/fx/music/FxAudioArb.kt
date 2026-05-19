@@ -89,13 +89,13 @@ fun Arb.Companion.fxAudioItem(attributes: AudioItemTestAttributes): Arb<Observab
                 SimpleStringProperty(this, "comments", metadata.comments)
             }
             every { this@mockk.trackNumberProperty } answers {
-                SimpleIntegerProperty(this, "track number", metadata.trackNumber!!.toInt())
+                SimpleIntegerProperty(this, "track number", metadata.trackNumber?.toInt() ?: -1)
             }
             every { this@mockk.discNumberProperty } answers {
-                SimpleIntegerProperty(this, "disc number", metadata.discNumber!!.toInt())
+                SimpleIntegerProperty(this, "disc number", metadata.discNumber?.toInt() ?: -1)
             }
             every { this@mockk.bpmProperty } answers {
-                SimpleFloatProperty(this, "bpm", metadata.bpm!!)
+                SimpleFloatProperty(this, "bpm", metadata.bpm ?: -1f)
             }
             every { this@mockk.lastDateModifiedProperty } answers {
                 SimpleObjectProperty(this, "last date modified", attributes.lastDateModified)

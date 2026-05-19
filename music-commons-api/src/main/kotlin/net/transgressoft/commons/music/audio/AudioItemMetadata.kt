@@ -52,7 +52,50 @@ data class AudioItemMetadata(
     val bitRate: Int = 0,
     val duration: Duration = Duration.ZERO,
     val coverBytes: ByteArray? = null
-)
+) {
+    init {
+        bpm?.let {
+            require(it.isFinite()) { "bpm must be a finite Float (got $it); NaN and ±Infinity are not representable in JSON" }
+        }
+    }
+
+    // ByteArray uses reference equality by default, breaking value-object semantics for the cover-bytes
+    // field. Override equals/hashCode so two metadata instances with byte-identical covers are equal.
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is AudioItemMetadata) return false
+        return title == other.title &&
+            artist == other.artist &&
+            album == other.album &&
+            genres == other.genres &&
+            comments == other.comments &&
+            trackNumber == other.trackNumber &&
+            discNumber == other.discNumber &&
+            bpm == other.bpm &&
+            encoder == other.encoder &&
+            encoding == other.encoding &&
+            bitRate == other.bitRate &&
+            duration == other.duration &&
+            (coverBytes?.contentEquals(other.coverBytes) ?: (other.coverBytes == null))
+    }
+
+    override fun hashCode(): Int {
+        var result = title.hashCode()
+        result = 31 * result + artist.hashCode()
+        result = 31 * result + album.hashCode()
+        result = 31 * result + genres.hashCode()
+        result = 31 * result + (comments?.hashCode() ?: 0)
+        result = 31 * result + (trackNumber?.hashCode() ?: 0)
+        result = 31 * result + (discNumber?.hashCode() ?: 0)
+        result = 31 * result + (bpm?.hashCode() ?: 0)
+        result = 31 * result + (encoder?.hashCode() ?: 0)
+        result = 31 * result + (encoding?.hashCode() ?: 0)
+        result = 31 * result + bitRate
+        result = 31 * result + duration.hashCode()
+        result = 31 * result + (coverBytes?.contentHashCode() ?: 0)
+        return result
+    }
+}
 
 /**
  * Api-resident singleton sentinel for an unknown [Artist].

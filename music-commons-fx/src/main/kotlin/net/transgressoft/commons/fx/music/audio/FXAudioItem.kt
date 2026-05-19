@@ -268,6 +268,7 @@ class FXAudioItem
 
         override var bpm: Float? = metadata.bpm
             set(value) {
+                value?.let { require(it.isFinite()) { "bpm must be a finite Float (got $it)" } }
                 mutateAndPublish { field = value }
                 bpmProperty.set(value ?: -1f)
             }
@@ -302,7 +303,7 @@ class FXAudioItem
         @Transient
         override var coverImageBytes: ByteArray?
             get() {
-                if (!coverLoaded) {
+                if (!coverLoaded && metadataIO != null) {
                     _coverImageBytes = metadataIO?.loadCover(this)
                     coverLoaded = true
                     val bytes = _coverImageBytes

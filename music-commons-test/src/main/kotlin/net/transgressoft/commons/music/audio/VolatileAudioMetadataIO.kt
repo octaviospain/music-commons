@@ -61,10 +61,10 @@ class VolatileAudioMetadataIO(val fileSystem: FileSystem = FileSystems.getDefaul
 
     /**
      * Stubs the raw cover bytes returned by [loadCover] for [path]. Pass `null` to simulate a file
-     * without artwork.
+     * without artwork. Stored as a defensive copy to keep fixture state immune to caller mutation.
      */
     fun stubCover(path: Path, bytes: ByteArray?) {
-        covers[path] = bytes
+        covers[path] = bytes?.copyOf()
     }
 
     /**
@@ -83,7 +83,7 @@ class VolatileAudioMetadataIO(val fileSystem: FileSystem = FileSystems.getDefaul
 
     override fun readMetadata(path: Path): AudioItemMetadata = metadata[path] ?: AudioItemMetadata()
 
-    override fun loadCover(path: Path): ByteArray? = covers[path]
+    override fun loadCover(path: Path): ByteArray? = covers[path]?.copyOf()
 
     override fun writeMetadata(item: ReactiveAudioItem<*>) {
         val current = metadata[item.path] ?: AudioItemMetadata()
@@ -99,6 +99,9 @@ class VolatileAudioMetadataIO(val fileSystem: FileSystem = FileSystems.getDefaul
                 bpm = item.bpm,
                 encoder = item.encoder
             )
-        item.coverImageBytes?.let { covers[item.path] = it }
+        // Mirror writeMetadata semantics: a null cover clears the previously stubbed bytes, so
+        // tests can exercise cover removal. Defensive copy keeps fixture state immune to caller
+        // mutation of the source array.
+        covers[item.path] = item.coverImageBytes?.copyOf()
     }
 }

@@ -61,6 +61,15 @@ class JAudioTaggerMetadataIO : AudioMetadataIO {
 
     private val logger = KotlinLogging.logger {}
 
+    init {
+        // JAudioTagger exposes genre-text flags only through a process-wide singleton. Set them
+        // once at construction so concurrent writes to different formats don't race on these
+        // toggles (previously the per-call createTag mutated them on every write, briefly making
+        // an MP4 write observe MP3-only settings if an MP3 write was interleaved).
+        TagOptionSingleton.getInstance().isWriteMp3GenresAsText = true
+        TagOptionSingleton.getInstance().isWriteMp4GenresAsText = true
+    }
+
     override fun readMetadata(path: Path): AudioItemMetadata {
         requireDefaultFileSystem(path)
         val tag =
@@ -210,7 +219,6 @@ class JAudioTaggerMetadataIO : AudioMetadataIO {
             }
 
             format.startsWith(MP3.extension, ignoreCase = true) -> {
-                TagOptionSingleton.getInstance().isWriteMp3GenresAsText = true
                 val tag: Tag = ID3v24Tag()
                 tag.artworkList.clear()
                 tag
@@ -223,7 +231,6 @@ class JAudioTaggerMetadataIO : AudioMetadataIO {
             }
 
             format.startsWith("Aac", ignoreCase = true) -> {
-                TagOptionSingleton.getInstance().isWriteMp4GenresAsText = true
                 val tag: Tag = Mp4Tag()
                 tag.artworkList.clear()
                 tag

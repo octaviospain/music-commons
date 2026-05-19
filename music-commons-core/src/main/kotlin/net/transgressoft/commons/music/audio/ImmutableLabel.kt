@@ -81,7 +81,7 @@ class ImmutableLabel private constructor(override val name: String, override val
             while (true) {
                 val existing = labelMap[key]?.get()
                 if (existing != null) return existing
-                val fresh = ImmutableLabel(name, countryCode)
+                val fresh = ImmutableLabel(normalizedName, countryCode)
                 val ref = SoftReference(fresh as Label, labelReferenceQueue)
                 val prev = labelMap.putIfAbsent(key, ref) ?: return fresh
                 val prevValue = prev.get()
