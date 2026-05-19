@@ -23,18 +23,28 @@ import java.util.TreeSet
 
 /**
  * Small sorted multimap for internal relationships that need deterministic key and value traversal.
+ *
+ * Backed by a [TreeMap] of [TreeSet] guarded by `@Synchronized` to provide atomic snapshots
+ * to readers (`get`, `entries`, `containsValue`) while concurrent writers mutate the structure.
+ * A concurrent alternative (e.g. `ConcurrentSkipListMap`) would lose this snapshot guarantee
+ * and reintroduce the partial-state visibility that motivated locking here in the first place.
+ * Contention is low in practice since the only caller — playlist hierarchy bookkeeping —
+ * touches the map at most once per playlist mutation, not per audio item.
  */
 internal class SortedMultimap<K : Comparable<K>, V : Comparable<V>> {
 
     private val valuesByKey = TreeMap<K, TreeSet<V>>()
 
-    operator fun get(key: K): Set<V> = valuesByKey[key] ?: emptySet()
+    @Synchronized
+    operator fun get(key: K): Set<V> = valuesByKey[key]?.toCollection(LinkedHashSet()) ?: emptySet()
 
+    @Synchronized
     fun put(
         key: K,
         value: V
     ): Boolean = valuesByKey.getOrPut(key) { TreeSet() }.add(value)
 
+    @Synchronized
     fun putAll(
         key: K,
         values: Iterable<V>
@@ -46,6 +56,7 @@ internal class SortedMultimap<K : Comparable<K>, V : Comparable<V>> {
         return changed
     }
 
+    @Synchronized
     fun remove(
         key: K,
         value: V
@@ -58,10 +69,13 @@ internal class SortedMultimap<K : Comparable<K>, V : Comparable<V>> {
         }
     }
 
-    fun removeAll(key: K): Set<V> = valuesByKey.remove(key) ?: emptySet()
+    @Synchronized
+    fun removeAll(key: K): Set<V> = valuesByKey.remove(key)?.toCollection(LinkedHashSet()) ?: emptySet()
 
+    @Synchronized
     fun containsValue(value: Any?): Boolean = valuesByKey.values.any { value in it }
 
+    @Synchronized
     fun entries(): Set<Map.Entry<K, V>> =
         valuesByKey.flatMapTo(LinkedHashSet()) { (key, values) ->
             values.map { value -> AbstractMap.SimpleImmutableEntry(key, value) }
