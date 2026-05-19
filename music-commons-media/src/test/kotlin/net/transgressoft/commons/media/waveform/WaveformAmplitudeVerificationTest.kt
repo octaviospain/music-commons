@@ -8,7 +8,7 @@ import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import kotlinx.coroutines.Dispatchers
 
-class WaveformAmplitudeVerificationTest : StringSpec({
+internal class WaveformAmplitudeVerificationTest : StringSpec({
 
     "Waveform produces non-zero amplitudes for WAV" {
         val realAudioPath = Arb.realAudioFile(WAV).next()

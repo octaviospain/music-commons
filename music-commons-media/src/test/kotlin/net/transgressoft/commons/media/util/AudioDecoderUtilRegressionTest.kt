@@ -6,7 +6,7 @@ import io.kotest.matchers.shouldBe
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
-class AudioDecoderUtilRegressionTest : StringSpec({
+internal class AudioDecoderUtilRegressionTest : StringSpec({
 
     fun resourceToTemp(name: String): java.nio.file.Path {
         val stream =

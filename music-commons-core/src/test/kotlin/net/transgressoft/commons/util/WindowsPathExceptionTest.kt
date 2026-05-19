@@ -22,7 +22,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 
-class WindowsPathExceptionTest : StringSpec({
+internal class WindowsPathExceptionTest : StringSpec({
 
     "WindowsPathException is catchable as InvalidAudioFilePathException" {
         val ex = WindowsPathException("bad|name.mp3", WindowsViolation.ForbiddenChar('|'))

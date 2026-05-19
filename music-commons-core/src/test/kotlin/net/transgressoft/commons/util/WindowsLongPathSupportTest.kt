@@ -19,7 +19,7 @@ import java.nio.file.Path
  * [WindowsIntegrationTest] under the `windows-only` tag.
  */
 @Tags("linux-only")
-class WindowsLongPathSupportTest : StringSpec({
+internal class WindowsLongPathSupportTest : StringSpec({
     isolationMode = IsolationMode.SingleInstance
 
     "WindowsLongPathSupport.toLongPathSafe(Path) passes through unchanged on Linux" {

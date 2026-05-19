@@ -36,7 +36,7 @@ import kotlin.reflect.KClass
  */
 @Tags("windows-only")
 @EnabledIf(IsWindowsCondition::class)
-class WindowsIntegrationTest : StringSpec({
+internal class WindowsIntegrationTest : StringSpec({
 
     "real Windows rejects reserved name at the OS level when we try to create NUL" {
         shouldThrow<WindowsPathException> {

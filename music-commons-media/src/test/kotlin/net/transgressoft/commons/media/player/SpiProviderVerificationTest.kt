@@ -31,7 +31,7 @@ import javax.sound.sampled.AudioSystem
  *
  * Uses real test fixture files from music-commons-test resources.
  */
-class SpiProviderVerificationTest : FunSpec({
+internal class SpiProviderVerificationTest : FunSpec({
 
     context("JavaSound SPI provider installation") {
 

@@ -17,8 +17,6 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.audio.audioItemTrackDiscNumberComparator
-import net.transgressoft.commons.music.audio.beautifyArtistName
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.Codepoint
@@ -166,7 +164,7 @@ fun Arb.Companion.audioItem(attributes: AudioItemTestAttributes): Arb<AudioItem>
 fun Arb.Companion.artist(givenName: String? = null, countryCode: CountryCode? = null): Arb<Artist> =
     arbitrary {
         ImmutableArtist.of(
-            givenName ?: beautifyArtistName(Arb.string().bind()),
+            givenName ?: beautifyArtistName(Arb.string(1..100).bind()),
             countryCode ?: CountryCode.entries.toTypedArray().random()
         )
     }
@@ -180,7 +178,7 @@ fun Arb.Companion.album(
 ): Arb<Album> =
     arbitrary {
         ImmutableAlbum(
-            name ?: Arb.string().bind(),
+            name ?: Arb.string(1..100).bind(),
             albumArtist ?: artist().bind(),
             isCompilation ?: Arb.boolean().bind(),
             year ?: Arb.short(1, Short.MAX_VALUE).bind(),
@@ -190,7 +188,7 @@ fun Arb.Companion.album(
 
 fun Arb.Companion.label(name: String? = null, countryCode: CountryCode? = null) =
     arbitrary {
-        ImmutableLabel.of(name ?: Arb.string().bind(), countryCode ?: CountryCode.entries.toTypedArray().random())
+        ImmutableLabel.of(name ?: Arb.string(1..100).bind(), countryCode ?: CountryCode.entries.toTypedArray().random())
     }
 
 fun Arb.Companion.audioFilePath(audioFileType: AudioFileType = Arb.enum<AudioFileType>().next()): Arb<Path> =
@@ -272,16 +270,16 @@ fun Arb.Companion.audioAttributes(
     arbitrary {
         val metadata =
             AudioItemMetadata(
-                title = title ?: Arb.string().bind(),
+                title = title ?: Arb.string(1..100).bind(),
                 artist = artist ?: artist().bind(),
                 album = album ?: album().bind(),
                 genres = genres ?: Arb.genres().bind(),
-                comments = comments ?: Arb.string().bind(),
+                comments = comments ?: Arb.string(1..100).bind(),
                 trackNumber = trackNumber ?: Arb.positiveShort().bind(),
                 discNumber = discNumber ?: Arb.positiveShort().bind(),
                 bpm = bpm ?: Arb.float(10.0f..220.58f, includeNaNs = false).bind(),
-                encoder = encoder ?: Arb.string().bind(),
-                encoding = encoding ?: Arb.string().bind(),
+                encoder = encoder ?: Arb.string(1..100).bind(),
+                encoding = encoding ?: Arb.string(1..100).bind(),
                 bitRate = bitRate ?: Arb.positiveInt().bind(),
                 duration = duration ?: Arb.positiveLong().bind().nanoseconds.toJavaDuration(),
                 coverBytes = coverImageBytes

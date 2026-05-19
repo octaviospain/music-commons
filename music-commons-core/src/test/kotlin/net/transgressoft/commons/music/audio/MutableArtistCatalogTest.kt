@@ -35,7 +35,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 typealias ArtistCatalogMutation = MutationEvent<Artist, ArtistCatalog<AudioItem>>
 
 @ExperimentalCoroutinesApi
-class MutableArtistCatalogTest : StringSpec({
+internal class MutableArtistCatalogTest : StringSpec({
 
     val reactive = reactiveScope()
     val files = virtualFiles()

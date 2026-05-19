@@ -37,7 +37,7 @@ import io.kotest.matchers.shouldBe
  * You should have received a copy of the GNU General Public License          *
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
-class OsDetectorTest : StringSpec({
+internal class OsDetectorTest : StringSpec({
     isolationMode = IsolationMode.SingleInstance
 
     "OsDetector.isWindows reflects real os.name when no override is active" {

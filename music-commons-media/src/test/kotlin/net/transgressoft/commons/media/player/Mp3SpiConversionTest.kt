@@ -9,7 +9,7 @@ import io.kotest.property.arbitrary.next
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 
-class Mp3SpiConversionTest : StringSpec({
+internal class Mp3SpiConversionTest : StringSpec({
 
     "MP3 format conversion via mp3spi produces PCM data" {
         val realAudioPath = Arb.realAudioFile(AudioFileTagType.ID3_V_24).next()

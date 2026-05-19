@@ -111,8 +111,8 @@ internal class FXArtistCatalog(
     override val albums: Set<AlbumSet<ObservableAudioItem>>
         get() =
             synchronized(this) {
-                audioItemsByAlbumName
-                    .values
+                audioItemsByAlbumName.values
+                    .asSequence()
                     .flatten()
                     .distinctBy(::audioItemIdentity)
                     .groupBy { it.album.name }
@@ -177,16 +177,17 @@ internal class FXArtistCatalog(
         synchronized(this) {
             mutateAndPublish {
                 val albumName = audioItem.album.name
-                val (resolvedAlbumName, audioItems) =
+                val resolvedAlbumName =
                     audioItemsByAlbumName[albumName]
-                        ?.let { albumName to it }
+                        ?.let { albumName }
                         ?: audioItemsByAlbumName.entries
-                            .firstOrNull { (_, items) ->
-                                items.any { isSameAudioItem(it, audioItem) }
+                            .firstOrNull { entry ->
+                                entry.value.any { isSameAudioItem(it, audioItem) }
                             }
-                            ?.let { (key, items) -> key to items }
+                            ?.key
                         ?: return@mutateAndPublish false
 
+                val audioItems = audioItemsByAlbumName.getValue(resolvedAlbumName)
                 val removed = audioItems.removeIf { isSameAudioItem(it, audioItem) }
 
                 if (removed) {
