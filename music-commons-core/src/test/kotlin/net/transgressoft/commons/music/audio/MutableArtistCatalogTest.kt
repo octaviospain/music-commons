@@ -43,6 +43,9 @@ class MutableArtistCatalogTest : StringSpec({
     fun createAudioItem(path: Path): AudioItem =
         MutableAudioItemTestBridge.createAudioItem(path, files.metadataIO)
 
+    fun createAudioItem(path: Path, id: Int): AudioItem =
+        MutableAudioItemTestBridge.createAudioItem(path, id, files.metadataIO)
+
     "MUTATE event is published when audio item is added to empty catalog" {
         val expectedArtist = Arb.artist().next()
         val expectedAlbum = Arb.album().next()
@@ -82,6 +85,27 @@ class MutableArtistCatalogTest : StringSpec({
             catalogSnapshot.albums.size shouldBe 0
             catalogSnapshot.isEmpty shouldBe true
         }
+    }
+
+    "MutableArtistCatalog stores items with the same ordering and unique id when repository ids differ" {
+        val expectedArtist = Arb.artist().next()
+        val expectedAlbum = ImmutableAlbum("Shared Album", expectedArtist)
+        val path =
+            files.virtualAudioFile {
+                artist = expectedArtist
+                album = expectedAlbum
+                trackNumber = 1
+                discNumber = 1
+            }.next()
+        val firstAudioItem = createAudioItem(path, 1)
+        val secondAudioItem = createAudioItem(path, 2)
+        val catalog = MutableArtistCatalog<AudioItem>(expectedArtist)
+
+        catalog.addAudioItem(firstAudioItem) shouldBe true
+        catalog.addAudioItem(secondAudioItem) shouldBe true
+
+        catalog.size shouldBe 2
+        catalog.albumAudioItems(firstAudioItem.album.name) shouldBe setOf(firstAudioItem, secondAudioItem)
     }
 
     "MUTATE event is published when second audio item is added to same album" {

@@ -21,6 +21,7 @@ import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.AlbumSet
 import net.transgressoft.commons.music.audio.AlbumView
 import net.transgressoft.commons.music.audio.Artist
+import net.transgressoft.commons.music.audio.UNASSIGNED_ID
 import net.transgressoft.commons.music.audio.id
 import net.transgressoft.lirp.entity.ReactiveEntityBase
 import net.transgressoft.lirp.event.ReactiveScope
@@ -111,10 +112,26 @@ internal class FXArtistCatalog(
         get() =
             synchronized(this) {
                 audioItemsByAlbumName
-                    .map { (albumName, audioItems) ->
-                        AlbumView(albumName, audioItems)
+                    .values
+                    .flatten()
+                    .distinctBy(::audioItemIdentity)
+                    .groupBy { it.album.name }
+                    .mapNotNull { (albumName, audioItems) ->
+                        val stableAudioItems = audioItems.filter { it.album.name == albumName }
+                        if (stableAudioItems.isEmpty()) {
+                            null
+                        } else {
+                            runCatching { AlbumView(albumName, stableAudioItems) }.getOrNull()
+                        }
                     }.toSet()
             }
+
+    private fun audioItemIdentity(audioItem: ObservableAudioItem): Any =
+        if (audioItem.id != UNASSIGNED_ID) {
+            audioItem.id
+        } else {
+            audioItem.uniqueId
+        }
 
     override fun albumAudioItems(albumName: String): Set<ObservableAudioItem> =
         synchronized(this) {
@@ -134,10 +151,11 @@ internal class FXArtistCatalog(
         synchronized(this) {
             mutateAndPublish {
                 val audioItems = audioItemsByAlbumName.getOrPut(audioItem.album.name) { mutableListOf() }
-                val existingIndex = audioItems.binarySearch(audioItem)
-
-                if (existingIndex < 0) {
-                    val insertionPoint = -(existingIndex + 1)
+                if (audioItems.none { isSameAudioItem(it, audioItem) }) {
+                    val insertionPoint =
+                        audioItems.indexOfFirst { it > audioItem }.let {
+                            if (it >= 0) it else audioItems.size
+                        }
                     audioItems.add(insertionPoint, audioItem)
                     logger.debug { "AudioItem $audioItem was added to album ${audioItem.album}" }
                     queueFxRefresh()
@@ -148,17 +166,32 @@ internal class FXArtistCatalog(
             }
         }
 
+    private fun isSameAudioItem(left: ObservableAudioItem, right: ObservableAudioItem): Boolean =
+        if (left.id != UNASSIGNED_ID && right.id != UNASSIGNED_ID) {
+            left.id == right.id
+        } else {
+            left === right || left.uniqueId == right.uniqueId
+        }
+
     internal fun removeAudioItem(audioItem: ObservableAudioItem): Boolean =
         synchronized(this) {
             mutateAndPublish {
                 val albumName = audioItem.album.name
-                val audioItems = audioItemsByAlbumName[albumName] ?: return@mutateAndPublish false
+                val (resolvedAlbumName, audioItems) =
+                    audioItemsByAlbumName[albumName]
+                        ?.let { albumName to it }
+                        ?: audioItemsByAlbumName.entries
+                            .firstOrNull { (_, items) ->
+                                items.any { isSameAudioItem(it, audioItem) }
+                            }
+                            ?.let { (key, items) -> key to items }
+                        ?: return@mutateAndPublish false
 
-                val removed = audioItems.removeIf { it.uniqueId == audioItem.uniqueId }
+                val removed = audioItems.removeIf { isSameAudioItem(it, audioItem) }
 
                 if (removed) {
                     if (audioItems.isEmpty()) {
-                        audioItemsByAlbumName.remove(albumName)
+                        audioItemsByAlbumName.remove(resolvedAlbumName)
                         logger.debug { "Album ${audioItem.album} was removed from artist catalog of $artist" }
                     } else {
                         logger.debug { "AudioItem $audioItem was removed from album ${audioItem.album}" }
@@ -171,7 +204,13 @@ internal class FXArtistCatalog(
 
     internal fun containsAudioItem(audioItem: ObservableAudioItem): Boolean =
         synchronized(this) {
-            audioItemsByAlbumName[audioItem.album.name]?.contains(audioItem) ?: false
+            artist == audioItem.artist &&
+                (
+                    audioItemsByAlbumName[audioItem.album.name]?.any { isSameAudioItem(it, audioItem) }
+                        ?: audioItemsByAlbumName.values.any { audioItems ->
+                            audioItems.any { isSameAudioItem(it, audioItem) }
+                        }
+                )
         }
 
     internal fun mergeAudioItem(audioItem: ObservableAudioItem): Boolean =

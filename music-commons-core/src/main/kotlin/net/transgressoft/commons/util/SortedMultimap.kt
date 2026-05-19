@@ -28,13 +28,16 @@ internal class SortedMultimap<K : Comparable<K>, V : Comparable<V>> {
 
     private val valuesByKey = TreeMap<K, TreeSet<V>>()
 
-    operator fun get(key: K): Set<V> = valuesByKey[key] ?: emptySet()
+    @Synchronized
+    operator fun get(key: K): Set<V> = valuesByKey[key]?.toCollection(LinkedHashSet()) ?: emptySet()
 
+    @Synchronized
     fun put(
         key: K,
         value: V
     ): Boolean = valuesByKey.getOrPut(key) { TreeSet() }.add(value)
 
+    @Synchronized
     fun putAll(
         key: K,
         values: Iterable<V>
@@ -46,6 +49,7 @@ internal class SortedMultimap<K : Comparable<K>, V : Comparable<V>> {
         return changed
     }
 
+    @Synchronized
     fun remove(
         key: K,
         value: V
@@ -58,10 +62,13 @@ internal class SortedMultimap<K : Comparable<K>, V : Comparable<V>> {
         }
     }
 
-    fun removeAll(key: K): Set<V> = valuesByKey.remove(key) ?: emptySet()
+    @Synchronized
+    fun removeAll(key: K): Set<V> = valuesByKey.remove(key)?.toCollection(LinkedHashSet()) ?: emptySet()
 
+    @Synchronized
     fun containsValue(value: Any?): Boolean = valuesByKey.values.any { value in it }
 
+    @Synchronized
     fun entries(): Set<Map.Entry<K, V>> =
         valuesByKey.flatMapTo(LinkedHashSet()) { (key, values) ->
             values.map { value -> AbstractMap.SimpleImmutableEntry(key, value) }
