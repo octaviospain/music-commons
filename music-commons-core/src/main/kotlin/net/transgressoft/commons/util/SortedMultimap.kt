@@ -23,6 +23,13 @@ import java.util.TreeSet
 
 /**
  * Small sorted multimap for internal relationships that need deterministic key and value traversal.
+ *
+ * Backed by a [TreeMap] of [TreeSet] guarded by `@Synchronized` to provide atomic snapshots
+ * to readers (`get`, `entries`, `containsValue`) while concurrent writers mutate the structure.
+ * A concurrent alternative (e.g. `ConcurrentSkipListMap`) would lose this snapshot guarantee
+ * and reintroduce the partial-state visibility that motivated locking here in the first place.
+ * Contention is low in practice since the only caller — playlist hierarchy bookkeeping —
+ * touches the map at most once per playlist mutation, not per audio item.
  */
 internal class SortedMultimap<K : Comparable<K>, V : Comparable<V>> {
 

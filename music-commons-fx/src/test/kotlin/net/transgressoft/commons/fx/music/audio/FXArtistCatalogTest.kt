@@ -2,6 +2,7 @@ package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
+import net.transgressoft.commons.music.audio.id
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.persistence.VolatileRepository
@@ -164,17 +165,16 @@ internal class FXArtistCatalogTest : StringSpec({
                 this.artist = secondArtist
                 this.album = ImmutableAlbum("Shared Album", secondArtist)
             }
-        val audioLibrary = FXAudioLibrary(VolatileRepository("SameUniqueIdFxAudioLibrary"))
+        FXAudioLibrary(VolatileRepository("SameUniqueIdFxAudioLibrary")).use { audioLibrary ->
+            audioLibrary.add(firstAudioItem)
+            audioLibrary.add(secondAudioItem)
+            reactive.advance()
 
-        audioLibrary.add(firstAudioItem)
-        audioLibrary.add(secondAudioItem)
-        reactive.advance()
-
-        audioLibrary.getArtistCatalog(firstArtist).isPresent shouldBe true
-        audioLibrary.getArtistCatalog(secondArtist).isPresent shouldBe true
-        audioLibrary.getArtistCatalog(firstArtist).get().albumAudioItems("Shared Album") shouldBe setOf(firstAudioItem)
-        audioLibrary.getArtistCatalog(secondArtist).get().albumAudioItems("Shared Album") shouldBe setOf(secondAudioItem)
-        audioLibrary.close()
+            audioLibrary.getArtistCatalog(firstArtist).isPresent shouldBe true
+            audioLibrary.getArtistCatalog(secondArtist).isPresent shouldBe true
+            audioLibrary.getArtistCatalog(firstArtist).get().albumAudioItems("Shared Album") shouldBe setOf(firstAudioItem)
+            audioLibrary.getArtistCatalog(secondArtist).get().albumAudioItems("Shared Album") shouldBe setOf(secondAudioItem)
+        }
     }
 
     "FXArtistCatalog coalesces burst mutations into one JavaFX property refresh" {
@@ -204,5 +204,121 @@ internal class FXArtistCatalogTest : StringSpec({
 
         (catalog.equals(null)) shouldBe false
         (catalog.equals("not a catalog")) shouldBe false
+    }
+
+    "FXArtistCatalog mergeAudioItem reorders item when track number changed" {
+        val catalog = FXArtistCatalog(artist)
+        val firstPath =
+            files.virtualAudioFile {
+                this.artist = artist
+                this.album = album
+                trackNumber = 1
+                discNumber = 1
+            }.next()
+        val secondPath =
+            files.virtualAudioFile {
+                this.artist = artist
+                this.album = album
+                trackNumber = 2
+                discNumber = 1
+            }.next()
+        val first = FXAudioItemTestBridge.createFxAudioItem(firstPath, files.metadataIO)
+        val second = FXAudioItemTestBridge.createFxAudioItem(secondPath, files.metadataIO)
+
+        catalog.addAudioItem(first) shouldBe true
+        catalog.addAudioItem(second) shouldBe true
+
+        first.trackNumber = 10
+        catalog.mergeAudioItem(first) shouldBe true
+
+        val ordered = catalog.albumAudioItems(album.name).toList()
+        ordered.last() shouldBe first
+    }
+
+    "FXArtistCatalog mergeAudioItem returns false when album bucket is unknown" {
+        val catalog = FXArtistCatalog(artist)
+        val path =
+            files.virtualAudioFile {
+                this.artist = artist
+                this.album = album
+            }.next()
+        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
+
+        catalog.mergeAudioItem(audioItem) shouldBe false
+    }
+
+    "FXArtistCatalog mergeAudioItem returns false for single-item album" {
+        val catalog = FXArtistCatalog(artist)
+        val path =
+            files.virtualAudioFile {
+                this.artist = artist
+                this.album = album
+            }.next()
+        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
+
+        catalog.addAudioItem(audioItem) shouldBe true
+        audioItem.trackNumber = 99
+        catalog.mergeAudioItem(audioItem) shouldBe false
+    }
+
+    "FXArtistCatalog mergeAudioItem returns false when the position did not change" {
+        val catalog = FXArtistCatalog(artist)
+        val firstPath =
+            files.virtualAudioFile {
+                this.artist = artist
+                this.album = album
+                trackNumber = 1
+                discNumber = 1
+            }.next()
+        val secondPath =
+            files.virtualAudioFile {
+                this.artist = artist
+                this.album = album
+                trackNumber = 2
+                discNumber = 1
+            }.next()
+        val first = FXAudioItemTestBridge.createFxAudioItem(firstPath, files.metadataIO)
+        val second = FXAudioItemTestBridge.createFxAudioItem(secondPath, files.metadataIO)
+
+        catalog.addAudioItem(first) shouldBe true
+        catalog.addAudioItem(second) shouldBe true
+
+        catalog.mergeAudioItem(first) shouldBe false
+    }
+
+    "FXArtistCatalog mergeAudioItem returns false when the item reference is missing from the album list" {
+        val catalog = FXArtistCatalog(artist)
+        val firstPath =
+            files.virtualAudioFile {
+                this.artist = artist
+                this.album = album
+            }.next()
+        val secondPath =
+            files.virtualAudioFile {
+                this.artist = artist
+                this.album = album
+            }.next()
+        val tracked = FXAudioItemTestBridge.createFxAudioItem(firstPath, files.metadataIO)
+        val untracked = FXAudioItemTestBridge.createFxAudioItem(firstPath, files.metadataIO)
+        val sibling = FXAudioItemTestBridge.createFxAudioItem(secondPath, files.metadataIO)
+
+        catalog.addAudioItem(tracked) shouldBe true
+        catalog.addAudioItem(sibling) shouldBe true
+
+        catalog.mergeAudioItem(untracked) shouldBe false
+    }
+
+    "FXArtistCatalog exposes empty, artist and uniqueId properties consistent with state" {
+        val catalog = FXArtistCatalog(artist)
+
+        catalog.emptyProperty.get() shouldBe true
+        catalog.artistProperty.get() shouldBe artist
+        catalog.uniqueId shouldBe artist.id()
+        catalog.compareTo(FXArtistCatalog(artist)) shouldBe 0
+    }
+
+    "FXArtistCatalog albumAudioItems returns empty set for unknown album" {
+        val catalog = FXArtistCatalog(artist)
+        catalog.albumAudioItems("Nonexistent") shouldBe emptySet()
     }
 })
