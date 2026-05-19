@@ -515,4 +515,87 @@ internal class ItunesImportServiceTest : StringSpec({
         result.imported shouldHaveSize 1
         result.unresolved.shouldBeEmpty()
     }
+
+    "ItunesImportService imports every library track when a subset of playlists is selected" {
+        val track1 = trackFor(1, mp3File, title = "Song One")
+        val track2 = trackFor(2, flacFile, title = "Song Two")
+        val track3 = trackFor(3, mp3File, title = "Song Three")
+        val playlistA = playlistFor("Playlist A", "PLA", listOf(1))
+        val playlistB = playlistFor("Playlist B", "PLB", listOf(2))
+        val library = ItunesLibrary(mapOf(1 to track1, 2 to track2, 3 to track3), listOf(playlistA, playlistB))
+        val policy = ItunesImportPolicy(useFileMetadata = true, writeMetadata = false)
+
+        val result = service.importAsync(listOf(playlistA), library, policy).get()
+
+        result.imported shouldHaveSize 3
+        result.unresolved.shouldBeEmpty()
+        musicLibrary.audioLibrary().size() shouldBe 3
+    }
+
+    "ItunesImportService imports every library track when no playlists are selected" {
+        val track1 = trackFor(1, mp3File, title = "Song One")
+        val track2 = trackFor(2, flacFile, title = "Song Two")
+        val track3 = trackFor(3, mp3File, title = "Song Three")
+        val playlistA = playlistFor("Playlist A", "PLA", listOf(1))
+        val playlistB = playlistFor("Playlist B", "PLB", listOf(2))
+        val library = ItunesLibrary(mapOf(1 to track1, 2 to track2, 3 to track3), listOf(playlistA, playlistB))
+        val policy = ItunesImportPolicy(useFileMetadata = true, writeMetadata = false)
+
+        val result = service.importAsync(emptyList(), library, policy).get()
+
+        result.imported shouldHaveSize 3
+        result.rejectedPlaylistNames.shouldBeEmpty()
+        musicLibrary.findPlaylistByName("Playlist A").isPresent shouldBe false
+        musicLibrary.findPlaylistByName("Playlist B").isPresent shouldBe false
+    }
+
+    "ItunesImportService recreates only selected playlists and ancestor folders while importing all tracks" {
+        val track1 = trackFor(1, mp3File, title = "Song One")
+        val track2 = trackFor(2, flacFile, title = "Song Two")
+        val track3 = trackFor(3, mp3File, title = "Song Three")
+        val folder = playlistFor("Music", "F1", isFolder = true)
+        val playlistA = playlistFor("Playlist A", "PLA", listOf(1), parentId = "F1")
+        val playlistB = playlistFor("Playlist B", "PLB", listOf(2))
+        val library = ItunesLibrary(mapOf(1 to track1, 2 to track2, 3 to track3), listOf(folder, playlistA, playlistB))
+        val policy = ItunesImportPolicy(useFileMetadata = true, writeMetadata = false)
+
+        val result = service.importAsync(listOf(playlistA), library, policy).get()
+
+        result.imported shouldHaveSize 3
+        musicLibrary.findPlaylistByName("Music").isPresent shouldBe true
+        musicLibrary.findPlaylistByName("Playlist A").isPresent shouldBe true
+        musicLibrary.findPlaylistByName("Playlist B").isPresent shouldBe false
+    }
+
+    "ItunesImportService reports totalItems equal to the iTunes library track count" {
+        val track1 = trackFor(1, mp3File, title = "Song One")
+        val track2 = trackFor(2, flacFile, title = "Song Two")
+        val track3 = trackFor(3, mp3File, title = "Song Three")
+        val track4 = trackFor(4, flacFile, title = "Song Four")
+        val playlist = playlistFor("Subset Playlist", "SUB1", listOf(1, 2))
+        val library = ItunesLibrary(mapOf(1 to track1, 2 to track2, 3 to track3, 4 to track4), listOf(playlist))
+        val policy = ItunesImportPolicy(useFileMetadata = true, writeMetadata = false)
+
+        val progresses = mutableListOf<ImportProgress>()
+        service.importAsync(listOf(playlist), library, policy) { progresses.add(it) }.get()
+
+        progresses.shouldHaveSize(4)
+        progresses.forEach { it.totalItems shouldBe library.tracks.size }
+        progresses.last().itemsProcessed shouldBe 4
+    }
+
+    "ItunesImportService surfaces iCloud-style tracks with no local file as UnresolvedTrack(FileNotFound)" {
+        val localTrack = trackFor(1, mp3File, title = "Local Song")
+        val iCloudPath = Paths.get("/icloud/missing/streaming-only.mp3")
+        val iCloudTrack = trackFor(2, iCloudPath, title = "iCloud Only Song")
+        val library = ItunesLibrary(mapOf(1 to localTrack, 2 to iCloudTrack), emptyList())
+        val policy = ItunesImportPolicy(useFileMetadata = true, writeMetadata = false)
+
+        val result = service.importAsync(emptyList(), library, policy).get()
+
+        result.imported shouldHaveSize 1
+        result.unresolved shouldHaveSize 1
+        result.unresolved.first().reason shouldBe UnresolvedReason.FileNotFound
+        result.unresolved.first().title shouldBe "iCloud Only Song"
+    }
 })

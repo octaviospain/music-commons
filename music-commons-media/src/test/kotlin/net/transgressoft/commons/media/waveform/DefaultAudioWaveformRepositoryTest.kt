@@ -1,5 +1,6 @@
 package net.transgressoft.commons.media.waveform
 
+import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.commons.music.waveform.AudioWaveform
@@ -15,8 +16,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.property.arbitrary.next
 import java.io.File
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.serialization.builtins.MapSerializer
-import kotlinx.serialization.builtins.serializer
 
 @ExperimentalCoroutinesApi
 internal class DefaultAudioWaveformRepositoryTest : StringSpec({
@@ -25,16 +24,16 @@ internal class DefaultAudioWaveformRepositoryTest : StringSpec({
     val files = virtualFiles()
     lateinit var jsonFile: File
     lateinit var jsonFileRepository: JsonRepository<Int, AudioWaveform>
-    lateinit var audioWaveformRepository: AudioWaveformRepository<AudioWaveform, net.transgressoft.commons.music.audio.AudioItem>
+    lateinit var audioWaveformRepository: AudioWaveformRepository<AudioWaveform, AudioItem>
 
     beforeEach {
         jsonFile = tempfile("audioWaveformRepository-test", ".json").also { it.deleteOnExit() }
-        jsonFileRepository = JsonFileRepository(jsonFile, MapSerializer(Int.serializer(), AudioWaveformSerializer(files.fileSystem)))
+        jsonFileRepository = JsonFileRepository(jsonFile, AudioWaveformMapSerializer)
         val subscriber =
             object : LirpEventSubscriberBase<
-                net.transgressoft.commons.music.audio.AudioItem,
+                AudioItem,
                 CrudEvent.Type,
-                CrudEvent<Int, net.transgressoft.commons.music.audio.AudioItem>
+                CrudEvent<Int, AudioItem>
             >("test-subscriber") {}
         audioWaveformRepository = DefaultAudioWaveformRepository(jsonFileRepository, subscriber)
     }
@@ -63,11 +62,11 @@ internal class DefaultAudioWaveformRepositoryTest : StringSpec({
 
         val subscriber =
             object : LirpEventSubscriberBase<
-                net.transgressoft.commons.music.audio.AudioItem,
+                AudioItem,
                 CrudEvent.Type,
-                CrudEvent<Int, net.transgressoft.commons.music.audio.AudioItem>
+                CrudEvent<Int, AudioItem>
             >("test-subscriber-2") {}
-        val loadedRepository = DefaultAudioWaveformRepository<net.transgressoft.commons.music.audio.AudioItem>(jsonFileRepository, subscriber)
+        val loadedRepository = DefaultAudioWaveformRepository(jsonFileRepository, subscriber)
         loadedRepository.size() shouldBe 1
         loadedRepository.findById(audioWaveform.id) shouldBePresent { found -> found shouldBe audioWaveform }
     }
@@ -75,9 +74,9 @@ internal class DefaultAudioWaveformRepositoryTest : StringSpec({
     "audioWaveformRepository factory function creates valid repository in media module" {
         val subscriber =
             object : LirpEventSubscriberBase<
-                net.transgressoft.commons.music.audio.AudioItem,
+                AudioItem,
                 CrudEvent.Type,
-                CrudEvent<Int, net.transgressoft.commons.music.audio.AudioItem>
+                CrudEvent<Int, AudioItem>
             >("factory-test") {}
         val repo = audioWaveformRepository(jsonFileRepository, subscriber)
 

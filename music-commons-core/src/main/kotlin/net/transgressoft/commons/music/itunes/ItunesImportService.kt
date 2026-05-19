@@ -37,7 +37,10 @@ import kotlinx.coroutines.future.future
  * Orchestrates importing tracks and playlists from a parsed [ItunesLibrary] into a [MusicLibrary].
  *
  * The import follows a two-step flow: the consumer first parses the XML via [ItunesLibraryParser],
- * selects playlists, then calls [importAsync] with the selection and a configured [ItunesImportPolicy].
+ * optionally selects a subset of playlists, then calls [importAsync] with the selection and a
+ * configured [ItunesImportPolicy]. Every track present in [ItunesLibrary.tracks] is considered for
+ * import regardless of the playlist selection; the selection only controls which playlists (and
+ * their ancestor folders) are recreated in the destination library.
  *
  * Track import behavior depends on [ItunesImportPolicy.useFileMetadata]:
  * - When `true`, audio items are created via [MusicLibrary.audioItemFromFile] which reads all
@@ -67,14 +70,21 @@ class ItunesImportService<I, P>
     private val logger = KotlinLogging.logger {}
 
     /**
-     * Imports tracks from [selectedPlaylists] (and their referenced tracks from [itunesLibrary])
-     * into the [MusicLibrary], applying the given [policy].
+     * Imports every track from [itunesLibrary] into the [MusicLibrary], applying the given [policy],
+     * and recreates the playlists named in [selectedPlaylists] (plus their ancestor folders).
+     *
+     * The imported track set is always the full content of [ItunesLibrary.tracks]; [selectedPlaylists]
+     * does not narrow it. Tracks that cannot be resolved (missing local file, unsupported extension,
+     * read error) are reported in [ImportResult.unresolved].
      *
      * Returns a [CompletableFuture] that completes with an [ImportResult] summarizing the import.
      * The future can be canceled via [CompletableFuture.cancel], which stops processing between tracks.
      *
-     * @param selectedPlaylists Playlists chosen by the consumer for import.
-     * @param itunesLibrary The full parsed iTunes library (for track lookup).
+     * @param selectedPlaylists Playlists chosen by the consumer for recreation in the destination
+     *  library. Does not narrow the set of imported tracks — every track in [itunesLibrary] is
+     *  considered for import.
+     * @param itunesLibrary The full parsed iTunes library; every entry in [ItunesLibrary.tracks]
+     *  is processed.
      * @param policy Import configuration controlling metadata source, play count, write-back, etc.
      * @param rootDirectoryName Optional name of an existing playlist directory to use as the
      *  parent for top-level imported playlists (those whose iTunes
@@ -94,7 +104,7 @@ class ItunesImportService<I, P>
     ): CompletableFuture<ImportResult> =
         CoroutineScope(Dispatchers.IO).future {
             val effectivePlaylists = expandWithAncestors(selectedPlaylists, itunesLibrary)
-            val trackImportResult = importTracks(effectivePlaylists, itunesLibrary, policy, onProgress)
+            val trackImportResult = importTracks(itunesLibrary, policy, onProgress)
             val rejectedNames = createPlaylists(effectivePlaylists, trackImportResult.trackIdToItem, rootDirectoryName)
 
             ImportResult(
@@ -120,17 +130,14 @@ class ItunesImportService<I, P>
     }
 
     private suspend fun importTracks(
-        selectedPlaylists: List<ItunesPlaylist>,
         itunesLibrary: ItunesLibrary,
         policy: ItunesImportPolicy,
         onProgress: (ImportProgress) -> Unit
     ): TrackImportAccumulator {
-        val uniqueTrackIds = selectedPlaylists.flatMap(ItunesPlaylist::trackIds).toSet()
-        val accumulator = TrackImportAccumulator(uniqueTrackIds.size)
+        val accumulator = TrackImportAccumulator(itunesLibrary.tracks.size)
 
-        for (trackId in uniqueTrackIds) {
+        for ((trackId, track) in itunesLibrary.tracks) {
             currentCoroutineContext().ensureActive()
-            val track = itunesLibrary.tracks[trackId] ?: continue
             processTrack(track, trackId, policy, accumulator)
             accumulator.itemsProcessed++
             onProgress(ImportProgress(accumulator.itemsProcessed, accumulator.totalItems, track.location))
