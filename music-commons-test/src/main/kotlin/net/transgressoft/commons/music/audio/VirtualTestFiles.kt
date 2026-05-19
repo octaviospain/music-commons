@@ -26,35 +26,30 @@ import io.kotest.property.arbitrary.arbitrary
 import io.kotest.property.arbitrary.enum
 import io.kotest.property.arbitrary.int
 import io.kotest.property.arbitrary.next
-import org.jaudiotagger.tag.FieldKey
-import org.jaudiotagger.tag.Tag
-import org.jaudiotagger.tag.images.ArtworkFactory
 import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
- * Per-spec test fixture that materializes Jimfs-backed virtual audio files with real
- * JAudioTagger tag instances served by a [FakeAudioMetadataIO]. One instance is created
- * per spec by [virtualFiles], and the per-spec Jimfs filesystem is closed by
- * [VirtualFilesExtension] when the spec finishes.
+ * Per-spec test fixture that materializes Jimfs-backed virtual audio files with metadata served
+ * by an [VolatileAudioMetadataIO]. One instance is created per spec by [virtualFiles], and the
+ * per-spec Jimfs filesystem is closed by [VirtualFilesExtension] when the spec finishes.
  *
  * Each instance owns its own in-memory [FileSystem], so two specs never collide on Jimfs
  * inodes. No JVM-global mutable state is used — specs execute fully in parallel.
  *
- * Tests inject [metadataUtils] (or [audioMetadataIO]) into [MutableAudioItem] / [FXAudioItem]
- * / library constructors so reads/writes route through the fake instead of the real
- * `DefaultAudioMetadataIO`. The [fileSystem] is passed into serializer constructors when
- * JSON round-trip against Jimfs paths is required.
+ * Tests inject [metadataIO] into [MutableAudioItem] / [FXAudioItem] / library constructors so
+ * reads/writes route through the in-memory fake instead of the real `JAudioTaggerMetadataIO`.
+ * The [fileSystem] is passed into serializer constructors when JSON round-trip against Jimfs
+ * paths is required.
  */
 class VirtualFiles internal constructor() {
 
     val fileSystem: FileSystem = Jimfs.newFileSystem(Configuration.unix())
 
-    val audioMetadataIO: FakeAudioMetadataIO = FakeAudioMetadataIO()
-
-    val metadataUtils: AudioItemMetadataUtils = AudioItemMetadataUtils(audioMetadataIO)
+    val metadataIO: VolatileAudioMetadataIO = VolatileAudioMetadataIO(fileSystem)
 
     fun virtualAlbumAudioFiles(
         artist: Artist? = null,
@@ -69,11 +64,13 @@ class VirtualFiles internal constructor() {
                 repeat(Arb.int(size).bind()) {
                     add(
                         virtualAudioFile(fileSystem = fileSystem) {
-                            this.artist = arbitraryArtist
-                            this.album = arbitraryAlbum
-                            this.trackNumber = (it.plus(1)).toShort()
-                            this.discNumber = 1
-                            this.coverImageBytes = testCoverBytes
+                            metadata =
+                                metadata.copy(
+                                    artist = arbitraryArtist,
+                                    album = arbitraryAlbum,
+                                    trackNumber = (it.plus(1)).toShort(),
+                                    discNumber = 1
+                                )
                         }.bind()
                     )
                 }
@@ -96,31 +93,32 @@ class VirtualFiles internal constructor() {
         attributes: AudioItemTestAttributes,
         fileSystem: FileSystem = this.fileSystem
     ): Path {
+        val metadata = attributes.metadata
         val fileName =
             buildString {
-                append(attributes.trackNumber).append(" ")
-                append(attributes.title.sanitizePathSegment())
+                append(metadata.trackNumber).append(" ")
+                append(metadata.title.sanitizePathSegment())
             }
         val filePath =
             buildString {
-                append("/").append(attributes.artist.name.sanitizePathSegment()).append("/")
-                append(attributes.album.name.sanitizePathSegment()).append("/")
+                append("/").append(metadata.artist.name.sanitizePathSegment()).append("/")
+                append(metadata.album.name.sanitizePathSegment()).append("/")
             }
         return createPath(filePath, fileName, tagType.fileType.extension, tagType, attributes, fileSystem)
     }
 
     /**
-     * Materializes a virtual audio file at the exact [targetPath] on [fileSystem],
-     * stubbing the [FakeAudioMetadataIO] so that downstream services (e.g.
-     * `audioItemFromFile(path)`) see a fully readable audio file with the supplied tag.
+     * Materializes a virtual audio file at the exact [targetPath] on [fileSystem] and stubs
+     * [metadataIO] so downstream services (e.g. `audioItemFromFile(path)`) read deterministic
+     * [AudioItemMetadata] and cover bytes for [targetPath].
      *
-     * The codec/container is derived from the file extension on [targetPath]. The
-     * supplied [attributes] populate the real tag instance returned by
-     * [FakeAudioMetadataIO.readTag] for [targetPath].
+     * The codec/container is derived from the file extension on [targetPath]. The supplied
+     * [attributes] are converted to [AudioItemMetadata] and registered with [metadataIO].
      *
      * @param targetPath absolute path on [fileSystem] where the virtual file should appear
-     * @param attributes tag values to expose through the stubbed [Tag]
-     * @param tagType    tag implementation matching the desired codec
+     * @param attributes metadata values exposed through the stubbed [metadataIO]
+     * @param tagType    tag implementation matching the desired codec (currently unused — kept for
+     *   parity with the on-disk fixture API)
      * @return the same [targetPath], usable as the audio item's path
      */
     fun createAt(
@@ -187,24 +185,17 @@ class VirtualFiles internal constructor() {
 
     private fun createPathAt(
         targetPath: Path,
-        tagType: AudioFileTagType,
+        @Suppress("UNUSED_PARAMETER") tagType: AudioFileTagType,
         attributes: AudioItemTestAttributes
     ): Path {
-        val parent = targetPath.parent
-        if (parent != null && !Files.exists(parent)) {
-            Files.createDirectories(parent)
-        }
-
-        Files.write(targetPath, byteArrayOf(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
-
-        // Stub the real JAudioTagger tag and header values on the fake for this path.
-        audioMetadataIO.stub(targetPath, tagType) {
-            populateTag(this, attributes)
-            attributes.coverImageBytes?.let { coverBytes -> attachArtwork(this, coverBytes) }
-        }
-        audioMetadataIO.stubHeader(targetPath, headerInfoFor(targetPath))
-        audioMetadataIO.stubCover(targetPath, attributes.coverImageBytes)
-
+        val header = headerInfoFor(targetPath)
+        val metadata =
+            attributes.metadata.copy(
+                encoding = header.encodingType,
+                bitRate = header.bitRate,
+                duration = java.time.Duration.ofSeconds(header.trackLengthSeconds)
+            )
+        metadataIO.createVirtualFile(targetPath, metadata, attributes.metadata.coverBytes)
         return targetPath
     }
 }
@@ -230,66 +221,8 @@ private fun headerInfoFor(path: Path): HeaderInfo {
     )
 }
 
-// Populates a real JAudioTagger tag with the test attributes. The tag is constructed by
-// AudioFileTagType.newActualTag() and answers setField/getFirst/hasField natively — no MockK
-// plumbing on the caller side. Unsupported field/format combinations (e.g. WavTag + COUNTRY)
-// are swallowed via runCatching so they behave the same way the production `getFieldIfExisting`
-// helper handles them.
-@Suppress("LongMethod")
-private fun populateTag(tag: Tag, attributes: AudioItemTestAttributes) {
-    val artist = attributes.artist.name
-    val album = attributes.album.name
-    val albumArtist = attributes.album.albumArtist.name
-    val title = attributes.title
-    val genre = Genre.joinGenres(attributes.genres)
-    val year = attributes.album.year
-    val trackNumber = attributes.trackNumber
-    val discNumber = attributes.discNumber
-    val bpm = attributes.bpm
-    val comment = attributes.comments
-    val encoder = attributes.encoder
-    val grouping = attributes.album.label.name
-    val isCompilation = attributes.album.isCompilation
-    val country = attributes.artist.countryCode.name
-
-    setFieldQuietly(tag, FieldKey.TITLE, title)
-    setFieldQuietly(tag, FieldKey.ALBUM, album)
-    setFieldQuietly(tag, FieldKey.ARTIST, artist)
-    setFieldQuietly(tag, FieldKey.ALBUM_ARTIST, albumArtist)
-    setFieldQuietly(tag, FieldKey.GENRE, genre)
-    year?.let { setFieldQuietly(tag, FieldKey.YEAR, it.toString()) }
-    setFieldQuietly(tag, FieldKey.GROUPING, grouping)
-    setFieldQuietly(tag, FieldKey.IS_COMPILATION, isCompilation.toString())
-    setFieldQuietly(tag, FieldKey.COUNTRY, country)
-
-    comment?.let { setFieldQuietly(tag, FieldKey.COMMENT, it) }
-    trackNumber?.let { setFieldQuietly(tag, FieldKey.TRACK, it.toString()) }
-    discNumber?.let { setFieldQuietly(tag, FieldKey.DISC_NO, it.toString()) }
-    bpm?.let { setFieldQuietly(tag, FieldKey.BPM, it.toString()) }
-    encoder?.let { setFieldQuietly(tag, FieldKey.ENCODER, it) }
-}
-
-// Some tag/format combinations (notably WavTag + COUNTRY) throw UnsupportedOperationException
-// or KeyNotFoundException when setField is called for an unsupported field. The production
-// readers route these through runCatching; mirror that here so populateTag is robust across
-// every AudioFileTagType.
-private fun setFieldQuietly(tag: Tag, key: FieldKey, value: String) {
-    runCatching { tag.setField(key, value) }
-}
-
-// Attaches cover artwork to the real JAudioTagger tag so the production AudioItemMetadataUtils
-// can extract it via parseCoverBytes. Routes through ArtworkFactory.getNew() to avoid the
-// temp-file write that AudioItemMetadataUtils.createArtwork does for production write paths.
-private fun attachArtwork(tag: Tag, coverBytes: ByteArray) {
-    runCatching {
-        val artwork = ArtworkFactory.getNew()
-        artwork.binaryData = coverBytes
-        artwork.mimeType = "image/jpeg"
-        artwork.description = ""
-        artwork.pictureType = 3 // PictureTypes.DEFAULT_ID (Cover Front)
-        tag.addField(artwork)
-    }
-}
+// (populateTag / setFieldQuietly / attachArtwork removed — the in-memory AudioMetadataIO
+// stores AudioItemMetadata directly, no JAudioTagger tag plumbing is needed in test fixtures.)
 
 /**
  * Kotest [SpecExtension] that closes the per-spec Jimfs filesystem after the spec finishes.
@@ -305,7 +238,9 @@ class VirtualFilesExtension : SpecExtension {
         } finally {
             // Jimfs FileSystem is Closeable; without this each spec leaks one in-memory
             // filesystem (inode/page caches included) for the lifetime of the JVM.
-            files.fileSystem.close()
+            withContext(Dispatchers.IO) {
+                files.fileSystem.close()
+            }
         }
     }
 }
@@ -318,7 +253,9 @@ class VirtualFilesExtension : SpecExtension {
  *         val files = virtualFiles()
  *         "test" {
  *             val path = files.virtualAudioFile().next()
- *             val item = MutableAudioItem(path, 1, files.metadataUtils)
+ *             val metadata = files.metadataIO.readMetadata(path)
+ *             // Construct items via the library or the metadata-first test bridges; the metadata
+ *             // value object replaces the old `(path, id, metadataIO)` constructor pattern.
  *         }
  *     })
  */

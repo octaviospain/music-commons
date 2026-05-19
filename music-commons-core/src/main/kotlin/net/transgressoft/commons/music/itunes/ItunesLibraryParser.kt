@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music.itunes
 
-import net.transgressoft.commons.music.audio.InvalidAudioFilePathException
-import net.transgressoft.commons.music.common.WindowsPathValidator
+import net.transgressoft.commons.util.InvalidAudioFilePathException
+import net.transgressoft.commons.util.WindowsPathValidator
 import com.dd.plist.NSArray
 import com.dd.plist.NSDate
 import com.dd.plist.NSDictionary

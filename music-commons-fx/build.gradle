@@ -70,7 +70,6 @@ dependencies {
     implementation libs.jaudiotagger.get()
     implementation libs.lirp.core.get()
     implementation libs.lirp.fx.get()
-    implementation libs.lirp.sql.get()
     implementation libs.javafx.controls.get()
 
     ksp libs.lirp.ksp.get()

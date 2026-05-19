@@ -95,8 +95,8 @@ Unknown genre strings are preserved as `Genre.Custom(name)` instead of being dis
 
 ### Persistence
 
-- **JSON file storage**: Powered by [lirp](https://github.com/octaviospain/lirp)'s `JsonFileRepository` with debounced file I/O
-- **SQL storage**: Powered by [lirp-sql](https://github.com/octaviospain/lirp)'s `SqlRepository` with HikariCP connection pooling and JetBrains Exposed
+- **JSON file storage**: Inject [lirp](https://github.com/octaviospain/lirp)'s `JsonFileRepository` into the `MusicLibrary.Builder` for debounced file I/O
+- **SQL storage**: Consumer-provided `SqlRepository` — add [lirp-sql](https://github.com/octaviospain/lirp) to your build to inject `SqlRepository` instances (HikariCP + JetBrains Exposed)
 - **Automatic serialization**: Built-in kotlinx-serialization serializers for all entities
 - **Transparent persistence**: Entity changes are persisted without manual save operations
 
@@ -238,22 +238,25 @@ Use `CoreMusicLibrary.builder()` as the single entry point for headless audio ma
 ```kotlin
 import net.transgressoft.commons.music.CoreMusicLibrary
 import net.transgressoft.commons.music.m3u.M3uImportService
+import net.transgressoft.lirp.persistence.json.JsonFileRepository
+import net.transgressoft.lirp.persistence.sql.SqlRepository
 
 // In-memory (volatile) storage -- no files needed
 val library = CoreMusicLibrary.builder().build()
 
-// JSON file persistence
+// JSON file persistence -- inject JsonFileRepository instances directly
 val library = CoreMusicLibrary.builder()
-    .audioLibraryJsonFile(File("audio-library.json"))
-    .playlistHierarchyJsonFile(File("playlists.json"))
-    .waveformRepositoryJsonFile(File("waveforms.json"))
+    .audioRepository(JsonFileRepository(File("audio-library.json"), AudioItemMapSerializer))
+    .playlistRepository(JsonFileRepository(File("playlists.json"), AudioPlaylistMapSerializer))
+    .waveformRepository(JsonFileRepository(File("waveforms.json"), AudioWaveformMapSerializer))
     .build()
 
-// SQL persistence (requires KSP-generated SqlTableDef for each entity)
+// SQL persistence -- requires the lirp-sql artifact on your classpath and a
+// KSP-generated SqlTableDef for each entity
 val library = CoreMusicLibrary.builder()
-    .audioLibrarySql(dataSource, audioItemTableDef)
-    .playlistHierarchySql(dataSource, playlistTableDef)
-    .waveformRepositorySql(dataSource, waveformTableDef)
+    .audioRepository(SqlRepository(dataSource, audioItemTableDef))
+    .playlistRepository(SqlRepository(dataSource, playlistTableDef))
+    .waveformRepository(SqlRepository(dataSource, waveformTableDef))
     .build()
 
 // Add audio files
@@ -291,16 +294,16 @@ Use `FXMusicLibrary.builder()` for JavaFX applications with observable property 
 import net.transgressoft.commons.fx.music.FXMusicLibrary
 
 val fxLibrary = FXMusicLibrary.builder()
-    .audioLibraryJsonFile(File("audio-library.json"))
-    .playlistHierarchyJsonFile(File("playlists.json"))
-    .waveformRepositoryJsonFile(File("waveforms.json"))
+    .audioRepository(JsonFileRepository(File("audio-library.json"), ObservableAudioItemMapSerializer))
+    .playlistRepository(JsonFileRepository(File("playlists.json"), ObservablePlaylistMapSerializer, loadOnInit = false))
+    .waveformRepository(JsonFileRepository(File("waveforms.json"), AudioWaveformMapSerializer))
     .build()
 
-// SQL persistence
+// SQL persistence -- add lirp-sql to your build to access SqlRepository
 val fxLibrary = FXMusicLibrary.builder()
-    .audioLibrarySql(dataSource, observableAudioItemTableDef)
-    .playlistHierarchySql(dataSource, observablePlaylistTableDef)
-    .waveformRepositorySql(dataSource, waveformTableDef)
+    .audioRepository(SqlRepository(dataSource, observableAudioItemTableDef))
+    .playlistRepository(SqlRepository(dataSource, observablePlaylistTableDef, loadOnInit = false))
+    .waveformRepository(SqlRepository(dataSource, waveformTableDef))
     .build()
 
 // Bind directly to JavaFX UI components

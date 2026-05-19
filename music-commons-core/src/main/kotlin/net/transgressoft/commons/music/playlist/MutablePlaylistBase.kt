@@ -18,7 +18,7 @@
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
-import net.transgressoft.commons.music.common.WindowsPathValidator
+import net.transgressoft.commons.util.WindowsPathValidator
 import net.transgressoft.lirp.entity.ReactiveEntityBase
 import net.transgressoft.lirp.entity.toIds
 import mu.KotlinLogging

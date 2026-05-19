@@ -4,6 +4,7 @@ import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.maps.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.property.arbitrary.next
@@ -37,7 +38,7 @@ internal class AudioItemSerializerTest : StringSpec({
     val mapSerializer = MapSerializer(Int.serializer(), AudioItemSerializer(files.fileSystem))
 
     fun createItem(path: Path, id: Int): AudioItem =
-        MutableAudioItemTestBridge.createAudioItem(path, id, files.metadataUtils)
+        MutableAudioItemTestBridge.createAudioItem(path, id, files.metadataIO)
 
     "AudioItemSerializer encodes golden JSON fixture with required fields for path, id, title, duration, artist and album" {
         val artist = ImmutableArtist.of("The Beatles", CountryCode.GB)
@@ -216,7 +217,7 @@ internal class AudioItemSerializerTest : StringSpec({
         encoded shouldContain "\"path\":\"file:///"
     }
 
-    "AudioItemSerializer deserialization throws for a path that no longer exists on disk" {
+    "AudioItemSerializer deserialization succeeds for a path that no longer exists on disk" {
         val offlineDriveJson =
             """
             {
@@ -248,9 +249,11 @@ internal class AudioItemSerializerTest : StringSpec({
             }
             """.trimIndent()
 
-        shouldThrow<InvalidAudioFilePathException> {
-            json.decodeFromString(mapSerializer, offlineDriveJson)
-        }
+        // Existence checks moved to DefaultAudioLibrary.createFromFile; deserialization
+        // is now pure data construction and succeeds even when the path no longer resolves on disk.
+        val decoded = json.decodeFromString(mapSerializer, offlineDriveJson)
+        decoded.shouldHaveSize(1)
+        decoded[1]!!.title shouldBe "Ghost"
     }
 
     "AudioItemSerializer rejects legacy JSON with raw path string" {

@@ -15,20 +15,23 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.music.common
+package net.transgressoft.commons.util
 
-import net.transgressoft.commons.music.audio.WindowsPathException
-import net.transgressoft.commons.music.audio.WindowsViolation
 import java.nio.file.Path
 
 /**
  * Validates paths and names against Windows filesystem constraints.
  *
- * All methods are no-ops on non-Windows JVMs ([OsDetector.isWindows] == false).
- * On Windows: forbidden characters, reserved names (case-insensitive, with or without
+ * Triggers when the host is Windows AND the path uses Windows naming conventions — detected by
+ * the [java.nio.file.FileSystem.getSeparator] being `\`. Paths on filesystems with `/` separators
+ * (Jimfs unix configuration, ZipFS, custom Unix-style providers) bypass validation even on Windows
+ * hosts, because they don't reach the Win32 IO layer and routinely use characters like `:`
+ * legitimately (e.g. Jimfs parsing `file:///C:/...` URIs into segments).
+ *
+ * When active: forbidden characters, reserved names (case-insensitive, with or without
  * extension), trailing dots or spaces, and MAX_PATH (260 chars) are all enforced.
- * [sanitizeForTempFile] is the only method that strips rather than throws, for use
- * with temp file names which are an internal implementation detail.
+ * [sanitizeForTempFile] is the only method that strips rather than throws, for use with temp file
+ * names which are an internal implementation detail.
  */
 object WindowsPathValidator {
 
@@ -50,9 +53,15 @@ object WindowsPathValidator {
 
     private const val MAX_PATH = 260
 
-    /** Validates [path] against all Windows filesystem rules. No-op on non-Windows JVMs. */
+    /**
+     * Validates [path] against all Windows filesystem rules. No-op on non-Windows JVMs and on
+     * paths whose [java.nio.file.FileSystem] uses a non-`\` separator (i.e. Unix-style paths on
+     * Jimfs unix configuration or similar) — those paths never reach the Win32 IO layer, so the
+     * Windows naming contract does not apply.
+     */
     fun validatePath(path: Path) {
         if (!OsDetector.isWindows) return
+        if (path.fileSystem.separator != "\\") return
         val fullPathString = path.toAbsolutePath().toString()
         // MAX_PATH includes the trailing null terminator, so a 260-char path string already exceeds
         // the practical limit for `CreateFileW` without the `\\?\` prefix. Use >= to match the same

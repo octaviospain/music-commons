@@ -17,13 +17,12 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.common.toJsonUri
+import net.transgressoft.commons.util.toJsonUri
 import net.transgressoft.lirp.entity.ReactiveEntity
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import kotlinx.coroutines.Job
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -80,8 +79,6 @@ interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I>, Co
      */
     fun setPlayCount(count: Short)
 
-    fun writeMetadata(): Job
-
     fun asJsonKeyValue() =
         buildJsonObject {
             put("$id", toJsonObject())
@@ -124,6 +121,7 @@ fun ReactiveAudioItem<*>.toJsonObject(): JsonObject =
                     "label",
                     buildJsonObject {
                         put("name", album.label.name)
+                        put("countryCode", album.label.countryCode.name)
                     }
                 )
             }

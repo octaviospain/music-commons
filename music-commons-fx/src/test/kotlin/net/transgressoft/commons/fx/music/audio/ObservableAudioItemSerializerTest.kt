@@ -2,15 +2,13 @@ package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.AudioItemTestFactory
 import net.transgressoft.commons.music.audio.Genre
-import net.transgressoft.commons.music.audio.InvalidAudioFilePathException
 import net.transgressoft.commons.music.audio.virtualFiles
+import net.transgressoft.commons.util.toJsonUri
 import io.kotest.assertions.json.shouldContainJsonKey
-import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.property.arbitrary.next
-import java.nio.file.Files
 import java.time.temporal.ChronoUnit.SECONDS
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
@@ -41,7 +39,7 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
 
     "ObservableAudioItemSerializer encodes all required JSON fields" {
         val path = files.virtualAudioFile().next()
-        val fxAudioItem = FXAudioItem(path, AudioItemTestFactory.nextTestId(), files.metadataUtils)
+        val fxAudioItem = FXAudioItemTestBridge.createFxAudioItem(path, AudioItemTestFactory.nextTestId(), files.metadataIO)
 
         val encoded = json.encodeToString(fxSerializer, fxAudioItem)
 
@@ -60,7 +58,7 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
 
     "ObservableAudioItemSerializer round-trip preserves all fields" {
         val path = files.virtualAudioFile().next()
-        val original = FXAudioItem(path, AudioItemTestFactory.nextTestId(), files.metadataUtils)
+        val original = FXAudioItemTestBridge.createFxAudioItem(path, AudioItemTestFactory.nextTestId(), files.metadataIO)
 
         val encoded = json.encodeToString(fxSerializer, original)
         val decoded = json.decodeFromString(fxSerializer, encoded)
@@ -89,7 +87,7 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
             files.virtualAudioFile {
                 this.genres = setOf(Genre.Rock)
             }.next()
-        val original = FXAudioItem(path, AudioItemTestFactory.nextTestId(), files.metadataUtils)
+        val original = FXAudioItemTestBridge.createFxAudioItem(path, AudioItemTestFactory.nextTestId(), files.metadataIO)
 
         val encoded = json.encodeToString(fxSerializer, original)
 
@@ -109,16 +107,26 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
 
     "ObservableAudioItemSerializer inherits file:// URI format from ReactiveAudioItem.toJsonObject" {
         val path = files.virtualAudioFile().next()
-        val fxAudioItem = FXAudioItem(path, AudioItemTestFactory.nextTestId(), files.metadataUtils)
+        val fxAudioItem = FXAudioItemTestBridge.createFxAudioItem(path, AudioItemTestFactory.nextTestId(), files.metadataIO)
 
         val encoded = json.encodeToString(fxSerializer, fxAudioItem)
 
         encoded shouldContain "\"path\":\"file://"
     }
 
-    "ObservableAudioItemSerializer deserialization throws for a path that no longer exists on disk" {
-        val gonePath = Files.createTempFile("offline", ".mp3").also { Files.deleteIfExists(it) }
-        val pathUri = gonePath.toUri().toString()
+    "ObservableAudioItemSerializer deserialization succeeds for a path that no longer exists on disk" {
+        // Phase 40-02/03 semantics: existence checks live in FXAudioLibrary.createFromFile; pure-data
+        // deserialization succeeds even when the path is offline. Deserialized items arrive with
+        // library = null and coverImageBytes = null until the owning library wires the back-ref.
+        //
+        // The path lives on the Jimfs filesystem the serializer is bound to — the URI must be parseable
+        // by Jimfs's URI handler, so use a Jimfs-native synthetic path rather than a real default-FS
+        // temp file. Mixing filesystems produced `/work/C:/...` style paths on Windows runners that
+        // tripped the Windows path validator with the embedded `:` from the drive letter.
+        val gonePath = files.fileSystem.getPath("/music/offline-ghost.mp3")
+        // toJsonUri synthesizes a file:// URI even for non-default filesystems, matching what
+        // production serialization emits and what toPathFromJsonUri's `file://` guard accepts.
+        val pathUri = gonePath.toJsonUri()
         val offlineDriveJson =
             """
             {
@@ -148,9 +156,10 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
             }
             """.trimIndent()
 
-        shouldThrow<InvalidAudioFilePathException> {
-            json.decodeFromString(fxSerializer, offlineDriveJson)
-        }
+        val decoded = json.decodeFromString(fxSerializer, offlineDriveJson) as FXAudioItem
+        decoded.id shouldBe 1
+        decoded.title shouldBe "Ghost"
+        decoded.coverImageBytes shouldBe null
     }
 
     "ObservableAudioItemMapSerializer round-trip preserves the map entries" {
@@ -158,8 +167,8 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
         val path2 = files.virtualAudioFile().next()
         val id1 = AudioItemTestFactory.nextTestId()
         val id2 = AudioItemTestFactory.nextTestId()
-        val item1 = FXAudioItem(path1, id1, files.metadataUtils)
-        val item2 = FXAudioItem(path2, id2, files.metadataUtils)
+        val item1 = FXAudioItemTestBridge.createFxAudioItem(path1, id1, files.metadataIO)
+        val item2 = FXAudioItemTestBridge.createFxAudioItem(path2, id2, files.metadataIO)
         val originalMap = mapOf(id1 to item1, id2 to item2)
 
         val encoded = json.encodeToString(fxMapSerializer, originalMap)

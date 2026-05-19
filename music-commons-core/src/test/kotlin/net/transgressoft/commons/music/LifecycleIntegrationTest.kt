@@ -3,11 +3,11 @@ package net.transgressoft.commons.music
 import net.transgressoft.commons.media.waveform.AudioWaveformMapSerializer
 import net.transgressoft.commons.media.waveform.ScalableAudioWaveform
 import net.transgressoft.commons.media.waveform.audioWaveformRepository
-import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemMapSerializer
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
+import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.playlist.AudioPlaylistMapSerializer
 import net.transgressoft.commons.music.playlist.DefaultPlaylistHierarchy
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
@@ -21,7 +21,6 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
-import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
@@ -33,6 +32,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 internal class LifecycleIntegrationTest : StringSpec({
 
     val reactive = reactiveScope()
+    val files = virtualFiles()
 
     lateinit var audioFile: java.io.File
     lateinit var playlistsFile: java.io.File
@@ -55,7 +55,7 @@ internal class LifecycleIntegrationTest : StringSpec({
         waveformsRepository = JsonFileRepository(waveformsFile, AudioWaveformMapSerializer)
         playlistHierarchyRepository = JsonFileRepository(playlistsFile, AudioPlaylistMapSerializer)
 
-        audioLibrary = DefaultAudioLibrary(audioLibraryRepository)
+        audioLibrary = DefaultAudioLibrary(audioLibraryRepository, files.metadataIO)
         val subscriber = AudioItemEventSubscriber<AudioItem>("LifecycleTestSubscriber")
         waveforms = audioWaveformRepository(waveformsRepository, subscriber) { subscriber.cancelSubscription() }
         playlistHierarchy = DefaultPlaylistHierarchy(playlistHierarchyRepository)
@@ -71,14 +71,14 @@ internal class LifecycleIntegrationTest : StringSpec({
     }
 
     "AudioLibrary close() stops reacting to repository events" {
-        val audioItem = audioLibrary.createFromFile(Arb.realAudioFile().next())
+        val audioItem = audioLibrary.createFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         audioLibrary.findAlbumAudioItems(audioItem.artist, audioItem.album.name).size shouldBe 1
 
         audioLibrary.close()
 
-        val audioItem2 = audioLibrary.createFromFile(Arb.realAudioFile().next())
+        val audioItem2 = audioLibrary.createFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         // After close(), the artist catalog registry subscription is cancelled
@@ -90,7 +90,7 @@ internal class LifecycleIntegrationTest : StringSpec({
     "PlaylistHierarchy close() stops reacting to audio item deletions" {
         audioLibrary.subscribe(playlistHierarchy)
 
-        val audioItem = audioLibrary.createFromFile(Arb.realAudioFile().next())
+        val audioItem = audioLibrary.createFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         val playlist = playlistHierarchy.createPlaylist("Lifecycle Test Playlist")
@@ -116,7 +116,7 @@ internal class LifecycleIntegrationTest : StringSpec({
     "DefaultAudioWaveformRepository close() cancels its event subscription and closes the delegated repository" {
         audioLibrary.subscribe(waveforms)
 
-        val audioItem = audioLibrary.createFromFile(Arb.realAudioFile().next())
+        val audioItem = audioLibrary.createFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         val waveform = ScalableAudioWaveform(audioItem.id, audioItem.path)
@@ -141,7 +141,7 @@ internal class LifecycleIntegrationTest : StringSpec({
         audioLibrary.subscribe(waveforms)
         audioLibrary.subscribe(playlistHierarchy)
 
-        val audioItem = audioLibrary.createFromFile(Arb.realAudioFile().next())
+        val audioItem = audioLibrary.createFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         val playlist = playlistHierarchy.createPlaylist("Full Lifecycle Playlist")

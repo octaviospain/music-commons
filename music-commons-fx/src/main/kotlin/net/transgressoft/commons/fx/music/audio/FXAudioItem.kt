@@ -17,23 +17,22 @@
 
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.music.AudioUtils.audioItemTrackDiscNumberComparator
-import net.transgressoft.commons.music.AudioUtils.getArtistsNamesInvolved
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
-import net.transgressoft.commons.music.audio.AudioFileMetadata
-import net.transgressoft.commons.music.audio.AudioItemMetadataUtils
+import net.transgressoft.commons.music.audio.AudioItemMetadata
+import net.transgressoft.commons.music.audio.AudioMetadataIO
 import net.transgressoft.commons.music.audio.Genre
-import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
-import net.transgressoft.commons.music.audio.InvalidAudioFilePathException
 import net.transgressoft.commons.music.audio.UNASSIGNED_ID
-import net.transgressoft.commons.music.common.WindowsPathValidator
+import net.transgressoft.commons.music.audio.audioItemTrackDiscNumberComparator
+import net.transgressoft.commons.music.audio.getArtistsNamesInvolved
+import net.transgressoft.commons.util.WindowsPathValidator
 import net.transgressoft.lirp.entity.ReactiveEntityBase
 import net.transgressoft.lirp.persistence.fx.fxFloat
 import net.transgressoft.lirp.persistence.fx.fxInteger
 import net.transgressoft.lirp.persistence.fx.fxObject
 import net.transgressoft.lirp.persistence.fx.fxString
+import javafx.application.Platform
 import javafx.beans.property.FloatProperty
 import javafx.beans.property.IntegerProperty
 import javafx.beans.property.ObjectProperty
@@ -46,7 +45,6 @@ import javafx.beans.property.SimpleSetProperty
 import javafx.beans.property.StringProperty
 import javafx.collections.FXCollections
 import javafx.scene.image.Image
-import mu.KotlinLogging
 import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import java.nio.file.Path
@@ -55,12 +53,6 @@ import java.time.LocalDateTime
 import java.util.Objects
 import java.util.Optional
 import kotlin.io.path.extension
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlinx.serialization.modules.SerializersModule
@@ -70,119 +62,66 @@ import kotlinx.serialization.modules.polymorphic
 // The serializer is a stateful class (ObservableAudioItemSerializer(FileSystem)) so it cannot be referenced as a
 // bare `@Serializable(with = ...)` target — kotlinx-serialization requires KSerializer-typed ctor params.
 
-// See MutableAudioItem.readMetadataSafely for rationale. Mirrored here because module visibility blocks reuse.
-private fun readMetadataSafely(metadataUtils: AudioItemMetadataUtils, path: java.nio.file.Path): AudioFileMetadata =
-    try {
-        metadataUtils.readMetadata(path)
-    } catch (_: IllegalArgumentException) {
-        AudioFileMetadata(
-            bitRate = 0,
-            duration = java.time.Duration.ZERO,
-            encoder = null,
-            encoding = null,
-            title = "",
-            artist = ImmutableArtist.UNKNOWN,
-            album = ImmutableAlbum.UNKNOWN,
-            genres = emptySet(),
-            comments = null,
-            trackNumber = null,
-            discNumber = null,
-            bpm = null,
-            coverBytes = null
-        )
-    }
-
 /**
  * JavaFX implementation of [ObservableAudioItem] with lirp-fx scalar properties.
+ *
+ * Pure value holder: the primary constructor seeds reactive JavaFX properties from an
+ * [AudioItemMetadata] value object. File-level concerns (existence checks, tag IO) live one layer up
+ * in [FXAudioLibrary]; this class only validates the path shape via [WindowsPathValidator] and
+ * exposes reactive mutators.
  *
  * Each mutable metadata field is exposed as a lirp-fx property ([fxString], [fxObject],
  * [fxInteger], [fxFloat]) that serves as the single source of truth for its JavaFX value.
  * Reactive mutation events are published via [mutateAndPublish] so [lastDateModified] is
- * updated and subscribers are notified on every state change, both when properties are set
- * directly and when they are mutated through the lirp-fx JavaFX property.
+ * updated and subscribers are notified on every state change.
  *
- * Side-effect logic (updating [artistsInvolvedProperty]) is registered as change listeners on
- * [titleProperty], [artistProperty], and [albumProperty] via [syncArtistsInvolved].
+ * Cover image bytes are loaded lazily. The owning [FXAudioLibrary] is held as a strong back-ref
+ * (wired by [FXAudioLibrary.add]) so [coverImageBytes] can fetch on first access through
+ * `library.loadCover(this)` and cache the result. Lifetimes are coterminous with the library:
+ * items leave the library only by removal, which drops the library reference as well.
  *
- * [lastDateModifiedProperty] is updated automatically by [ReactiveEntityBase] after each
- * successful mutation.
+ * [equals] / [hashCode] read [coverImageBytes], which triggers the lazy load on first comparison
+ * when a library back-ref is present. This deferred-IO contract is acceptable because callers
+ * comparing freshly-deserialized items already accept the cost of resolving the path on disk.
  */
 class FXAudioItem
     @JvmOverloads
     internal constructor(
         override val path: Path,
         override val id: Int = UNASSIGNED_ID,
-        private val metadataUtils: AudioItemMetadataUtils = AudioItemMetadataUtils()
+        metadata: AudioItemMetadata
     ): ObservableAudioItem, Comparable<ObservableAudioItem>,
         ReactiveEntityBase<Int, ObservableAudioItem>() {
 
+        /**
+         * Metadata-IO back-ref used by the lazy [coverImageBytes] getter to load and cache the
+         * cover image on demand. Wired by [FXAudioLibrary.add] when the item enters the library;
+         * left `null` for orphan items (e.g. freshly-deserialized JSON entities before the library
+         * rehydration pass attaches them) — in that case [coverImageBytes] returns `null`.
+         */
         @Transient
-        private val logger = KotlinLogging.logger {}
+        internal var metadataIO: AudioMetadataIO? = null
 
-        private val ioScope =
-            CoroutineScope(
-                Dispatchers.IO + SupervisorJob() +
-                    CoroutineExceptionHandler { _, exception ->
-                        val errorText = "Error writing metadata of $this"
-                        logger.error(errorText, exception)
-                    }
-            )
-
+        // Constructor for deserialization & iTunes import
         internal constructor(
             path: Path,
             id: Int,
-            title: String,
-            duration: Duration,
-            bitRate: Int,
-            artist: Artist,
-            album: Album,
-            genres: Set<Genre>,
-            comments: String?,
-            trackNumber: Short?,
-            discNumber: Short?,
-            bpm: Float?,
-            encoder: String?,
-            encoding: String?,
+            metadata: AudioItemMetadata,
             dateOfCreation: LocalDateTime,
             lastDateModified: LocalDateTime,
-            playCount: Short,
-            metadataUtils: AudioItemMetadataUtils = AudioItemMetadataUtils()
-        ): this(path, id, metadataUtils) {
+            playCount: Short
+        ): this(path, id, metadata) {
             disableEvents()
-            this.title = title
-            this._duration = duration
-            this.artist = artist
-            this.genres = genres
-            this.comments = comments
-            this.trackNumber = trackNumber
-            this.discNumber = discNumber
-            this.bpm = bpm
-            this.album = album
-            this._bitRate = bitRate
-            this._encoder = encoder
-            this._encoding = encoding
             this._dateOfCreation = dateOfCreation
             this.lastDateModified = lastDateModified
-            this.coverImageBytes = metadata.coverBytes
-            _playCountProperty.set(playCount.toInt())
+            this._playCountProperty.set(playCount.toInt())
+            this.metadataIO = null
             enableEvents()
         }
 
         init {
             WindowsPathValidator.validatePath(path)
-            if (!Files.exists(path)) {
-                throw InvalidAudioFilePathException("File '${path.toAbsolutePath()}' does not exist")
-            }
-            if (!Files.isRegularFile(path)) {
-                throw InvalidAudioFilePathException("Path '${path.toAbsolutePath()}' is not a regular file")
-            }
-            if (!Files.isReadable(path)) {
-                throw InvalidAudioFilePathException("File '${path.toAbsolutePath()}' is not readable")
-            }
         }
-
-        @Transient
-        private val metadata = readMetadataSafely(metadataUtils, path)
 
         /** Immutable properties */
 
@@ -245,12 +184,9 @@ class FXAudioItem
          *  a RegistryBase-managed repository. */
 
         @Transient
-        private val metadataTitle = metadata.title
+        override val titleProperty: StringProperty = fxString(metadata.title)
 
-        @Transient
-        override val titleProperty: StringProperty = fxString(metadataTitle)
-
-        override var title: String = metadataTitle
+        override var title: String = metadata.title
             set(value) {
                 mutateAndPublish {
                     field = value
@@ -264,13 +200,10 @@ class FXAudioItem
         // because JavaFX generics erase to raw types on the JVM.
         // Safe cast: generic type erased at runtime but guaranteed by the builder/serializer contract
         @Transient
-        private val metadataArtist: Artist = metadata.artist
-
-        @Transient
         @Suppress("UNCHECKED_CAST")
-        override val artistProperty: ObjectProperty<Artist> = fxObject(metadataArtist) as ObjectProperty<Artist>
+        override val artistProperty: ObjectProperty<Artist> = fxObject(metadata.artist) as ObjectProperty<Artist>
 
-        override var artist: Artist = metadataArtist
+        override var artist: Artist = metadata.artist
             set(value) {
                 mutateAndPublish {
                     field = value
@@ -280,13 +213,10 @@ class FXAudioItem
             }
 
         @Transient
-        private val metadataAlbum: Album = metadata.album
-
-        @Transient
         @Suppress("UNCHECKED_CAST")
-        override val albumProperty: ObjectProperty<Album> = fxObject(metadataAlbum) as ObjectProperty<Album>
+        override val albumProperty: ObjectProperty<Album> = fxObject(metadata.album) as ObjectProperty<Album>
 
-        override var album: Album = metadataAlbum
+        override var album: Album = metadata.album
             set(value) {
                 mutateAndPublish {
                     field = value
@@ -296,13 +226,10 @@ class FXAudioItem
             }
 
         @Transient
-        private val metadataGenres: Set<Genre> = metadata.genres.toSet()
-
-        @Transient
         @Suppress("UNCHECKED_CAST")
-        override val genresProperty: ObjectProperty<Set<Genre>> = fxObject(metadataGenres) as ObjectProperty<Set<Genre>>
+        override val genresProperty: ObjectProperty<Set<Genre>> = fxObject(metadata.genres) as ObjectProperty<Set<Genre>>
 
-        override var genres: Set<Genre> = metadataGenres
+        override var genres: Set<Genre> = metadata.genres
             set(value) {
                 val copy = value.toSet()
                 mutateAndPublish { field = copy }
@@ -310,49 +237,38 @@ class FXAudioItem
             }
 
         @Transient
-        private val metadataComments: String? = metadata.comments
+        override val commentsProperty: StringProperty by fxString(metadata.comments ?: "")
 
-        @Transient
-        override val commentsProperty: StringProperty by fxString(metadataComments ?: "")
-
-        override var comments: String? = metadataComments
+        override var comments: String? = metadata.comments
             set(value) {
                 mutateAndPublish { field = value }
                 commentsProperty.set(value ?: "")
             }
 
         @Transient
-        private val metadataTrackNumber: Short? = metadata.trackNumber
+        override val trackNumberProperty: IntegerProperty by fxInteger(metadata.trackNumber?.toInt() ?: -1)
 
-        @Transient
-        override val trackNumberProperty: IntegerProperty by fxInteger(metadataTrackNumber?.toInt() ?: -1)
-
-        override var trackNumber: Short? = metadataTrackNumber
+        override var trackNumber: Short? = metadata.trackNumber
             set(value) {
                 mutateAndPublish { field = value }
                 trackNumberProperty.set(value?.toInt() ?: -1)
             }
 
         @Transient
-        private val metadataDiscNumber: Short? = metadata.discNumber
+        override val discNumberProperty: IntegerProperty by fxInteger(metadata.discNumber?.toInt() ?: -1)
 
-        @Transient
-        override val discNumberProperty: IntegerProperty by fxInteger(metadataDiscNumber?.toInt() ?: -1)
-
-        override var discNumber: Short? = metadataDiscNumber
+        override var discNumber: Short? = metadata.discNumber
             set(value) {
                 mutateAndPublish { field = value }
                 discNumberProperty.set(value?.toInt() ?: -1)
             }
 
         @Transient
-        private val metadataBpm: Float? = metadata.bpm
+        override val bpmProperty: FloatProperty by fxFloat(metadata.bpm ?: -1f)
 
-        @Transient
-        override val bpmProperty: FloatProperty by fxFloat(metadataBpm ?: -1f)
-
-        override var bpm: Float? = metadataBpm
+        override var bpm: Float? = metadata.bpm
             set(value) {
+                value?.let { require(it.isFinite()) { "bpm must be a finite Float (got $it)" } }
                 mutateAndPublish { field = value }
                 bpmProperty.set(value ?: -1f)
             }
@@ -369,21 +285,50 @@ class FXAudioItem
         @Transient
         override val lastDateModifiedProperty: ReadOnlyObjectProperty<LocalDateTime> = _lastDateModifiedProperty
 
-        override var coverImageBytes: ByteArray? = metadata.coverBytes?.copyOf()
-            get() = field?.copyOf()
+        @Transient
+        private var _coverImageBytes: ByteArray? = metadata.coverBytes?.copyOf()
+
+        @Transient
+        private var coverLoaded: Boolean = metadata.coverBytes != null
+
+        /**
+         * Cover image bytes, loaded lazily through the wired [metadataIO] on first access.
+         *
+         * When [metadataIO] is null (orphan item, e.g. freshly-deserialized JSON entity before
+         * the library rehydration pass attaches it), returns `null`. When set and the cache is
+         * empty, fetches via `metadataIO.loadCover(this)`, caches, and fires a
+         * [Platform.runLater] update to [coverImageProperty]. Subsequent reads return the cached
+         * defensive copy without re-invoking the IO seam.
+         */
+        @Transient
+        override var coverImageBytes: ByteArray?
+            get() {
+                if (!coverLoaded && metadataIO != null) {
+                    _coverImageBytes = metadataIO?.loadCover(this)
+                    coverLoaded = true
+                    val bytes = _coverImageBytes
+                    if (bytes != null) {
+                        runOnFxThread {
+                            _coverImageProperty.set(Optional.of(Image(ByteArrayInputStream(bytes))))
+                        }
+                    }
+                }
+                return _coverImageBytes?.copyOf()
+            }
             set(value) {
                 val copy = value?.copyOf()
                 mutateAndPublish {
-                    field = copy
+                    _coverImageBytes = copy
+                    coverLoaded = true
                     _coverImageProperty.set(Optional.ofNullable(copy).map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) })
                 }
             }
 
-        private val _coverImageProperty =
+        private val _coverImageProperty: SimpleObjectProperty<Optional<Image>> =
             SimpleObjectProperty(
                 this,
                 "cover image",
-                Optional.ofNullable(coverImageBytes)
+                Optional.ofNullable(_coverImageBytes)
                     .map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) }
             )
 
@@ -455,17 +400,6 @@ class FXAudioItem
             artistsInvolvedProperty.addAll(involved)
         }
 
-        override fun writeMetadata(): Job =
-            ioScope.launch {
-                logger.debug { "Writing metadata of $this to file '${path.toAbsolutePath()}'" }
-                metadataUtils.writeMetadataToFile(
-                    path, title, album, artist, genres,
-                    comments, trackNumber, discNumber, bpm, encoder,
-                    coverImageBytes, fileName, logger
-                )
-                logger.debug { "Metadata of $this successfully written to file" }
-            }
-
         override fun setPlayCount(count: Short) {
             require(count >= 0) { "Play count cannot be negative" }
             withEventsDisabled { _playCountProperty.set(count.toInt()) }
@@ -502,14 +436,65 @@ class FXAudioItem
 
         override fun clone(): FXAudioItem =
             FXAudioItem(
-                path, id, title, duration, bitRate, artist, album, genres,
-                comments, trackNumber, discNumber, bpm, encoder, encoding,
-                dateOfCreation, lastDateModified, playCount, metadataUtils
+                path,
+                id,
+                AudioItemMetadata(
+                    title = title,
+                    artist = artist,
+                    album = album,
+                    genres = genres,
+                    comments = comments,
+                    trackNumber = trackNumber,
+                    discNumber = discNumber,
+                    bpm = bpm,
+                    encoder = encoder,
+                    encoding = encoding,
+                    bitRate = bitRate,
+                    duration = duration,
+                    // Seed the clone's cover cache with the current bytes so equals() in
+                    // mutateAndPublish's pre/post comparison sees the same state without triggering
+                    // a lazy load on either side.
+                    coverBytes = _coverImageBytes?.copyOf()
+                ),
+                dateOfCreation,
+                lastDateModified,
+                playCount
             )
 
         override fun toString() = "ObservableAudioItem(id=$id, path=$path, title=$title, artist=${artist.name})"
+
+        // Runs the action on the JavaFX application thread when the toolkit is initialized; otherwise
+        // executes inline. This keeps the lazy cover-load path resilient when invoked from a headless
+        // context (e.g. unit tests that exercise the FXAudioItem getter without a toolkit).
+        private fun runOnFxThread(action: () -> Unit) {
+            try {
+                Platform.runLater(action)
+            } catch (_: IllegalStateException) {
+                action()
+            }
+        }
     }
 
+/**
+ * Kotlinx [SerializersModule] registering the polymorphic subtype consumed by
+ * [ObservableAudioItemMapSerializer] when round-tripping FX audio-library JSON.
+ *
+ * Registers `ObservableAudioItem` → [ObservableAudioItemSerializer] (which materializes
+ * deserialized entries as [FXAudioItem] with their JavaFX property bindings reconstructed).
+ *
+ * Pass this module as `serializersModule` when constructing a `Json` instance manually:
+ *
+ * ```
+ * val json = Json { serializersModule = observableAudioItemSerializerModule }
+ * ```
+ *
+ * `JsonFileRepository(audioFile, ObservableAudioItemMapSerializer)` registers this module
+ * automatically, so consumers using the convenience repository do not need to touch it.
+ *
+ * Thread-safety: immutable; safe to share across threads.
+ *
+ * @see ObservableAudioItemMapSerializer
+ */
 val observableAudioItemSerializerModule =
     SerializersModule {
         polymorphic(ObservableAudioItem::class, ObservableAudioItemSerializer())

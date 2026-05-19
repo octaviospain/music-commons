@@ -22,8 +22,26 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 
-// Safe cast: generic type erased at runtime but guaranteed by the builder/serializer contract
+/**
+ * [KSerializer] for `Map<Int, ObservablePlaylist>` — the JavaFX-typed counterpart of
+ * `AudioPlaylistMapSerializer` for use with the FX `MusicLibrary`.
+ *
+ * Consumers wiring a custom `JsonFileRepository` pass this serializer directly:
+ *
+ * ```
+ * val repository = JsonFileRepository(playlistsFile, ObservablePlaylistMapSerializer)
+ * FXMusicLibrary.builder().playlistRepository(repository).build()
+ * ```
+ *
+ * The element serializer is produced by `lirpSerializer(FXPlaylist(...))`, encoding the
+ * playlist identity, name, folder flag, and child references. JavaFX observable properties
+ * are reconstructed during deserialization. Polymorphic resolution of the concrete `FXPlaylist`
+ * subtype is wired by the lirp framework — no additional `serializersModule` plumbing is
+ * required at consumer call sites.
+ *
+ * Thread-safety: the serializer is stateless; concurrent reads are safe.
+ */
 @get:JvmName("ObservablePlaylistMapSerializer")
-@Suppress("UNCHECKED_CAST")
-internal val ObservablePlaylistMapSerializer: KSerializer<Map<Int, ObservablePlaylist>> =
+@Suppress("UNCHECKED_CAST") // Safe cast: generic type erased at runtime but guaranteed by the builder/serializer contract
+val ObservablePlaylistMapSerializer: KSerializer<Map<Int, ObservablePlaylist>> =
     MapSerializer(Int.serializer(), lirpSerializer(FXPlaylist(0, "", false))) as KSerializer<Map<Int, ObservablePlaylist>>

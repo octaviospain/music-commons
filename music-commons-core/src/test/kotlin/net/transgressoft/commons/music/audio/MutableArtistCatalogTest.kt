@@ -41,7 +41,7 @@ class MutableArtistCatalogTest : StringSpec({
     val files = virtualFiles()
 
     fun createAudioItem(path: Path): AudioItem =
-        MutableAudioItemTestBridge.createAudioItem(path, files.metadataUtils)
+        MutableAudioItemTestBridge.createAudioItem(path, files.metadataIO)
 
     "MUTATE event is published when audio item is added to empty catalog" {
         val expectedArtist = Arb.artist().next()

@@ -15,14 +15,20 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.music.audio
+package net.transgressoft.commons.util
 
 /**
  * Exception thrown when a path provided to an audio item entry point is invalid.
  *
  * Thrown with a distinct message for each of the three checks performed in sequence:
  * file not found, path is not a regular file, or file is not readable.
+ *
+ * Lives in `music-commons-api` and extends [Exception] directly rather than the core-resident
+ * `AudioItemManipulationException`. The Phase 40 refactor decoupled path-validation errors from
+ * file-IO errors so the api module owns the entire entity-construction contract without depending
+ * on core. Consumers catching path-validation failures should catch this type or its subclass
+ * `WindowsPathException`.
  */
-open class InvalidAudioFilePathException(message: String, cause: Throwable?) : AudioItemManipulationException(message, cause) {
+open class InvalidAudioFilePathException(message: String, cause: Throwable?) : Exception(message, cause) {
     constructor(message: String) : this(message, null)
 }

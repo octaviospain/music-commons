@@ -17,9 +17,7 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.AudioUtils
-import net.transgressoft.commons.music.AudioUtils.audioItemTrackDiscNumberComparator
-import net.transgressoft.commons.music.common.toJsonUri
+import net.transgressoft.commons.util.toJsonUri
 import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.fail
 import io.kotest.assertions.json.shouldEqualJson
@@ -38,21 +36,22 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 infix fun AudioItem.shouldMatch(attributes: AudioItemTestAttributes) {
+    val metadata = attributes.metadata
     assertSoftly {
         id shouldBe attributes.id
-        title shouldBe attributes.title
-        album.name shouldBe attributes.album.name
-        album.albumArtist.name shouldBe attributes.album.albumArtist.name
-        album.albumArtist.countryCode shouldBe attributes.album.albumArtist.countryCode
-        album.label.name shouldBe attributes.album.label.name
-        album.label.countryCode shouldBe attributes.album.label.countryCode
-        artist shouldBe attributes.artist
-        bpm shouldBe attributes.bpm
-        trackNumber shouldBe attributes.trackNumber
-        discNumber shouldBe attributes.discNumber
-        comments shouldBe attributes.comments
-        genres shouldBe attributes.genres
-        encoder shouldBe attributes.encoder
+        title shouldBe metadata.title
+        album.name shouldBe metadata.album.name
+        album.albumArtist.name shouldBe metadata.album.albumArtist.name
+        album.albumArtist.countryCode shouldBe metadata.album.albumArtist.countryCode
+        album.label.name shouldBe metadata.album.label.name
+        album.label.countryCode shouldBe metadata.album.label.countryCode
+        artist shouldBe metadata.artist
+        bpm shouldBe metadata.bpm
+        trackNumber shouldBe metadata.trackNumber
+        discNumber shouldBe metadata.discNumber
+        comments shouldBe metadata.comments
+        genres shouldBe metadata.genres
+        encoder shouldBe metadata.encoder
         uniqueId shouldBe
             buildString {
                 append(path.fileName.toString().replace(' ', '_'))
@@ -64,7 +63,7 @@ infix fun AudioItem.shouldMatch(attributes: AudioItemTestAttributes) {
                 append(bitRate)
             }
         artistsInvolved shouldContainExactly
-            AudioUtils.getArtistsNamesInvolved(
+            getArtistsNamesInvolved(
                 title, artist.name, album.albumArtist.name
             ).map { ImmutableArtist.of(it) }.toSet()
     }

@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.music.common
+package net.transgressoft.commons.util
 
 import java.net.URI
 import java.nio.file.FileSystem
@@ -27,7 +27,7 @@ import kotlinx.serialization.SerializationException
 /**
  * Converts this path to a platform-neutral `file://` URI string for JSON persistence.
  *
- * Default-filesystem paths use [Path.toUri] which handles OS-specific encoding (drive letters,
+ * Default-filesystem paths use [toUri] which handles OS-specific encoding (drive letters,
  * separator normalization, percent-encoding). Paths from non-default filesystem providers
  * (e.g. Jimfs) would otherwise serialize with their provider's URI scheme (`jimfs://...`),
  * which would fail the `file://` guard in [toPathFromJsonUri] on round-trip. To keep the

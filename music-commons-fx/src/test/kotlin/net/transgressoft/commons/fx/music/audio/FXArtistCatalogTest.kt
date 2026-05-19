@@ -39,7 +39,7 @@ internal class FXArtistCatalogTest : StringSpec({
                 this.artist = artist
                 this.album = album
             }.next()
-        val audioItem = FXAudioItem(path, metadataUtils = files.metadataUtils)
+        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
 
         catalog1.addAudioItem(audioItem)
 
@@ -55,7 +55,7 @@ internal class FXArtistCatalogTest : StringSpec({
                 this.artist = artist
                 this.album = album
             }.next()
-        val audioItem = FXAudioItem(path, metadataUtils = files.metadataUtils)
+        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
 
         catalog1.addAudioItem(audioItem)
         catalog2.addAudioItem(audioItem)
@@ -72,7 +72,7 @@ internal class FXArtistCatalogTest : StringSpec({
                 this.artist = artist
                 this.album = album
             }.next()
-        val audioItem = FXAudioItem(path, metadataUtils = files.metadataUtils)
+        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
 
         catalog1.addAudioItem(audioItem)
 
@@ -88,7 +88,7 @@ internal class FXArtistCatalogTest : StringSpec({
                 this.artist = artist
                 this.album = album
             }.next()
-        val audioItem = FXAudioItem(path, metadataUtils = files.metadataUtils)
+        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
         catalog.addAudioItem(audioItem)
 
         cloneBefore shouldNotBe catalog
@@ -105,7 +105,7 @@ internal class FXArtistCatalogTest : StringSpec({
                     this.artist = artist
                     this.album = album
                 }.next()
-            catalog.addAudioItem(FXAudioItem(path, metadataUtils = files.metadataUtils))
+            catalog.addAudioItem(FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO))
         }
 
         reactive.advance()

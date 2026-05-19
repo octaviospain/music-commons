@@ -2,10 +2,10 @@ package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
-import net.transgressoft.commons.music.audio.WindowsPathException
 import net.transgressoft.commons.music.audio.audioItem
-import net.transgressoft.commons.music.common.OsDetector
 import net.transgressoft.commons.music.testing.reactiveScope
+import net.transgressoft.commons.util.OsDetector
+import net.transgressoft.commons.util.WindowsPathException
 import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.VolatileRepository
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
