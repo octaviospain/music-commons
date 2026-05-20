@@ -8,7 +8,7 @@ import io.kotest.matchers.string.shouldStartWith
 import java.nio.file.Path
 import kotlinx.serialization.SerializationException
 
-class PathJsonExtensionsTest : StringSpec({
+internal class PathJsonExtensionsTest : StringSpec({
 
     "Path.toJsonUri produces file:// URI on absolute path" {
         val path = Path.of("/home/u/song.mp3")

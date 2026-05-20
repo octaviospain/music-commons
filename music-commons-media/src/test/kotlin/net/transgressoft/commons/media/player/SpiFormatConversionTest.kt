@@ -9,7 +9,7 @@ import io.kotest.property.arbitrary.next
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 
-class SpiFormatConversionTest : StringSpec({
+internal class SpiFormatConversionTest : StringSpec({
 
     "OGG format conversion produces PCM data" {
         val realAudioPath = Arb.realAudioFile(AudioFileTagType.VORBIS_COMMENT).next()

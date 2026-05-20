@@ -7,7 +7,7 @@
         "helpers:pinGitHubActionDigests"
     ],
     "timezone": "Europe/Madrid",
-    "schedule": ["* 0-5 * * 1"],
+    "schedule": ["* 6 * * 1"],
     "labels": ["dependencies"],
     "rangeStrategy": "pin",
     "ignoreUnstable": true,
