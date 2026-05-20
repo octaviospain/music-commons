@@ -23,10 +23,14 @@ import net.transgressoft.commons.music.player.UnsupportedAudioPlaybackException
 import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
+import java.io.ByteArrayInputStream
 import java.io.File
+import java.io.IOException
 import java.lang.reflect.Field
 import java.nio.file.Files
 import java.nio.file.Path
@@ -284,6 +288,109 @@ internal class CoreAudioItemPlayerUnitTest : StringSpec({
             durationMillis.invoke(player, metadataDuration) shouldBe 1_234L
             durationMillis.invoke(player, frameDuration) shouldBe 2_000L
             durationMillis.invoke(player, unknownDuration) shouldBe 0L
+        } finally {
+            player.dispose()
+        }
+    }
+
+    "resolveSourceDurationMillis scans containerized mp3 when the reader misidentifies the file" {
+        val decodeCount = AtomicInteger()
+        val stereoFormat = AudioFormat(44_100f, 16, 2, true, false)
+        val player =
+            CoreAudioItemPlayer(
+                pcmStreamFactory = {
+                    decodeCount.incrementAndGet()
+                    AudioInputStream(
+                        ByteArrayInputStream(ByteArray(5_299_200)),
+                        stereoFormat,
+                        5_299_200L / stereoFormat.frameSize.toLong()
+                    )
+                },
+                lineFactory = { fakeLine() },
+                nanoTime = { 0L },
+                stallThresholdNanos = Long.MAX_VALUE
+            )
+        val resolveSourceDurationMillis =
+            CoreAudioItemPlayer::class.java.getDeclaredMethod("resolveSourceDurationMillis", File::class.java, AudioFileFormat::class.java).apply {
+                isAccessible = true
+            }
+        val mp3Type = object : AudioFileFormat.Type("MP3", "mp3") {}
+        val suspiciousFormat =
+            AudioFileFormat(
+                mp3Type,
+                PCM_FORMAT,
+                692,
+                mapOf("duration" to 18_077_000L)
+            )
+
+        try {
+            val duration =
+                resolveSourceDurationMillis.invoke(player, File("track.m4a"), suspiciousFormat) as Long
+
+            duration shouldBeGreaterThan 29_000L
+            duration shouldBeLessThan 31_000L
+            decodeCount.get() shouldBe 1
+        } finally {
+            player.dispose()
+        }
+    }
+
+    "resolveSourceDurationMillis falls back to file-format duration when decoded probing fails" {
+        val player =
+            CoreAudioItemPlayer(
+                pcmStreamFactory = {
+                    throw IOException("probe failed")
+                },
+                lineFactory = { fakeLine() },
+                nanoTime = { 0L },
+                stallThresholdNanos = Long.MAX_VALUE
+            )
+        val resolveSourceDurationMillis =
+            CoreAudioItemPlayer::class.java.getDeclaredMethod("resolveSourceDurationMillis", File::class.java, AudioFileFormat::class.java).apply {
+                isAccessible = true
+            }
+        val mp3Type = object : AudioFileFormat.Type("MP3", "mp3") {}
+        val suspiciousFormat =
+            AudioFileFormat(
+                mp3Type,
+                PCM_FORMAT,
+                692,
+                mapOf("duration" to 18_077_000L)
+            )
+
+        try {
+            val duration =
+                resolveSourceDurationMillis.invoke(player, File("track.m4a"), suspiciousFormat) as Long
+
+            duration shouldBe 18_077L
+        } finally {
+            player.dispose()
+        }
+    }
+
+    "openStreamSession refreshes totalDuration from the decoded PCM stream" {
+        val player =
+            CoreAudioItemPlayer(
+                pcmStreamFactory = {
+                    streamOf(ByteArray(88_200))
+                },
+                lineFactory = { fakeLine() },
+                nanoTime = { 0L },
+                stallThresholdNanos = Long.MAX_VALUE
+            )
+        val openStreamSession =
+            CoreAudioItemPlayer::class.java.getDeclaredMethod("openStreamSession", File::class.java, Long::class.javaPrimitiveType).apply {
+                isAccessible = true
+            }
+
+        try {
+            val session = openStreamSession.invoke(player, File("unused.m4a"), 0L) as Any
+            val stream = session.javaClass.getDeclaredMethod("getStream").apply { isAccessible = true }.invoke(session) as AudioInputStream
+            try {
+                player.totalDuration shouldBe Duration.ofSeconds(1)
+            } finally {
+                stream.close()
+            }
         } finally {
             player.dispose()
         }
