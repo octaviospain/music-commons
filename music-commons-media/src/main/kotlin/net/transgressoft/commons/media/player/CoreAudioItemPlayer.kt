@@ -171,7 +171,7 @@ open class CoreAudioItemPlayer private constructor(
         stopCurrentPlayback()
         seekTargetMillis.set(-1L)
         framePosition = 0L
-        sourceDurationMillis = durationMillis(audioFileFormat)
+        sourceDurationMillis = resolveSourceDurationMillis(file, audioFileFormat)
         currentAudioItem.set(audioItem)
         val mySession = sessionId.incrementAndGet()
         activeSessionId.set(mySession)
@@ -342,6 +342,10 @@ open class CoreAudioItemPlayer private constructor(
         val stream = pcmStreamFactory(file.toPath())
         val format = stream.format
         pcmFormat.set(format)
+        val streamDurationMillis = durationMillis(stream)
+        if (streamDurationMillis > 0L) {
+            sourceDurationMillis = streamDurationMillis
+        }
         val alignedOffset = requestedOffset.coerceAtLeast(0L).alignDown(format.frameSize.toLong())
         val skipped = skipFully(stream, alignedOffset)
         framePosition = skipped.alignDown(format.frameSize.toLong())
@@ -449,6 +453,52 @@ open class CoreAudioItemPlayer private constructor(
             (audioFileFormat.frameLength * 1000.0 / format.frameRate).toLong()
         } else {
             0L
+        }
+    }
+
+    private fun durationMillis(audioInputStream: AudioInputStream): Long {
+        val format = audioInputStream.format
+        return if (audioInputStream.frameLength > 0 && format.frameRate > 0f) {
+            (audioInputStream.frameLength * 1000.0 / format.frameRate).toLong()
+        } else {
+            0L
+        }
+    }
+
+    private fun resolveSourceDurationMillis(file: File, audioFileFormat: AudioFileFormat): Long {
+        val fileFormatDurationMillis = durationMillis(audioFileFormat)
+        if (!requiresDecodedDurationProbe(file, audioFileFormat)) {
+            return fileFormatDurationMillis
+        }
+
+        val decodedDurationMillis = durationMillisFromPcmStream(file)
+        return if (decodedDurationMillis > 0L) decodedDurationMillis else fileFormatDurationMillis
+    }
+
+    private fun requiresDecodedDurationProbe(file: File, audioFileFormat: AudioFileFormat): Boolean {
+        val containerExtension = file.extension.lowercase()
+        if (containerExtension !in setOf("m4a", "mp4", "aac")) {
+            return false
+        }
+        return audioFileFormat.type.extension.equals("mp3", ignoreCase = true)
+    }
+
+    private fun durationMillisFromPcmStream(file: File): Long {
+        val stream = pcmStreamFactory(file.toPath())
+        return stream.use { stream ->
+            val format = stream.format
+            val frameSize = format.frameSize.takeIf { it > 0 } ?: return 0L
+            val frameRate = format.frameRate
+            if (frameRate <= 0f) return 0L
+
+            val buffer = ByteArray(TRANSFER_BUFFER_SIZE)
+            var totalBytes = 0L
+            while (true) {
+                val bytesRead = stream.read(buffer)
+                if (bytesRead < 0) break
+                totalBytes += bytesRead
+            }
+            (totalBytes * 1000.0 / frameSize / frameRate).toLong()
         }
     }
 

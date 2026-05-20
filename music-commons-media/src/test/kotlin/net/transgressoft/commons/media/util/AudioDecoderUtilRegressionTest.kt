@@ -45,6 +45,14 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
             override fun read(): Int = throw NegativeArraySizeException("bad decode")
         }
 
+    fun validateReadablePcmStream(stream: AudioInputStream): AudioInputStream {
+        val method =
+            Class.forName("net.transgressoft.commons.media.util.AudioDecoderUtilKt")
+                .getDeclaredMethod("validateReadablePcmStream", AudioInputStream::class.java)
+                .apply { isAccessible = true }
+        return method.invoke(null, stream) as AudioInputStream
+    }
+
     "AAC M4A decodes to valid PCM with correct endianness and known sample size" {
         val temp = resourceToTemp("testeable_aac.m4a")
         try {
@@ -141,6 +149,15 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
         } finally {
             Files.deleteIfExists(temp)
         }
+    }
+
+    "validateReadablePcmStream preserves the decoded frame length" {
+        val stream = AudioInputStream(ByteArrayInputStream(ByteArray(8_820)), PCM_FORMAT, 4_410)
+
+        val wrapped = validateReadablePcmStream(stream)
+
+        wrapped.frameLength shouldBe 4_410
+        wrapped.close()
     }
 
     "decodeToPcmStream skips a crashing provider and uses the next SPI reader" {
