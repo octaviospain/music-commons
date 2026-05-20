@@ -155,6 +155,7 @@ open class CoreAudioItemPlayer private constructor(
     private fun framesToMillis(byteOffset: Long, frameSize: Long, frameRate: Float): Long =
         (byteOffset * 1000.0 / frameSize / frameRate).toLong()
 
+    @Throws(UnsupportedAudioPlaybackException::class)
     override fun play(audioItem: ReactiveAudioItem<*>) {
         if (state.get() == InternalState.DISPOSED) return
         val file = audioItem.path.toFile()

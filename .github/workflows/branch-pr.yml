@@ -86,6 +86,7 @@ jobs:
                 #      reordering, missing entries) — flagged by the diff below.
                 # Together these prove the committed metadata matches what Maven Central
                 # currently serves, defeating a poisoned-local-cache attack at regen time.
+                shell: bash
                 run: |
                     ./gradlew --write-verification-metadata sha256 build cyclonedxBom \
                         --dry-run --no-parallel --refresh-dependencies
