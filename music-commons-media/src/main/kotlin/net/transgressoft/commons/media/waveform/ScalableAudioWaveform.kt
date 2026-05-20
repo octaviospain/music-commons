@@ -31,7 +31,6 @@ import javax.imageio.ImageIO
 import kotlin.io.path.exists
 import kotlin.io.path.extension
 import kotlin.math.abs
-import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.sync.Mutex
@@ -58,15 +57,6 @@ class ScalableAudioWaveform(
     override val id: Int,
     override val audioFilePath: Path
 ) : ReactiveEntityBase<Int, AudioWaveform>(), AudioWaveform {
-
-    /*
-        This constant is used to scale the amplitude height of the waveform
-        For the waveform to be properly visible, the amplitude must be between 3.8 and 4.4
-        Below 3.8, the waveform is too big and touches the limits of the canvas
-        Above 4.2, the waveform can be too small and is not visible
-        This anyway depends on each waveform, but this value is the one I found more balanced
-     */
-    @Transient private val amplitudeCoefficient = 3.9
 
     @Transient private val cacheMutex = Mutex()
 
@@ -142,8 +132,7 @@ class ScalableAudioWaveform(
 
     /**
      * Computes width-normalized amplitude values from the raw PCM data, without applying
-     * a height factor. The returned values use [amplitudeCoefficient] as the divisor exponent
-     * and average samples per pixel. Height scaling is deferred to the [amplitudes] caller,
+     * a height factor. Height scaling is deferred to the [amplitudes] caller,
      * allowing the same normalized array to be reused across different height requests.
      *
      * Lazily memoizes [rawAudioPcm] on first invocation to avoid redundant audio file reads.
@@ -151,7 +140,7 @@ class ScalableAudioWaveform(
     private fun computeNormalized(width: Int): FloatArray {
         val pcm = rawAudioPcm ?: getRawAudioPcm(audioFilePath).also { rawAudioPcm = it }
         if (pcm.isEmpty()) return FloatArray(width) { 0f }
-        val divisor = 32767.0f * 2.0.pow(amplitudeCoefficient).toFloat()
+        val divisor = 32767.0f
         return FloatArray(width) { w ->
             val start = (w.toLong() * pcm.size / width).toInt()
             val endExclusive =
