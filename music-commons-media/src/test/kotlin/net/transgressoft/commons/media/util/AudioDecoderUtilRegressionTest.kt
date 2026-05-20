@@ -13,6 +13,8 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import java.io.ByteArrayInputStream
 import java.io.File
+import java.io.IOException
+import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import javax.sound.sampled.AudioFormat
@@ -44,6 +46,25 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
 
             override fun read(): Int = throw NegativeArraySizeException("bad decode")
         }
+
+    fun ioFailingStream(): AudioInputStream =
+        AudioInputStream(
+            object : InputStream() {
+                override fun read(): Int = throw IOException("bad decode")
+
+                override fun read(b: ByteArray, off: Int, len: Int): Int = throw IOException("bad decode")
+            },
+            PCM_FORMAT,
+            AudioSystem.NOT_SPECIFIED.toLong()
+        )
+
+    fun validateReadablePcmStream(stream: AudioInputStream): AudioInputStream {
+        val method =
+            Class.forName("net.transgressoft.commons.media.util.AudioDecoderUtilKt")
+                .getDeclaredMethod("validateReadablePcmStream", AudioInputStream::class.java)
+                .apply { isAccessible = true }
+        return method.invoke(null, stream) as AudioInputStream
+    }
 
     "AAC M4A decodes to valid PCM with correct endianness and known sample size" {
         val temp = resourceToTemp("testeable_aac.m4a")
@@ -143,6 +164,15 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
         }
     }
 
+    "validateReadablePcmStream preserves the decoded frame length" {
+        val stream = AudioInputStream(ByteArrayInputStream(ByteArray(8_820)), PCM_FORMAT, 4_410)
+
+        val wrapped = validateReadablePcmStream(stream)
+
+        wrapped.frameLength shouldBe 4_410
+        wrapped.close()
+    }
+
     "decodeToPcmStream skips a crashing provider and uses the next SPI reader" {
         val crashingReader =
             mockk<AudioFileReader>(relaxed = true) {
@@ -155,6 +185,33 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
 
         mockkStatic("net.transgressoft.commons.media.util.AudioDecoderUtilKt")
         every { loadAudioFileReaders() } returns listOf(crashingReader, successReader)
+
+        val temp = Files.createTempFile("audio_", ".mp3")
+        try {
+            val decoded = decodeToPcmStream(temp)
+            val buffer = ByteArray(8)
+            val bytesRead = decoded.read(buffer)
+
+            decoded.format shouldBe PCM_FORMAT
+            bytesRead shouldBeGreaterThan 0
+        } finally {
+            Files.deleteIfExists(temp)
+            unmockkStatic("net.transgressoft.commons.media.util.AudioDecoderUtilKt")
+        }
+    }
+
+    "decodeToPcmStream skips a provider that throws IOException while probing PCM data" {
+        val ioFailingReader =
+            mockk<AudioFileReader>(relaxed = true) {
+                every { getAudioInputStream(any<File>()) } returns ioFailingStream()
+            }
+        val successReader =
+            mockk<AudioFileReader>(relaxed = true) {
+                every { getAudioInputStream(any<File>()) } returns pcmStreamOf(0x00, 0x40, 0x00, 0xC0.toByte(), 0x00, 0x20, 0x00, 0xE0.toByte())
+            }
+
+        mockkStatic("net.transgressoft.commons.media.util.AudioDecoderUtilKt")
+        every { loadAudioFileReaders() } returns listOf(ioFailingReader, successReader)
 
         val temp = Files.createTempFile("audio_", ".mp3")
         try {
