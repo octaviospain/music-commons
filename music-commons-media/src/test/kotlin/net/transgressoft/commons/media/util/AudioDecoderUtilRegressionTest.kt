@@ -17,9 +17,11 @@ import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import javax.sound.sampled.AudioFileFormat
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioInputStream
 import javax.sound.sampled.AudioSystem
+import javax.sound.sampled.UnsupportedAudioFileException
 import javax.sound.sampled.spi.AudioFileReader
 
 private val PCM_FORMAT = AudioFormat(44_100f, 16, 1, true, false)
@@ -39,6 +41,9 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
 
     fun pcmStreamOf(vararg bytes: Byte): AudioInputStream =
         AudioInputStream(ByteArrayInputStream(bytes), PCM_FORMAT, bytes.size.toLong() / PCM_FORMAT.frameSize.toLong())
+
+    fun audioFileFormat(): AudioFileFormat =
+        AudioFileFormat(AudioFileFormat.Type.WAVE, PCM_FORMAT, 44_100)
 
     fun crashingStream(): AudioInputStream =
         object : AudioInputStream(ByteArrayInputStream(ByteArray(0)), PCM_FORMAT, AudioSystem.NOT_SPECIFIED.toLong()) {
@@ -245,6 +250,57 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
             val error =
                 shouldThrow<UnsupportedAudioPlaybackException> {
                     decodeToPcmStream(temp)
+                }
+
+            error.message shouldContain "tried 2 providers"
+        } finally {
+            Files.deleteIfExists(temp)
+            unmockkStatic("net.transgressoft.commons.media.util.AudioDecoderUtilKt")
+        }
+    }
+
+    "readAudioFileFormat skips a crashing provider and uses the next SPI reader" {
+        val crashingReader =
+            mockk<AudioFileReader>(relaxed = true) {
+                every { getAudioFileFormat(any<File>()) } throws NullPointerException("bad metadata")
+            }
+        val successReader =
+            mockk<AudioFileReader>(relaxed = true) {
+                every { getAudioFileFormat(any<File>()) } returns audioFileFormat()
+            }
+
+        mockkStatic("net.transgressoft.commons.media.util.AudioDecoderUtilKt")
+        every { loadAudioFileReaders() } returns listOf(crashingReader, successReader)
+
+        val temp = Files.createTempFile("audio_", ".m4a")
+        try {
+            val format = readAudioFileFormat(temp)
+
+            format.type shouldBe AudioFileFormat.Type.WAVE
+        } finally {
+            Files.deleteIfExists(temp)
+            unmockkStatic("net.transgressoft.commons.media.util.AudioDecoderUtilKt")
+        }
+    }
+
+    "readAudioFileFormat reports unsupported playback when every provider rejects the file" {
+        val rejectingReader1 =
+            mockk<AudioFileReader>(relaxed = true) {
+                every { getAudioFileFormat(any<File>()) } throws UnsupportedAudioFileException("bad metadata")
+            }
+        val rejectingReader2 =
+            mockk<AudioFileReader>(relaxed = true) {
+                every { getAudioFileFormat(any<File>()) } throws UnsupportedAudioFileException("bad metadata")
+            }
+
+        mockkStatic("net.transgressoft.commons.media.util.AudioDecoderUtilKt")
+        every { loadAudioFileReaders() } returns listOf(rejectingReader1, rejectingReader2)
+
+        val temp = Files.createTempFile("audio_", ".m4a")
+        try {
+            val error =
+                shouldThrow<UnsupportedAudioPlaybackException> {
+                    readAudioFileFormat(temp)
                 }
 
             error.message shouldContain "tried 2 providers"
