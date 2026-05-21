@@ -44,7 +44,7 @@ class PlayableWaveformPaneDemo : Application() {
     override fun start(primaryStage: Stage) {
         playableWaveformPane = PlayableWaveformPane()
         val borderPane = BorderPane(playableWaveformPane)
-        borderPane.setPrefSize(700.0, 300.0)
+        borderPane.setPrefSize(900.0, 300.0)
 
         statusLabel = Label("Select a fixture to load")
 

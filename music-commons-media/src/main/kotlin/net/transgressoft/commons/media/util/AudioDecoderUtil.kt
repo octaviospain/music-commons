@@ -22,6 +22,7 @@ import java.io.File
 import java.io.IOException
 import java.nio.file.Path
 import java.util.ServiceLoader
+import javax.sound.sampled.AudioFileFormat
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioInputStream
 import javax.sound.sampled.AudioSystem
@@ -54,6 +55,35 @@ fun decodeToPcmStream(path: Path): AudioInputStream {
     }
 
     return decodeWithReaders(file, readers)
+}
+
+/**
+ * Reads audio file metadata using the same prioritized and exception-safe provider order as [decodeToPcmStream].
+ */
+fun readAudioFileFormat(path: Path): AudioFileFormat {
+    val file = path.toFile()
+    val readers = prioritizeAudioFileReaders(file, loadAudioFileReaders())
+    if (readers.isEmpty()) {
+        throw UnsupportedAudioPlaybackException("No AudioFileReader providers registered for '${file.name}'")
+    }
+
+    var firstFailure: Throwable? = null
+    for (reader in readers) {
+        try {
+            return reader.getAudioFileFormat(file)
+        } catch (_: UnsupportedAudioFileException) {
+            // Try the next provider.
+        } catch (e: IOException) {
+            if (firstFailure == null) firstFailure = e
+        } catch (e: RuntimeException) {
+            if (firstFailure == null) firstFailure = e
+        }
+    }
+
+    throw UnsupportedAudioPlaybackException(
+        "Cannot read audio format for '${file.name}': unsupported format (tried ${readers.size} providers)",
+        firstFailure
+    )
 }
 
 private fun decodeWithReaders(file: File, readers: List<AudioFileReader>): AudioInputStream {

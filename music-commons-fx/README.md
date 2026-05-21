@@ -84,6 +84,8 @@ audioLibrary.playerSubscriber.addOnNextEventAction(PLAYED) { event ->
 }
 ```
 
+`FXAudioItemPlayer` mirrors `CoreAudioItemPlayer`'s playback position immediately after a seek request, so UI bindings can update the playhead before the decoder finishes repositioning. Native FLAC seeks use the decoder's random-access path, generic compressed seeks discard decoded PCM to remain decoder-aligned, and volume control applies to signed PCM streams up to 32-bit.
+
 ### Waveform Visualization
 
 ```kotlin
