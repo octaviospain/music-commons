@@ -82,52 +82,48 @@ internal class FXPlaylist(
 
     override val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist> = SimpleSetProperty(this, "playlists", playlistsAggregate)
 
-    private val _nameProperty = SimpleStringProperty(this, "name", name)
-
-    override val nameProperty: ReadOnlyStringProperty = _nameProperty
+    override val nameProperty: ReadOnlyStringProperty
+        field = SimpleStringProperty(this, "name", name)
 
     override var name: String
-        get() = _nameProperty.value
+        get() = nameProperty.value
         set(value) {
             mutateAndPublish {
-                _nameProperty.set(value)
+                nameProperty.set(value)
                 value
             }
         }
 
-    private val _isDirectoryProperty = SimpleBooleanProperty(this, "isDirectory", isDirectory)
-
-    override val isDirectoryProperty: ReadOnlyBooleanProperty = _isDirectoryProperty
+    override val isDirectoryProperty: ReadOnlyBooleanProperty
+        field = SimpleBooleanProperty(this, "isDirectory", isDirectory)
 
     override var isDirectory: Boolean
-        get() = _isDirectoryProperty.value
+        get() = isDirectoryProperty.value
         set(value) {
             mutateAndPublish {
-                _isDirectoryProperty.set(value)
+                isDirectoryProperty.set(value)
                 value
             }
         }
 
-    private val _audioItemsRecursiveProperty =
+    override val audioItemsRecursiveProperty: ReadOnlyListProperty<ObservableAudioItem>
+        field =
         SimpleListProperty(
             this,
             "audioItemsRecursive",
             FXCollections.observableArrayList<ObservableAudioItem>()
         )
 
-    override val audioItemsRecursiveProperty: ReadOnlyListProperty<ObservableAudioItem> = _audioItemsRecursiveProperty
-
     override val audioItemsRecursive: List<ObservableAudioItem>
         get() = audioItemsRecursiveProperty.get()
 
-    private val _coverImageProperty =
+    override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>>
+        field =
         SimpleObjectProperty(
             this,
             "coverImage",
             Optional.empty<Image>()
         )
-
-    override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>> = _coverImageProperty
 
     private val childRecursiveListener = ListChangeListener<ObservableAudioItem> { refreshDerivedState() }
 
@@ -216,8 +212,8 @@ internal class FXPlaylist(
     private fun replaceRecursiveAudioItems() {
         val currentAudioItems = audioItemsAggregate.toList()
         val currentPlaylists = playlistsAggregate.toList()
-        _audioItemsRecursiveProperty.clear()
-        _audioItemsRecursiveProperty.addAll(
+        audioItemsRecursiveProperty.clear()
+        audioItemsRecursiveProperty.addAll(
             buildList<ObservableAudioItem> {
                 addAll(currentAudioItems)
                 addAll(currentPlaylists.flatMap { it.audioItemsRecursive })
@@ -233,9 +229,9 @@ internal class FXPlaylist(
                 .findFirst()
 
         if (newCover.isPresent) {
-            _coverImageProperty.set(newCover.get())
+            coverImageProperty.set(newCover.get())
         } else {
-            _coverImageProperty.set(Optional.empty())
+            coverImageProperty.set(Optional.empty())
         }
     }
 

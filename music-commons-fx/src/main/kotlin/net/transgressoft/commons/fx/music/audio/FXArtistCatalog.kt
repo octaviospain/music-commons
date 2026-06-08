@@ -43,6 +43,7 @@ import java.util.*
 import java.util.Collections.synchronizedSortedMap
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -74,25 +75,25 @@ internal class FXArtistCatalog(
     private val fxRefreshQueued = AtomicBoolean(false)
     private val fxRefreshRequested = AtomicBoolean(false)
 
-    private val _albumsProperty = SimpleSetProperty<Album>(this, "albums", observableSet())
-    override val albumsProperty: ReadOnlySetProperty<Album> = _albumsProperty
+    override val albumsProperty: ReadOnlySetProperty<Album>
+        field = SimpleSetProperty<Album>(this, "albums", observableSet())
 
     private val albumItemProperties = ConcurrentHashMap<String, SimpleListProperty<ObservableAudioItem>>()
 
-    private val _sizeProperty = SimpleIntegerProperty(this, "size", 0)
-    override val sizeProperty: ReadOnlyIntegerProperty = _sizeProperty
+    override val sizeProperty: ReadOnlyIntegerProperty
+        field = SimpleIntegerProperty(this, "size", 0)
 
-    private val _albumCountProperty = SimpleIntegerProperty(this, "albumCount", 0)
-    override val albumCountProperty: ReadOnlyIntegerProperty = _albumCountProperty
+    override val albumCountProperty: ReadOnlyIntegerProperty
+        field = SimpleIntegerProperty(this, "albumCount", 0)
 
     private val _emptyProperty =
         ReadOnlyBooleanWrapper(this, "empty", true).apply {
-            bind(_sizeProperty.isEqualTo(0))
+            bind(sizeProperty.isEqualTo(0))
         }
     override val emptyProperty: ReadOnlyBooleanProperty = _emptyProperty.readOnlyProperty
 
-    private val _artistProperty = SimpleObjectProperty(this, "artist", artist)
-    override val artistProperty: ReadOnlyObjectProperty<Artist> = _artistProperty
+    override val artistProperty: ReadOnlyObjectProperty<Artist>
+        field = SimpleObjectProperty(this, "artist", artist)
 
     init {
         logger.debug { "FXArtistCatalog created for ${artist.id()}" }
@@ -262,7 +263,7 @@ internal class FXArtistCatalog(
             return
         }
         ReactiveScope.flowScope.launch {
-            delay(FX_REFRESH_DEBOUNCE_MILLIS)
+            delay(FX_REFRESH_DEBOUNCE_MILLIS.milliseconds)
             Platform.runLater {
                 try {
                     fxRefreshRequested.set(false)
@@ -281,17 +282,17 @@ internal class FXArtistCatalog(
         val currentAlbums = albums
         val currentAlbumNames = currentAlbums.map { it.albumName }.toSet()
 
-        _albumsProperty.clear()
+        albumsProperty.clear()
         currentAlbums.forEach { albumSet ->
-            _albumsProperty.add(albumSet.first().album)
+            albumsProperty.add(albumSet.first().album)
             val prop = getOrCreateAlbumItemsProperty(albumSet.albumName)
             prop.setAll(albumSet.toList())
         }
 
         albumItemProperties.keys.retainAll(currentAlbumNames)
 
-        _sizeProperty.set(size)
-        _albumCountProperty.set(currentAlbums.size)
+        sizeProperty.set(size)
+        albumCountProperty.set(currentAlbums.size)
     }
 
     override fun clone(): FXArtistCatalog = FXArtistCatalog(this)

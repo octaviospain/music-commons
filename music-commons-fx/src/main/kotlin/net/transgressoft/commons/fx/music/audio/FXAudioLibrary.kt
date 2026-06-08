@@ -50,6 +50,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CopyOnWriteArraySet
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -116,15 +117,13 @@ internal class FXAudioLibrary
         override val artistCatalogsProperty: ReadOnlySetProperty<ObservableArtistCatalog> =
             SimpleSetProperty(this, "artist catalogs", observableArtistCatalogSet)
 
-        private val _albumsProperty = SimpleSetProperty<Album>(this, "albums", observableSet())
-
         @get:JvmName("albumsProperty")
-        override val albumsProperty: ReadOnlySetProperty<Album> = _albumsProperty
-
-        private val _albumCountProperty = SimpleIntegerProperty(this, "albumCount", 0)
+        override val albumsProperty: ReadOnlySetProperty<Album>
+            field = SimpleSetProperty<Album>(this, "albums", observableSet())
 
         @get:JvmName("albumCountProperty")
-        override val albumCountProperty: ReadOnlyIntegerProperty = _albumCountProperty
+        override val albumCountProperty: ReadOnlyIntegerProperty
+            field = SimpleIntegerProperty(this, "albumCount", 0)
 
         // Subscribe to repository events to populate audioItemsDelegate and artistsProperty.
         // artistsProperty tracks all artists from artistsInvolved (primary + featured artists).
@@ -197,7 +196,7 @@ internal class FXAudioLibrary
                 return
             }
             ReactiveScope.flowScope.launch {
-                delay(FX_REFRESH_DEBOUNCE_MILLIS)
+                delay(FX_REFRESH_DEBOUNCE_MILLIS.milliseconds)
                 Platform.runLater {
                     try {
                         drainAudioItemChanges()
@@ -243,7 +242,7 @@ internal class FXAudioLibrary
                 return
             }
             ReactiveScope.flowScope.launch {
-                delay(FX_REFRESH_DEBOUNCE_MILLIS)
+                delay(FX_REFRESH_DEBOUNCE_MILLIS.milliseconds)
                 Platform.runLater {
                     try {
                         catalogRefreshRequested.set(false)
@@ -267,11 +266,11 @@ internal class FXAudioLibrary
                 artistCatalogBacking.flatMap { catalog ->
                     catalog.albums.map { it.first().album }
                 }.toSet()
-            _albumsProperty.apply {
+            albumsProperty.apply {
                 clear()
                 addAll(allAlbums)
             }
-            _albumCountProperty.set(allAlbums.size)
+            albumCountProperty.set(allAlbums.size)
         }
 
         /**

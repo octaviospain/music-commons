@@ -115,8 +115,5 @@ infix fun File.shouldEqual(audioItemJson: String) {
 }
 
 fun List<AudioItem>.shouldBeOrdered() {
-    val comparator = audioItemTrackDiscNumberComparator<AudioItem>()
-    zipWithNext().all { (current, next) ->
-        comparator.compare(current, next) <= 0
-    } shouldBe true
+    isSortedWith(audioItemTrackDiscNumberComparator()) shouldBe true
 }

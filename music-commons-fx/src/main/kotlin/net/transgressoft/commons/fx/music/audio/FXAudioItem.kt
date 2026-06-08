@@ -114,7 +114,7 @@ class FXAudioItem
             disableEvents()
             this._dateOfCreation = dateOfCreation
             this.lastDateModified = lastDateModified
-            this._playCountProperty.set(playCount.toInt())
+            playCountProperty.set(playCount.toInt())
             this.metadataIO = null
             enableEvents()
         }
@@ -125,28 +125,16 @@ class FXAudioItem
 
         /** Immutable properties */
 
-        private var _bitRate: Int = metadata.bitRate
+        @Serializable
+        override val bitRate: Int = metadata.bitRate
+
+        override val duration: Duration = metadata.duration
 
         @Serializable
-        override val bitRate: Int
-            get() = _bitRate
-
-        private var _duration: Duration = metadata.duration
-
-        override val duration: Duration
-            get() = _duration
-
-        private var _encoder: String? = metadata.encoder?.takeIf { it.isNotEmpty() }
+        override val encoder: String? = metadata.encoder?.takeIf { it.isNotEmpty() }
 
         @Serializable
-        override val encoder: String?
-            get() = _encoder
-
-        private var _encoding: String? = metadata.encoding?.takeIf { it.isNotEmpty() }
-
-        @Serializable
-        override val encoding: String?
-            get() = _encoding
+        override val encoding: String? = metadata.encoding?.takeIf { it.isNotEmpty() }
 
         private var _dateOfCreation: LocalDateTime = LocalDateTime.now()
 
@@ -277,13 +265,12 @@ class FXAudioItem
         override var lastDateModified: LocalDateTime = dateOfCreation
             set(value) {
                 field = value
-                _lastDateModifiedProperty.set(value)
+                lastDateModifiedProperty.set(value)
             }
 
-        private val _lastDateModifiedProperty = SimpleObjectProperty(this, "date of last modification", lastDateModified)
-
         @Transient
-        override val lastDateModifiedProperty: ReadOnlyObjectProperty<LocalDateTime> = _lastDateModifiedProperty
+        override val lastDateModifiedProperty: ReadOnlyObjectProperty<LocalDateTime>
+            field = SimpleObjectProperty(this, "date of last modification", lastDateModified)
 
         @Transient
         private var _coverImageBytes: ByteArray? = metadata.coverBytes?.copyOf()
@@ -309,7 +296,7 @@ class FXAudioItem
                     val bytes = _coverImageBytes
                     if (bytes != null) {
                         runOnFxThread {
-                            _coverImageProperty.set(Optional.of(Image(ByteArrayInputStream(bytes))))
+                            coverImageProperty.set(Optional.of(Image(ByteArrayInputStream(bytes))))
                         }
                     }
                 }
@@ -320,20 +307,19 @@ class FXAudioItem
                 mutateAndPublish {
                     _coverImageBytes = copy
                     coverLoaded = true
-                    _coverImageProperty.set(Optional.ofNullable(copy).map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) })
+                    coverImageProperty.set(Optional.ofNullable(copy).map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) })
                 }
             }
 
-        private val _coverImageProperty: SimpleObjectProperty<Optional<Image>> =
+        @Transient
+        override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>>
+            field =
             SimpleObjectProperty(
                 this,
                 "cover image",
                 Optional.ofNullable(_coverImageBytes)
                     .map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) }
             )
-
-        @Transient
-        override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>> = _coverImageProperty
 
         @Transient
         override val artistsInvolvedProperty: ReadOnlySetProperty<Artist> =
@@ -351,12 +337,11 @@ class FXAudioItem
 
         @Serializable
         override val playCount: Short
-            get() = _playCountProperty.get().toShort()
-
-        private val _playCountProperty = SimpleIntegerProperty(this, "play count", 0)
+            get() = playCountProperty.get().toShort()
 
         @Transient
-        override val playCountProperty: ReadOnlyIntegerProperty = _playCountProperty
+        override val playCountProperty: ReadOnlyIntegerProperty
+            field = SimpleIntegerProperty(this, "play count", 0)
 
         init {
             titleProperty.addListener { _, _, newTitle ->
@@ -402,12 +387,12 @@ class FXAudioItem
 
         override fun setPlayCount(count: Short) {
             require(count >= 0) { "Play count cannot be negative" }
-            withEventsDisabled { _playCountProperty.set(count.toInt()) }
+            withEventsDisabled { playCountProperty.set(count.toInt()) }
         }
 
         internal fun incrementPlayCount() {
             mutateAndPublish {
-                _playCountProperty.set(_playCountProperty.get() + 1)
+                playCountProperty.set(playCountProperty.get() + 1)
             }
         }
 
