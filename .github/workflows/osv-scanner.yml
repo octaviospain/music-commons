@@ -2,7 +2,7 @@ name: OSV-Scanner
 
 on:
     schedule:
-        # Mondays 06:00 UTC — matches lirp cadence.
+        # Mondays 06:00 UTC
         -   cron: '0 6 * * 1'
     workflow_dispatch:
 
@@ -39,13 +39,24 @@ jobs:
                     restore-keys: |
                         ${{ runner.os }}-gradle-
 
+            # The aggregated SBOM is scoped to runtimeClasspath via
+            # `tasks.cyclonedxDirectBom { includeConfigs = ['runtimeClasspath'] }`
+            # in build.gradle. Scanning it instead of the repo avoids false
+            # positives from plugin-classpath transitives (Sonar/JGit/etc.) that
+            # live only in the Gradle daemon and never ship to consumers.
             -   name: Generate CycloneDX SBOM
                 run: ./gradlew cyclonedxBom --no-parallel
 
             -   name: Install OSV-Scanner CLI
+                # Verify the downloaded binary against the upstream-published
+                # SHA-256 sums before executing it. Fetching SHA256SUMS over
+                # the same HTTPS channel matches Google's own installation guide;
+                # a future hardening step could pin the digest inline.
                 run: |
                     set -euo pipefail
                     base="https://github.com/google/osv-scanner/releases/download/${OSV_SCANNER_VERSION}"
+                    # Save under the canonical asset filename so `sha256sum --check`
+                    # can match the entry in osv-scanner_SHA256SUMS.
                     curl --proto '=https' --tlsv1.2 -fsSL \
                         "${base}/osv-scanner_linux_amd64" -o /tmp/osv-scanner_linux_amd64
                     curl --proto '=https' --tlsv1.2 -fsSL \
@@ -56,6 +67,8 @@ jobs:
                     /tmp/osv-scanner_linux_amd64 --version
 
             -   name: Scan SBOM
+                # OSV-Scanner exits non-zero on findings; keep going so the
+                # SARIF still gets uploaded to Code Scanning.
                 continue-on-error: true
                 run: |
                     /tmp/osv-scanner_linux_amd64 \
