@@ -5,8 +5,12 @@ import net.transgressoft.commons.music.audio.AudioFileTagType.FLAC
 import net.transgressoft.commons.music.audio.AudioFileTagType.ID3_V_24
 import net.transgressoft.commons.music.audio.AudioFileTagType.MP4_INFO
 import net.transgressoft.commons.music.audio.AudioFileTagType.WAV
+import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
 import net.transgressoft.commons.music.audio.MutableAudioItemTestBridge.createAudioItem
-import net.transgressoft.commons.music.common.OsDetector
+import net.transgressoft.commons.util.InvalidAudioFilePathException
+import net.transgressoft.commons.util.OsDetector
+import net.transgressoft.commons.util.WindowsPathException
+import net.transgressoft.lirp.persistence.VolatileRepository
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import com.neovisionaries.i18n.CountryCode
@@ -58,6 +62,7 @@ internal class MutableAudioItemTest : FunSpec({
             comments = "Best song ever!",
             genres = setOf(Genre.Rock),
             encoder = "transgressoft",
+            coverImageBytes = testCoverBytes,
             playCount = 0
         ).next()
 
@@ -110,15 +115,15 @@ internal class MutableAudioItemTest : FunSpec({
             audioItem.path.extension.toAudioFileType().toString() shouldBe fileExtension
             audioItem.path.extension.toAudioFileType().extension shouldBe fileExtension
 
-            json.encodeToString(AudioItemSerializer, audioItem).let {
+            json.encodeToString(AudioItemSerializer(), audioItem).let {
                 it shouldEqualJson audioItem.asJsonValue()
-                json.decodeFromString<MutableAudioItem>(it) shouldBe audioItem
+                (json.decodeFromString(AudioItemSerializer(), it) as MutableAudioItem) shouldBe audioItem
             }
 
             val audioItemChanges = Arb.audioItemChange().next()
             audioItem.update(audioItemChanges)
 
-            audioItem.writeMetadata().join()
+            JAudioTaggerMetadataIO().writeMetadata(audioItem)
             val loadedAudioItem: AudioItem = createAudioItem(filePath, audioItem.id)
 
             assertSoftly {
@@ -162,7 +167,7 @@ internal class MutableAudioItemTest : FunSpec({
         }
     }
 
-    context("Has expected coverImage after deserialization") {
+    context("coverImageBytes is null after deserialization (cover travels out of band)") {
         val audioItem =
             createAudioItem(
                 Arb.realAudioFile(ID3_V_24) {
@@ -174,13 +179,15 @@ internal class MutableAudioItemTest : FunSpec({
 
         audioItem.coverImageBytes = testCoverBytes
 
-        audioItem.writeMetadata()
+        JAudioTaggerMetadataIO().writeMetadata(audioItem)
 
+        // Option A semantics (Phase 40-02): deserialized items always start with null cover bytes;
+        // covers are re-loaded by the audio library via library.loadCover(item) added in plan 40-04.
         eventually(200.milliseconds) {
-            val encodedAudioItem = json.encodeToString(AudioItemSerializer, audioItem)
-            val decodedAudioItem = json.decodeFromString<MutableAudioItem>(encodedAudioItem)
+            val encodedAudioItem = json.encodeToString(AudioItemSerializer(), audioItem)
+            val decodedAudioItem = json.decodeFromString(AudioItemSerializer(), encodedAudioItem) as MutableAudioItem
 
-            decodedAudioItem.coverImageBytes shouldBe testCoverBytes
+            decodedAudioItem.coverImageBytes shouldBe null
         }
     }
 
@@ -205,31 +212,57 @@ internal class MutableAudioItemTest : FunSpec({
         }
     }
 
-    context("MutableAudioItem three-check path validation") {
-        test("MutableAudioItem throws InvalidAudioFilePathException when file does not exist") {
+    context("MutableAudioItem.bpm rejects non-finite Float values") {
+        test("setting bpm = NaN throws IllegalArgumentException") {
+            val audioItem = createAudioItem(Arb.realAudioFile(ID3_V_24).next())
+            shouldThrow<IllegalArgumentException> { audioItem.bpm = Float.NaN }
+        }
+
+        test("setting bpm = POSITIVE_INFINITY throws IllegalArgumentException") {
+            val audioItem = createAudioItem(Arb.realAudioFile(ID3_V_24).next())
+            shouldThrow<IllegalArgumentException> { audioItem.bpm = Float.POSITIVE_INFINITY }
+        }
+
+        test("AudioItemMetadata init rejects NaN bpm") {
+            shouldThrow<IllegalArgumentException> { AudioItemMetadata(bpm = Float.NaN) }
+        }
+    }
+
+    context("DefaultAudioLibrary.createFromFile three-check path validation") {
+        test("DefaultAudioLibrary.createFromFile throws InvalidAudioFilePathException when file does not exist") {
             Jimfs.newFileSystem(Configuration.unix()).use { fs ->
                 val nonExistent = fs.getPath("/nowhere.mp3")
-                val ex = shouldThrow<InvalidAudioFilePathException> { MutableAudioItem(nonExistent) }
+                val library = DefaultAudioLibrary(VolatileRepository("AudioLibrary"))
+                val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(nonExistent) }
                 ex.message!! shouldContain "does not exist"
                 ex.message!! shouldContain "/nowhere.mp3"
             }
         }
 
-        test("MutableAudioItem throws InvalidAudioFilePathException when path is a directory") {
+        test("DefaultAudioLibrary.createFromFile throws InvalidAudioFilePathException when path is a directory") {
             Jimfs.newFileSystem(Configuration.unix()).use { fs ->
                 val dir = fs.getPath("/a-directory")
                 Files.createDirectory(dir)
-                val ex = shouldThrow<InvalidAudioFilePathException> { MutableAudioItem(dir) }
+                val library = DefaultAudioLibrary(VolatileRepository("AudioLibrary"))
+                val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(dir) }
                 ex.message!! shouldContain "is not a regular file"
             }
         }
 
-        test("MutableAudioItem throws InvalidAudioFilePathException when file is not readable")
+        test("DefaultAudioLibrary.createFromFile throws InvalidAudioFilePathException when file is not readable")
             .config(enabled = !OsDetector.isWindows) {
                 val tempFile = Files.createTempFile("unreadable", ".mp3")
                 try {
-                    tempFile.toFile().setReadable(false)
-                    val ex = shouldThrow<InvalidAudioFilePathException> { MutableAudioItem(tempFile) }
+                    // setReadable(false) is a no-op when running as root or on filesystems that don't
+                    // honor POSIX permissions — skip rather than fail spuriously.
+                    val demoted = tempFile.toFile().setReadable(false) && !tempFile.toFile().canRead()
+                    if (!demoted) {
+                        throw org.opentest4j.TestAbortedException(
+                            "Cannot revoke read permission on this filesystem/user — skipping"
+                        )
+                    }
+                    val library = DefaultAudioLibrary(VolatileRepository("AudioLibrary"))
+                    val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(tempFile) }
                     ex.message!! shouldContain "is not readable"
                 } finally {
                     tempFile.toFile().setReadable(true)
@@ -237,10 +270,11 @@ internal class MutableAudioItemTest : FunSpec({
                 }
             }
 
-        test("MutableAudioItem InvalidAudioFilePathException is catchable as AudioItemManipulationException") {
+        test("DefaultAudioLibrary.createFromFile InvalidAudioFilePathException is catchable") {
             Jimfs.newFileSystem(Configuration.unix()).use { fs ->
                 val nonExistent = fs.getPath("/nowhere.mp3")
-                shouldThrow<AudioItemManipulationException> { MutableAudioItem(nonExistent) }
+                val library = DefaultAudioLibrary(VolatileRepository("AudioLibrary"))
+                shouldThrow<InvalidAudioFilePathException> { library.createFromFile(nonExistent) }
             }
         }
     }
@@ -261,11 +295,17 @@ internal class MutableAudioItemTest : FunSpec({
     }
 
     context("MutableAudioItem Windows path validation") {
-        test("MutableAudioItem throws WindowsPathException for a Windows-invalid path when isWindows=true") {
+        test("MutableAudioItem throws WindowsPathException for a reserved-name path when isWindows=true") {
             OsDetector.withOverriddenIsWindows(true) {
-                Jimfs.newFileSystem(Configuration.unix()).use { fs ->
-                    val forbidden = fs.getPath("/tmp/bad|name.mp3")
-                    shouldThrow<WindowsPathException> { MutableAudioItem(forbidden) }
+                // Use Jimfs windows configuration so the path's filesystem separator is `\`. The
+                // validator only triggers for Windows-style paths now, because Unix-style paths
+                // (e.g. Jimfs unix on a Windows host parsing `file:///C:/...` URIs) don't reach
+                // the Win32 IO layer and use `:` legitimately. Jimfs windows rejects forbidden
+                // chars at parse time, so the test uses a reserved name (parsable, then rejected
+                // by the validator) to exercise the violation path.
+                Jimfs.newFileSystem(Configuration.windows()).use { fs ->
+                    val forbidden = fs.getPath("C:\\tmp\\NUL.mp3")
+                    shouldThrow<WindowsPathException> { MutableAudioItem(forbidden, metadata = AudioItemMetadata()) }
                 }
             }
         }
@@ -274,10 +314,23 @@ internal class MutableAudioItemTest : FunSpec({
             OsDetector.withOverriddenIsWindows(false) {
                 Jimfs.newFileSystem(Configuration.unix()).use { fs ->
                     val path = fs.getPath("/music/bad|name.mp3")
-                    // WindowsPathValidator is a no-op on Linux, so pipe char is fine
-                    // File does not exist, so it throws InvalidAudioFilePathException (not WindowsPathException)
-                    val ex = shouldThrow<InvalidAudioFilePathException> { MutableAudioItem(path) }
-                    (ex is WindowsPathException) shouldBe false
+                    // WindowsPathValidator is a no-op on Linux, so pipe char is fine and construction succeeds.
+                    // Existence checks now live in DefaultAudioLibrary.createFromFile, not the constructor.
+                    val item = MutableAudioItem(path, metadata = AudioItemMetadata())
+                    item.path shouldBe path
+                }
+            }
+        }
+
+        test("MutableAudioItem pass-through for Unix-style path on Jimfs even when isWindows=true") {
+            // Production scenario: deserializing a JSON entry whose path lives on Jimfs unix (e.g.
+            // FX serializer tests) while running on a Windows host. The path uses Unix conventions,
+            // never reaches the Win32 IO layer, and may contain `:` legitimately — validator skips it.
+            OsDetector.withOverriddenIsWindows(true) {
+                Jimfs.newFileSystem(Configuration.unix()).use { fs ->
+                    val path = fs.getPath("/work/C:/Users/runner/Temp/song.mp3")
+                    val item = MutableAudioItem(path, metadata = AudioItemMetadata())
+                    item.path shouldBe path
                 }
             }
         }

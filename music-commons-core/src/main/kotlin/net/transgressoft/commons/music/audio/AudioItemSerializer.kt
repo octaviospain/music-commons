@@ -17,9 +17,11 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.common.toPathFromJsonUri
+import net.transgressoft.commons.util.toPathFromJsonUri
 import net.transgressoft.lirp.persistence.json.LirpEntityPolymorphicSerializer
 import com.neovisionaries.i18n.CountryCode
+import java.nio.file.FileSystem
+import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
@@ -47,8 +49,28 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
 
+/**
+ * [KSerializer] for `Map<Int, AudioItem>` used to round-trip an audio library through JSON.
+ *
+ * Consumers wiring a custom `JsonFileRepository` pass this serializer directly:
+ *
+ * ```
+ * val repository = JsonFileRepository(audioFile, AudioItemMapSerializer)
+ * MusicLibrary.builder().audioRepository(repository).build()
+ * ```
+ *
+ * The underlying element serializer is the polymorphic [AudioItemSerializer], which materializes
+ * deserialized entries as [MutableAudioItem] instances. Polymorphic subtypes for [Artist], [Album]
+ * and [Label] (`ImmutableArtist`, `ImmutableAlbum`, `ImmutableLabel`) are registered via
+ * [audioItemSerializerModule]; when building a `Json` instance manually, pass that module as
+ * `serializersModule` so subtypes resolve correctly. `JsonFileRepository` wires it automatically.
+ *
+ * Thread-safety: the serializer is stateless; concurrent reads are safe.
+ *
+ * @see audioItemSerializerModule
+ */
 @get:JvmName("AudioItemMapSerializer")
-internal val AudioItemMapSerializer: KSerializer<Map<Int, AudioItem>> = MapSerializer(Int.serializer(), AudioItemSerializer)
+val AudioItemMapSerializer: KSerializer<Map<Int, AudioItem>> = MapSerializer(Int.serializer(), AudioItemSerializer())
 
 /**
  * Kotlinx serialization serializer for [AudioItem] instances.
@@ -56,36 +78,30 @@ internal val AudioItemMapSerializer: KSerializer<Map<Int, AudioItem>> = MapSeria
  * Handles JSON serialization and deserialization of audio items, preserving all metadata
  * fields including artist, album, and label information. Creates [MutableAudioItem]
  * instances during deserialization to enable metadata modification.
+ *
+ * @param fileSystem the [FileSystem] used to materialize [Path] instances during
+ *  deserialization. Defaults to [FileSystems.getDefault]; tests may pass a Jimfs
+ *  filesystem to deserialize against an in-memory tree.
  */
-internal object AudioItemSerializer : AudioItemSerializerBase<AudioItem>() {
+internal class AudioItemSerializer
+    @JvmOverloads
+    constructor(
+        fileSystem: FileSystem = FileSystems.getDefault()
+    ) : AudioItemSerializerBase<AudioItem>(fileSystem) {
 
-    override fun constructEntity(
-        path: Path,
-        id: Int,
-        title: String,
-        duration: Duration,
-        bitRate: Int,
-        artist: Artist,
-        album: Album,
-        genres: Set<Genre>,
-        comments: String?,
-        trackNumber: Short?,
-        discNumber: Short?,
-        bpm: Float?,
-        encoder: String?,
-        encoding: String?,
-        dateOfCreation: LocalDateTime,
-        lastDateModified: LocalDateTime,
-        playCount: Short
-    ): AudioItem =
-        MutableAudioItem(
-            path, id, title, duration, bitRate, artist, album, genres,
-            comments, trackNumber, discNumber, bpm, encoder, encoding,
-            dateOfCreation, lastDateModified, playCount
-        )
-}
+        override fun constructEntity(
+            path: Path,
+            id: Int,
+            metadata: AudioItemMetadata,
+            dateOfCreation: LocalDateTime,
+            lastDateModified: LocalDateTime,
+            playCount: Short
+        ): AudioItem = MutableAudioItem(path, id, metadata, dateOfCreation, lastDateModified, playCount)
+    }
 
-abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>> : LirpEntityPolymorphicSerializer<I> {
+abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>>(
+    private val fileSystem: FileSystem = FileSystems.getDefault()
+) : LirpEntityPolymorphicSerializer<I> {
 
     // This serializer is JSON-only: deserialize() reads fields by name via JsonDecoder,
     // so the descriptor serves as a schema identity marker, not for positional decoding.
@@ -100,38 +116,15 @@ abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>> : LirpEntityPol
      *
      * @param path audio file path
      * @param id entity identifier
-     * @param title track title
-     * @param duration track duration
-     * @param bitRate audio bitrate in kbps
-     * @param artist track artist
-     * @param album track album
-     * @param genres track genres
-     * @param comments optional comments
-     * @param trackNumber optional track number
-     * @param discNumber optional disc number
-     * @param bpm optional beats per minute
-     * @param encoder optional encoder name
-     * @param encoding optional encoding type
+     * @param metadata tag- and header-derived metadata (cover bytes are not on the JSON wire and remain null here)
      * @param dateOfCreation creation timestamp
      * @param lastDateModified last modification timestamp
      * @param playCount number of times played
      */
-    @SuppressWarnings("kotlin:S107") // Audio metadata requires all tag fields as parameters; splitting would obscure the mapping
     protected abstract fun constructEntity(
         path: Path,
         id: Int,
-        title: String,
-        duration: Duration,
-        bitRate: Int,
-        artist: Artist,
-        album: Album,
-        genres: Set<Genre>,
-        comments: String?,
-        trackNumber: Short?,
-        discNumber: Short?,
-        bpm: Float?,
-        encoder: String?,
-        encoding: String?,
+        metadata: AudioItemMetadata,
         dateOfCreation: LocalDateTime,
         lastDateModified: LocalDateTime,
         playCount: Short
@@ -149,7 +142,13 @@ abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>> : LirpEntityPol
             obj[key]?.jsonPrimitive?.contentOrNull
                 ?: throw SerializationException("Missing required field '$fullKey' in AudioItem JSON")
 
-        val path = requireString(json, "path").toPathFromJsonUri()
+        val pathString = requireString(json, "path")
+        val path =
+            if (fileSystem == FileSystems.getDefault()) {
+                pathString.toPathFromJsonUri()
+            } else {
+                pathString.toPathFromJsonUri(fileSystem)
+            }
         val id = require("id").jsonPrimitive.int
         val title = requireString(json, "title")
         val duration = Duration.ofSeconds(require("duration").jsonPrimitive.long)
@@ -181,7 +180,16 @@ abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>> : LirpEntityPol
             albumObj["label"]?.jsonObject
                 ?: throw SerializationException("Missing required field 'album.label' in AudioItem JSON")
         val labelName = requireString(labelObj, "name", "album.label.name")
-        val album = ImmutableAlbum(albumName, ImmutableArtist.of(albumArtistName, albumArtistCountryCode), isCompilation, year, ImmutableLabel.of(labelName))
+        val labelCountryCodeStr = labelObj["countryCode"]?.jsonPrimitive?.contentOrNull
+        val labelCountryCode = labelCountryCodeStr?.let { CountryCode.getByCode(it) ?: CountryCode.UNDEFINED } ?: CountryCode.UNDEFINED
+        val album =
+            ImmutableAlbum(
+                albumName,
+                ImmutableArtist.of(albumArtistName, albumArtistCountryCode),
+                isCompilation,
+                year,
+                ImmutableLabel.of(labelName, labelCountryCode)
+            )
 
         val genres: Set<Genre> =
             json["genres"]?.jsonArray
@@ -200,11 +208,23 @@ abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>> : LirpEntityPol
         val lastDateModified = LocalDateTime.ofEpochSecond(require("lastDateModified").jsonPrimitive.long, 0, ZoneOffset.UTC)
         val playCount = json["playCount"]?.jsonPrimitive?.intOrNull?.toShort() ?: 0.toShort()
 
-        return constructEntity(
-            path, id, title, duration, bitRate, artist, album, genres,
-            comments, trackNumber, discNumber, bpm, encoder, encoding,
-            dateOfCreation, lastDateModified, playCount
-        )
+        val metadata =
+            AudioItemMetadata(
+                title = title,
+                artist = artist,
+                album = album,
+                genres = genres,
+                comments = comments,
+                trackNumber = trackNumber,
+                discNumber = discNumber,
+                bpm = bpm,
+                encoder = encoder,
+                encoding = encoding,
+                bitRate = bitRate,
+                duration = duration,
+                coverBytes = null
+            )
+        return constructEntity(path, id, metadata, dateOfCreation, lastDateModified, playCount)
     }
 
     override fun createInstance(propertiesList: List<Any?>): I =

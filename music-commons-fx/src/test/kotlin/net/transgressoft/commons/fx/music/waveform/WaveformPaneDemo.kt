@@ -1,13 +1,16 @@
 package net.transgressoft.commons.fx.music.waveform
 
 import net.transgressoft.commons.media.waveform.ScalableAudioWaveform
+import net.transgressoft.commons.music.audio.AudioFileType
 import javafx.application.Application
 import javafx.collections.FXCollections
 import javafx.scene.Scene
+import javafx.scene.control.Button
 import javafx.scene.control.ComboBox
 import javafx.scene.layout.AnchorPane
 import javafx.scene.layout.HBox
 import javafx.scene.paint.Color
+import javafx.stage.FileChooser
 import javafx.stage.Stage
 import java.nio.file.Files
 import java.nio.file.Path
@@ -40,8 +43,31 @@ class WaveformPaneDemo : Application() {
                 setOnAction { loadWaveformForFixture(value) }
             }
 
+        val browseButton =
+            Button("Browse...").apply {
+                setOnAction {
+                    try {
+                        val chooser = FileChooser()
+                        chooser.title = "Select Audio File"
+                        val extList = AudioFileType.extensions.map { "*.$it" }
+                        chooser.extensionFilters.add(
+                            FileChooser.ExtensionFilter("Audio Files", *extList.toTypedArray())
+                        )
+                        val file = chooser.showOpenDialog(primaryStage) ?: return@setOnAction
+                        waveformPane.drawWaveformAsync(
+                            ScalableAudioWaveform(1, file.toPath()),
+                            Color.GREEN,
+                            Color.MAGENTA
+                        )
+                    } catch (e: Exception) {
+                        println("Error loading file: ${e.message}")
+                        e.printStackTrace()
+                    }
+                }
+            }
+
         val controls =
-            HBox(10.0, formatSelector).apply {
+            HBox(10.0, formatSelector, browseButton).apply {
                 AnchorPane.setBottomAnchor(this, 10.0)
                 AnchorPane.setLeftAnchor(this, 10.0)
             }

@@ -4,18 +4,22 @@ import net.transgressoft.commons.music.MusicLibrary
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioFileType
+import net.transgressoft.commons.music.audio.AudioMetadataIO
 import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.ImmutableLabel
+import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
-import net.transgressoft.commons.music.audio.WindowsPathException
-import net.transgressoft.commons.music.audio.WindowsViolation
-import net.transgressoft.commons.music.common.WindowsPathValidator
 import net.transgressoft.commons.music.playlist.ReactiveAudioPlaylist
+import net.transgressoft.commons.util.WindowsPathException
+import net.transgressoft.commons.util.WindowsPathValidator
+import net.transgressoft.commons.util.WindowsViolation
 import net.transgressoft.lirp.event.ReactiveMutationEvent
 import mu.KotlinLogging
 import java.net.URI
+import java.nio.file.FileSystem
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -33,7 +37,10 @@ import kotlinx.coroutines.future.future
  * Orchestrates importing tracks and playlists from a parsed [ItunesLibrary] into a [MusicLibrary].
  *
  * The import follows a two-step flow: the consumer first parses the XML via [ItunesLibraryParser],
- * selects playlists, then calls [importAsync] with the selection and a configured [ItunesImportPolicy].
+ * optionally selects a subset of playlists, then calls [importAsync] with the selection and a
+ * configured [ItunesImportPolicy]. Every track present in [ItunesLibrary.tracks] is considered for
+ * import regardless of the playlist selection; the selection only controls which playlists (and
+ * their ancestor folders) are recreated in the destination library.
  *
  * Track import behavior depends on [ItunesImportPolicy.useFileMetadata]:
  * - When `true`, audio items are created via [MusicLibrary.audioItemFromFile] which reads all
@@ -51,21 +58,33 @@ import kotlinx.coroutines.future.future
  *
  * @param musicLibrary The target library to import into.
  */
-class ItunesImportService<I, P>(private val musicLibrary: MusicLibrary<I, P>)
-    where I : ReactiveAudioItem<I>,
+class ItunesImportService<I, P>
+    @JvmOverloads
+    constructor(
+        private val musicLibrary: MusicLibrary<I, P>,
+        private val metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO(),
+        private val fileSystem: FileSystem = FileSystems.getDefault()
+    ) where I : ReactiveAudioItem<I>,
           P : ReactiveAudioPlaylist<I, P> {
 
     private val logger = KotlinLogging.logger {}
 
     /**
-     * Imports tracks from [selectedPlaylists] (and their referenced tracks from [itunesLibrary])
-     * into the [MusicLibrary], applying the given [policy].
+     * Imports every track from [itunesLibrary] into the [MusicLibrary], applying the given [policy],
+     * and recreates the playlists named in [selectedPlaylists] (plus their ancestor folders).
+     *
+     * The imported track set is always the full content of [ItunesLibrary.tracks]; [selectedPlaylists]
+     * does not narrow it. Tracks that cannot be resolved (missing local file, unsupported extension,
+     * read error) are reported in [ImportResult.unresolved].
      *
      * Returns a [CompletableFuture] that completes with an [ImportResult] summarizing the import.
      * The future can be canceled via [CompletableFuture.cancel], which stops processing between tracks.
      *
-     * @param selectedPlaylists Playlists chosen by the consumer for import.
-     * @param itunesLibrary The full parsed iTunes library (for track lookup).
+     * @param selectedPlaylists Playlists chosen by the consumer for recreation in the destination
+     *  library. Does not narrow the set of imported tracks — every track in [itunesLibrary] is
+     *  considered for import.
+     * @param itunesLibrary The full parsed iTunes library; every entry in [ItunesLibrary.tracks]
+     *  is processed.
      * @param policy Import configuration controlling metadata source, play count, write-back, etc.
      * @param rootDirectoryName Optional name of an existing playlist directory to use as the
      *  parent for top-level imported playlists (those whose iTunes
@@ -85,7 +104,7 @@ class ItunesImportService<I, P>(private val musicLibrary: MusicLibrary<I, P>)
     ): CompletableFuture<ImportResult> =
         CoroutineScope(Dispatchers.IO).future {
             val effectivePlaylists = expandWithAncestors(selectedPlaylists, itunesLibrary)
-            val trackImportResult = importTracks(effectivePlaylists, itunesLibrary, policy, onProgress)
+            val trackImportResult = importTracks(itunesLibrary, policy, onProgress)
             val rejectedNames = createPlaylists(effectivePlaylists, trackImportResult.trackIdToItem, rootDirectoryName)
 
             ImportResult(
@@ -111,17 +130,14 @@ class ItunesImportService<I, P>(private val musicLibrary: MusicLibrary<I, P>)
     }
 
     private suspend fun importTracks(
-        selectedPlaylists: List<ItunesPlaylist>,
         itunesLibrary: ItunesLibrary,
         policy: ItunesImportPolicy,
         onProgress: (ImportProgress) -> Unit
     ): TrackImportAccumulator {
-        val uniqueTrackIds = selectedPlaylists.flatMap(ItunesPlaylist::trackIds).toSet()
-        val accumulator = TrackImportAccumulator(uniqueTrackIds.size)
+        val accumulator = TrackImportAccumulator(itunesLibrary.tracks.size)
 
-        for (trackId in uniqueTrackIds) {
+        for ((trackId, track) in itunesLibrary.tracks) {
             currentCoroutineContext().ensureActive()
-            val track = itunesLibrary.tracks[trackId] ?: continue
             processTrack(track, trackId, policy, accumulator)
             accumulator.itemsProcessed++
             onProgress(ImportProgress(accumulator.itemsProcessed, accumulator.totalItems, track.location))
@@ -130,7 +146,7 @@ class ItunesImportService<I, P>(private val musicLibrary: MusicLibrary<I, P>)
         return accumulator
     }
 
-    private suspend fun processTrack(track: ItunesTrack, trackId: Int, policy: ItunesImportPolicy, accumulator: TrackImportAccumulator) {
+    private fun processTrack(track: ItunesTrack, trackId: Int, policy: ItunesImportPolicy, accumulator: TrackImportAccumulator) {
         try {
             val path = resolveTrackPath(track)
 
@@ -166,7 +182,7 @@ class ItunesImportService<I, P>(private val musicLibrary: MusicLibrary<I, P>)
         return fileType == null || fileType !in policy.acceptedFileTypes
     }
 
-    private suspend fun importTrack(track: ItunesTrack, path: Path, policy: ItunesImportPolicy): I {
+    private fun importTrack(track: ItunesTrack, path: Path, policy: ItunesImportPolicy): I {
         val audioItem = musicLibrary.audioItemFromFile(path)
 
         if (!policy.useFileMetadata) {
@@ -178,7 +194,7 @@ class ItunesImportService<I, P>(private val musicLibrary: MusicLibrary<I, P>)
         }
 
         if (policy.writeMetadata && !policy.useFileMetadata) {
-            audioItem.writeMetadata().join()
+            metadataIO.writeMetadata(audioItem)
         }
 
         return audioItem
@@ -218,7 +234,17 @@ class ItunesImportService<I, P>(private val musicLibrary: MusicLibrary<I, P>)
 
     private fun resolveTrackPath(track: ItunesTrack): Path {
         val uri = URI(track.location)
-        val rawPath = Paths.get(uri)
+        val rawPath =
+            if (fileSystem == FileSystems.getDefault()) {
+                // Paths.get(URI) handles Windows drive letters (file:///C:/... -> C:\...) and
+                // UNC authority preservation (file:////server/share/... -> \\server\share\...)
+                // correctly on the default filesystem. The earlier fileSystem.getPath(uri.path)
+                // form mangled both because URI.path returns `/C:/...` which Windows' NIO
+                // provider parses ambiguously, and the UNC authority is silently dropped.
+                Paths.get(uri)
+            } else {
+                fileSystem.getPath(uri.path)
+            }
         // Normalize filename to NFC: macOS iTunes writes NFD-decomposed Unicode;
         // Linux/Windows expect NFC. Idempotent and no-op for ASCII.
         val normalizedName = Normalizer.normalize(rawPath.fileName.toString(), Normalizer.Form.NFC)

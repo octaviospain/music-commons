@@ -18,11 +18,13 @@
 package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
+import net.transgressoft.commons.util.InvalidAudioFilePathException
 import net.transgressoft.lirp.event.StandardCrudEvent.Update
 import net.transgressoft.lirp.persistence.LirpRepository
 import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.Repository
 import mu.KotlinLogging
+import java.nio.file.Files
 import java.nio.file.Path
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
@@ -40,44 +42,84 @@ import kotlinx.serialization.modules.subclass
  * lazily through the context. Deregisters on [close] to support repeated construction within the same JVM.
  */
 @LirpRepository
-internal class DefaultAudioLibrary(repository: Repository<Int, AudioItem>) :
-    AudioLibraryBase<AudioItem, ArtistCatalog<AudioItem>>(repository, DefaultArtistCatalogRegistry()),
-    AudioLibrary {
-    private val logger = KotlinLogging.logger {}
+internal class DefaultAudioLibrary
+    @JvmOverloads
+    constructor(
+        repository: Repository<Int, AudioItem>,
+        metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO()
+    ) : AudioLibraryBase<AudioItem, ArtistCatalog<AudioItem>>(repository, DefaultArtistCatalogRegistry(), metadataIO),
+        AudioLibrary {
+        private val logger = KotlinLogging.logger {}
 
-    init {
-        RegistryBase.deregisterRepository(AudioItem::class.java)
-        RegistryBase.registerRepository(AudioItem::class.java, repository)
-        playerSubscriber.addOnNextEventAction(PLAYED) { event ->
-            val audioItem = event.audioItem
-            logger.info { "Audio item with id ${audioItem.id} was played" }
-            if (audioItem is MutableAudioItem) {
-                val audioItemClone = audioItem.clone()
-                audioItem.incrementPlayCount()
-                repository.emitAsync(Update(audioItem, audioItemClone))
-                logger.debug { "Play count for audio item ${audioItem.id} increased to ${audioItem.playCount}" }
+        init {
+            RegistryBase.deregisterRepository(AudioItem::class.java)
+            RegistryBase.registerRepository(AudioItem::class.java, repository)
+            playerSubscriber.addOnNextEventAction(PLAYED) { event ->
+                val audioItem = event.audioItem
+                logger.info { "Audio item with id ${audioItem.id} was played" }
+                if (audioItem is MutableAudioItem) {
+                    val audioItemClone = audioItem.clone()
+                    audioItem.incrementPlayCount()
+                    repository.emitAsync(Update(audioItem, audioItemClone))
+                    logger.debug { "Play count for audio item ${audioItem.id} increased to ${audioItem.playCount}" }
+                }
             }
         }
-    }
 
-    override fun createFromFile(audioItemPath: Path): AudioItem =
-        MutableAudioItem(audioItemPath, newId())
-            .also { audioItem ->
+        override fun createFromFile(audioItemPath: Path): AudioItem {
+            if (!Files.exists(audioItemPath)) {
+                throw InvalidAudioFilePathException("File '${audioItemPath.toAbsolutePath()}' does not exist")
+            }
+            if (!Files.isRegularFile(audioItemPath)) {
+                throw InvalidAudioFilePathException("Path '${audioItemPath.toAbsolutePath()}' is not a regular file")
+            }
+            if (!Files.isReadable(audioItemPath)) {
+                throw InvalidAudioFilePathException("File '${audioItemPath.toAbsolutePath()}' is not readable")
+            }
+            val tag = metadataIO.readMetadata(audioItemPath)
+            val cover = metadataIO.loadCover(audioItemPath)
+            val metadata = tag.copy(coverBytes = cover)
+            return MutableAudioItem(audioItemPath, newId(), metadata).also { audioItem ->
                 add(audioItem)
                 logger.debug { "New AudioItem was created from file $audioItemPath with id ${audioItem.id}" }
             }
+        }
 
-    override fun close() {
-        super.close()
-        RegistryBase.deregisterRepository(AudioItem::class.java)
+        override fun close() {
+            super.close()
+            RegistryBase.deregisterRepository(AudioItem::class.java)
+        }
+
+        override fun toString() = "AudioItemJsonRepository(audioItemsCount=${size()})"
     }
 
-    override fun toString() = "AudioItemJsonRepository(audioItemsCount=${size()})"
-}
-
+/**
+ * Kotlinx [SerializersModule] registering the polymorphic subtypes consumed by
+ * [AudioItemMapSerializer] when round-tripping audio-library JSON.
+ *
+ * Registered polymorphic subtypes:
+ * - [AudioItem] → [AudioItemSerializer] (delegates to [MutableAudioItem])
+ * - [Artist] → [ImmutableArtist]
+ * - [Album] → [ImmutableAlbum]
+ * - [Label] → [ImmutableLabel]
+ *
+ * Pass this module as `serializersModule` when constructing a `Json` instance manually:
+ *
+ * ```
+ * val json = Json { serializersModule = audioItemSerializerModule }
+ * ```
+ *
+ * `JsonFileRepository(audioFile, AudioItemMapSerializer)` registers this module automatically, so
+ * consumers using the convenience repository do not need to touch it.
+ *
+ * Thread-safety: immutable; safe to share across threads.
+ *
+ * @see AudioItemMapSerializer
+ */
 @get:JvmName("audioItemSerializerModule")
-internal val audioItemSerializerModule =
+val audioItemSerializerModule =
     SerializersModule {
+        polymorphic(AudioItem::class, AudioItemSerializer())
         polymorphic(Artist::class) {
             subclass(ImmutableArtist.serializer())
         }

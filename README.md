@@ -95,8 +95,8 @@ Unknown genre strings are preserved as `Genre.Custom(name)` instead of being dis
 
 ### Persistence
 
-- **JSON file storage**: Powered by [lirp](https://github.com/octaviospain/lirp)'s `JsonFileRepository` with debounced file I/O
-- **SQL storage**: Powered by [lirp-sql](https://github.com/octaviospain/lirp)'s `SqlRepository` with HikariCP connection pooling and JetBrains Exposed
+- **JSON file storage**: Inject [lirp](https://github.com/octaviospain/lirp)'s `JsonFileRepository` into the `MusicLibrary.Builder` for debounced file I/O
+- **SQL storage**: Consumer-provided `SqlRepository` — add [lirp-sql](https://github.com/octaviospain/lirp) to your build to inject `SqlRepository` instances (HikariCP + JetBrains Exposed)
 - **Automatic serialization**: Built-in kotlinx-serialization serializers for all entities
 - **Transparent persistence**: Entity changes are persisted without manual save operations
 
@@ -238,22 +238,25 @@ Use `CoreMusicLibrary.builder()` as the single entry point for headless audio ma
 ```kotlin
 import net.transgressoft.commons.music.CoreMusicLibrary
 import net.transgressoft.commons.music.m3u.M3uImportService
+import net.transgressoft.lirp.persistence.json.JsonFileRepository
+import net.transgressoft.lirp.persistence.sql.SqlRepository
 
 // In-memory (volatile) storage -- no files needed
 val library = CoreMusicLibrary.builder().build()
 
-// JSON file persistence
+// JSON file persistence -- inject JsonFileRepository instances directly
 val library = CoreMusicLibrary.builder()
-    .audioLibraryJsonFile(File("audio-library.json"))
-    .playlistHierarchyJsonFile(File("playlists.json"))
-    .waveformRepositoryJsonFile(File("waveforms.json"))
+    .audioRepository(JsonFileRepository(File("audio-library.json"), AudioItemMapSerializer))
+    .playlistRepository(JsonFileRepository(File("playlists.json"), AudioPlaylistMapSerializer))
+    .waveformRepository(JsonFileRepository(File("waveforms.json"), AudioWaveformMapSerializer))
     .build()
 
-// SQL persistence (requires KSP-generated SqlTableDef for each entity)
+// SQL persistence -- requires the lirp-sql artifact on your classpath and a
+// KSP-generated SqlTableDef for each entity
 val library = CoreMusicLibrary.builder()
-    .audioLibrarySql(dataSource, audioItemTableDef)
-    .playlistHierarchySql(dataSource, playlistTableDef)
-    .waveformRepositorySql(dataSource, waveformTableDef)
+    .audioRepository(SqlRepository(dataSource, audioItemTableDef))
+    .playlistRepository(SqlRepository(dataSource, playlistTableDef))
+    .waveformRepository(SqlRepository(dataSource, waveformTableDef))
     .build()
 
 // Add audio files
@@ -291,16 +294,16 @@ Use `FXMusicLibrary.builder()` for JavaFX applications with observable property 
 import net.transgressoft.commons.fx.music.FXMusicLibrary
 
 val fxLibrary = FXMusicLibrary.builder()
-    .audioLibraryJsonFile(File("audio-library.json"))
-    .playlistHierarchyJsonFile(File("playlists.json"))
-    .waveformRepositoryJsonFile(File("waveforms.json"))
+    .audioRepository(JsonFileRepository(File("audio-library.json"), ObservableAudioItemMapSerializer))
+    .playlistRepository(JsonFileRepository(File("playlists.json"), ObservablePlaylistMapSerializer, loadOnInit = false))
+    .waveformRepository(JsonFileRepository(File("waveforms.json"), AudioWaveformMapSerializer))
     .build()
 
-// SQL persistence
+// SQL persistence -- add lirp-sql to your build to access SqlRepository
 val fxLibrary = FXMusicLibrary.builder()
-    .audioLibrarySql(dataSource, observableAudioItemTableDef)
-    .playlistHierarchySql(dataSource, observablePlaylistTableDef)
-    .waveformRepositorySql(dataSource, waveformTableDef)
+    .audioRepository(SqlRepository(dataSource, observableAudioItemTableDef))
+    .playlistRepository(SqlRepository(dataSource, observablePlaylistTableDef, loadOnInit = false))
+    .waveformRepository(SqlRepository(dataSource, waveformTableDef))
     .build()
 
 // Bind directly to JavaFX UI components
@@ -401,6 +404,18 @@ gradle ktlintCheck
 gradle dokkaHtml
 ```
 
+## Supply Chain
+
+Each GitHub Release includes a CycloneDX SBOM artifact (`music-commons-sbom-cyclonedx`) — an aggregated `bom.json` describing the runtime classpaths of all six modules (`api`, `core`, `fx`, `media`, `test`, `fx-test`). Per-PR builds run GitHub Dependency Review and fail on HIGH+ severity CVEs. A weekly OSV-Scanner job uploads SARIF results to the repository Security tab.
+
+The build also enforces SHA-256 dependency verification via `gradle/verification-metadata.xml`: every resolved artifact is checked against its locked checksum on every Gradle invocation, defeating compromised-mirror and typosquat attacks. See [CONTRIBUTING.md](CONTRIBUTING.md) for the regeneration workflow contributors must run when bumping a dependency.
+
+Dependency hygiene is automated via [Renovate](https://docs.renovatebot.com/) (`renovate.json` at the repo root). Renovate opens weekly grouped pull requests — `gradle-libraries` (library bumps in `gradle/libs.versions.toml` and `build.gradle`), `kotlin` (Kotlin plugin + stdlib + KSP in lockstep), `github-actions` (workflow action SHAs, preserving the SHA-pin policy via the `helpers:pinGitHubActionDigests` preset), and `gradle-wrapper`. CVE-driven security PRs (`vulnerabilityAlerts`) bypass the weekly window and open at any time. Auto-merge is **disabled**: every Renovate PR is manually reviewed and merged.
+
+Renovate coexists with the global Transgressoft init script (`~/.gradle/init.d/transgressoft-updates.gradle`) without conflict — Renovate updates **declarations** in `gradle/libs.versions.toml` and `build.gradle`, while the init script operates at **dependency-resolution time** to align Transgressoft-published artifacts. The two act on different layers and never compete.
+
+**Owner action (post-merge, one-time):** for `renovate.json` to take effect, the [Renovate GitHub App](https://github.com/apps/renovate) must be installed on `octaviospain/music-commons`. Until installed, the configuration file is inert and no PRs will be opened. After installation, Renovate publishes a "Renovate: dependency dashboard" issue and begins its weekly cadence.
+
 ## Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
@@ -414,7 +429,7 @@ Music Commons is free software under GNU GPL version 3 license, available [here]
 This project builds upon several excellent open-source libraries:
 
 - **[JAudioTagger](https://github.com/ericfarng/jaudiotagger)**: Audio metadata reading and writing library
-- **JavaSound SPI providers** ([mp3spi](https://github.com/umjammer/mp3spi), [javasound-flac](https://github.com/Tianscar/javasound-flac), [javasound-vorbis](https://github.com/Tianscar/javasound-vorbis), [javasound-aac](https://github.com/Tianscar/javasound-aac), [JAAD](https://github.com/Almax/jaad)): pure-Java audio decoders for MP3, FLAC, OGG Vorbis, and AAC/M4A
+- **JavaSound SPI providers** ([mp3spi](https://github.com/umjammer/mp3spi), [javasound-flac](https://github.com/Tianscar/javasound-flac), [javasound-vorbis](https://github.com/Tianscar/javasound-vorbis), [javasound-aac](https://github.com/Tianscar/javasound-aac), [JAAD](https://github.com/Almax/jaad)): pure-Java audio decoders for MP3, FLAC, OGG Vorbis, and AAC/M4A; metadata and decoding use prioritized provider fallback, native FLAC seeks use the decoder's random-access path, generic compressed seeks discard decoded PCM to stay decoder-aligned, and playback volume scales signed PCM sample widths up to 32-bit
 - **[Kotlin Coroutines](https://github.com/Kotlin/kotlinx.coroutines)**: Library support for Kotlin coroutines
 - **[kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization)**: Kotlin multiplatform serialization
 - **[lirp](https://github.com/octaviospain/lirp)**: Reactive entity framework and persistence infrastructure

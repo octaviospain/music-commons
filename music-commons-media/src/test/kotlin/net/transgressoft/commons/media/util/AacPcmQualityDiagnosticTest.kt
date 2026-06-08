@@ -25,7 +25,7 @@ import java.nio.ByteOrder
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
-class AacPcmQualityDiagnosticTest : StringSpec({
+internal class AacPcmQualityDiagnosticTest : StringSpec({
 
     fun resourceToTemp(name: String): java.nio.file.Path {
         val stream =

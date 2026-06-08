@@ -17,25 +17,14 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.AudioUtils.audioItemTrackDiscNumberComparator
-import net.transgressoft.commons.music.AudioUtils.getArtistsNamesInvolved
-import net.transgressoft.commons.music.audio.AudioItemMetadataUtils.readMetadata
-import net.transgressoft.commons.music.audio.AudioItemMetadataUtils.writeMetadataToFile
-import net.transgressoft.commons.music.common.WindowsPathValidator
+import net.transgressoft.commons.util.WindowsPathValidator
 import net.transgressoft.lirp.entity.ReactiveEntityBase
-import mu.KotlinLogging
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.Objects
 import kotlin.io.path.extension
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -52,250 +41,213 @@ interface AudioItem : ReactiveAudioItem<AudioItem> {
     override fun clone(): AudioItem
 }
 
+// Serializer is wired via `audioItemSerializerModule` polymorphic registration (see DefaultAudioLibrary).
+// The serializer is a stateful class (AudioItemSerializer(FileSystem)) so it cannot be referenced as a
+// bare `@Serializable(with = ...)` target — kotlinx-serialization requires KSerializer-typed ctor params.
+
 /**
- * Mutable implementation of [AudioItem] that reads and writes audio file metadata.
+ * Mutable implementation of [AudioItem].
  *
- * Reads metadata from audio files using JAudioTagger library and provides reactive
- * change notifications when metadata is modified. Supports asynchronous metadata
- * writing back to audio files while maintaining data integrity through thread-safe operations.
- *
- * The implementation automatically extracts metadata from the file on construction and
- * lazily caches immutable properties like duration and bitrate for performance.
- * All JAudioTagger operations are delegated to [AudioItemMetadataUtils].
+ * Pure value holder: the primary constructor seeds reactive properties from an [AudioItemMetadata]
+ * value object. File-level concerns (existence checks, tag IO) live one layer up in
+ * [DefaultAudioLibrary]; this class only validates the path shape via [WindowsPathValidator] and
+ * exposes reactive mutators.
  *
  * @see <a href=https://www.jthink.net/jaudiotagger/>JAudioTagger website</a>
  */
-@Suppress("SERIALIZER_TYPE_INCOMPATIBLE") // Serializer handles polymorphic AudioItem hierarchy; declared type intentionally broader than serializer target
-@Serializable(with = AudioItemSerializer::class)
-internal class MutableAudioItem(
-    override val path: Path,
-    override val id: Int = UNASSIGNED_ID
-) : AudioItem, ReactiveEntityBase<Int, AudioItem>() {
+internal class MutableAudioItem
+    @JvmOverloads
+    constructor(
+        override val path: Path,
+        override val id: Int = UNASSIGNED_ID,
+        metadata: AudioItemMetadata
+    ) : AudioItem, ReactiveEntityBase<Int, AudioItem>() {
 
-    @Transient
-    private val logger = KotlinLogging.logger {}
+        // Constructor for deserialization & iTunes import
+        internal constructor(
+            path: Path,
+            id: Int,
+            metadata: AudioItemMetadata,
+            dateOfCreation: LocalDateTime,
+            lastDateModified: LocalDateTime,
+            playCount: Short
+        ) : this(path, id, metadata) {
+            disableEvents()
+            this._dateOfCreation = dateOfCreation
+            this.lastDateModified = lastDateModified
+            this._playCount = playCount
+            enableEvents()
+        }
 
-    private val ioScope =
-        CoroutineScope(
-            Dispatchers.IO + SupervisorJob() +
-                CoroutineExceptionHandler { _, exception ->
-                    val errorText = "Error writing metadata of $this"
-                    logger.error(errorText, exception)
+        init {
+            WindowsPathValidator.validatePath(path)
+        }
+
+        private var _bitRate: Int = metadata.bitRate
+
+        @Serializable
+        override val bitRate: Int
+            get() = _bitRate
+
+        private var _duration: Duration = metadata.duration
+
+        @Serializable
+        override val duration: Duration
+            get() = _duration
+
+        private var _encoder: String? = metadata.encoder?.takeIf { it.isNotEmpty() }
+
+        @Serializable
+        override val encoder: String?
+            get() = _encoder
+
+        private var _encoding: String? = metadata.encoding?.takeIf { it.isNotEmpty() }
+
+        @Serializable
+        override val encoding: String?
+            get() = _encoding
+
+        private var _dateOfCreation: LocalDateTime = LocalDateTime.now()
+
+        @Serializable
+        override val dateOfCreation: LocalDateTime
+            get() = _dateOfCreation
+
+        @Serializable
+        override var lastDateModified: LocalDateTime = _dateOfCreation
+
+        private var _playCount: Short by reactiveProperty(0.toShort())
+
+        @Serializable
+        override val playCount: Short
+            get() = _playCount
+
+        override val fileName by lazy {
+            path.fileName.toString()
+        }
+
+        override val extension by lazy {
+            path.extension
+        }
+
+        override val artistsInvolved
+            get() = getArtistsNamesInvolved(title, artist.name, album.albumArtist.name).map { ImmutableArtist.of(it) }.toSet()
+
+        override val length by lazy {
+            Files.size(path)
+        }
+
+        override val uniqueId
+            get() =
+                buildString {
+                    append(path.fileName.toString().replace(' ', '_'))
+                    append("-$title")
+                    append("-${duration.toSeconds()}")
+                    append("-$bitRate")
                 }
-        )
 
-    // Constructor for deserialization & iTunes import
-    internal constructor(
-        path: Path,
-        id: Int,
-        title: String,
-        duration: Duration,
-        bitRate: Int,
-        artist: Artist,
-        album: Album,
-        genres: Set<Genre>,
-        comments: String?,
-        trackNumber: Short?,
-        discNumber: Short?,
-        bpm: Float?,
-        encoder: String?,
-        encoding: String?,
-        dateOfCreation: LocalDateTime,
-        lastDateModified: LocalDateTime,
-        playCount: Short
-    ) : this(path, id) {
-        disableEvents()
-        this.title = title
-        this._duration = duration
-        this.artist = artist
-        this.genres = genres
-        this.comments = comments
-        this.trackNumber = trackNumber
-        this.discNumber = discNumber
-        this.bpm = bpm
-        this.album = album
-        this._bitRate = bitRate
-        this._encoder = encoder
-        this._encoding = encoding
-        this._dateOfCreation = dateOfCreation
-        this.lastDateModified = lastDateModified
-        this._playCount = playCount
-        enableEvents()
-    }
+        /** Mutable properties */
 
-    init {
-        WindowsPathValidator.validatePath(path)
-        if (!Files.exists(path)) {
-            throw InvalidAudioFilePathException("File '${path.toAbsolutePath()}' does not exist")
-        }
-        if (!Files.isRegularFile(path)) {
-            throw InvalidAudioFilePathException("Path '${path.toAbsolutePath()}' is not a regular file")
-        }
-        if (!Files.isReadable(path)) {
-            throw InvalidAudioFilePathException("File '${path.toAbsolutePath()}' is not readable")
-        }
-    }
+        @Serializable
+        override var title: String by reactiveProperty(metadata.title)
 
-    @Transient
-    private val metadata = readMetadata(path)
+        @Serializable
+        override var artist: Artist by reactiveProperty(metadata.artist)
 
-    private var _bitRate: Int = metadata.bitRate
+        @Serializable
+        override var genres: Set<Genre> by reactiveProperty(metadata.genres)
 
-    @Serializable
-    override val bitRate: Int
-        get() = _bitRate
+        @Transient
+        private var _comments: String? = metadata.comments
 
-    private var _duration: Duration = metadata.duration
-
-    @Serializable
-    override val duration: Duration
-        get() = _duration
-
-    private var _encoder: String? = metadata.encoder?.takeIf { it.isNotEmpty() }
-
-    @Serializable
-    override val encoder: String?
-        get() = _encoder
-
-    private var _encoding: String? = metadata.encoding?.takeIf { it.isNotEmpty() }
-
-    @Serializable
-    override val encoding: String?
-        get() = _encoding
-
-    private var _dateOfCreation: LocalDateTime = LocalDateTime.now()
-
-    @Serializable
-    override val dateOfCreation: LocalDateTime
-        get() = _dateOfCreation
-
-    @Serializable
-    override var lastDateModified: LocalDateTime = _dateOfCreation
-
-    private var _playCount: Short by reactiveProperty(0.toShort())
-
-    @Serializable
-    override val playCount: Short
-        get() = _playCount
-
-    override val fileName by lazy {
-        path.fileName.toString()
-    }
-
-    override val extension by lazy {
-        path.extension
-    }
-
-    override val artistsInvolved
-        get() = getArtistsNamesInvolved(title, artist.name, album.albumArtist.name).map { ImmutableArtist.of(it) }.toSet()
-
-    override val length by lazy {
-        path.toFile().length()
-    }
-
-    override val uniqueId
-        get() =
-            buildString {
-                append(path.fileName.toString().replace(' ', '_'))
-                append("-$title")
-                append("-${duration.toSeconds()}")
-                append("-$bitRate")
-            }
-
-    /** Mutable properties */
-
-    @Serializable
-    override var title: String by reactiveProperty(metadata.title)
-
-    @Serializable
-    override var artist: Artist by reactiveProperty(metadata.artist)
-
-    @Serializable
-    override var genres: Set<Genre> by reactiveProperty(metadata.genres)
-
-    @Transient
-    private var _comments: String? = metadata.comments
-
-    @Serializable
-    override var comments: String?
-        by reactiveProperty(
-            getter = { _comments },
-            setter = { _comments = it?.takeIf { s -> s.isNotEmpty() } }
-        )
-
-    @Serializable
-    override var trackNumber: Short? by reactiveProperty(metadata.trackNumber)
-
-    @Serializable
-    override var discNumber: Short? by reactiveProperty(metadata.discNumber)
-
-    @Serializable
-    override var bpm: Float? by reactiveProperty(metadata.bpm)
-
-    @Serializable
-    override var album: Album by reactiveProperty(metadata.album)
-
-    @Transient
-    private var _coverImageBytes: ByteArray? = metadata.coverBytes?.copyOf()
-
-    @Transient
-    override var coverImageBytes: ByteArray?
-        by reactiveProperty(
-            getter = { _coverImageBytes?.copyOf() },
-            setter = { _coverImageBytes = it?.copyOf() }
-        )
-
-    /**
-     * Asynchronously writes the current metadata back to the audio file.
-     *
-     * Creates the appropriate tag format based on the file type and commits changes to disk.
-     * Errors during writing are logged but do not throw exceptions to prevent
-     * disrupting the application flow, especially during batch, background operations.
-     */
-    override fun writeMetadata(): Job =
-        ioScope.launch {
-            logger.debug { "Writing metadata of $this to file '${path.toAbsolutePath()}'" }
-            writeMetadataToFile(
-                path, title, album, artist, genres,
-                comments, trackNumber, discNumber, bpm, encoder,
-                coverImageBytes, fileName, logger
+        @Serializable
+        override var comments: String?
+            by reactiveProperty(
+                getter = { _comments },
+                setter = { _comments = it?.takeIf { s -> s.isNotEmpty() } }
             )
-            logger.debug { "Metadata of $this successfully written to file" }
+
+        @Serializable
+        override var trackNumber: Short? by reactiveProperty(metadata.trackNumber)
+
+        @Serializable
+        override var discNumber: Short? by reactiveProperty(metadata.discNumber)
+
+        private var _bpm: Float? = metadata.bpm
+
+        @Serializable
+        override var bpm: Float?
+            by reactiveProperty(
+                getter = { _bpm },
+                setter = { value ->
+                    value?.let { require(it.isFinite()) { "bpm must be a finite Float (got $it)" } }
+                    _bpm = value
+                }
+            )
+
+        @Serializable
+        override var album: Album by reactiveProperty(metadata.album)
+
+        @Transient
+        private var _coverImageBytes: ByteArray? = metadata.coverBytes?.copyOf()
+
+        @Transient
+        override var coverImageBytes: ByteArray?
+            by reactiveProperty(
+                getter = { _coverImageBytes?.copyOf() },
+                setter = { _coverImageBytes = it?.copyOf() }
+            )
+
+        internal fun incrementPlayCount() = _playCount++
+
+        override fun setPlayCount(count: Short) {
+            require(count >= 0) { "Play count cannot be negative" }
+            withEventsDisabled { _playCount = count }
         }
 
-    internal fun incrementPlayCount() = _playCount++
+        override operator fun compareTo(other: AudioItem) = audioItemTrackDiscNumberComparator<AudioItem>().compare(this, other)
 
-    override fun setPlayCount(count: Short) {
-        require(count >= 0) { "Play count cannot be negative" }
-        withEventsDisabled { _playCount = count }
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other == null || javaClass != other.javaClass) return false
+            val that = other as MutableAudioItem
+            return trackNumber == that.trackNumber &&
+                discNumber == that.discNumber &&
+                bpm == that.bpm &&
+                path == that.path &&
+                title == that.title &&
+                artist == that.artist &&
+                album == that.album &&
+                genres == that.genres &&
+                comments == that.comments &&
+                duration == that.duration
+        }
+
+        override fun hashCode() = Objects.hash(path, title, artist, album, genres, comments, trackNumber, discNumber, bpm, duration)
+
+        override fun clone(): MutableAudioItem =
+            MutableAudioItem(
+                path,
+                id,
+                AudioItemMetadata(
+                    title = title,
+                    artist = artist,
+                    album = album,
+                    genres = genres,
+                    comments = comments,
+                    trackNumber = trackNumber,
+                    discNumber = discNumber,
+                    bpm = bpm,
+                    encoder = encoder,
+                    encoding = encoding,
+                    bitRate = bitRate,
+                    duration = duration,
+                    coverBytes = _coverImageBytes?.copyOf()
+                ),
+                dateOfCreation,
+                lastDateModified,
+                _playCount
+            )
+
+        override fun toString() = "AudioItem(id=$id, path=$path, title=$title, artist=${artist.name})"
     }
-
-    override operator fun compareTo(other: AudioItem) = audioItemTrackDiscNumberComparator<AudioItem>().compare(this, other)
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other == null || javaClass != other.javaClass) return false
-        val that = other as MutableAudioItem
-        return trackNumber == that.trackNumber &&
-            discNumber == that.discNumber &&
-            bpm == that.bpm &&
-            path == that.path &&
-            title == that.title &&
-            artist == that.artist &&
-            album == that.album &&
-            genres == that.genres &&
-            comments == that.comments &&
-            duration == that.duration
-    }
-
-    override fun hashCode() = Objects.hash(path, title, artist, album, genres, comments, trackNumber, discNumber, bpm, duration)
-
-    override fun clone(): MutableAudioItem =
-        MutableAudioItem(
-            path, id, title, duration, bitRate, artist, album, genres,
-            comments, trackNumber, discNumber, bpm, encoder, encoding,
-            dateOfCreation, lastDateModified, _playCount
-        )
-
-    override fun toString() = "AudioItem(id=$id, path=$path, title=$title, artist=${artist.name})"
-}

@@ -15,36 +15,22 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.music.common
+package net.transgressoft.commons.music.audio
 
 /**
- * Provides a testable seam for OS detection, enabling Windows-specific validation
- * paths to be exercised on Linux CI by overriding [isWindows] via [withOverriddenIsWindows].
+ * Plain-Kotlin view of the audio header fields consumed by metadata utilities.
  *
- * Tests using the override helper must run sequentially (not in parallel Kotest contexts)
- * because the override is stored in a single volatile field.
+ * Mirrors the subset of JAudioTagger's `AudioHeader` actually read by `AudioItemMetadataUtils`:
+ * codec/encoding, parsed bitrate (the leading `~` marker for variable bitrate is already stripped),
+ * total track length in seconds, and the container format string used to choose the tag type when
+ * writing metadata back to disk.
+ *
+ * Decoupling this from JAudioTagger keeps `music-commons-api` free of library-specific types and
+ * lets test fakes synthesize header values without instantiating JAudioTagger objects.
  */
-object OsDetector {
-
-    @Volatile
-    @PublishedApi
-    internal var overrideIsWindows: Boolean? = null
-
-    val isWindows: Boolean
-        get() = overrideIsWindows ?: System.getProperty("os.name").lowercase().contains("windows")
-
-    /**
-     * Executes [block] with [isWindows] temporarily overridden to [value], returning whatever
-     * [block] returns. Restores the previous override (or `null` for native detection) in a
-     * `finally` block so nested calls do not silently lose the outer override.
-     */
-    inline fun <R> withOverriddenIsWindows(value: Boolean, block: () -> R): R {
-        val previous = overrideIsWindows
-        overrideIsWindows = value
-        return try {
-            block()
-        } finally {
-            overrideIsWindows = previous
-        }
-    }
-}
+data class HeaderInfo(
+    val encodingType: String?,
+    val bitRate: Int,
+    val trackLengthSeconds: Long,
+    val format: String
+)

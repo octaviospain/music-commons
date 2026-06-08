@@ -17,8 +17,6 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.AudioUtils.audioItemTrackDiscNumberComparator
-import net.transgressoft.commons.music.AudioUtils.beautifyArtistName
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.Codepoint
@@ -56,11 +54,14 @@ fun Arb.Companion.albumAudioItems(
             repeat(Arb.int(size).bind()) {
                 add(
                     audioItem {
-                        this.artist = arbitraryArtist
-                        this.album = arbitraryAlbum
-                        this.trackNumber = (it.plus(1)).toShort()
-                        this.discNumber = 1
-                        this.coverImageBytes = null
+                        metadata =
+                            metadata.copy(
+                                artist = arbitraryArtist,
+                                album = arbitraryAlbum,
+                                trackNumber = (it.plus(1)).toShort(),
+                                discNumber = 1,
+                                coverBytes = null
+                            )
                     }.bind()
                 )
             }
@@ -121,29 +122,30 @@ fun Arb.Companion.audioItem(attributesAction: AudioItemTestAttributes.() -> Unit
 
 fun Arb.Companion.audioItem(attributes: AudioItemTestAttributes): Arb<AudioItem> =
     arbitrary {
+        val metadata = attributes.metadata
         mockk<AudioItem> {
             // immutable properties
             every { id } returns attributes.id
             every { uniqueId } answers { callOriginal() }
             every { path } returns attributes.path
-            every { duration } returns attributes.duration
-            every { bitRate } returns attributes.bitRate
-            every { encoder } returns attributes.encoder
-            every { encoding } returns attributes.encoding
+            every { duration } returns metadata.duration
+            every { bitRate } returns metadata.bitRate
+            every { encoder } returns metadata.encoder
+            every { encoding } returns metadata.encoding
             every { dateOfCreation } returns attributes.dateOfCreation
             every { lastDateModified } returns attributes.lastDateModified
             every { playCount } returns attributes.playCount
 
             // mutable properties
-            every { title } returns attributes.title
-            every { artist } returns attributes.artist
-            every { album } returns attributes.album
-            every { genres } returns attributes.genres
-            every { comments } returns attributes.comments
-            every { trackNumber } returns attributes.trackNumber
-            every { discNumber } returns attributes.discNumber
-            every { bpm } returns attributes.bpm
-            every { coverImageBytes } returns attributes.coverImageBytes
+            every { title } returns metadata.title
+            every { artist } returns metadata.artist
+            every { album } returns metadata.album
+            every { genres } returns metadata.genres
+            every { comments } returns metadata.comments
+            every { trackNumber } returns metadata.trackNumber
+            every { discNumber } returns metadata.discNumber
+            every { bpm } returns metadata.bpm
+            every { coverImageBytes } returns metadata.coverBytes
             every { playCount } returns attributes.playCount
 
             every { this@mockk.artistsInvolved } answers { callOriginal() }
@@ -162,7 +164,7 @@ fun Arb.Companion.audioItem(attributes: AudioItemTestAttributes): Arb<AudioItem>
 fun Arb.Companion.artist(givenName: String? = null, countryCode: CountryCode? = null): Arb<Artist> =
     arbitrary {
         ImmutableArtist.of(
-            givenName ?: beautifyArtistName(Arb.string().bind()),
+            givenName ?: beautifyArtistName(Arb.string(1..100).bind()),
             countryCode ?: CountryCode.entries.toTypedArray().random()
         )
     }
@@ -176,7 +178,7 @@ fun Arb.Companion.album(
 ): Arb<Album> =
     arbitrary {
         ImmutableAlbum(
-            name ?: Arb.string().bind(),
+            name ?: Arb.string(1..100).bind(),
             albumArtist ?: artist().bind(),
             isCompilation ?: Arb.boolean().bind(),
             year ?: Arb.short(1, Short.MAX_VALUE).bind(),
@@ -186,7 +188,7 @@ fun Arb.Companion.album(
 
 fun Arb.Companion.label(name: String? = null, countryCode: CountryCode? = null) =
     arbitrary {
-        ImmutableLabel.of(name ?: Arb.string().bind(), countryCode ?: CountryCode.entries.toTypedArray().random())
+        ImmutableLabel.of(name ?: Arb.string(1..100).bind(), countryCode ?: CountryCode.entries.toTypedArray().random())
     }
 
 fun Arb.Companion.audioFilePath(audioFileType: AudioFileType = Arb.enum<AudioFileType>().next()): Arb<Path> =
@@ -204,21 +206,22 @@ fun Arb.Companion.audioFilePath(audioFileType: AudioFileType = Arb.enum<AudioFil
 fun Arb.Companion.audioItemChange(): Arb<AudioItemChange> =
     arbitrary {
         val attributes = audioAttributes().bind()
+        val metadata = attributes.metadata
         AudioItemChange(
             attributes.id,
-            attributes.title,
-            attributes.artist,
-            attributes.album.name,
-            attributes.album.albumArtist,
-            attributes.album.isCompilation,
-            attributes.album.year,
-            attributes.album.label,
-            attributes.genres,
-            attributes.comments,
-            attributes.trackNumber,
-            attributes.discNumber,
-            attributes.bpm,
-            attributes.coverImageBytes,
+            metadata.title,
+            metadata.artist,
+            metadata.album.name,
+            metadata.album.albumArtist,
+            metadata.album.isCompilation,
+            metadata.album.year,
+            metadata.album.label,
+            metadata.genres,
+            metadata.comments,
+            metadata.trackNumber,
+            metadata.discNumber,
+            metadata.bpm,
+            metadata.coverBytes,
             attributes.playCount
         )
     }
@@ -259,31 +262,35 @@ fun Arb.Companion.audioAttributes(
     bpm: Float? = null,
     encoder: String? = null,
     encoding: String? = null,
-    coverImageBytes: ByteArray? = testCoverBytes,
+    coverImageBytes: ByteArray? = null,
     dateOfCreation: LocalDateTime? = null,
     lastDateModified: LocalDateTime? = null,
     playCount: Short? = null
 ): Arb<AudioItemTestAttributes> =
     arbitrary {
+        val metadata =
+            AudioItemMetadata(
+                title = title ?: Arb.string(1..100).bind(),
+                artist = artist ?: artist().bind(),
+                album = album ?: album().bind(),
+                genres = genres ?: Arb.genres().bind(),
+                comments = comments ?: Arb.string(1..100).bind(),
+                trackNumber = trackNumber ?: Arb.positiveShort().bind(),
+                discNumber = discNumber ?: Arb.positiveShort().bind(),
+                bpm = bpm ?: Arb.float(10.0f..220.58f, includeNaNs = false).bind(),
+                encoder = encoder ?: Arb.string(1..100).bind(),
+                encoding = encoding ?: Arb.string(1..100).bind(),
+                bitRate = bitRate ?: Arb.positiveInt().bind(),
+                duration = duration ?: Arb.positiveLong().bind().nanoseconds.toJavaDuration(),
+                coverBytes = coverImageBytes
+            )
         AudioItemTestAttributes(
-            path ?: Arb.audioFilePath().bind(),
-            title ?: Arb.string().bind(),
-            duration ?: Arb.positiveLong().bind().nanoseconds.toJavaDuration(),
-            bitRate ?: Arb.positiveInt().bind(),
-            artist ?: artist().bind(),
-            album ?: album().bind(),
-            genres ?: Arb.genres().bind(),
-            comments ?: Arb.string().bind(),
-            trackNumber ?: Arb.positiveShort().bind(),
-            discNumber ?: Arb.positiveShort().bind(),
-            bpm ?: Arb.float(10.0f..220.58f).bind(),
-            encoder ?: Arb.string().bind(),
-            encoding ?: Arb.string().bind(),
-            coverImageBytes,
-            dateOfCreation ?: Arb.localDateTime(LocalDateTime.of(2000, 1, 1, 0, 0)).next(),
-            lastDateModified ?: Arb.localDateTime(LocalDateTime.of(2023, 1, 1, 0, 0)).next(),
-            playCount ?: Arb.positiveShort().bind(),
-            id ?: atomicInteger.getAndDecrement()
+            path = path ?: Arb.audioFilePath().bind(),
+            id = id ?: atomicInteger.getAndDecrement(),
+            metadata = metadata,
+            dateOfCreation = dateOfCreation ?: Arb.localDateTime(LocalDateTime.of(2000, 1, 1, 0, 0)).next(),
+            lastDateModified = lastDateModified ?: Arb.localDateTime(LocalDateTime.of(2023, 1, 1, 0, 0)).next(),
+            playCount = playCount ?: Arb.positiveShort().bind()
         )
     }
 

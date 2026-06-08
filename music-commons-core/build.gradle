@@ -11,13 +11,12 @@ dependencies {
     implementation project(':music-commons-media')
     implementation libs.jaudiotagger.get()
     implementation libs.lirp.core.get()
-    implementation libs.lirp.sql.get()
     implementation libs.dd.plist.get()
 
     ksp libs.lirp.ksp.get()
     kspTest libs.lirp.ksp.get()
 
-    testApi project(path: ':music-commons-test')
+    testImplementation project(path: ':music-commons-test')
     testImplementation(platform(libs.junit.bom.get()))
     testImplementation libs.jimfs.get()
     testImplementation libs.mockk.get()

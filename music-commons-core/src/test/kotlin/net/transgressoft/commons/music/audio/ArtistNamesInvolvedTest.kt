@@ -1,11 +1,11 @@
-package net.transgressoft.commons.music
+package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.AudioUtils
+import net.transgressoft.commons.music.audio.getArtistsNamesInvolved
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
 
-internal class AudioUtilsArtistsInvolvedTest : FunSpec({
+internal class ArtistNamesInvolvedTest : FunSpec({
 
     data class AudioItemFields(
         val titleField: String = "",
@@ -41,7 +41,7 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                             )
                     )
                 ) {
-                    AudioUtils.getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
+                    getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
                 }
             }
 
@@ -74,7 +74,7 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                             )
                     )
                 ) {
-                    AudioUtils.getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
+                    getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
                 }
             }
 
@@ -103,7 +103,7 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                             )
                     )
                 ) {
-                    AudioUtils.getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
+                    getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
                 }
             }
 
@@ -124,7 +124,7 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                             )
                     )
                 ) {
-                    AudioUtils.getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
+                    getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
                 }
             }
 
@@ -145,7 +145,7 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                             )
                     )
                 ) {
-                    AudioUtils.getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
+                    getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
                 }
             }
 
@@ -166,7 +166,7 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                             )
                     )
                 ) {
-                    AudioUtils.getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
+                    getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
                 }
             }
 
@@ -179,7 +179,7 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                             )
                     )
                 ) {
-                    AudioUtils.getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
+                    getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
                 }
             }
 
@@ -196,7 +196,7 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                             )
                     )
                 ) {
-                    AudioUtils.getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
+                    getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
                 }
             }
 
@@ -218,7 +218,7 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                             )
                     )
                 ) {
-                    AudioUtils.getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
+                    getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
                 }
             }
 
@@ -235,7 +235,7 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                             )
                     )
                 ) {
-                    AudioUtils.getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
+                    getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
                 }
             }
         }
@@ -309,7 +309,7 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                         )
                 )
             ) {
-                AudioUtils.getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
+                getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
             }
         }
 
@@ -330,7 +330,7 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                         )
                 )
             ) {
-                AudioUtils.getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
+                getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
             }
         }
 
@@ -381,12 +381,12 @@ internal class AudioUtilsArtistsInvolvedTest : FunSpec({
                         )
                 )
             ) {
-                AudioUtils.getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
+                getArtistsNamesInvolved(it.titleField, it.artistField, it.albumArtistField) shouldBe it.expectedArtists
             }
         }
 
         context("Has 'ft' and remix in parentheses") {
-            AudioUtils.getArtistsNamesInvolved("Pretendingtowalkslow ft Zeroh (M. Constant Remix)", "Devonwho", "") shouldBe
+            getArtistsNamesInvolved("Pretendingtowalkslow ft Zeroh (M. Constant Remix)", "Devonwho", "") shouldBe
                 setOf("Zeroh", "M. Constant", "Devonwho")
         }
     }

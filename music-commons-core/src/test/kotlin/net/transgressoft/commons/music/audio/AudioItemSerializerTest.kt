@@ -4,10 +4,14 @@ import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.maps.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.property.arbitrary.next
+import java.nio.file.Path
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -29,6 +33,13 @@ internal class AudioItemSerializerTest : StringSpec({
             explicitNulls = true
         }
 
+    // Bind the serializer to the Jimfs filesystem so encoded `file://` URIs deserialize back to
+    // the same Jimfs path tree, and JsonFileRepository-style round-trip exercises real fields.
+    val mapSerializer = MapSerializer(Int.serializer(), AudioItemSerializer(files.fileSystem))
+
+    fun createItem(path: Path, id: Int): AudioItem =
+        MutableAudioItemTestBridge.createAudioItem(path, id, files.metadataIO)
+
     "AudioItemSerializer encodes golden JSON fixture with required fields for path, id, title, duration, artist and album" {
         val artist = ImmutableArtist.of("The Beatles", CountryCode.GB)
         val label = ImmutableLabel.of("EMI")
@@ -45,9 +56,9 @@ internal class AudioItemSerializerTest : StringSpec({
                 this.discNumber = 1
             }.next()
 
-        val audioItem: AudioItem = MutableAudioItemTestBridge.createAudioItem(path, 42)
+        val audioItem: AudioItem = createItem(path, 42)
 
-        val encoded = json.encodeToString(AudioItemMapSerializer, mapOf(42 to audioItem))
+        val encoded = json.encodeToString(mapSerializer, mapOf(42 to audioItem))
 
         encoded shouldContain "\"path\""
         encoded shouldContain "\"id\""
@@ -79,10 +90,10 @@ internal class AudioItemSerializerTest : StringSpec({
                 this.bpm = 120.0f
             }.next()
 
-        val originalItem: AudioItem = MutableAudioItemTestBridge.createAudioItem(path, 99)
+        val originalItem: AudioItem = createItem(path, 99)
 
-        val encoded = json.encodeToString(AudioItemMapSerializer, mapOf(originalItem.id to originalItem))
-        val decoded = json.decodeFromString(AudioItemMapSerializer, encoded)
+        val encoded = json.encodeToString(mapSerializer, mapOf(originalItem.id to originalItem))
+        val decoded = json.decodeFromString(mapSerializer, encoded)
 
         val decodedItem = decoded.getValue(99)
 
@@ -116,9 +127,9 @@ internal class AudioItemSerializerTest : StringSpec({
                 this.artist = artist
             }.next()
 
-        val audioItem: AudioItem = MutableAudioItemTestBridge.createAudioItem(path, 10)
+        val audioItem: AudioItem = createItem(path, 10)
 
-        val encoded = json.encodeToString(AudioItemMapSerializer, mapOf(10 to audioItem))
+        val encoded = json.encodeToString(mapSerializer, mapOf(10 to audioItem))
         val jsonElement = Json.parseToJsonElement(encoded).jsonObject["10"]!!.jsonObject
 
         jsonElement["artist"]!!.jsonObject["name"]!!.jsonPrimitive.content shouldBe "Solo Artist"
@@ -131,8 +142,8 @@ internal class AudioItemSerializerTest : StringSpec({
                 this.title = "Test Song"
             }.next()
 
-        val originalItem: AudioItem = MutableAudioItemTestBridge.createAudioItem(path, 77)
-        val encoded = json.encodeToString(AudioItemMapSerializer, mapOf(77 to originalItem))
+        val originalItem: AudioItem = createItem(path, 77)
+        val encoded = json.encodeToString(mapSerializer, mapOf(77 to originalItem))
 
         // Remove the "title" field from the JSON object to simulate a missing required field
         val jsonTree = Json.parseToJsonElement(encoded).jsonObject
@@ -150,7 +161,7 @@ internal class AudioItemSerializerTest : StringSpec({
 
         val exception =
             shouldThrow<SerializationException> {
-                json.decodeFromString(AudioItemMapSerializer, modifiedJson)
+                json.decodeFromString(mapSerializer, modifiedJson)
             }
         exception.message shouldContain "Missing required field 'title'"
     }
@@ -168,8 +179,8 @@ internal class AudioItemSerializerTest : StringSpec({
                 this.bpm = 130.0f
             }.next()
 
-        val originalItem: AudioItem = MutableAudioItemTestBridge.createAudioItem(path, 55)
-        val encoded = json.encodeToString(AudioItemMapSerializer, mapOf(55 to originalItem))
+        val originalItem: AudioItem = createItem(path, 55)
+        val encoded = json.encodeToString(mapSerializer, mapOf(55 to originalItem))
 
         // Strip only the mutable nullable fields from the JSON; keep encoder/encoding since
         // MutableAudioItem always re-reads those from the audio file during construction.
@@ -185,7 +196,7 @@ internal class AudioItemSerializerTest : StringSpec({
                 mapOf("55" to JsonObject(filteredEntries))
             ).toString()
 
-        val decoded = json.decodeFromString(AudioItemMapSerializer, modifiedJson)
+        val decoded = json.decodeFromString(mapSerializer, modifiedJson)
         val decodedItem = decoded.getValue(55)
 
         decodedItem.comments shouldBe null
@@ -197,16 +208,16 @@ internal class AudioItemSerializerTest : StringSpec({
 
     "AudioItemSerializer writes path as file:// URI in JSON" {
         val path = files.virtualAudioFile().next()
-        val audioItem: AudioItem = MutableAudioItemTestBridge.createAudioItem(path, 200)
+        val audioItem: AudioItem = createItem(path, 200)
 
-        val encoded = json.encodeToString(AudioItemMapSerializer, mapOf(200 to audioItem))
+        val encoded = json.encodeToString(mapSerializer, mapOf(200 to audioItem))
 
         // file:// URIs always have three slashes (file://<authority>/<path> with empty authority);
         // assert on that to catch regressions to malformed forms like "file://relative".
         encoded shouldContain "\"path\":\"file:///"
     }
 
-    "AudioItemSerializer deserialization throws for a path that no longer exists on disk" {
+    "AudioItemSerializer deserialization succeeds for a path that no longer exists on disk" {
         val offlineDriveJson =
             """
             {
@@ -238,9 +249,11 @@ internal class AudioItemSerializerTest : StringSpec({
             }
             """.trimIndent()
 
-        shouldThrow<InvalidAudioFilePathException> {
-            json.decodeFromString(AudioItemMapSerializer, offlineDriveJson)
-        }
+        // Existence checks moved to DefaultAudioLibrary.createFromFile; deserialization
+        // is now pure data construction and succeeds even when the path no longer resolves on disk.
+        val decoded = json.decodeFromString(mapSerializer, offlineDriveJson)
+        decoded.shouldHaveSize(1)
+        decoded[1]!!.title shouldBe "Ghost"
     }
 
     "AudioItemSerializer rejects legacy JSON with raw path string" {
@@ -276,7 +289,7 @@ internal class AudioItemSerializerTest : StringSpec({
             """.trimIndent()
 
         shouldThrow<SerializationException> {
-            json.decodeFromString(AudioItemMapSerializer, legacyJson)
+            json.decodeFromString(mapSerializer, legacyJson)
         }
     }
 })

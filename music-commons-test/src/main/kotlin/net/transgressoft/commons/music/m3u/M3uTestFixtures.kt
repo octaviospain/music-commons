@@ -124,7 +124,7 @@ object M3uTestFixtures {
                 materializeRecursive(nestedResource, resolved, baseDir, virtualFiles, visited, collected)
             } else {
                 val info = TrackInfo.from(entry, resolved)
-                virtualFiles.createAt(resolved, info.toAttributes(), info.tagType, baseDir.fileSystem)
+                virtualFiles.createAt(resolved, info.toAttributes(), info.tagType)
                 collected.add(info)
             }
         }

@@ -17,7 +17,6 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.audio.MutableAudioItemTestBridge.createAudioItem
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.event.MutationEvent
@@ -30,15 +29,22 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
+import java.nio.file.Path
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 typealias ArtistCatalogMutation = MutationEvent<Artist, ArtistCatalog<AudioItem>>
 
 @ExperimentalCoroutinesApi
-class MutableArtistCatalogTest : StringSpec({
+internal class MutableArtistCatalogTest : StringSpec({
 
     val reactive = reactiveScope()
     val files = virtualFiles()
+
+    fun createAudioItem(path: Path): AudioItem =
+        MutableAudioItemTestBridge.createAudioItem(path, files.metadataIO)
+
+    fun createAudioItem(path: Path, id: Int): AudioItem =
+        MutableAudioItemTestBridge.createAudioItem(path, id, files.metadataIO)
 
     "MUTATE event is published when audio item is added to empty catalog" {
         val expectedArtist = Arb.artist().next()
@@ -79,6 +85,27 @@ class MutableArtistCatalogTest : StringSpec({
             catalogSnapshot.albums.size shouldBe 0
             catalogSnapshot.isEmpty shouldBe true
         }
+    }
+
+    "MutableArtistCatalog stores items with the same ordering and unique id when repository ids differ" {
+        val expectedArtist = Arb.artist().next()
+        val expectedAlbum = ImmutableAlbum("Shared Album", expectedArtist)
+        val path =
+            files.virtualAudioFile {
+                artist = expectedArtist
+                album = expectedAlbum
+                trackNumber = 1
+                discNumber = 1
+            }.next()
+        val firstAudioItem = createAudioItem(path, 1)
+        val secondAudioItem = createAudioItem(path, 2)
+        val catalog = MutableArtistCatalog<AudioItem>(expectedArtist)
+
+        catalog.addAudioItem(firstAudioItem) shouldBe true
+        catalog.addAudioItem(secondAudioItem) shouldBe true
+
+        catalog.size shouldBe 2
+        catalog.albumAudioItems(firstAudioItem.album.name) shouldBe setOf(firstAudioItem, secondAudioItem)
     }
 
     "MUTATE event is published when second audio item is added to same album" {
@@ -356,6 +383,62 @@ class MutableArtistCatalogTest : StringSpec({
             catalogSnapshot.size shouldBe originalSize
             catalogSnapshot.albumAudioItems(album).shouldContain(audioItem)
         }
+    }
+
+    "MutableArtistCatalog equals returns true for same artist and items" {
+        val audioItem = createAudioItem(files.virtualAudioFile().next())
+        val catalog1 = MutableArtistCatalog(audioItem)
+        val catalog2 = MutableArtistCatalog(audioItem)
+
+        (catalog1 == catalog2) shouldBe true
+        catalog1.hashCode() shouldBe catalog2.hashCode()
+    }
+
+    "MutableArtistCatalog equals returns false for different artist" {
+        val firstArtist = Arb.artist().next()
+        val secondArtist = Arb.artist().next()
+        val first = MutableArtistCatalog<AudioItem>(firstArtist)
+        val second = MutableArtistCatalog<AudioItem>(secondArtist)
+
+        (first == second) shouldBe false
+    }
+
+    "MutableArtistCatalog equals returns false for non-catalog types and null" {
+        val catalog = MutableArtistCatalog<AudioItem>(Arb.artist().next())
+
+        catalog.equals(null) shouldBe false
+        catalog.equals("not a catalog") shouldBe false
+    }
+
+    "MutableArtistCatalog toString includes artist and size" {
+        val audioItem = createAudioItem(files.virtualAudioFile().next())
+        val catalog = MutableArtistCatalog(audioItem)
+
+        catalog.toString() shouldBe "MutableArtistCatalog(artist=${audioItem.artist}, size=1)"
+    }
+
+    "MutableArtistCatalog compareTo orders by artist" {
+        val firstArtist = ImmutableArtist.of("A Artist")
+        val secondArtist = ImmutableArtist.of("Z Artist")
+        val first = MutableArtistCatalog<AudioItem>(firstArtist)
+        val second = MutableArtistCatalog<AudioItem>(secondArtist)
+
+        (first.compareTo(second) < 0) shouldBe true
+    }
+
+    "MutableArtistCatalog containsAudioItem falls back to scanning other buckets when album bucket is missing" {
+        val renamedAlbum = Arb.album().next()
+        val audioItem = createAudioItem(files.virtualAudioFile().next())
+        val catalog = MutableArtistCatalog(audioItem)
+
+        audioItem.album = renamedAlbum
+
+        catalog.containsAudioItem(audioItem) shouldBe true
+    }
+
+    "MutableArtistCatalog albumAudioItems returns empty set for unknown album" {
+        val catalog = MutableArtistCatalog<AudioItem>(Arb.artist().next())
+        catalog.albumAudioItems("Nonexistent") shouldBe emptySet()
     }
 
     "multiple subscribers should all receive MUTATE events" {

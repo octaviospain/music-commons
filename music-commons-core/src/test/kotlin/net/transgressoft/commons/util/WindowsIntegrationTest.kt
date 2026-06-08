@@ -1,7 +1,5 @@
-package net.transgressoft.commons.music.common
+package net.transgressoft.commons.util
 
-import net.transgressoft.commons.music.audio.WindowsPathException
-import net.transgressoft.commons.music.audio.WindowsViolation
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.Condition
 import io.kotest.core.annotation.EnabledIf
@@ -38,7 +36,7 @@ import kotlin.reflect.KClass
  */
 @Tags("windows-only")
 @EnabledIf(IsWindowsCondition::class)
-class WindowsIntegrationTest : StringSpec({
+internal class WindowsIntegrationTest : StringSpec({
 
     "real Windows rejects reserved name at the OS level when we try to create NUL" {
         shouldThrow<WindowsPathException> {
@@ -128,7 +126,7 @@ class WindowsIntegrationTest : StringSpec({
 })
 
 /**
- * Kotest [io.kotest.core.annotation.EnabledIf] condition that enables specs only on Windows hosts.
+ * Kotest [EnabledIf] condition that enables specs only on Windows hosts.
  */
 class IsWindowsCondition : Condition {
     override fun evaluate(kclass: KClass<out Spec>): Boolean =

@@ -79,11 +79,26 @@ internal class MutableArtistCatalog<I>(override val artist: Artist)
     override val albums: Set<AlbumSet<I>>
         get() =
             synchronized(this) {
-                audioItemsByAlbumName
-                    .map { (albumName, audioItems) ->
-                        AlbumView(albumName, audioItems)
+                audioItemsByAlbumName.values
+                    .asSequence()
+                    .flatten()
+                    .distinctBy(::audioItemIdentity)
+                    .groupBy { it.album.name }
+                    .mapNotNull { (albumName, audioItems) ->
+                        if (audioItems.isEmpty()) {
+                            null
+                        } else {
+                            runCatching { AlbumView(albumName, audioItems) }.getOrNull()
+                        }
                     }.toSet()
             }
+
+    private fun audioItemIdentity(audioItem: I): Any =
+        if (audioItem.id != UNASSIGNED_ID) {
+            audioItem.id
+        } else {
+            audioItem.uniqueId
+        }
 
     override fun albumAudioItems(albumName: String): Set<I> =
         synchronized(this) {
@@ -102,9 +117,7 @@ internal class MutableArtistCatalog<I>(override val artist: Artist)
     /**
      * Adds an audio item to this catalog, maintaining sorted order by disc and track number.
      *
-     * Uses binary search to find the correct insertion point, ensuring items remain sorted
-     * within their album. If the item already exists (based on [Comparable] equality), it
-     * is not added again.
+     * Uses item identity for duplicate detection and comparable ordering only for insertion.
      *
      * @param audioItem The audio item to add
      * @return true if the audio item was added
@@ -113,10 +126,11 @@ internal class MutableArtistCatalog<I>(override val artist: Artist)
         synchronized(this) {
             mutateAndPublish {
                 val audioItems = audioItemsByAlbumName.getOrPut(audioItem.album.name) { mutableListOf() }
-                val existingIndex = audioItems.binarySearch(audioItem)
-
-                if (existingIndex < 0) {
-                    val insertionPoint = -(existingIndex + 1)
+                if (audioItems.none { isSameAudioItem(it, audioItem) }) {
+                    val insertionPoint =
+                        audioItems.indexOfFirst { it > audioItem }.let {
+                            if (it >= 0) it else audioItems.size
+                        }
                     audioItems.add(insertionPoint, audioItem)
                     logger.debug { "AudioItem $audioItem was added to album ${audioItem.album}" }
                     true
@@ -124,6 +138,13 @@ internal class MutableArtistCatalog<I>(override val artist: Artist)
                     false
                 }
             }
+        }
+
+    private fun isSameAudioItem(left: I, right: I): Boolean =
+        if (left.id != UNASSIGNED_ID && right.id != UNASSIGNED_ID) {
+            left.id == right.id
+        } else {
+            left === right || left.uniqueId == right.uniqueId
         }
 
     /**
@@ -137,17 +158,18 @@ internal class MutableArtistCatalog<I>(override val artist: Artist)
         synchronized(this) {
             mutateAndPublish {
                 val albumName = audioItem.album.name
-                val (resolvedAlbumName, audioItems) =
+                val resolvedAlbumName =
                     audioItemsByAlbumName[albumName]
-                        ?.let { albumName to it }
+                        ?.let { albumName }
                         ?: audioItemsByAlbumName.entries
-                            .firstOrNull { (_, items) ->
-                                items.any { it.uniqueId == audioItem.uniqueId }
+                            .firstOrNull { entry ->
+                                entry.value.any { isSameAudioItem(it, audioItem) }
                             }
-                            ?.let { (key, items) -> key to items }
+                            ?.key
                         ?: return@mutateAndPublish false
 
-                val removed = audioItems.removeIf { it.uniqueId == audioItem.uniqueId }
+                val audioItems = audioItemsByAlbumName.getValue(resolvedAlbumName)
+                val removed = audioItems.removeIf { isSameAudioItem(it, audioItem) }
 
                 if (removed) {
                     if (audioItems.isEmpty()) {
@@ -169,7 +191,13 @@ internal class MutableArtistCatalog<I>(override val artist: Artist)
      */
     internal fun containsAudioItem(audioItem: I): Boolean =
         synchronized(this) {
-            artist == audioItem.artist && (audioItemsByAlbumName[audioItem.album.name]?.contains(audioItem) ?: false)
+            artist == audioItem.artist &&
+                (
+                    audioItemsByAlbumName[audioItem.album.name]?.any { isSameAudioItem(it, audioItem) }
+                        ?: audioItemsByAlbumName.values.any { audioItems ->
+                            audioItems.any { isSameAudioItem(it, audioItem) }
+                        }
+                )
         }
 
     /**

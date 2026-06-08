@@ -17,14 +17,13 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.AudioUtils
 import net.transgressoft.commons.music.audio.AudioFileType.FLAC
 import net.transgressoft.commons.music.audio.AudioFileType.MP3
 import net.transgressoft.commons.music.audio.AudioFileType.WAV
 import com.neovisionaries.i18n.CountryCode
 import mu.KLogger
+import mu.KotlinLogging
 import org.jaudiotagger.audio.AudioFileIO
-import org.jaudiotagger.audio.AudioHeader
 import org.jaudiotagger.audio.exceptions.CannotReadException
 import org.jaudiotagger.audio.wav.WavOptions
 import org.jaudiotagger.tag.FieldKey
@@ -38,73 +37,51 @@ import org.jaudiotagger.tag.mp4.Mp4Tag
 import org.jaudiotagger.tag.wav.WavInfoTag
 import org.jaudiotagger.tag.wav.WavTag
 import java.io.IOException
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.time.Duration
 
 /**
- * Holds all metadata extracted from an audio file, using only plain Kotlin/Java types.
+ * Production [AudioMetadataIO] backed by JAudioTagger.
  *
- * Returned by [AudioItemMetadataUtils.readMetadata] so that audio item implementations
- * never need to depend on JAudioTagger types directly.
+ * Encapsulates every JAudioTagger dependency behind the domain-typed [AudioMetadataIO] surface —
+ * no `org.jaudiotagger.*` types ever escape this class. Fails fast when handed a [Path] from a
+ * non-default filesystem provider (e.g. Jimfs): JAudioTagger reads through `java.io.File` and
+ * non-default-FS paths throw `UnsupportedOperationException` from `path.toFile()`. Tests that
+ * operate against an in-memory filesystem must inject the test-side `VolatileAudioMetadataIO`
+ * instead — the guard surfaces the mismatch with a helpful message rather than the cryptic
+ * upstream exception.
+ *
+ * Future Kotlin-native metadata libraries land alongside this class as additional
+ * [AudioMetadataIO] implementations.
  */
-data class AudioFileMetadata(
-    val bitRate: Int,
-    val duration: Duration,
-    val encoder: String?,
-    val encoding: String?,
-    val title: String,
-    val artist: Artist,
-    val album: Album,
-    val genres: Set<Genre>,
-    val comments: String?,
-    val trackNumber: Short?,
-    val discNumber: Short?,
-    val bpm: Float?,
-    val coverBytes: ByteArray?
-)
+class JAudioTaggerMetadataIO : AudioMetadataIO {
 
-/**
- * Shared utility object centralizing all JAudioTagger metadata read and write operations.
- *
- * Isolates JAudioTagger-dependent code from [net.transgressoft.commons.music.audio.MutableAudioItem]
- * and [net.transgressoft.commons.fx.music.audio.FXAudioItem], creating a clean seam for future
- * library replacement. Both audio item implementations delegate metadata operations to this object
- * rather than depending on JAudioTagger types.
- *
- * The public API consists of [readMetadata], [readCoverBytes], and [writeMetadataToFile].
- * All JAudioTagger type references are confined to this object.
- */
-object AudioItemMetadataUtils {
+    private val logger = KotlinLogging.logger {}
 
-    /**
-     * Reads all metadata from the audio file at [path] and returns it as an [AudioFileMetadata]
-     * value object containing only plain Kotlin/Java types.
-     *
-     * @param path path to the audio file
-     */
-    fun readMetadata(path: Path): AudioFileMetadata {
-        val audioFile =
+    init {
+        // JAudioTagger exposes genre-text flags only through a process-wide singleton. Set them
+        // once at construction so concurrent writes to different formats don't race on these
+        // toggles (previously the per-call createTag mutated them on every write, briefly making
+        // an MP4 write observe MP3-only settings if an MP3 write was interleaved).
+        TagOptionSingleton.getInstance().isWriteMp3GenresAsText = true
+        TagOptionSingleton.getInstance().isWriteMp4GenresAsText = true
+    }
+
+    override fun readMetadata(path: Path): AudioItemMetadata {
+        requireDefaultFileSystem(path)
+        val tag =
             try {
-                AudioFileIO.read(path.toFile())
+                AudioFileIO.read(path.toFile()).tag
             } catch (_: CannotReadException) {
-                // File is a valid audio stream but has no readable tag block (e.g. OGG without vorbiscomment).
-                // Fall back to header-only metadata so the file can still be played.
-                return emptyMetadata()
+                return emptyItemMetadata(runCatching { readHeader(path) }.getOrNull())
             } catch (_: NullPointerException) {
-                // JAudioTagger's Mp4InfoReader throws NPE for unsupported M4A codecs
-                // (Opus, FLAC-in-M4A) because fields like noOfChannels are null.
-                // Fall back to empty metadata so the file can still be played.
-                return emptyMetadata()
+                return emptyItemMetadata(runCatching { readHeader(path) }.getOrNull())
             }
-        val header = audioFile.audioHeader
-        val tag = audioFile.tag ?: return emptyMetadata(header)
-        return AudioFileMetadata(
-            bitRate = parseBitRate(header),
-            duration = Duration.ofSeconds(header.trackLength.toLong()),
-            encoder = getFieldIfExisting(tag, FieldKey.ENCODER),
-            encoding = header.encodingType,
+        val header = readHeader(path)
+        return AudioItemMetadata(
             title = getFieldIfExisting(tag, FieldKey.TITLE) ?: "",
             artist = parseArtist(tag),
             album = parseAlbum(tag),
@@ -113,77 +90,77 @@ object AudioItemMetadataUtils {
             trackNumber = parseOptionalShort(getFieldIfExisting(tag, FieldKey.TRACK)),
             discNumber = parseOptionalShort(getFieldIfExisting(tag, FieldKey.DISC_NO)),
             bpm = parseOptionalBpm(getFieldIfExisting(tag, FieldKey.BPM)),
-            coverBytes = parseCoverBytes(tag)
+            encoder = getFieldIfExisting(tag, FieldKey.ENCODER),
+            encoding = header.encodingType,
+            bitRate = header.bitRate,
+            duration = Duration.ofSeconds(header.trackLengthSeconds)
         )
     }
 
-    private fun emptyMetadata(header: AudioHeader? = null): AudioFileMetadata =
-        AudioFileMetadata(
-            bitRate = header?.let(::parseBitRate) ?: 0,
-            duration = header?.let { Duration.ofSeconds(it.trackLength.toLong()) } ?: Duration.ZERO,
-            encoder = null,
-            encoding = header?.encodingType,
-            title = "",
-            artist = ImmutableArtist.UNKNOWN,
-            album = ImmutableAlbum.UNKNOWN,
-            genres = emptySet(),
-            comments = null,
-            trackNumber = null,
-            discNumber = null,
-            bpm = null,
-            coverBytes = null
-        )
-
-    /**
-     * Reads the cover image bytes from the audio file at [path], or returns `null` if the file
-     * has no artwork or cannot be read.
-     */
-    fun readCoverBytes(path: Path): ByteArray? {
+    override fun loadCover(path: Path): ByteArray? {
+        requireDefaultFileSystem(path)
         val file = path.toFile()
         if (!file.exists() || !file.canRead()) return null
         return runCatching { AudioFileIO.read(file).tag }
             .getOrNull()
-            ?.let(::parseCoverBytes)
+            ?.let { tag ->
+                if (tag.artworkList.isNotEmpty()) tag.firstArtwork.binaryData else null
+            }
     }
 
-    /**
-     * Writes metadata to the audio file at [path], creating the appropriate tag format and
-     * committing changes to disk.
-     *
-     * @param logger caller's logger for artwork error reporting
-     * @param fileName caller's file name for temp file naming during artwork creation
-     */
-    @SuppressWarnings("kotlin:S107") // Audio metadata requires all tag fields as parameters; splitting would obscure the mapping
-    fun writeMetadataToFile(
-        path: Path,
-        title: String,
-        album: Album,
-        artist: Artist,
-        genres: Set<Genre>,
-        comments: String?,
-        trackNumber: Short?,
-        discNumber: Short?,
-        bpm: Float?,
-        encoder: String?,
-        coverImageBytes: ByteArray?,
-        fileName: String,
-        logger: KLogger
-    ) {
-        val audio = AudioFileIO.read(path.toFile())
-        createTag(
-            audio.audioHeader.format, title, album, artist, genres,
-            comments, trackNumber, discNumber, bpm, encoder,
-            coverImageBytes, fileName, logger
-        ).let {
-            audio.tag = it
+    override fun writeMetadata(item: ReactiveAudioItem<*>) {
+        requireDefaultFileSystem(item.path)
+        val format = readHeader(item.path).format
+        val tag =
+            createTag(
+                format = format,
+                title = item.title,
+                album = item.album,
+                artist = item.artist,
+                genres = item.genres,
+                comments = item.comments,
+                trackNumber = item.trackNumber,
+                discNumber = item.discNumber,
+                bpm = item.bpm,
+                encoder = item.encoder,
+                coverImageBytes = item.coverImageBytes,
+                fileName = item.fileName,
+                logger = logger
+            )
+        val audioFile = AudioFileIO.read(item.path.toFile())
+        audioFile.tag = tag
+        audioFile.commit()
+    }
+
+    private fun emptyItemMetadata(header: HeaderInfo?): AudioItemMetadata =
+        AudioItemMetadata(
+            bitRate = header?.bitRate ?: 0,
+            duration = header?.let { Duration.ofSeconds(it.trackLengthSeconds) } ?: Duration.ZERO,
+            encoding = header?.encodingType
+        )
+
+    private fun readHeader(path: Path): HeaderInfo {
+        val header = AudioFileIO.read(path.toFile()).audioHeader
+        return HeaderInfo(
+            encodingType = header.encodingType,
+            bitRate = parseBitRate(header.bitRate),
+            trackLengthSeconds = header.trackLength.toLong(),
+            format = header.format
+        )
+    }
+
+    private fun parseBitRate(bitRate: String): Int = if (bitRate.startsWith("~")) bitRate.substring(1).toInt() else bitRate.toInt()
+
+    private fun requireDefaultFileSystem(path: Path) {
+        require(path.fileSystem == FileSystems.getDefault()) {
+            "JAudioTaggerMetadataIO does not support non-default filesystems (got ${path.fileSystem}). " +
+                "Use VolatileAudioMetadataIO for Jimfs paths."
         }
-        audio.commit()
     }
 
     // getFirst returns "" for missing fields, but throws UnsupportedOperationException for some tag/field
     // combinations (e.g. WavTag + COUNTRY). Treat both as "field not present".
-    private fun getFieldIfExisting(tag: Tag, fieldKey: FieldKey): String? =
-        runCatching { tag.getFirst(fieldKey) }.getOrNull()
+    private fun getFieldIfExisting(tag: Tag, fieldKey: FieldKey): String? = runCatching { tag.getFirst(fieldKey) }.getOrNull()
 
     private fun parseArtist(tag: Tag): Artist =
         getFieldIfExisting(tag, FieldKey.ARTIST)?.let { artistName ->
@@ -191,10 +168,10 @@ object AudioItemMetadataUtils {
                 getFieldIfExisting(tag, FieldKey.COUNTRY)
                     ?.let { CountryCode.getByCode(it) ?: CountryCode.UNDEFINED }
                     ?: CountryCode.UNDEFINED
-            ImmutableArtist.of(AudioUtils.beautifyArtistName(artistName), country)
+            ImmutableArtist.of(beautifyArtistName(artistName), country)
         } ?: ImmutableArtist.UNKNOWN
 
-    private fun parseAlbum(tag: Tag): ImmutableAlbum =
+    private fun parseAlbum(tag: Tag): Album =
         getFieldIfExisting(tag, FieldKey.ALBUM).let { albumName ->
             return if (albumName == null) {
                 ImmutableAlbum.UNKNOWN
@@ -209,26 +186,13 @@ object AudioItemMetadataUtils {
                     } ?: false
                 val year = getFieldIfExisting(tag, FieldKey.YEAR)?.toShortOrNull()?.takeIf { it > 0 }
                 val label = getFieldIfExisting(tag, FieldKey.GROUPING)?.let { ImmutableLabel.of(it) } ?: ImmutableLabel.UNKNOWN
-                ImmutableAlbum(albumName, ImmutableArtist.of(AudioUtils.beautifyArtistName(albumArtistName)), isCompilation, year, label)
+                ImmutableAlbum(albumName, ImmutableArtist.of(beautifyArtistName(albumArtistName)), isCompilation, year, label)
             }
         }
 
-    private fun parseBitRate(audioHeader: AudioHeader): Int {
-        val bitRate = audioHeader.bitRate
-        return if ("~" == bitRate.substring(0, 1)) {
-            bitRate.substring(1).toInt()
-        } else {
-            bitRate.toInt()
-        }
-    }
+    private fun parseOptionalShort(value: String?): Short? = value?.takeUnless { it.isEmpty() || it == "0" }?.toShortOrNull()?.takeIf { it > 0 }
 
-    private fun parseCoverBytes(tag: Tag): ByteArray? = tag.artworkList.isNotEmpty().takeIf { it }?.let { tag.firstArtwork.binaryData }
-
-    private fun parseOptionalShort(value: String?): Short? =
-        value?.takeUnless { it.isEmpty() || it == "0" }?.toShortOrNull()?.takeIf { it > 0 }
-
-    private fun parseOptionalBpm(value: String?): Float? =
-        value?.takeUnless { it.isEmpty() || it == "0" }?.toFloatOrNull()?.takeIf { it > 0 }
+    private fun parseOptionalBpm(value: String?): Float? = value?.takeUnless { it.isEmpty() || it == "0" }?.toFloatOrNull()?.takeIf { it > 0 }
 
     @SuppressWarnings("kotlin:S107")
     private fun createTag(
@@ -255,7 +219,6 @@ object AudioItemMetadataUtils {
             }
 
             format.startsWith(MP3.extension, ignoreCase = true) -> {
-                TagOptionSingleton.getInstance().isWriteMp3GenresAsText = true
                 val tag: Tag = ID3v24Tag()
                 tag.artworkList.clear()
                 tag
@@ -268,7 +231,6 @@ object AudioItemMetadataUtils {
             }
 
             format.startsWith("Aac", ignoreCase = true) -> {
-                TagOptionSingleton.getInstance().isWriteMp4GenresAsText = true
                 val tag: Tag = Mp4Tag()
                 tag.artworkList.clear()
                 tag

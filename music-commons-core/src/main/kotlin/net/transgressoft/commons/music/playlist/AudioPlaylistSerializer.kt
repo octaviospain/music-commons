@@ -23,12 +23,24 @@ import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 
 /**
- * Singleton serializer for [MutableAudioPlaylist] maps, backed by [lirpSerializer].
+ * [KSerializer] for `Map<Int, MutableAudioPlaylist>` used to round-trip a playlist hierarchy
+ * through JSON.
  *
- * Provides a single shared [KSerializer] instance for `Map<Int, MutableAudioPlaylist>` to avoid
- * repeatedly constructing `lirpSerializer(MutablePlaylist(0, "", false))` at each call site.
+ * Consumers wiring a custom `JsonFileRepository` pass this serializer directly:
+ *
+ * ```
+ * val repository = JsonFileRepository(playlistsFile, AudioPlaylistMapSerializer)
+ * MusicLibrary.builder().playlistRepository(repository).build()
+ * ```
+ *
+ * The element serializer is produced by `lirpSerializer(MutablePlaylist(...))`, which encodes
+ * the playlist's identity, name, folder flag, and child references. Polymorphic resolution of
+ * the concrete `MutablePlaylist` subtype is wired by the lirp framework — no additional
+ * `serializersModule` plumbing is required at consumer call sites.
+ *
+ * Thread-safety: the serializer is stateless; concurrent reads are safe.
  */
 @get:JvmName("AudioPlaylistMapSerializer")
 @Suppress("UNCHECKED_CAST") // Safe cast: generic type erased at runtime but guaranteed by the builder/serializer contract
-internal val AudioPlaylistMapSerializer: KSerializer<Map<Int, MutableAudioPlaylist>> =
+val AudioPlaylistMapSerializer: KSerializer<Map<Int, MutableAudioPlaylist>> =
     MapSerializer(Int.serializer(), lirpSerializer(MutablePlaylist(0, "", false))) as KSerializer<Map<Int, MutableAudioPlaylist>>

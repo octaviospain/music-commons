@@ -18,6 +18,7 @@
 package net.transgressoft.commons.media.player
 
 import net.transgressoft.commons.media.util.decodeToPcmStream
+import net.transgressoft.commons.media.util.readAudioFileFormat
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.player.AudioItemPlayer
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status
@@ -28,8 +29,6 @@ import net.transgressoft.lirp.event.FlowEventPublisher
 import net.transgressoft.lirp.event.LirpEventPublisher
 import mu.KotlinLogging
 import java.io.File
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
@@ -102,6 +101,7 @@ open class CoreAudioItemPlayer private constructor(
     private val lineRef = AtomicReference<SourceDataLine?>(null)
     private val currentAudioItem = AtomicReference<ReactiveAudioItem<*>?>(null)
     private val pumpThread = AtomicReference<Thread?>(null)
+    private val durationProbeThread = AtomicReference<Thread?>(null)
     private val onFinishCallback = AtomicReference<Runnable?>(null)
     private val internalStatus = AtomicReference(Status.UNKNOWN)
     private val pcmFormat = AtomicReference<AudioFormat?>(null)
@@ -118,6 +118,9 @@ open class CoreAudioItemPlayer private constructor(
 
     @Volatile
     private var framePosition: Long = 0L
+
+    @Volatile
+    private var seekPreviewMillis: Long = -1L
 
     private val seekTargetMillis = AtomicLong(-1L)
 
@@ -139,6 +142,11 @@ open class CoreAudioItemPlayer private constructor(
     override fun status(): Status = internalStatus.get()
 
     override fun getCurrentTime(): Duration {
+        val pendingSeekMillis = seekPreviewMillis
+        if (pendingSeekMillis >= 0L && (state.get() == InternalState.PLAYING || state.get() == InternalState.PAUSED)) {
+            return Duration.ofMillis(pendingSeekMillis)
+        }
+
         val line = lineRef.get()
         val fs = frameSize.toLong()
         val rate = frameRate
@@ -155,28 +163,34 @@ open class CoreAudioItemPlayer private constructor(
     private fun framesToMillis(byteOffset: Long, frameSize: Long, frameRate: Float): Long =
         (byteOffset * 1000.0 / frameSize / frameRate).toLong()
 
+    @Throws(UnsupportedAudioPlaybackException::class)
     override fun play(audioItem: ReactiveAudioItem<*>) {
         if (state.get() == InternalState.DISPOSED) return
         val file = audioItem.path.toFile()
         if (!file.exists() || file.isDirectory) {
             throw UnsupportedAudioPlaybackException("Cannot play audio item '${audioItem.path.fileName}': file not found")
         }
-        val audioFileFormat =
-            try {
-                AudioSystem.getAudioFileFormat(file)
-            } catch (e: Exception) {
-                throw UnsupportedAudioPlaybackException("Cannot play audio item '${audioItem.path.fileName}': unsupported format", e)
-            }
         stopCurrentPlayback()
         seekTargetMillis.set(-1L)
+        seekPreviewMillis = -1L
         framePosition = 0L
-        sourceDurationMillis = durationMillis(audioFileFormat)
+        val audioFileFormat = runCatching { readAudioFileFormat(file.toPath()) }.getOrNull()
+        sourceDurationMillis =
+            if (audioFileFormat != null) {
+                durationMillis(audioFileFormat)
+            } else {
+                ensurePlayableByOpeningStream(file, audioItem)
+                0L
+            }
         currentAudioItem.set(audioItem)
         val mySession = sessionId.incrementAndGet()
         activeSessionId.set(mySession)
         internalStatus.set(Status.PLAYING)
         pumpThread.set(createPumpThread(audioItem, mySession))
         pumpThread.get()?.start()
+        if (audioFileFormat == null || requiresDecodedDurationProbe(file, audioFileFormat)) {
+            launchDecodedDurationProbe(file, audioItem, mySession)
+        }
     }
 
     override fun pause() {
@@ -203,6 +217,7 @@ open class CoreAudioItemPlayer private constructor(
         framePosition = 0L
         lineStartFrameOffset = 0L
         seekTargetMillis.set(-1L)
+        seekPreviewMillis = -1L
         internalStatus.set(Status.STOPPED)
     }
 
@@ -211,6 +226,7 @@ open class CoreAudioItemPlayer private constructor(
         stopCurrentPlayback()
         pcmFormat.set(null)
         sourceDurationMillis = 0L
+        seekPreviewMillis = -1L
         state.set(InternalState.DISPOSED)
         internalStatus.set(Status.DISPOSED)
         onFinishCallback.set(null)
@@ -223,7 +239,18 @@ open class CoreAudioItemPlayer private constructor(
 
     override fun seek(position: Duration) {
         if (state.get() == InternalState.DISPOSED) return
-        seekTargetMillis.set(position.toMillis())
+        val requestedMillis = position.toMillis().coerceAtLeast(0L)
+        val targetMillis =
+            if (sourceDurationMillis > 0L) {
+                requestedMillis.coerceAtMost(sourceDurationMillis)
+            } else {
+                requestedMillis
+            }
+        seekTargetMillis.set(targetMillis)
+        if (state.get() == InternalState.PLAYING || state.get() == InternalState.PAUSED) {
+            seekPreviewMillis = targetMillis
+            lineRef.get()?.flush()
+        }
     }
 
     override fun onFinish(value: Runnable) {
@@ -235,6 +262,7 @@ open class CoreAudioItemPlayer private constructor(
         state.set(InternalState.STOPPED)
         val thread = pumpThread.getAndSet(null)
         thread?.interrupt()
+        durationProbeThread.getAndSet(null)?.interrupt()
         drainAndClose()
     }
 
@@ -302,6 +330,7 @@ open class CoreAudioItemPlayer private constructor(
         var session = openStreamSession(file, framePosition)
         var line = openLine(session.format)
         val buffer = ByteArray(TRANSFER_BUFFER_SIZE)
+        var clearSeekPreviewAfterWrite = false
 
         try {
             while (true) {
@@ -319,6 +348,7 @@ open class CoreAudioItemPlayer private constructor(
                     val targetOffset = millisToByteOffset(seekTarget, session.format)
                     session = openStreamSession(file, targetOffset)
                     line = openLine(session.format)
+                    clearSeekPreviewAfterWrite = true
                 }
 
                 val readStartedAt = nanoTime()
@@ -330,6 +360,10 @@ open class CoreAudioItemPlayer private constructor(
                 updateStallStatus(readDuration)
                 applyVolume(buffer, bytesRead, session.format)
                 framePosition += line.write(buffer, 0, bytesRead)
+                if (clearSeekPreviewAfterWrite) {
+                    seekPreviewMillis = -1L
+                    clearSeekPreviewAfterWrite = false
+                }
             }
         } finally {
             session.stream.close()
@@ -338,6 +372,15 @@ open class CoreAudioItemPlayer private constructor(
     }
 
     private fun openStreamSession(file: File, requestedOffset: Long): StreamSession {
+        val seekableFlacStream = SeekableFlacPcmStreams.open(file, requestedOffset)
+        if (seekableFlacStream != null) {
+            val stream = seekableFlacStream.stream
+            val format = stream.format
+            pcmFormat.set(format)
+            framePosition = seekableFlacStream.startByteOffset.alignDown(format.frameSize.toLong())
+            return StreamSession(stream, format)
+        }
+
         val stream = pcmStreamFactory(file.toPath())
         val format = stream.format
         pcmFormat.set(format)
@@ -356,9 +399,8 @@ open class CoreAudioItemPlayer private constructor(
         while (remaining > 0L) {
             val currentState = state.get()
             if (currentState == InternalState.STOPPED || currentState == InternalState.DISPOSED) break
-            val step = minOf(remaining, discard.size.toLong()).toInt()
-            val bytesRead = stream.read(discard, 0, step)
-            if (bytesRead < 0) break
+            val bytesRead = stream.read(discard, 0, minOf(remaining, discard.size.toLong()).toInt())
+            if (bytesRead <= 0) break
             skipped += bytesRead
             remaining -= bytesRead
         }
@@ -394,28 +436,72 @@ open class CoreAudioItemPlayer private constructor(
             buffer.fill(0, 0, chunk)
             return
         }
-        when (format.sampleSizeInBits) {
-            16 -> {
-                val byteOrder = if (format.isBigEndian) ByteOrder.BIG_ENDIAN else ByteOrder.LITTLE_ENDIAN
-                val bb = ByteBuffer.wrap(buffer, 0, chunk).order(byteOrder)
-                val sb = bb.asShortBuffer()
-                for (j in 0 until sb.remaining()) {
-                    val sample = sb[j]
-                    val scaled = (sample * gain).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
-                    sb.put(j, scaled)
-                }
+        val sampleSizeInBits = format.sampleSizeInBits
+        if (sampleSizeInBits <= 0 || sampleSizeInBits % 8 != 0) {
+            logger.debug {
+                "Volume control skipped: sample size ${format.sampleSizeInBits}-bit not supported (requires byte-aligned PCM)"
             }
-            8 -> {
+            return
+        }
+
+        when (val bytesPerSample = sampleSizeInBits / 8) {
+            1 if format.encoding == AudioFormat.Encoding.PCM_UNSIGNED -> {
                 for (i in 0 until chunk) {
                     val signed = (buffer[i].toInt() and 0xFF) - 128
                     val scaled = (signed * gain).toInt().coerceIn(-128, 127)
                     buffer[i] = (scaled + 128).toByte()
                 }
             }
-            else ->
+            in 1..4 -> scaleSignedSamples(buffer, chunk, bytesPerSample, gain, format.isBigEndian)
+            else -> {
                 logger.debug {
-                    "Volume control skipped: sample size ${format.sampleSizeInBits}-bit not supported (only 8/16-bit)"
+                    "Volume control skipped: sample size ${format.sampleSizeInBits}-bit not supported (requires 8/16/24/32-bit PCM)"
                 }
+            }
+        }
+    }
+
+    private fun scaleSignedSamples(buffer: ByteArray, chunk: Int, bytesPerSample: Int, gain: Float, bigEndian: Boolean) {
+        val limit = chunk - chunk % bytesPerSample
+        val minValue = -(1L shl (bytesPerSample * 8 - 1))
+        val maxValue = (1L shl (bytesPerSample * 8 - 1)) - 1L
+        for (offset in 0 until limit step bytesPerSample) {
+            val sample = readSignedSample(buffer, offset, bytesPerSample, bigEndian)
+            val scaled = (sample * gain).toLong().coerceIn(minValue, maxValue)
+            writeSignedSample(buffer, offset, bytesPerSample, scaled, bigEndian)
+        }
+    }
+
+    private fun readSignedSample(buffer: ByteArray, offset: Int, bytesPerSample: Int, bigEndian: Boolean): Long {
+        var value = 0L
+        if (bigEndian) {
+            for (i in 0 until bytesPerSample) {
+                value = (value shl 8) or (buffer[offset + i].toLong() and 0xFF)
+            }
+        } else {
+            for (i in bytesPerSample - 1 downTo 0) {
+                value = (value shl 8) or (buffer[offset + i].toLong() and 0xFF)
+            }
+        }
+
+        val bits = bytesPerSample * 8
+        val signBit = 1L shl (bits - 1)
+        val extensionMask = (-1L) shl bits
+        return if (value and signBit != 0L) value or extensionMask else value
+    }
+
+    private fun writeSignedSample(buffer: ByteArray, offset: Int, bytesPerSample: Int, sample: Long, bigEndian: Boolean) {
+        var value = sample
+        if (bigEndian) {
+            for (i in bytesPerSample - 1 downTo 0) {
+                buffer[offset + i] = (value and 0xFF).toByte()
+                value = value shr 8
+            }
+        } else {
+            for (i in 0 until bytesPerSample) {
+                buffer[offset + i] = (value and 0xFF).toByte()
+                value = value shr 8
+            }
         }
     }
 
@@ -424,6 +510,7 @@ open class CoreAudioItemPlayer private constructor(
         // Stale pump (a newer play() has already started): do not mutate shared state
         // or fire callbacks that belong to the newly started playback.
         if (activeSessionId.get() != mySession) return
+        seekPreviewMillis = -1L
         val item = if (wasNaturalEnd) currentAudioItem.getAndSet(null) else null
         if (item != null) {
             publisher.emitAsync(Played(item))
@@ -448,6 +535,111 @@ open class CoreAudioItemPlayer private constructor(
             (audioFileFormat.frameLength * 1000.0 / format.frameRate).toLong()
         } else {
             0L
+        }
+    }
+
+    private fun durationMillis(audioInputStream: AudioInputStream): Long {
+        val format = audioInputStream.format
+        return if (audioInputStream.frameLength > 0 && format.frameRate > 0f) {
+            (audioInputStream.frameLength * 1000.0 / format.frameRate).toLong()
+        } else {
+            0L
+        }
+    }
+
+    private fun resolveSourceDurationMillis(file: File, audioFileFormat: AudioFileFormat): Long {
+        val fileFormatDurationMillis = durationMillis(audioFileFormat)
+        if (!requiresDecodedDurationProbe(file, audioFileFormat)) {
+            return fileFormatDurationMillis
+        }
+
+        return try {
+            val decodedDurationMillis = durationMillisFromPcmStream(file)
+            if (decodedDurationMillis > 0L) decodedDurationMillis else fileFormatDurationMillis
+        } catch (e: Exception) {
+            logger.debug(e) { "Decoded-duration probe failed for '${file.name}', using file-format duration" }
+            fileFormatDurationMillis
+        }
+    }
+
+    private fun requiresDecodedDurationProbe(file: File, audioFileFormat: AudioFileFormat): Boolean {
+        val containerExtension = file.extension.lowercase()
+        if (containerExtension !in setOf("m4a", "mp4", "aac")) {
+            return false
+        }
+        return audioFileFormat.type.extension.equals("mp3", ignoreCase = true)
+    }
+
+    private fun resolvePlayableDurationMillis(file: File, audioItem: ReactiveAudioItem<*>): Long {
+        val audioFileFormat =
+            try {
+                readAudioFileFormat(file.toPath())
+            } catch (formatFailure: Exception) {
+                return resolveDurationFromDecodedPcmOrThrow(file, audioItem, formatFailure)
+            }
+        return resolveSourceDurationMillis(file, audioFileFormat)
+    }
+
+    private fun launchDecodedDurationProbe(file: File, audioItem: ReactiveAudioItem<*>, session: Long) {
+        val probeThread =
+            Thread(
+                {
+                    val resolvedDuration =
+                        runCatching { resolvePlayableDurationMillis(file, audioItem) }
+                            .onFailure {
+                                logger.debug(it) { "Decoded-duration probe failed for '${file.name}' after playback started" }
+                            }
+                            .getOrNull()
+                    if (
+                        resolvedDuration != null &&
+                        resolvedDuration > 0L &&
+                        activeSessionId.get() == session &&
+                        state.get() != InternalState.DISPOSED
+                    ) {
+                        sourceDurationMillis = resolvedDuration
+                    }
+                },
+                "CoreAudioPlayer-duration-probe"
+            ).apply {
+                isDaemon = true
+            }
+        durationProbeThread.set(probeThread)
+        probeThread.start()
+    }
+
+    private fun ensurePlayableByOpeningStream(file: File, audioItem: ReactiveAudioItem<*>) {
+        try {
+            pcmStreamFactory(file.toPath()).use { }
+        } catch (failure: Exception) {
+            throw UnsupportedAudioPlaybackException("Cannot play audio item '${audioItem.path.fileName}': unsupported format", failure)
+        }
+    }
+
+    private fun resolveDurationFromDecodedPcmOrThrow(file: File, audioItem: ReactiveAudioItem<*>, formatFailure: Exception): Long =
+        try {
+            durationMillisFromPcmStream(file)
+        } catch (decodeFailure: Exception) {
+            throw UnsupportedAudioPlaybackException("Cannot play audio item '${audioItem.path.fileName}': unsupported format", decodeFailure).apply {
+                addSuppressed(formatFailure)
+            }
+        }
+
+    private fun durationMillisFromPcmStream(file: File): Long {
+        val stream = pcmStreamFactory(file.toPath())
+        return stream.use { stream ->
+            val format = stream.format
+            val frameSize = format.frameSize.takeIf { it > 0 } ?: return 0L
+            val frameRate = format.frameRate
+            if (frameRate <= 0f) return 0L
+
+            val buffer = ByteArray(TRANSFER_BUFFER_SIZE)
+            var totalBytes = 0L
+            while (true) {
+                val bytesRead = stream.read(buffer)
+                if (bytesRead <= 0) break
+                totalBytes += bytesRead
+            }
+            (totalBytes * 1000.0 / frameSize / frameRate).toLong()
         }
     }
 

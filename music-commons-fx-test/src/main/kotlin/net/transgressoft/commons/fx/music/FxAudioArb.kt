@@ -45,14 +45,15 @@ fun Arb.Companion.fxAudioItem(attributesAction: AudioItemTestAttributes.() -> Un
 
 fun Arb.Companion.fxAudioItem(attributes: AudioItemTestAttributes): Arb<ObservableAudioItem> =
     arbitrary {
+        val metadata = attributes.metadata
         mockk<FXAudioItem>(relaxed = true) {
             // immutable properties
             every { id } returns attributes.id
             every { path } returns attributes.path
-            every { duration } returns attributes.duration
-            every { bitRate } returns attributes.bitRate
-            every { encoder } returns attributes.encoder
-            every { encoding } returns attributes.encoding
+            every { duration } returns metadata.duration
+            every { bitRate } returns metadata.bitRate
+            every { encoder } returns metadata.encoder
+            every { encoding } returns metadata.encoding
             every { dateOfCreation } returns attributes.dateOfCreation
             every { lastDateModified } returns attributes.lastDateModified
             every { playCount } returns attributes.playCount
@@ -61,46 +62,47 @@ fun Arb.Companion.fxAudioItem(attributes: AudioItemTestAttributes): Arb<Observab
             every { length } returns path.toFile().length()
 
             // mutable properties
-            every { title } returns attributes.title
-            every { artist } returns attributes.artist
-            every { album } returns attributes.album
-            every { genres } returns attributes.genres
-            every { comments } returns attributes.comments
-            every { trackNumber } returns attributes.trackNumber
-            every { discNumber } returns attributes.discNumber
-            every { bpm } returns attributes.bpm
-            every { coverImageBytes } returns attributes.coverImageBytes
+            every { title } returns metadata.title
+            every { artist } returns metadata.artist
+            every { album } returns metadata.album
+            every { genres } returns metadata.genres
+            every { comments } returns metadata.comments
+            every { trackNumber } returns metadata.trackNumber
+            every { discNumber } returns metadata.discNumber
+            every { bpm } returns metadata.bpm
+            every { coverImageBytes } returns metadata.coverBytes
             every { playCount } returns attributes.playCount
 
             every { this@mockk.dateOfCreationProperty } answers {
                 SimpleObjectProperty(this, "date of creation", attributes.dateOfCreation)
             }
             every { this@mockk.artistProperty } answers {
-                SimpleObjectProperty(this, "artist", attributes.artist)
+                SimpleObjectProperty(this, "artist", metadata.artist)
             }
             every { this@mockk.albumProperty } answers {
-                SimpleObjectProperty(this, "album", attributes.album)
+                SimpleObjectProperty(this, "album", metadata.album)
             }
             every { this@mockk.genresProperty } answers {
-                SimpleObjectProperty(this, "genres", attributes.genres)
+                SimpleObjectProperty(this, "genres", metadata.genres)
             }
             every { this@mockk.commentsProperty } answers {
-                SimpleStringProperty(this, "comments", attributes.comments)
+                SimpleStringProperty(this, "comments", metadata.comments)
             }
             every { this@mockk.trackNumberProperty } answers {
-                SimpleIntegerProperty(this, "track number", attributes.trackNumber!!.toInt())
+                SimpleIntegerProperty(this, "track number", metadata.trackNumber?.toInt() ?: -1)
             }
             every { this@mockk.discNumberProperty } answers {
-                SimpleIntegerProperty(this, "disc number", attributes.discNumber!!.toInt())
+                SimpleIntegerProperty(this, "disc number", metadata.discNumber?.toInt() ?: -1)
             }
             every { this@mockk.bpmProperty } answers {
-                SimpleFloatProperty(this, "bpm", attributes.bpm!!)
+                SimpleFloatProperty(this, "bpm", metadata.bpm ?: -1f)
             }
             every { this@mockk.lastDateModifiedProperty } answers {
                 SimpleObjectProperty(this, "last date modified", attributes.lastDateModified)
             }
             every { this@mockk.coverImageProperty } answers {
-                SimpleObjectProperty(this, "cover image", Optional.of(Image(ByteArrayInputStream(coverImageBytes))))
+                val image = coverImageBytes?.let { Optional.of(Image(ByteArrayInputStream(it))) } ?: Optional.empty()
+                SimpleObjectProperty(this, "cover image", image)
             }
             every { this@mockk.artistsInvolvedProperty } answers {
                 SimpleSetProperty(this, "artists involved", FXCollections.observableSet(this@mockk.artistsInvolved))

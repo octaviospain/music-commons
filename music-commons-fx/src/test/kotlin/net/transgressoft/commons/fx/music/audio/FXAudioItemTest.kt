@@ -1,18 +1,20 @@
 package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
-import net.transgressoft.commons.music.audio.AudioItemManipulationException
+import net.transgressoft.commons.music.audio.AudioItemMetadata
 import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.ImmutableLabel
-import net.transgressoft.commons.music.audio.InvalidAudioFilePathException
-import net.transgressoft.commons.music.audio.WindowsPathException
+import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
 import net.transgressoft.commons.music.audio.audioItemChange
 import net.transgressoft.commons.music.audio.testCoverBytes
 import net.transgressoft.commons.music.audio.update
 import net.transgressoft.commons.music.audio.virtualFiles
-import net.transgressoft.commons.music.common.OsDetector
+import net.transgressoft.commons.util.InvalidAudioFilePathException
+import net.transgressoft.commons.util.OsDetector
+import net.transgressoft.commons.util.WindowsPathException
+import net.transgressoft.lirp.persistence.VolatileRepository
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import com.neovisionaries.i18n.CountryCode
@@ -47,9 +49,9 @@ internal class FXAudioItemTest : StringSpec({
         }
 
     "Changes its properties when observable properties are updated" {
-        val path = files.virtualAudioFile().next()
+        val path = files.virtualAudioFile { coverImageBytes = testCoverBytes }.next()
 
-        val fxAudioItem = FXAudioItem(path)
+        val fxAudioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
         assertSoftly {
             fxAudioItem.titleProperty.value shouldBe fxAudioItem.title
             fxAudioItem.artistProperty.value shouldBe fxAudioItem.artist
@@ -58,7 +60,7 @@ internal class FXAudioItemTest : StringSpec({
             fxAudioItem.commentsProperty.value shouldBe (fxAudioItem.comments ?: "")
             fxAudioItem.trackNumberProperty.value shouldBe (fxAudioItem.trackNumber?.toInt() ?: -1)
             fxAudioItem.discNumberProperty.value shouldBe (fxAudioItem.discNumber?.toInt() ?: -1)
-            fxAudioItem.bpmProperty.value shouldBe (fxAudioItem.bpm ?: 0f)
+            fxAudioItem.bpmProperty.value shouldBe (fxAudioItem.bpm ?: -1f)
             fxAudioItem.coverImageProperty.value shouldBePresent {
                 it.height shouldBe Image(ByteArrayInputStream(fxAudioItem.coverImageBytes)).height
             }
@@ -156,19 +158,26 @@ internal class FXAudioItemTest : StringSpec({
 
     "Creates an audio item, that is serializable to json, and write changes to metadata" {
         val testAudioFile = Arb.realAudioFile().next()
-        val fxAudioItem = FXAudioItem(testAudioFile)
+        val fxAudioItem = FXAudioItemTestBridge.createFxAudioItem(testAudioFile)
 
-        json.encodeToString(ObservableAudioItemSerializer, fxAudioItem).let {
+        json.encodeToString(ObservableAudioItemSerializer(), fxAudioItem).let {
             it.shouldEqualJson(fxAudioItem.asJsonValue())
-            json.decodeFromString<FXAudioItem>(it) shouldBe fxAudioItem
+            // Phase 40-03 semantics: deserialized items arrive with library = null and lazy cover,
+            // so structural equality (which compares coverImageBytes) does NOT hold unless we wire
+            // the back-ref. Comparing via uniqueId and key fields keeps the round-trip contract.
+            val decoded = json.decodeFromString(ObservableAudioItemSerializer(), it) as FXAudioItem
+            decoded.id shouldBe fxAudioItem.id
+            decoded.path shouldBe fxAudioItem.path
+            decoded.title shouldBe fxAudioItem.title
+            decoded.uniqueId shouldBe fxAudioItem.uniqueId
         }
 
         val audioItemChanges = Arb.audioItemChange().next()
         fxAudioItem.update(audioItemChanges)
 
-        fxAudioItem.writeMetadata().join()
+        JAudioTaggerMetadataIO().writeMetadata(fxAudioItem)
 
-        val loadedAudioItem = FXAudioItem(testAudioFile, fxAudioItem.id)
+        val loadedAudioItem = FXAudioItemTestBridge.createFxAudioItem(testAudioFile, fxAudioItem.id)
         assertSoftly {
             loadedAudioItem.id shouldBe fxAudioItem.id
             loadedAudioItem.dateOfCreation shouldBeAfter fxAudioItem.dateOfCreation
@@ -205,24 +214,23 @@ internal class FXAudioItemTest : StringSpec({
         }
     }
 
-    "Returns coverImage after deserialization" {
-        val fxAudioItem = FXAudioItem(Arb.realAudioFile { coverImageBytes = null }.next())
+    "coverImageBytes is null after deserialization (cover travels out of band)" {
+        // Option A semantics (Phase 40-02/03): deserialized items always start with null cover bytes
+        // and library = null; covers are re-loaded by FXAudioLibrary.loadCover(item) once the back-ref
+        // is wired by FXAudioLibrary.add (plan 40-04 formalizes the AudioLibrary interface).
+        val fxAudioItem = FXAudioItemTestBridge.createFxAudioItem(Arb.realAudioFile { coverImageBytes = null }.next())
 
         fxAudioItem.coverImageBytes = testCoverBytes
+        JAudioTaggerMetadataIO().writeMetadata(fxAudioItem)
 
-        fxAudioItem.writeMetadata().join()
+        val encodedAudioItem = json.encodeToString(ObservableAudioItemSerializer(), fxAudioItem)
+        val decodedAudioItem = json.decodeFromString(ObservableAudioItemSerializer(), encodedAudioItem) as FXAudioItem
 
-        val encodedAudioItem = json.encodeToString(ObservableAudioItemSerializer, fxAudioItem)
-        val decodedAudioItem = json.decodeFromString<FXAudioItem>(encodedAudioItem)
-
-        decodedAudioItem.coverImageBytes shouldBe testCoverBytes
-        decodedAudioItem.coverImageProperty.value shouldBePresent {
-            it.height shouldBe Image(ByteArrayInputStream(decodedAudioItem.coverImageBytes)).height
-        }
+        decodedAudioItem.coverImageBytes shouldBe null
     }
 
     "FXAudioItem getter returns defensive copy — mutating returned array does not affect internal state" {
-        val fxAudioItem = FXAudioItem(Arb.realAudioFile().next())
+        val fxAudioItem = FXAudioItemTestBridge.createFxAudioItem(Arb.realAudioFile().next())
         fxAudioItem.coverImageBytes = testCoverBytes
 
         val returned = fxAudioItem.coverImageBytes!!
@@ -233,7 +241,7 @@ internal class FXAudioItemTest : StringSpec({
     }
 
     "FXAudioItem setter stores defensive copy — mutating source array after set does not affect internal state" {
-        val fxAudioItem = FXAudioItem(Arb.realAudioFile().next())
+        val fxAudioItem = FXAudioItemTestBridge.createFxAudioItem(Arb.realAudioFile().next())
         val source = byteArrayOf(1, 2, 3, 4, 5)
         fxAudioItem.coverImageBytes = source
         source[0] = 99.toByte()
@@ -241,43 +249,87 @@ internal class FXAudioItemTest : StringSpec({
         fxAudioItem.coverImageBytes!![0] shouldBe 1.toByte()
     }
 
-    "FXAudioItem throws InvalidAudioFilePathException when file does not exist" {
+    "FXAudioItem.coverImageBytes lazy-loads via metadataIO back-ref on first read and caches result" {
+        // Construct an orphan item via the deserialization constructor (metadataIO starts null,
+        // cover unseeded). Manually wire the metadataIO back-ref to verify the lazy-load path.
+        val path = Arb.realAudioFile().next()
+        val item =
+            FXAudioItem(
+                path,
+                1, AudioItemMetadata(),
+                java.time.LocalDateTime.now(),
+                java.time.LocalDateTime.now(),
+                0
+            )
+
+        // Without metadataIO wired, coverImageBytes returns null even when the file has artwork.
+        item.coverImageBytes shouldBe null
+
+        val metadataIO = JAudioTaggerMetadataIO()
+        val expected = metadataIO.loadCover(item)
+        // Reconstruct a fresh item to model the rehydration path cleanly.
+        val freshItem =
+            FXAudioItem(
+                path,
+                2, AudioItemMetadata(),
+                java.time.LocalDateTime.now(),
+                java.time.LocalDateTime.now(),
+                0
+            )
+        freshItem.metadataIO = metadataIO
+
+        val firstRead = freshItem.coverImageBytes
+        firstRead shouldBe expected
+
+        val secondRead = freshItem.coverImageBytes
+        secondRead shouldBe expected
+    }
+
+    "FXAudioLibrary.createFromFile throws InvalidAudioFilePathException when file does not exist" {
         val nonExistent = Paths.get("/tmp/fx-nonexistent-${System.nanoTime()}.mp3")
-        val ex = shouldThrow<InvalidAudioFilePathException> { FXAudioItem(nonExistent) }
+        val library = FXAudioLibrary(VolatileRepository("FXAudioLibrary"), files.metadataIO)
+        val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(nonExistent) }
         ex.message!! shouldContain "does not exist"
     }
 
-    "FXAudioItem throws InvalidAudioFilePathException when path is a directory" {
+    "FXAudioLibrary.createFromFile throws InvalidAudioFilePathException when path is a directory" {
         val dir = Files.createTempDirectory("fx-dir-test")
         try {
-            val ex = shouldThrow<InvalidAudioFilePathException> { FXAudioItem(dir) }
+            val library = FXAudioLibrary(VolatileRepository("FXAudioLibrary"), files.metadataIO)
+            val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(dir) }
             ex.message!! shouldContain "is not a regular file"
         } finally {
             Files.deleteIfExists(dir)
         }
     }
 
-    "FXAudioItem InvalidAudioFilePathException is catchable as AudioItemManipulationException" {
+    "FXAudioLibrary.createFromFile InvalidAudioFilePathException is catchable" {
         val nonExistent = Paths.get("/tmp/fx-nonexistent-${System.nanoTime()}.mp3")
-        shouldThrow<AudioItemManipulationException> { FXAudioItem(nonExistent) }
+        val library = FXAudioLibrary(VolatileRepository("FXAudioLibrary"), files.metadataIO)
+        shouldThrow<InvalidAudioFilePathException> { library.createFromFile(nonExistent) }
     }
 
-    "FXAudioItem throws WindowsPathException for a path with Windows-forbidden chars when isWindows=true" {
+    "FXAudioItem throws WindowsPathException for a reserved-name path when isWindows=true" {
         OsDetector.withOverriddenIsWindows(true) {
-            val fs = Jimfs.newFileSystem(Configuration.unix())
+            // Jimfs windows configuration: separator is `\` so the validator engages. Unix-style
+            // Jimfs paths bypass validation per the Phase 40 fix (they don't reach Win32 IO).
+            // Jimfs windows rejects most forbidden chars at parse time, so use a reserved name
+            // (which parses fine but the validator still rejects) to exercise the validation path.
+            val fs = Jimfs.newFileSystem(Configuration.windows())
             fs.use { fs ->
-                val forbidden = fs.getPath("/tmp/bad|name.mp3")
-                shouldThrow<WindowsPathException> { FXAudioItem(forbidden) }
+                val forbidden = fs.getPath("C:\\tmp\\NUL.mp3")
+                shouldThrow<WindowsPathException> { FXAudioItem(forbidden, metadata = AudioItemMetadata()) }
             }
         }
     }
 
-    "FXAudioItem pass-through when isWindows=false for a path with Windows-forbidden chars" {
+    "FXAudioLibrary.createFromFile pass-through when isWindows=false for a path with Windows-forbidden chars" {
         OsDetector.withOverriddenIsWindows(false) {
             val fs = Jimfs.newFileSystem(Configuration.unix())
             fs.use { fs ->
                 val forbidden = fs.getPath("/tmp/fx-nonexistent-bad|name-${System.nanoTime()}.mp3")
-                val ex = shouldThrow<InvalidAudioFilePathException> { FXAudioItem(forbidden) }
+                val library = FXAudioLibrary(VolatileRepository("FXAudioLibrary"), files.metadataIO)
+                val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(forbidden) }
                 ex.message!! shouldContain "does not exist"
             }
         }

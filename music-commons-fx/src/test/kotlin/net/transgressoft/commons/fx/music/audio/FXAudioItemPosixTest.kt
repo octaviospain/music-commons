@@ -1,7 +1,8 @@
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.music.audio.InvalidAudioFilePathException
-import net.transgressoft.commons.music.common.OsDetector
+import net.transgressoft.commons.util.InvalidAudioFilePathException
+import net.transgressoft.commons.util.OsDetector
+import net.transgressoft.lirp.persistence.VolatileRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.Condition
 import io.kotest.core.annotation.EnabledIf
@@ -25,7 +26,7 @@ import kotlin.reflect.KClass
 @EnabledIf(IsPosixCondition::class)
 internal class FXAudioItemPosixTest : StringSpec({
 
-    "FXAudioItem throws InvalidAudioFilePathException when file is not readable" {
+    "FXAudioLibrary.createFromFile throws InvalidAudioFilePathException when file is not readable" {
         val tempFile = Files.createTempFile("unreadable-fx", ".mp3")
         try {
             // setReadable(false) is a no-op when running as root (POSIX permissions are bypassed),
@@ -35,7 +36,8 @@ internal class FXAudioItemPosixTest : StringSpec({
             if (!flipped || Files.isReadable(tempFile)) {
                 throw TestAbortedException("Cannot demote read permission on this filesystem (root or unsupported FS)")
             }
-            val ex = shouldThrow<InvalidAudioFilePathException> { FXAudioItem(tempFile) }
+            val library = FXAudioLibrary(VolatileRepository("FXAudioLibrary"))
+            val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(tempFile) }
             ex.message shouldContain "is not readable"
         } finally {
             tempFile.toFile().setReadable(true)

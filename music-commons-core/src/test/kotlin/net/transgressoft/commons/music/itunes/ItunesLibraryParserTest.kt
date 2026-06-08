@@ -1,8 +1,8 @@
 package net.transgressoft.commons.music.itunes
 
-import net.transgressoft.commons.music.audio.InvalidAudioFilePathException
-import net.transgressoft.commons.music.audio.WindowsPathException
-import net.transgressoft.commons.music.common.OsDetector
+import net.transgressoft.commons.util.InvalidAudioFilePathException
+import net.transgressoft.commons.util.OsDetector
+import net.transgressoft.commons.util.WindowsPathException
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import io.kotest.assertions.throwables.shouldThrow
@@ -125,8 +125,9 @@ internal class ItunesLibraryParserTest : StringSpec({
 
     "ItunesLibraryParser.parse throws WindowsPathException for a Windows-invalid xmlPath when isWindows=true" {
         OsDetector.withOverriddenIsWindows(true) {
-            Jimfs.newFileSystem(Configuration.unix()).use { fs ->
-                val forbidden = fs.getPath("/tmp/bad|name.xml")
+            Jimfs.newFileSystem(Configuration.windows()).use { fs ->
+                // Jimfs windows rejects forbidden chars at parse, so use a reserved name.
+                val forbidden = fs.getPath("C:\\tmp\\NUL.xml")
                 shouldThrow<WindowsPathException> { ItunesLibraryParser.parse(forbidden) }
             }
         }

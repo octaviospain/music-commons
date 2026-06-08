@@ -4,6 +4,7 @@ import net.transgressoft.commons.fx.music.FXMusicLibrary
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.fx.music.player.FXAudioItemPlayer
 import net.transgressoft.commons.media.waveform.ScalableAudioWaveform
+import net.transgressoft.commons.music.audio.AudioFileType
 import net.transgressoft.commons.music.player.AudioItemPlayer
 import javafx.application.Application
 import javafx.collections.FXCollections
@@ -14,6 +15,7 @@ import javafx.scene.control.Label
 import javafx.scene.control.Slider
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.HBox
+import javafx.stage.FileChooser
 import javafx.stage.Stage
 import java.nio.file.Files
 import java.nio.file.Path
@@ -42,7 +44,7 @@ class PlayableWaveformPaneDemo : Application() {
     override fun start(primaryStage: Stage) {
         playableWaveformPane = PlayableWaveformPane()
         val borderPane = BorderPane(playableWaveformPane)
-        borderPane.setPrefSize(700.0, 300.0)
+        borderPane.setPrefSize(900.0, 300.0)
 
         statusLabel = Label("Select a fixture to load")
 
@@ -73,7 +75,30 @@ class PlayableWaveformPaneDemo : Application() {
                 }
             }
 
-        val controls = HBox(10.0, Label("Fixture:"), formatSelector, playPauseButton, stopButton, Label("Vol:"), volumeSlider, statusLabel)
+        val browseButton =
+            Button("Browse...").apply {
+                setOnAction {
+                    try {
+                        val chooser = FileChooser()
+                        chooser.title = "Select Audio File"
+                        val extList = AudioFileType.extensions.map { "*.$it" }
+                        chooser.extensionFilters.add(
+                            FileChooser.ExtensionFilter("Audio Files", *extList.toTypedArray())
+                        )
+                        val file = chooser.showOpenDialog(primaryStage) ?: return@setOnAction
+                        stopPlayback()
+                        currentAudioItem = library.audioItemFromFile(file.toPath())
+                        playableWaveformPane.loadWaveform(ScalableAudioWaveform(1, file.toPath()))
+                        statusLabel.text = "Loaded: ${file.name}"
+                    } catch (e: Exception) {
+                        statusLabel.text = "Error loading file: ${e.message}"
+                        currentAudioItem = null
+                        e.printStackTrace()
+                    }
+                }
+            }
+
+        val controls = HBox(10.0, Label("Fixture:"), formatSelector, browseButton, playPauseButton, stopButton, Label("Vol:"), volumeSlider, statusLabel)
         borderPane.bottom = controls
 
         player.currentTimeProperty.addListener { _, _, newTime ->

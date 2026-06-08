@@ -1,7 +1,5 @@
-package net.transgressoft.commons.music.common
+package net.transgressoft.commons.util
 
-import net.transgressoft.commons.music.audio.WindowsPathException
-import net.transgressoft.commons.music.audio.WindowsViolation
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import io.kotest.assertions.throwables.shouldThrow
@@ -10,7 +8,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 
-class WindowsPathValidatorTest : StringSpec({
+internal class WindowsPathValidatorTest : StringSpec({
     isolationMode = IsolationMode.SingleInstance
 
     "WindowsPathValidator.validatePath is a no-op on Linux (isWindows=false)" {

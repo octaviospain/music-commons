@@ -1,17 +1,20 @@
 package net.transgressoft.commons.music
 
-import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
+import net.transgressoft.commons.media.waveform.AudioWaveformMapSerializer
 import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.AudioItemMapSerializer
 import net.transgressoft.commons.music.audio.AudioLibrary
 import net.transgressoft.commons.music.audio.ImmutableAlbum
 import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.virtualFiles
-import net.transgressoft.commons.music.common.toJsonUri
+import net.transgressoft.commons.music.playlist.AudioPlaylistMapSerializer
 import net.transgressoft.commons.music.playlist.PlaylistHierarchy
 import net.transgressoft.commons.music.playlist.asJsonKeyValues
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
+import net.transgressoft.commons.util.toJsonUri
+import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import io.kotest.assertions.json.shouldContainJsonKeyValue
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.core.spec.style.StringSpec
@@ -21,7 +24,6 @@ import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
-import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import java.io.File
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -50,9 +52,10 @@ internal class MusicLibraryIntegrationTest : StringSpec({
 
         musicLibrary =
             CoreMusicLibrary.builder()
-                .audioLibraryJsonFile(audioFile)
-                .playlistHierarchyJsonFile(playlistsFile)
-                .waveformRepositoryJsonFile(waveformsFile)
+                .metadataIO(files.metadataIO)
+                .audioRepository(JsonFileRepository(audioFile, AudioItemMapSerializer))
+                .playlistRepository(JsonFileRepository(playlistsFile, AudioPlaylistMapSerializer))
+                .waveformRepository(JsonFileRepository(waveformsFile, AudioWaveformMapSerializer))
                 .build()
         audioLibrary = musicLibrary.audioLibrary()
         playlistHierarchy = musicLibrary.playlistHierarchy()
@@ -64,7 +67,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     }
 
     "Operations on audio items impact subscribed repositories" {
-        val audioItem = audioLibrary.createFromFile(Arb.realAudioFile().next())
+        val audioItem = audioLibrary.createFromFile(files.virtualAudioFile().next())
 
         reactive.advance()
 
@@ -218,8 +221,8 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     }
 
     "Persistence round-trip — create items, close repositories, reopen from same JSON files, verify full state restoration" {
-        val item1 = audioLibrary.createFromFile(Arb.realAudioFile().next())
-        val item2 = audioLibrary.createFromFile(Arb.realAudioFile().next())
+        val item1 = audioLibrary.createFromFile(files.virtualAudioFile().next())
+        val item2 = audioLibrary.createFromFile(files.virtualAudioFile().next())
 
         reactive.advance()
 
@@ -237,9 +240,9 @@ internal class MusicLibraryIntegrationTest : StringSpec({
 
         val restoredLibrary =
             CoreMusicLibrary.builder()
-                .audioLibraryJsonFile(audioFile)
-                .playlistHierarchyJsonFile(playlistsFile)
-                .waveformRepositoryJsonFile(waveformsFile)
+                .audioRepository(JsonFileRepository(audioFile, AudioItemMapSerializer))
+                .playlistRepository(JsonFileRepository(playlistsFile, AudioPlaylistMapSerializer))
+                .waveformRepository(JsonFileRepository(waveformsFile, AudioWaveformMapSerializer))
                 .build()
         reactive.advance()
 

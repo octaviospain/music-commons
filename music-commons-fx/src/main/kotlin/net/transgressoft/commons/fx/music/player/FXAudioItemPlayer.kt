@@ -20,6 +20,7 @@ package net.transgressoft.commons.fx.music.player
 import net.transgressoft.commons.media.player.CoreAudioItemPlayer
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.player.AudioItemPlayer
+import net.transgressoft.commons.music.player.UnsupportedAudioPlaybackException
 import javafx.animation.AnimationTimer
 import javafx.application.Platform
 import javafx.beans.property.DoubleProperty
@@ -73,6 +74,7 @@ class FXAudioItemPlayer(
     val statusProperty: ReadOnlyObjectProperty<AudioItemPlayer.Status> = _statusProperty
     val currentTimeProperty: ReadOnlyObjectProperty<FxDuration> = _currentTimeProperty
 
+    @Throws(UnsupportedAudioPlaybackException::class)
     override fun play(audioItem: ReactiveAudioItem<*>) {
         corePlayer.play(audioItem)
         syncStatus()

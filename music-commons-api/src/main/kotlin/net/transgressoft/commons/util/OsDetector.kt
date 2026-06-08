@@ -15,37 +15,36 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.music.audio
+package net.transgressoft.commons.util
 
 /**
- * Exception thrown when a path or name violates Windows filename constraints.
+ * Provides a testable seam for OS detection, enabling Windows-specific validation
+ * paths to be exercised on Linux CI by overriding [isWindows] via [withOverriddenIsWindows].
  *
- * Carries the [offendingName] and a specific [violation] describing the Windows rule
- * that was broken, enabling precise diagnostic messages. Only thrown when the JVM is
- * running on a Windows host; pass-through on Linux/macOS.
+ * Tests using the override helper must run sequentially (not in parallel Kotest contexts)
+ * because the override is stored in a single volatile field.
  */
-class WindowsPathException(
-    val offendingName: String,
-    val violation: WindowsViolation
-) : InvalidAudioFilePathException("Windows filename violation for '$offendingName': $violation")
+object OsDetector {
 
-/**
- * Categorizes Windows filename constraint violations.
- */
-sealed class WindowsViolation {
-    data class ForbiddenChar(val char: Char) : WindowsViolation() {
-        override fun toString() = "forbidden character '$char'"
-    }
+    @Volatile
+    @PublishedApi
+    internal var overrideIsWindows: Boolean? = null
 
-    data class ReservedName(val name: String) : WindowsViolation() {
-        override fun toString() = "reserved name '$name'"
-    }
+    val isWindows: Boolean
+        get() = overrideIsWindows ?: System.getProperty("os.name").lowercase().contains("windows")
 
-    data object TrailingDotOrSpace : WindowsViolation() {
-        override fun toString() = "trailing dot or space"
-    }
-
-    data object ExceedsMaxPath : WindowsViolation() {
-        override fun toString() = "exceeds Windows MAX_PATH (260 characters)"
+    /**
+     * Executes [block] with [isWindows] temporarily overridden to [value], returning whatever
+     * [block] returns. Restores the previous override (or `null` for native detection) in a
+     * `finally` block so nested calls do not silently lose the outer override.
+     */
+    inline fun <R> withOverriddenIsWindows(value: Boolean, block: () -> R): R {
+        val previous = overrideIsWindows
+        overrideIsWindows = value
+        return try {
+            block()
+        } finally {
+            overrideIsWindows = previous
+        }
     }
 }

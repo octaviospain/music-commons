@@ -1,12 +1,12 @@
 /******************************************************************************
- * Copyright (C) 2026  Octavio Calleya Garcia                                 *
+ * Copyright (C) 2025  Octavio Calleya Garcia                                 *
  *                                                                            *
  * This program is free software: you can redistribute it and/or modify       *
  * it under the terms of the GNU General Public License as published by       *
  * the Free Software Foundation, either version 3 of the License, or          *
  * (at your option) any later version.                                        *
  *                                                                            *
- * This program is distributed in the hope that it will be useful,             *
+ * This program is distributed in the hope that it will be useful,            *
  * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
  * GNU General Public License for more details.                               *
@@ -15,26 +15,36 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.music.common
+package net.transgressoft.commons.util
 
-import java.util.AbstractMap.SimpleImmutableEntry
+import java.util.AbstractMap
 import java.util.TreeMap
 import java.util.TreeSet
 
 /**
  * Small sorted multimap for internal relationships that need deterministic key and value traversal.
+ *
+ * Backed by a [TreeMap] of [TreeSet] guarded by `@Synchronized` to provide atomic snapshots
+ * to readers (`get`, `entries`, `containsValue`) while concurrent writers mutate the structure.
+ * A concurrent alternative (e.g. `ConcurrentSkipListMap`) would lose this snapshot guarantee
+ * and reintroduce the partial-state visibility that motivated locking here in the first place.
+ * Contention is low in practice since the only caller — playlist hierarchy bookkeeping —
+ * touches the map at most once per playlist mutation, not per audio item.
  */
 internal class SortedMultimap<K : Comparable<K>, V : Comparable<V>> {
 
     private val valuesByKey = TreeMap<K, TreeSet<V>>()
 
-    operator fun get(key: K): Set<V> = valuesByKey[key] ?: emptySet()
+    @Synchronized
+    operator fun get(key: K): Set<V> = valuesByKey[key]?.toCollection(LinkedHashSet()) ?: emptySet()
 
+    @Synchronized
     fun put(
         key: K,
         value: V
     ): Boolean = valuesByKey.getOrPut(key) { TreeSet() }.add(value)
 
+    @Synchronized
     fun putAll(
         key: K,
         values: Iterable<V>
@@ -46,6 +56,7 @@ internal class SortedMultimap<K : Comparable<K>, V : Comparable<V>> {
         return changed
     }
 
+    @Synchronized
     fun remove(
         key: K,
         value: V
@@ -58,12 +69,15 @@ internal class SortedMultimap<K : Comparable<K>, V : Comparable<V>> {
         }
     }
 
-    fun removeAll(key: K): Set<V> = valuesByKey.remove(key) ?: emptySet()
+    @Synchronized
+    fun removeAll(key: K): Set<V> = valuesByKey.remove(key)?.toCollection(LinkedHashSet()) ?: emptySet()
 
+    @Synchronized
     fun containsValue(value: Any?): Boolean = valuesByKey.values.any { value in it }
 
+    @Synchronized
     fun entries(): Set<Map.Entry<K, V>> =
         valuesByKey.flatMapTo(LinkedHashSet()) { (key, values) ->
-            values.map { value -> SimpleImmutableEntry(key, value) }
+            values.map { value -> AbstractMap.SimpleImmutableEntry(key, value) }
         }
 }

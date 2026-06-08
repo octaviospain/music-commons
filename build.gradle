@@ -11,6 +11,7 @@ plugins {
     id 'org.jlleitschuh.gradle.ktlint'
     id 'org.sonarqube'
     id 'pl.allegro.tech.build.axion-release'
+    id 'org.cyclonedx.bom' version '3.2.4'
 }
 
 repositories {
@@ -84,6 +85,11 @@ allprojects {
     repositories {
         mavenCentral()
         maven { url = 'https://jitpack.io' }
+    }
+
+    tasks.cyclonedxDirectBom {
+        includeConfigs = ['runtimeClasspath']
+        skipConfigs = ['compileClasspath', 'testCompileClasspath', 'testRuntimeClasspath']
     }
 }
 
@@ -166,7 +172,7 @@ subprojects {
     tasks.withType(Test).configureEach {
         useJUnitPlatform()
         jvmArgs '-XX:+EnableDynamicAgentLoading'
-        maxHeapSize = '1g'
+        maxHeapSize = '2g'
         testLogging {
             events 'passed', 'skipped', 'failed'
         }

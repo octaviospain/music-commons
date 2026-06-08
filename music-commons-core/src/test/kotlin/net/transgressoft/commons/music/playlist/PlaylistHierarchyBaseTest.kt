@@ -53,7 +53,7 @@ internal class PlaylistHierarchyBaseTest : StringSpec({
         val audioLibraryRepository = VolatileRepository<Int, AudioItem>("SyncTest")
         deregisterRepository(AudioItem::class.java)
         registerRepository(AudioItem::class.java, audioLibraryRepository)
-        val audioLibrary = TestAudioLibrary(audioLibraryRepository)
+        val audioLibrary = TestAudioLibrary(audioLibraryRepository, files.metadataIO)
         audioLibrary.subscribe(playlistHierarchy)
 
         val audioItem = audioLibrary.createFromFile(files.virtualAudioFile().next())
@@ -102,7 +102,7 @@ internal class PlaylistHierarchyBaseTest : StringSpec({
         val audioLibraryRepository = VolatileRepository<Int, AudioItem>("CloseTest")
         deregisterRepository(AudioItem::class.java)
         registerRepository(AudioItem::class.java, audioLibraryRepository)
-        val audioLibrary = TestAudioLibrary(audioLibraryRepository)
+        val audioLibrary = TestAudioLibrary(audioLibraryRepository, files.metadataIO)
         audioLibrary.subscribe(playlistHierarchy)
 
         val audioItem = audioLibrary.createFromFile(files.virtualAudioFile().next())

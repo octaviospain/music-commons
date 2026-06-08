@@ -10,9 +10,13 @@ import java.nio.file.Path
  * enabling isolated unit testing of the base class reactive catalog management.
  */
 internal class TestAudioLibrary(
-    repository: Repository<Int, AudioItem>
-) : AudioLibraryBase<AudioItem, ArtistCatalog<AudioItem>>(repository, DefaultArtistCatalogRegistry()) {
+    repository: Repository<Int, AudioItem>,
+    metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO()
+) : AudioLibraryBase<AudioItem, ArtistCatalog<AudioItem>>(repository, DefaultArtistCatalogRegistry(), metadataIO) {
 
-    override fun createFromFile(audioItemPath: Path): AudioItem =
-        MutableAudioItem(audioItemPath, newId()).also { add(it) }
+    override fun createFromFile(audioItemPath: Path): AudioItem {
+        val tag = metadataIO.readMetadata(audioItemPath)
+        val cover = metadataIO.loadCover(audioItemPath)
+        return MutableAudioItem(audioItemPath, newId(), tag.copy(coverBytes = cover)).also { add(it) }
+    }
 }

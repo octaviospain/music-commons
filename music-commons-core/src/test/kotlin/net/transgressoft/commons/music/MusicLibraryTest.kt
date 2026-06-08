@@ -1,10 +1,14 @@
 package net.transgressoft.commons.music
 
-import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
-import net.transgressoft.commons.music.audio.WindowsPathException
+import net.transgressoft.commons.media.waveform.AudioWaveformMapSerializer
+import net.transgressoft.commons.music.audio.AudioItemMapSerializer
+import net.transgressoft.commons.music.audio.AudioItemSerializer
 import net.transgressoft.commons.music.audio.virtualFiles
-import net.transgressoft.commons.music.common.OsDetector
+import net.transgressoft.commons.music.playlist.AudioPlaylistMapSerializer
 import net.transgressoft.commons.music.testing.reactiveScope
+import net.transgressoft.commons.util.OsDetector
+import net.transgressoft.commons.util.WindowsPathException
+import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import io.kotest.assertions.throwables.shouldThrow
@@ -13,9 +17,10 @@ import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 
 @ExperimentalCoroutinesApi
 internal class MusicLibraryTest : StringSpec({
@@ -40,12 +45,13 @@ internal class MusicLibraryTest : StringSpec({
 
         val library =
             CoreMusicLibrary.builder()
-                .audioLibraryJsonFile(audioFile)
-                .playlistHierarchyJsonFile(playlistsFile)
-                .waveformRepositoryJsonFile(waveformsFile)
+                .metadataIO(files.metadataIO)
+                .audioRepository(JsonFileRepository(audioFile, MapSerializer(Int.serializer(), AudioItemSerializer(files.fileSystem))))
+                .playlistRepository(JsonFileRepository(playlistsFile, AudioPlaylistMapSerializer))
+                .waveformRepository(JsonFileRepository(waveformsFile, AudioWaveformMapSerializer))
                 .build()
 
-        val audioItem = library.audioItemFromFile(Arb.realAudioFile().next())
+        val audioItem = library.audioItemFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         library.createPlaylist("Test Playlist")
@@ -57,7 +63,7 @@ internal class MusicLibraryTest : StringSpec({
     }
 
     "MusicLibrary curated methods delegate to components" {
-        val library = CoreMusicLibrary.builder().build()
+        val library = CoreMusicLibrary.builder().metadataIO(files.metadataIO).build()
 
         val audioItem = library.audioItemFromFile(files.virtualAudioFile().next())
         reactive.advance()
@@ -72,7 +78,7 @@ internal class MusicLibraryTest : StringSpec({
     }
 
     "MusicLibrary close disposes all components" {
-        val library = CoreMusicLibrary.builder().build()
+        val library = CoreMusicLibrary.builder().metadataIO(files.metadataIO).build()
 
         val audioItem = library.audioItemFromFile(files.virtualAudioFile().next())
         reactive.advance()
@@ -101,13 +107,14 @@ internal class MusicLibraryTest : StringSpec({
 
         val library =
             CoreMusicLibrary.builder()
-                .audioLibraryJsonFile(audioFile)
-                .playlistHierarchyJsonFile(playlistsFile)
-                .waveformRepositoryJsonFile(waveformsFile)
+                .metadataIO(files.metadataIO)
+                .audioRepository(JsonFileRepository(audioFile, AudioItemMapSerializer))
+                .playlistRepository(JsonFileRepository(playlistsFile, AudioPlaylistMapSerializer))
+                .waveformRepository(JsonFileRepository(waveformsFile, AudioWaveformMapSerializer))
                 .build()
 
-        val item1 = library.audioItemFromFile(Arb.realAudioFile().next())
-        val item2 = library.audioItemFromFile(Arb.realAudioFile().next())
+        val item1 = library.audioItemFromFile(files.virtualAudioFile().next())
+        val item2 = library.audioItemFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
         val playlist = library.createPlaylist("Round Trip Playlist")
@@ -123,9 +130,10 @@ internal class MusicLibraryTest : StringSpec({
 
         val restoredLibrary =
             CoreMusicLibrary.builder()
-                .audioLibraryJsonFile(audioFile)
-                .playlistHierarchyJsonFile(playlistsFile)
-                .waveformRepositoryJsonFile(waveformsFile)
+                .metadataIO(files.metadataIO)
+                .audioRepository(JsonFileRepository(audioFile, AudioItemMapSerializer))
+                .playlistRepository(JsonFileRepository(playlistsFile, AudioPlaylistMapSerializer))
+                .waveformRepository(JsonFileRepository(waveformsFile, AudioWaveformMapSerializer))
                 .build()
         reactive.advance()
 
@@ -143,8 +151,12 @@ internal class MusicLibraryTest : StringSpec({
     "MusicLibrary.audioItemFromFile throws WindowsPathException before delegating when isWindows=true" {
         OsDetector.withOverriddenIsWindows(true) {
             CoreMusicLibrary.builder().build().use { library ->
-                Jimfs.newFileSystem(Configuration.unix()).use { fs ->
-                    val forbidden = fs.getPath("/tmp/bad|name.mp3")
+                // Jimfs windows configuration so the path's filesystem separator is `\` and the
+                // validator engages. Jimfs unix paths bypass validation per the Phase 40 fix that
+                // skips the validator for non-Windows-style filesystems.
+                Jimfs.newFileSystem(Configuration.windows()).use { fs ->
+                    // Jimfs windows rejects forbidden chars at parse, so use a reserved name.
+                    val forbidden = fs.getPath("C:\\tmp\\NUL.mp3")
                     shouldThrow<WindowsPathException> { library.audioItemFromFile(forbidden) }
                 }
             }
