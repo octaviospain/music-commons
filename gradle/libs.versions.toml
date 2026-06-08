@@ -2,7 +2,7 @@
 kotlin = "2.4.0"
 coroutines = "1.11.0"
 kotest = "6.1.11"
-lirp = "2.4.2"
+lirp = "2.5.0"
 ksp = "2.3.9"
 jaudiotagger = "3.0.1"
 nv-i18n = "1.29"
