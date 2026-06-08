@@ -83,29 +83,17 @@ internal class MutableAudioItem
             WindowsPathValidator.validatePath(path)
         }
 
-        private var _bitRate: Int = metadata.bitRate
+        @Serializable
+        override val bitRate: Int = metadata.bitRate
 
         @Serializable
-        override val bitRate: Int
-            get() = _bitRate
-
-        private var _duration: Duration = metadata.duration
+        override val duration: Duration = metadata.duration
 
         @Serializable
-        override val duration: Duration
-            get() = _duration
-
-        private var _encoder: String? = metadata.encoder?.takeIf { it.isNotEmpty() }
+        override val encoder: String? = metadata.encoder?.takeIf { it.isNotEmpty() }
 
         @Serializable
-        override val encoder: String?
-            get() = _encoder
-
-        private var _encoding: String? = metadata.encoding?.takeIf { it.isNotEmpty() }
-
-        @Serializable
-        override val encoding: String?
-            get() = _encoding
+        override val encoding: String? = metadata.encoding?.takeIf { it.isNotEmpty() }
 
         private var _dateOfCreation: LocalDateTime = LocalDateTime.now()
 

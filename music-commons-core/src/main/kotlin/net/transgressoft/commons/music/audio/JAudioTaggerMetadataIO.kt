@@ -21,7 +21,6 @@ import net.transgressoft.commons.music.audio.AudioFileType.FLAC
 import net.transgressoft.commons.music.audio.AudioFileType.MP3
 import net.transgressoft.commons.music.audio.AudioFileType.WAV
 import com.neovisionaries.i18n.CountryCode
-import mu.KLogger
 import mu.KotlinLogging
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.audio.exceptions.CannotReadException
@@ -124,8 +123,7 @@ class JAudioTaggerMetadataIO : AudioMetadataIO {
                 bpm = item.bpm,
                 encoder = item.encoder,
                 coverImageBytes = item.coverImageBytes,
-                fileName = item.fileName,
-                logger = logger
+                fileName = item.fileName
             )
         val audioFile = AudioFileIO.read(item.path.toFile())
         audioFile.tag = tag
@@ -207,8 +205,7 @@ class JAudioTaggerMetadataIO : AudioMetadataIO {
         bpm: Float?,
         encoder: String?,
         coverImageBytes: ByteArray?,
-        fileName: String,
-        logger: KLogger
+        fileName: String
     ): Tag =
         when {
             format.startsWith(WAV.extension, ignoreCase = true) -> {
@@ -240,7 +237,7 @@ class JAudioTaggerMetadataIO : AudioMetadataIO {
                 WavInfoTag()
             }
         }.also {
-            setTrackFieldsToTag(it, title, album, artist, genres, comments, trackNumber, discNumber, bpm, encoder, coverImageBytes, fileName, logger)
+            setTrackFieldsToTag(it, title, album, artist, genres, comments, trackNumber, discNumber, bpm, encoder, coverImageBytes, fileName)
         }
 
     @SuppressWarnings("kotlin:S107")
@@ -256,8 +253,7 @@ class JAudioTaggerMetadataIO : AudioMetadataIO {
         bpm: Float?,
         encoder: String?,
         coverImageBytes: ByteArray?,
-        fileName: String,
-        logger: KLogger
+        fileName: String
     ) {
         tag.setField(FieldKey.TITLE, title)
         tag.setField(FieldKey.ALBUM, album.name)
@@ -287,11 +283,11 @@ class JAudioTaggerMetadataIO : AudioMetadataIO {
         }
         coverImageBytes?.let {
             tag.deleteArtworkField()
-            tag.addField(createArtwork(it, fileName, logger))
+            tag.addField(createArtwork(it, fileName))
         }
     }
 
-    private fun createArtwork(coverBytes: ByteArray, fileName: String, logger: KLogger): Artwork {
+    private fun createArtwork(coverBytes: ByteArray, fileName: String): Artwork {
         var tempCover: Path? = null
         try {
             tempCover = Files.createTempFile("tempCover_$fileName", ".tmp")
