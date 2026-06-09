@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ * Copyright (C) 2026  Octavio Calleya Garcia                                 *
  *                                                                            *
  * This program is free software: you can redistribute it and/or modify       *
  * it under the terms of the GNU General Public License as published by       *
@@ -17,21 +17,24 @@
 
 package net.transgressoft.commons.music.audio
 
-fun <I : ReactiveAudioItem<I>> I.update(change: AudioItemChange) {
-    change.title?.let { title = it }
-    change.artist?.let { artist = it }
-    album =
-        Album(
-            change.albumName ?: album.name,
-            change.albumArtist ?: album.albumArtist,
-            change.isCompilation ?: album.isCompilation,
-            change.year?.takeIf { year -> year > 0 } ?: album.year,
-            change.label ?: album.label
-        )
-    change.genres?.let { genres = it }
-    change.comments?.let { comments = it }
-    change.trackNumber?.takeIf { it > 0 }?.let { trackNumber = it }
-    change.discNumber?.takeIf { it > 0 }?.let { discNumber = it }
-    change.bpm?.takeIf { it > 0 }?.let { bpm = it }
-    change.coverImageBytes?.let { coverImageBytes = it }
+import net.transgressoft.lirp.persistence.ColumnConverter
+import net.transgressoft.lirp.persistence.ColumnType
+import com.neovisionaries.i18n.CountryCode
+
+/**
+ * Maps [CountryCode] values to alpha-2 strings for SQL persistence.
+ *
+ * [CountryCode.UNDEFINED] serializes as `"UNDEFINED"` — the ISO 3166-1 alpha-2 lookup
+ * (`getByCode`) returns null for this sentinel value, so the fallback `valueOf` (enum constant
+ * name lookup) is used to reconstruct it during deserialization.
+ */
+object CountryConverter : ColumnConverter<CountryCode, String> {
+
+    override val sqlType = ColumnType.TextType
+
+    override fun toSql(value: CountryCode): String = value.getAlpha2()
+
+    // CountryCode.getByCode("UNDEFINED") returns null because "UNDEFINED" is not a valid
+    // ISO alpha-2 code; valueOf falls back to enum constant name lookup which always works.
+    override fun fromSql(raw: String): CountryCode = CountryCode.getByCode(raw) ?: CountryCode.valueOf(raw)
 }

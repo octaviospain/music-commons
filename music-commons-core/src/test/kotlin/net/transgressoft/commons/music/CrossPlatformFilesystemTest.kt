@@ -17,11 +17,11 @@
 
 package net.transgressoft.commons.music
 
+import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemSerializer
-import net.transgressoft.commons.music.audio.ImmutableAlbum
-import net.transgressoft.commons.music.audio.ImmutableArtist
-import net.transgressoft.commons.music.audio.ImmutableLabel
+import net.transgressoft.commons.music.audio.Label
 import net.transgressoft.commons.music.audio.MutableAudioItemTestBridge
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.playlist.AudioPlaylistMapSerializer
@@ -73,9 +73,9 @@ internal class CrossPlatformFilesystemTest : StringSpec({
     // ASCII-only fixtures keep osx NFD normalization transparent — osx Jimfs decomposes
     // Unicode combining characters on path creation, which would make decoded.path.toString()
     // differ from original.path.toString() if the test data contained precomposed characters.
-    val asciiArtist = ImmutableArtist.of("Round Trip Artist", CountryCode.US)
-    val asciiLabel = ImmutableLabel.of("Round Trip Label")
-    val asciiAlbum = ImmutableAlbum("Round Trip Album", asciiArtist, false, 2020.toShort(), asciiLabel)
+    val asciiArtist = Artist.of("Round Trip Artist", CountryCode.US)
+    val asciiLabel = Label.of("Round Trip Label")
+    val asciiAlbum = Album("Round Trip Album", asciiArtist, false, 2020.toShort(), asciiLabel)
 
     // Stable per-label id offsets — String.hashCode() is JVM-specified for String, but
     // an explicit map is more obvious and immune to silent collisions if labels change.

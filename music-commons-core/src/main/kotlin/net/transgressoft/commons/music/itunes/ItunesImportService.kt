@@ -6,10 +6,8 @@ import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioFileType
 import net.transgressoft.commons.music.audio.AudioMetadataIO
 import net.transgressoft.commons.music.audio.Genre
-import net.transgressoft.commons.music.audio.ImmutableAlbum
-import net.transgressoft.commons.music.audio.ImmutableArtist
-import net.transgressoft.commons.music.audio.ImmutableLabel
 import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
+import net.transgressoft.commons.music.audio.Label
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.playlist.ReactiveAudioPlaylist
 import net.transgressoft.commons.util.WindowsPathException
@@ -218,15 +216,15 @@ class ItunesImportService<I, P>
     }
 
     private fun resolveItunesMetadata(track: ItunesTrack): ItunesMetadata {
-        val artist = ImmutableArtist.of(track.artist)
-        val albumArtist = ImmutableArtist.of(track.albumArtist)
+        val artist = Artist.of(track.artist)
+        val albumArtist = Artist.of(track.albumArtist)
         val album =
-            ImmutableAlbum(
+            Album(
                 name = track.album,
                 albumArtist = albumArtist,
                 isCompilation = track.isCompilation,
                 year = track.year,
-                label = ImmutableLabel.UNKNOWN
+                label = Label.UNKNOWN
             )
         val genres = track.genre?.let { Genre.parseGenre(it) } ?: emptySet()
         return ItunesMetadata(artist, album, genres)

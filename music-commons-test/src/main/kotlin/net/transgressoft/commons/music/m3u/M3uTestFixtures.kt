@@ -17,11 +17,11 @@
 
 package net.transgressoft.commons.music.m3u
 
+import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioFileTagType
 import net.transgressoft.commons.music.audio.AudioFileType
 import net.transgressoft.commons.music.audio.AudioItemTestAttributes
-import net.transgressoft.commons.music.audio.ImmutableAlbum
-import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.VirtualFiles
 import net.transgressoft.commons.music.audio.audioAttributes
 import io.kotest.property.arbitrary.next
@@ -159,11 +159,11 @@ object M3uTestFixtures {
         val tagType: AudioFileTagType
     ) {
         fun toAttributes(): AudioItemTestAttributes {
-            val artistEntity = ImmutableArtist.of(artist)
-            val albumArtistEntity = ImmutableArtist.of(albumArtist)
+            val artistEntity = Artist.of(artist)
+            val albumArtistEntity = Artist.of(albumArtist)
             return io.kotest.property.Arb.audioAttributes(
                 artist = artistEntity,
-                album = ImmutableAlbum(album, albumArtistEntity),
+                album = Album(album, albumArtistEntity),
                 title = title,
                 trackNumber = trackNumber
             ).next()

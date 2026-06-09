@@ -77,8 +77,8 @@ internal class AudioLibraryBaseTest : StringSpec({
     }
 
     "AudioLibraryBase findAlbumAudioItems returns items by artist and album" {
-        val theBeatles = ImmutableArtist.of("The Beatles")
-        val abbeyRoad = ImmutableAlbum("Abbey Road", theBeatles)
+        val theBeatles = Artist.of("The Beatles")
+        val abbeyRoad = Album("Abbey Road", theBeatles)
 
         val file1 =
             files.virtualAudioFile {

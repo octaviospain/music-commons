@@ -2,9 +2,9 @@ package net.transgressoft.commons.music.itunes
 
 import net.transgressoft.commons.music.CoreMusicLibrary
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile
+import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioFileType
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.commons.util.OsDetector
@@ -123,7 +123,7 @@ internal class ItunesImportServiceTest : StringSpec({
         item.album.name shouldBe "iTunes Album Override"
         musicLibrary
             .audioLibrary()
-            .getArtistCatalog(ImmutableArtist.of("iTunes Artist Override"))
+            .getArtistCatalog(Artist.of("iTunes Artist Override"))
             .shouldBePresent { catalog ->
                 catalog.albums.map { it.albumName } shouldContain "iTunes Album Override"
             }

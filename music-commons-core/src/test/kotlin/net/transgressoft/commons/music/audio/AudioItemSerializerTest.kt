@@ -41,9 +41,9 @@ internal class AudioItemSerializerTest : StringSpec({
         MutableAudioItemTestBridge.createAudioItem(path, id, files.metadataIO)
 
     "AudioItemSerializer encodes golden JSON fixture with required fields for path, id, title, duration, artist and album" {
-        val artist = ImmutableArtist.of("The Beatles", CountryCode.GB)
-        val label = ImmutableLabel.of("EMI")
-        val album = ImmutableAlbum("Abbey Road", artist, false, 1969.toShort(), label)
+        val artist = Artist.of("The Beatles", CountryCode.GB)
+        val label = Label.of("EMI")
+        val album = Album("Abbey Road", artist, false, 1969.toShort(), label)
 
         val path =
             files.virtualAudioFile {
@@ -74,9 +74,9 @@ internal class AudioItemSerializerTest : StringSpec({
     }
 
     "AudioItemSerializer round-trip serialization produces equal entity fields" {
-        val artist = ImmutableArtist.of("Test Artist", CountryCode.US)
-        val label = ImmutableLabel.of("Test Label")
-        val album = ImmutableAlbum("Test Album", artist, true, 2010.toShort(), label)
+        val artist = Artist.of("Test Artist", CountryCode.US)
+        val label = Label.of("Test Label")
+        val album = Album("Test Album", artist, true, 2010.toShort(), label)
 
         val path =
             files.virtualAudioFile {
@@ -120,7 +120,7 @@ internal class AudioItemSerializerTest : StringSpec({
     }
 
     "AudioItemSerializer encodes nested artist object with name and countryCode" {
-        val artist = ImmutableArtist.of("Solo Artist", CountryCode.DE)
+        val artist = Artist.of("Solo Artist", CountryCode.DE)
 
         val path =
             files.virtualAudioFile {

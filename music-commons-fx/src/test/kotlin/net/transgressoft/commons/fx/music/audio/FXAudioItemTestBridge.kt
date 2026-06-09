@@ -28,6 +28,9 @@ internal object FXAudioItemTestBridge {
     fun createFxAudioItem(path: Path, id: Int, metadataIO: AudioMetadataIO): FXAudioItem =
         FXAudioItem(path, id, readMetadataOrDefault(path, metadataIO))
 
+    fun createFxAudioItemFromMetadata(path: Path, id: Int, metadata: AudioItemMetadata): FXAudioItem =
+        FXAudioItem(path, id, metadata)
+
     private fun readMetadataOrDefault(path: Path, metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO()): AudioItemMetadata =
         if (Files.exists(path) && Files.isRegularFile(path)) {
             metadataIO.readMetadata(path).copy(coverBytes = metadataIO.loadCover(path))

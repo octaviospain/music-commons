@@ -1,11 +1,11 @@
 package net.transgressoft.commons.music
 
 import net.transgressoft.commons.media.waveform.AudioWaveformMapSerializer
+import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemMapSerializer
 import net.transgressoft.commons.music.audio.AudioLibrary
-import net.transgressoft.commons.music.audio.ImmutableAlbum
-import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.playlist.AudioPlaylistMapSerializer
 import net.transgressoft.commons.music.playlist.PlaylistHierarchy
@@ -120,11 +120,11 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     }
 
     "Multi-item artist catalog sync — add items from multiple artists, remove one, verify partial catalog cleanup" {
-        val artistA = ImmutableArtist.of("Artist Alpha")
-        val artistB = ImmutableArtist.of("Artist Beta")
-        val albumA1 = ImmutableAlbum("Album One", artistA)
-        val albumA2 = ImmutableAlbum("Album Two", artistA)
-        val albumB = ImmutableAlbum("Album Beta", artistB)
+        val artistA = Artist.of("Artist Alpha")
+        val artistB = Artist.of("Artist Beta")
+        val albumA1 = Album("Album One", artistA)
+        val albumA2 = Album("Album Two", artistA)
+        val albumB = Album("Album Beta", artistB)
 
         val itemA1 =
             audioLibrary.createFromFile(

@@ -27,10 +27,10 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
         registry = DefaultArtistCatalogRegistry()
 
         When("an audio item that has the same album artist and artist is added") {
-            val expectedAlbum = ImmutableAlbum("Play", ImmutableArtist.of("Moby", CountryCode.US))
+            val expectedAlbum = Album("Play", Artist.of("Moby", CountryCode.US))
             val audioFilePath =
                 files.virtualAudioFile {
-                    artist = ImmutableArtist.of("Moby", CountryCode.US)
+                    artist = Artist.of("Moby", CountryCode.US)
                     album = expectedAlbum
                     trackNumber = 1
                     discNumber = 1
@@ -47,7 +47,7 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
                 registry.findFirst("Moby") shouldBePresent { artistCatalog ->
                     artistCatalog.artist should { it.name shouldBe "Moby" }
                     artistCatalog should {
-                        it.artist shouldBe ImmutableArtist.of("Moby", CountryCode.US)
+                        it.artist shouldBe Artist.of("Moby", CountryCode.US)
                         it.size shouldBe 1
                         it.albumAudioItems(expectedAlbum).shouldContainOnly(audioItem)
                     }
@@ -80,8 +80,8 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
             and("the audio item updates its artist and album artist without writing the metadata") {
                 val audioItemBeforeChange = audioItem.clone()
                 audioItem.apply {
-                    artist = ImmutableArtist.of("Bjork", CountryCode.IS)
-                    album = ImmutableAlbum(audioItem.album.name, artist!!)
+                    artist = Artist.of("Bjork", CountryCode.IS)
+                    album = Album(audioItem.album.name, artist!!)
                 }
 
                 registry.updateCatalog(audioItem, audioItemBeforeChange)
@@ -90,13 +90,13 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
                     registry.findFirst("Bjork") shouldBePresent { artistCatalog ->
                         artistCatalog.artist should { it.name shouldBe "Bjork" }
                         artistCatalog should {
-                            it.artist shouldBe ImmutableArtist.of("Bjork", CountryCode.IS)
+                            it.artist shouldBe Artist.of("Bjork", CountryCode.IS)
                             it.size shouldBe 1
                             it.albumAudioItems(expectedAlbum).shouldContainOnly(audioItem)
                         }
                     }
                     registry.findFirst("Moby").isEmpty shouldBe true
-                    registry.findAlbumAudioItems(ImmutableArtist.of("Moby", CountryCode.US), "Play").isEmpty() shouldBe true
+                    registry.findAlbumAudioItems(Artist.of("Moby", CountryCode.US), "Play").isEmpty() shouldBe true
                 }
             }
 
@@ -134,8 +134,8 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
         }
 
         When("album audio items are added") {
-            val expectedArtist = ImmutableArtist.of("Pixies", CountryCode.UK)
-            val expectedAlbum = ImmutableAlbum("Doolittle", ImmutableArtist.of("Pixies"))
+            val expectedArtist = Artist.of("Pixies", CountryCode.UK)
+            val expectedAlbum = Album("Doolittle", Artist.of("Pixies"))
             val pixiesAudioItems = Arb.albumAudioItems(expectedArtist, expectedAlbum).next()
 
             registry.addAudioItems(pixiesAudioItems)
@@ -157,8 +157,8 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
         }
 
         When("getting an artist album set") {
-            val expectedArtist = ImmutableArtist.of("Radiohead", CountryCode.UK)
-            val expectedAlbum = ImmutableAlbum("OK Computer", ImmutableArtist.of("Radiohead", CountryCode.UK))
+            val expectedArtist = Artist.of("Radiohead", CountryCode.UK)
+            val expectedAlbum = Album("OK Computer", Artist.of("Radiohead", CountryCode.UK))
             val audioItems = Arb.albumAudioItems(expectedArtist, expectedAlbum).next()
 
             registry.addAudioItems(audioItems)
@@ -182,8 +182,8 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
 
             registry.subscribe(CREATE) { receivedEvents.add(it) }
 
-            val expectedArtist = ImmutableArtist.of("Moby", CountryCode.US)
-            val expectedAlbum = ImmutableAlbum("Play", expectedArtist)
+            val expectedArtist = Artist.of("Moby", CountryCode.US)
+            val expectedAlbum = Album("Play", expectedArtist)
             val audioFilePath =
                 files.virtualAudioFile {
                     artist = expectedArtist
@@ -209,8 +209,8 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
             registry = DefaultArtistCatalogRegistry()
             val receivedEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
 
-            val expectedArtist = ImmutableArtist.of("Radiohead", CountryCode.UK)
-            val expectedAlbum = ImmutableAlbum("OK Computer", expectedArtist)
+            val expectedArtist = Artist.of("Radiohead", CountryCode.UK)
+            val expectedAlbum = Album("OK Computer", expectedArtist)
             val audioFilePath =
                 files.virtualAudioFile {
                     artist = expectedArtist
@@ -293,8 +293,8 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
             registry = DefaultArtistCatalogRegistry()
             val receivedEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
 
-            val expectedArtist = ImmutableArtist.of("Bjork", CountryCode.IS)
-            val expectedAlbum = ImmutableAlbum("Homogenic", expectedArtist)
+            val expectedArtist = Artist.of("Bjork", CountryCode.IS)
+            val expectedAlbum = Album("Homogenic", expectedArtist)
             val audioFilePath =
                 files.virtualAudioFile {
                     artist = expectedArtist
@@ -327,10 +327,10 @@ internal class ArtistCatalogRegistryTest : BehaviorSpec({
 
             registry.subscribe(CREATE) { receivedEvents.add(it) }
 
-            val artist1 = ImmutableArtist.of("Pink Floyd", CountryCode.UK)
-            val artist2 = ImmutableArtist.of("Led Zeppelin", CountryCode.UK)
-            val album1 = ImmutableAlbum("The Wall", artist1)
-            val album2 = ImmutableAlbum("IV", artist2)
+            val artist1 = Artist.of("Pink Floyd", CountryCode.UK)
+            val artist2 = Artist.of("Led Zeppelin", CountryCode.UK)
+            val album1 = Album("The Wall", artist1)
+            val album2 = Album("IV", artist2)
 
             val audioItem1 =
                 createAudioItem(

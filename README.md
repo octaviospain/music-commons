@@ -237,9 +237,10 @@ Use `CoreMusicLibrary.builder()` as the single entry point for headless audio ma
 
 ```kotlin
 import net.transgressoft.commons.music.CoreMusicLibrary
+import net.transgressoft.commons.music.audio.MutableAudioItem_LirpTableDef
 import net.transgressoft.commons.music.m3u.M3uImportService
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
-import net.transgressoft.lirp.persistence.sql.SqlRepository
+import net.transgressoft.lirp.persistence.sql.SqliteRepository
 
 // In-memory (volatile) storage -- no files needed
 val library = CoreMusicLibrary.builder().build()
@@ -251,12 +252,11 @@ val library = CoreMusicLibrary.builder()
     .waveformRepository(JsonFileRepository(File("waveforms.json"), AudioWaveformMapSerializer))
     .build()
 
-// SQL persistence -- requires the lirp-sql artifact on your classpath and a
-// KSP-generated SqlTableDef for each entity
+// SQL persistence -- add lirp-sql and a JDBC driver (e.g. org.xerial:sqlite-jdbc) to your build;
+// the KSP-generated MutableAudioItem_LirpTableDef is a ready SqlTableDef<AudioItem> (its fromRow
+// reconstructs the flyweight Artist/Label embeddables via their @PersistenceCreator of() factories)
 val library = CoreMusicLibrary.builder()
-    .audioRepository(SqlRepository(dataSource, audioItemTableDef))
-    .playlistRepository(SqlRepository(dataSource, playlistTableDef))
-    .waveformRepository(SqlRepository(dataSource, waveformTableDef))
+    .audioRepository(SqliteRepository.fileBacked(Path.of("audio-library.db"), MutableAudioItem_LirpTableDef))
     .build()
 
 // Add audio files
@@ -292,6 +292,8 @@ Use `FXMusicLibrary.builder()` for JavaFX applications with observable property 
 
 ```kotlin
 import net.transgressoft.commons.fx.music.FXMusicLibrary
+import net.transgressoft.commons.fx.music.audio.FXAudioItem_LirpTableDef
+import net.transgressoft.lirp.persistence.sql.SqliteRepository
 
 val fxLibrary = FXMusicLibrary.builder()
     .audioRepository(JsonFileRepository(File("audio-library.json"), ObservableAudioItemMapSerializer))
@@ -299,11 +301,10 @@ val fxLibrary = FXMusicLibrary.builder()
     .waveformRepository(JsonFileRepository(File("waveforms.json"), AudioWaveformMapSerializer))
     .build()
 
-// SQL persistence -- add lirp-sql to your build to access SqlRepository
+// SQL persistence -- add lirp-sql and a JDBC driver (e.g. org.xerial:sqlite-jdbc) to your build;
+// use the KSP-generated FXAudioItem_LirpTableDef (a ready SqlTableDef<ObservableAudioItem>)
 val fxLibrary = FXMusicLibrary.builder()
-    .audioRepository(SqlRepository(dataSource, observableAudioItemTableDef))
-    .playlistRepository(SqlRepository(dataSource, observablePlaylistTableDef, loadOnInit = false))
-    .waveformRepository(SqlRepository(dataSource, waveformTableDef))
+    .audioRepository(SqliteRepository.fileBacked(Path.of("audio-library.db"), FXAudioItem_LirpTableDef))
     .build()
 
 // Bind directly to JavaFX UI components

@@ -158,14 +158,25 @@ class CoreMusicLibrary private constructor(
      *
      * Each component defaults to a [VolatileRepository] (in-memory). Inject a different repository
      * implementation — `JsonFileRepository`, `SqlRepository`, or a custom one — to configure
-     * persistence. The `lirp-sql` artifact is now an optional consumer dependency: add it to your
-     * build only if you intend to back any component with a SQL repository.
+     * persistence. The `lirp-sql` artifact and a JDBC driver are optional consumer dependencies:
+     * add them to your build only if you intend to back any component with a SQL repository.
+     *
+     * The KSP-generated `MutableAudioItem_LirpTableDef` is a ready `SqlTableDef<AudioItem>`: its
+     * `fromRow` rebuilds the entity and reconstructs the flyweight `Artist`/`Label` embeddables
+     * through their `@PersistenceCreator` `of()` factories. Pass it straight to a `SqlRepository`/
+     * `SqliteRepository`.
      *
      * ```kotlin
-     * val library = MusicLibrary.builder()
-     *     .audioRepository(SqlRepository(dataSource, audioTableDef))
-     *     .playlistRepository(SqlRepository(dataSource, playlistTableDef))
-     *     .waveformRepository(SqlRepository(dataSource, waveformTableDef))
+     * // consumer build.gradle — lirp-sql and a JDBC driver are consumer-side dependencies
+     * // implementation("net.transgressoft:lirp-sql:<version>")
+     * // implementation("org.xerial:sqlite-jdbc:<version>")
+     *
+     * import net.transgressoft.commons.music.audio.MutableAudioItem_LirpTableDef
+     * import net.transgressoft.lirp.persistence.sql.SqliteRepository
+     * import java.nio.file.Path
+     *
+     * val library = CoreMusicLibrary.builder()
+     *     .audioRepository(SqliteRepository.fileBacked(Path.of("audio-library.db"), MutableAudioItem_LirpTableDef))
      *     .build()
      * ```
      */

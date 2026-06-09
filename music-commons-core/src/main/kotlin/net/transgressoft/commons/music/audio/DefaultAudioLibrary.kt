@@ -28,7 +28,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
-import kotlinx.serialization.modules.subclass
 
 /**
  * Default implementation of [AudioLibrary] for managing [AudioItem] instances.
@@ -99,9 +98,9 @@ internal class DefaultAudioLibrary
  *
  * Registered polymorphic subtypes:
  * - [AudioItem] → [AudioItemSerializer] (delegates to [MutableAudioItem])
- * - [Artist] → [ImmutableArtist]
- * - [Album] → [ImmutableAlbum]
- * - [Label] → [ImmutableLabel]
+ *
+ * [Artist], [Album] and [Label] are concrete `data class` types and do not require
+ * polymorphic registration; the [AudioItemSerializer] constructs them directly.
  *
  * Pass this module as `serializersModule` when constructing a `Json` instance manually:
  *
@@ -120,13 +119,4 @@ internal class DefaultAudioLibrary
 val audioItemSerializerModule =
     SerializersModule {
         polymorphic(AudioItem::class, AudioItemSerializer())
-        polymorphic(Artist::class) {
-            subclass(ImmutableArtist.serializer())
-        }
-        polymorphic(Album::class) {
-            subclass(ImmutableAlbum.serializer())
-        }
-        polymorphic(Label::class) {
-            subclass(ImmutableLabel.serializer())
-        }
     }

@@ -2,8 +2,8 @@ package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.fx.music.createItemsByArtist
 import net.transgressoft.commons.fx.music.createItemsWithMultipleAlbums
-import net.transgressoft.commons.music.audio.ImmutableAlbum
-import net.transgressoft.commons.music.audio.ImmutableArtist.Companion.of
+import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.Artist.Companion.of
 import net.transgressoft.commons.music.audio.shouldEqual
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
@@ -221,8 +221,8 @@ internal class ObservableAudioLibraryTest : StringSpec({
     "ObservableAudioLibrary catalogs reflect correct album data with multiple albums per artist" {
         val artistName = "Multi Album Artist"
         val artist = of(artistName)
-        val album1 = ImmutableAlbum("First Album", artist)
-        val album2 = ImmutableAlbum("Second Album", artist)
+        val album1 = Album("First Album", artist)
+        val album2 = Album("Second Album", artist)
 
         repository.createItemsWithMultipleAlbums(
             files,
@@ -300,9 +300,9 @@ internal class ObservableAudioLibraryTest : StringSpec({
     "ObservableAudioLibrary albumsProperty and albumCountProperty reflect aggregate across all catalogs" {
         val artist1 = of("Artist One")
         val artist2 = of("Artist Two")
-        val album1A = ImmutableAlbum("Album 1A", artist1)
-        val album1B = ImmutableAlbum("Album 1B", artist1)
-        val album2A = ImmutableAlbum("Album 2A", artist2)
+        val album1A = Album("Album 1A", artist1)
+        val album1B = Album("Album 1B", artist1)
+        val album2A = Album("Album 2A", artist2)
 
         repository.createItemsWithMultipleAlbums(files, "Artist One", mapOf("Album 1A" to 2, "Album 1B" to 1))
         repository.createItemsWithMultipleAlbums(files, "Artist Two", mapOf("Album 2A" to 2))

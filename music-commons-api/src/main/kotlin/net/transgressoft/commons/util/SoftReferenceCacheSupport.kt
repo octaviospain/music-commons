@@ -20,7 +20,6 @@ package net.transgressoft.commons.util
 import java.lang.ref.ReferenceQueue
 import java.lang.ref.SoftReference
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.collections.iterator
 
 // Drains the reference queue and removes any cache entries whose referent has been reclaimed by
 // the GC. The map values are SoftReferences identical to the ones polled from the queue, so a

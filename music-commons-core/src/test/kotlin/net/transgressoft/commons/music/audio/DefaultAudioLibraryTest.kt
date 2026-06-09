@@ -118,8 +118,8 @@ internal class DefaultAudioLibraryTest: StringSpec({
     }
 
     "Creates audio items from the same album" {
-        val theBeatles = ImmutableArtist.of("The Beatles")
-        val abbeyRoad = ImmutableAlbum("Abbey Road", theBeatles)
+        val theBeatles = Artist.of("The Beatles")
+        val abbeyRoad = Album("Abbey Road", theBeatles)
         val albumAudioFiles = files.virtualAlbumAudioFiles(theBeatles, abbeyRoad).next()
 
         albumAudioFiles.forEach(audioRepository::createFromFile)
@@ -187,8 +187,8 @@ internal class DefaultAudioLibraryTest: StringSpec({
 
     "Artist catalog registry should be populated when loading from existing repository" {
         // Create some audio items and save them to the JSON file
-        val theBeatles = ImmutableArtist.of("The Beatles")
-        val abbeyRoad = ImmutableAlbum("Abbey Road", theBeatles)
+        val theBeatles = Artist.of("The Beatles")
+        val abbeyRoad = Album("Abbey Road", theBeatles)
         val albumAudioFiles = files.virtualAlbumAudioFiles(theBeatles, abbeyRoad).next()
 
         albumAudioFiles.forEach(audioRepository::createFromFile)
@@ -256,8 +256,8 @@ internal class DefaultAudioLibraryTest: StringSpec({
     "Artist catalog publisher emits UPDATE events when multiple audio items are reordered" {
         val receivedEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
 
-        val theBeatles = ImmutableArtist.of("The Beatles")
-        val abbeyRoad = ImmutableAlbum("Abbey Road", theBeatles)
+        val theBeatles = Artist.of("The Beatles")
+        val abbeyRoad = Album("Abbey Road", theBeatles)
 
         val audioFile1 =
             files.virtualAudioFile {
@@ -338,7 +338,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         createEvents.size shouldBe 1
 
         // Change artist - should delete old catalog and create new one
-        val newArtist = ImmutableArtist.of("New Artist")
+        val newArtist = Artist.of("New Artist")
         audioRepository.findById(audioItem.id).ifPresent { it.artist = newArtist }
         reactive.advance()
 
@@ -357,8 +357,8 @@ internal class DefaultAudioLibraryTest: StringSpec({
             receivedCatalogs.addAll(event.entities.values)
         }
 
-        val theBeatles = ImmutableArtist.of("The Beatles")
-        val abbeyRoad = ImmutableAlbum("Abbey Road", theBeatles)
+        val theBeatles = Artist.of("The Beatles")
+        val abbeyRoad = Album("Abbey Road", theBeatles)
         val albumFiles = files.virtualAlbumAudioFiles(theBeatles, abbeyRoad).next()
 
         albumFiles.forEach { audioRepository.createFromFile(it) }

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ * Copyright (C) 2026  Octavio Calleya Garcia                                 *
  *                                                                            *
  * This program is free software: you can redistribute it and/or modify       *
  * it under the terms of the GNU General Public License as published by       *
@@ -17,21 +17,22 @@
 
 package net.transgressoft.commons.music.audio
 
-fun <I : ReactiveAudioItem<I>> I.update(change: AudioItemChange) {
-    change.title?.let { title = it }
-    change.artist?.let { artist = it }
-    album =
-        Album(
-            change.albumName ?: album.name,
-            change.albumArtist ?: album.albumArtist,
-            change.isCompilation ?: album.isCompilation,
-            change.year?.takeIf { year -> year > 0 } ?: album.year,
-            change.label ?: album.label
-        )
-    change.genres?.let { genres = it }
-    change.comments?.let { comments = it }
-    change.trackNumber?.takeIf { it > 0 }?.let { trackNumber = it }
-    change.discNumber?.takeIf { it > 0 }?.let { discNumber = it }
-    change.bpm?.takeIf { it > 0 }?.let { bpm = it }
-    change.coverImageBytes?.let { coverImageBytes = it }
+import net.transgressoft.lirp.persistence.ColumnConverter
+import net.transgressoft.lirp.persistence.ColumnType
+import java.time.Duration
+
+/**
+ * Maps [Duration] values to whole seconds (Long) for SQL persistence.
+ *
+ * Sub-second precision is intentionally truncated: audio durations derived from file headers
+ * are measured in whole seconds in practice, so no information is lost. The [ColumnType.LongType]
+ * backing column avoids floating-point imprecision for typical track lengths.
+ */
+object DurationConverter : ColumnConverter<Duration, Long> {
+
+    override val sqlType = ColumnType.LongType
+
+    override fun toSql(value: Duration): Long = value.toSeconds()
+
+    override fun fromSql(raw: Long): Duration = Duration.ofSeconds(raw)
 }

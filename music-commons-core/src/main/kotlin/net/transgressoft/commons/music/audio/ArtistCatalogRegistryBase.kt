@@ -233,7 +233,7 @@ abstract class ArtistCatalogRegistryBase<I, AC>(
 
     private fun Collection<AC>.toArtistNames(): List<String> = map { it.artist.name }
 
-    private fun ReactiveAudioItem<I>.artistUniqueId() = ImmutableArtist.id(artist.name, artist.countryCode)
+    private fun ReactiveAudioItem<I>.artistUniqueId() = artist.id()
 
     internal fun findFirst(artistName: String): Optional<AC> =
         Optional.ofNullable(entitiesById.entries.firstOrNull { it.key.name.lowercase().contains(artistName.lowercase()) }?.value)

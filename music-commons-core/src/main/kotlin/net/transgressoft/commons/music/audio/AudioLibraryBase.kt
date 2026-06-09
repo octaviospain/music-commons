@@ -23,6 +23,7 @@ import net.transgressoft.lirp.event.CrudEvent.Type.CONFLICT
 import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.READ
+import net.transgressoft.lirp.event.CrudEvent.Type.RECOVERY_FAILED
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
 import net.transgressoft.lirp.event.LirpEventPublisher
 import net.transgressoft.lirp.event.LirpEventSubscription
@@ -124,7 +125,7 @@ abstract class AudioLibraryBase<I, AC>(
                     observableArtistCatalogRegistry.removeAudioItems(event.entities.values)
                     event.entities.values.forEach { entitySubscriptions.remove(it.id)?.cancel() }
                 }
-                READ, CONFLICT -> Unit
+                READ, CONFLICT, RECOVERY_FAILED -> Unit
             }
         }
 
