@@ -3,4 +3,8 @@ description = 'Transgressoft Music Commons - API'
 dependencies {
     api 'org.jetbrains.kotlinx:kotlinx-coroutines-core'
     api libs.jaudiotagger.get()
+    implementation libs.lirp.sql.api.get()
+
+    testImplementation libs.kotest.runner.junit6.get()
+    testImplementation libs.kotest.assertions.core.get()
 }

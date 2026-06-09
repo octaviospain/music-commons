@@ -17,12 +17,83 @@
 
 package net.transgressoft.commons.music.audio
 
+import net.transgressoft.commons.util.expungeStaleEntries
+import net.transgressoft.lirp.persistence.Embeddable
+import net.transgressoft.lirp.persistence.PersistenceCreator
+import net.transgressoft.lirp.persistence.PersistenceProperty
 import com.neovisionaries.i18n.CountryCode
+import java.lang.ref.ReferenceQueue
+import java.lang.ref.SoftReference
+import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Represents a music artist with identifying information.
+ * Concrete value type representing a music artist with an optional country of origin.
+ *
+ * Uses a flyweight pattern over soft references so that identical artists share the same
+ * object instance under normal memory conditions, reducing footprint in large audio libraries.
+ * The [UNKNOWN] singleton represents an artist whose name and country are unspecified.
+ *
+ * Access instances via the [of] factory rather than the constructor directly.
  */
-interface Artist : Comparable<Artist> {
-    val name: String
-    val countryCode: CountryCode
+@ConsistentCopyVisibility
+@Embeddable
+data class Artist internal constructor(
+    val name: String,
+    @PersistenceProperty(converter = CountryConverter::class) val countryCode: CountryCode = CountryCode.UNDEFINED
+) : Comparable<Artist> {
+
+    override fun compareTo(other: Artist): Int {
+        val result = compareValues(name, other.name)
+        return if (result == 0) compareValues(countryCode, other.countryCode) else result
+    }
+
+    companion object {
+
+        @JvmField
+        @get:JvmName("UNKNOWN")
+        val UNKNOWN: Artist = Artist("", CountryCode.UNDEFINED)
+
+        // Soft-reference flyweight cache: entries are eligible for GC under memory pressure,
+        // preventing long-running JVMs from accumulating unbounded entries for transient artists.
+        private val artistReferenceQueue = ReferenceQueue<Artist>()
+        private val artistMap: ConcurrentHashMap<String, SoftReference<Artist>> = ConcurrentHashMap()
+
+        /**
+         * Returns a cached [Artist] instance for the given [name] and [countryCode].
+         *
+         * Uses a flyweight pattern over soft references so that repeated lookups of the same
+         * artist return the same object instance. Returns [UNKNOWN] when both arguments are
+         * at their default values.
+         */
+        @JvmStatic
+        @JvmOverloads
+        @PersistenceCreator
+        fun of(name: String, countryCode: CountryCode = CountryCode.UNDEFINED): Artist {
+            val normalizedName = name.trim()
+            if (normalizedName.isEmpty() && countryCode == CountryCode.UNDEFINED) return UNKNOWN
+            expungeStaleEntries(artistMap, artistReferenceQueue)
+            val key = id(normalizedName, countryCode)
+            while (true) {
+                val existing = artistMap[key]?.get()
+                if (existing != null) return existing
+                val fresh = Artist(normalizedName, countryCode)
+                val ref = SoftReference(fresh, artistReferenceQueue)
+                val prev = artistMap.putIfAbsent(key, ref) ?: return fresh
+                val prevValue = prev.get()
+                if (prevValue != null) return prevValue
+                artistMap.remove(key, prev)
+            }
+        }
+
+        internal fun id(name: String, countryCode: CountryCode = CountryCode.UNDEFINED) =
+            if (countryCode == CountryCode.UNDEFINED) name else "$name-${countryCode.name}"
+    }
 }
+
+/**
+ * Returns a string key uniquely identifying this artist by name and country code.
+ *
+ * Used as the unique cache key for the flyweight map and as [net.transgressoft.lirp.entity.ReactiveEntityBase.uniqueId]
+ * in artist catalog implementations.
+ */
+fun Artist.id(): String = if (countryCode == CountryCode.UNDEFINED) name else "$name-${countryCode.name}"

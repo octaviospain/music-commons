@@ -89,7 +89,7 @@ internal class MutableArtistCatalogTest : StringSpec({
 
     "MutableArtistCatalog stores items with the same ordering and unique id when repository ids differ" {
         val expectedArtist = Arb.artist().next()
-        val expectedAlbum = ImmutableAlbum("Shared Album", expectedArtist)
+        val expectedAlbum = Album("Shared Album", expectedArtist)
         val path =
             files.virtualAudioFile {
                 artist = expectedArtist
@@ -418,8 +418,8 @@ internal class MutableArtistCatalogTest : StringSpec({
     }
 
     "MutableArtistCatalog compareTo orders by artist" {
-        val firstArtist = ImmutableArtist.of("A Artist")
-        val secondArtist = ImmutableArtist.of("Z Artist")
+        val firstArtist = Artist.of("A Artist")
+        val secondArtist = Artist.of("Z Artist")
         val first = MutableArtistCatalog<AudioItem>(firstArtist)
         val second = MutableArtistCatalog<AudioItem>(secondArtist)
 

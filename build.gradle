@@ -208,6 +208,15 @@ subprojects {
         tasks.named('generateMetadataFileForMavenPublication') {
             dependsOn tasks.named('dokkaJavadocJar')
         }
+        // KSP adds build/generated/ksp/** to the Kotlin source set in modules that apply the KSP
+        // plugin. The generated files do not conform to project code style. When KSP is present,
+        // restrict all ktlint tasks to hand-authored sources under src/ only.
+        if (plugins.hasPlugin('com.google.devtools.ksp')) {
+            def handAuthoredSrc = fileTree("${projectDir}/src") { include("**/*.kt") }
+            tasks.withType(org.jlleitschuh.gradle.ktlint.tasks.BaseKtLintCheckTask).configureEach {
+                setSource(handAuthoredSrc)
+            }
+        }
     }
 
     kotlin {
@@ -234,6 +243,9 @@ subprojects {
     ktlint {
         reporters {
             reporter(ReporterType.HTML)
+        }
+        filter {
+            exclude("**/build/**")
         }
     }
 

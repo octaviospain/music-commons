@@ -61,7 +61,7 @@ import kotlinx.serialization.json.long
  *
  * The underlying element serializer is the polymorphic [AudioItemSerializer], which materializes
  * deserialized entries as [MutableAudioItem] instances. Polymorphic subtypes for [Artist], [Album]
- * and [Label] (`ImmutableArtist`, `ImmutableAlbum`, `ImmutableLabel`) are registered via
+ * and [Label] are constructed directly; they are no longer registered as polymorphic subtypes via
  * [audioItemSerializerModule]; when building a `Json` instance manually, pass that module as
  * `serializersModule` so subtypes resolve correctly. `JsonFileRepository` wires it automatically.
  *
@@ -157,7 +157,7 @@ abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>>(
         val artistObj = require("artist").jsonObject
         val artistName = requireString(artistObj, "name", "artist.name")
         val countryCodeStr = requireString(artistObj, "countryCode", "artist.countryCode")
-        val artist = ImmutableArtist.of(artistName, CountryCode.getByCode(countryCodeStr) ?: CountryCode.UNDEFINED)
+        val artist = Artist.of(artistName, CountryCode.getByCode(countryCodeStr) ?: CountryCode.UNDEFINED)
 
         val albumObj = require("album").jsonObject
         val albumName = requireString(albumObj, "name", "album.name")
@@ -183,12 +183,12 @@ abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>>(
         val labelCountryCodeStr = labelObj["countryCode"]?.jsonPrimitive?.contentOrNull
         val labelCountryCode = labelCountryCodeStr?.let { CountryCode.getByCode(it) ?: CountryCode.UNDEFINED } ?: CountryCode.UNDEFINED
         val album =
-            ImmutableAlbum(
+            Album(
                 albumName,
-                ImmutableArtist.of(albumArtistName, albumArtistCountryCode),
+                Artist.of(albumArtistName, albumArtistCountryCode),
                 isCompilation,
                 year,
-                ImmutableLabel.of(labelName, labelCountryCode)
+                Label.of(labelName, labelCountryCode)
             )
 
         val genres: Set<Genre> =

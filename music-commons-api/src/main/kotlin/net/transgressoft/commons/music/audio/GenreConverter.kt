@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ * Copyright (C) 2026  Octavio Calleya Garcia                                 *
  *                                                                            *
  * This program is free software: you can redistribute it and/or modify       *
  * it under the terms of the GNU General Public License as published by       *
@@ -17,21 +17,22 @@
 
 package net.transgressoft.commons.music.audio
 
-fun <I : ReactiveAudioItem<I>> I.update(change: AudioItemChange) {
-    change.title?.let { title = it }
-    change.artist?.let { artist = it }
-    album =
-        Album(
-            change.albumName ?: album.name,
-            change.albumArtist ?: album.albumArtist,
-            change.isCompilation ?: album.isCompilation,
-            change.year?.takeIf { year -> year > 0 } ?: album.year,
-            change.label ?: album.label
-        )
-    change.genres?.let { genres = it }
-    change.comments?.let { comments = it }
-    change.trackNumber?.takeIf { it > 0 }?.let { trackNumber = it }
-    change.discNumber?.takeIf { it > 0 }?.let { discNumber = it }
-    change.bpm?.takeIf { it > 0 }?.let { bpm = it }
-    change.coverImageBytes?.let { coverImageBytes = it }
+import net.transgressoft.lirp.persistence.ColumnConverter
+import net.transgressoft.lirp.persistence.ColumnType
+
+/**
+ * Maps individual [Genre] elements for `@ElementCollection` storage.
+ *
+ * Each element is serialized as the genre's display name string. Standard genres round-trip via
+ * [Genre.parseGenre]; custom genres that are not in the built-in registry are reconstructed as
+ * [Genre.Custom] instances. Individual genre names never contain commas (enforced by
+ * [Genre.Custom]'s init block), so per-element encoding is unambiguous.
+ */
+object GenreConverter : ColumnConverter<Genre, String> {
+
+    override val sqlType = ColumnType.TextType
+
+    override fun toSql(value: Genre): String = value.name
+
+    override fun fromSql(raw: String): Genre = Genre.parseGenre(raw).firstOrNull() ?: Genre.Custom(raw)
 }

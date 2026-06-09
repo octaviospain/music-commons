@@ -11,10 +11,16 @@ dependencies {
     implementation project(':music-commons-media')
     implementation libs.jaudiotagger.get()
     implementation libs.lirp.core.get()
+    implementation libs.lirp.sql.api.get()
     implementation libs.dd.plist.get()
 
     ksp libs.lirp.ksp.get()
+    ksp libs.lirp.sql.api.get()
+    ksp("net.transgressoft:lirp-sql") { version { require libs.versions.lirp.get() } }
     kspTest libs.lirp.ksp.get()
+
+    testImplementation("net.transgressoft:lirp-sql") { version { require libs.versions.lirp.get() } }
+    testImplementation libs.sqlite.jdbc.get()
 
     testImplementation project(path: ':music-commons-test')
     testImplementation(platform(libs.junit.bom.get()))
@@ -25,6 +31,10 @@ dependencies {
     testImplementation libs.kotest.property.get()
     testImplementation libs.kotest.assertions.json.get()
     testImplementation libs.coroutines.test.get()
+}
+
+ksp {
+    arg('lirp.sql.generate', 'true')
 }
 
 tasks.withType(Test).configureEach {

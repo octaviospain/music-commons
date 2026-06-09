@@ -50,11 +50,11 @@ internal class MutableAudioItemTest : FunSpec({
             title = "Yesterday",
             duration = Duration.ofSeconds(180),
             bitRate = 320,
-            artist = ImmutableArtist.of("The Beatles", CountryCode.UK),
+            artist = Artist.of("The Beatles", CountryCode.UK),
             album =
-                ImmutableAlbum(
+                Album(
                     "Help!",
-                    ImmutableArtist.of("The Beatles Band", CountryCode.UK), true, 1965, ImmutableLabel.of("EMI", CountryCode.US)
+                    Artist.of("The Beatles Band", CountryCode.UK), true, 1965, Label.of("EMI", CountryCode.US)
                 ),
             bpm = 120f,
             trackNumber = 13,
@@ -95,20 +95,20 @@ internal class MutableAudioItemTest : FunSpec({
                             id = UNASSIGNED_ID
                             // the album artists' and label's country code is not saved in the ID3 tag
                             album =
-                                ImmutableAlbum(
+                                Album(
                                     "Help!",
-                                    ImmutableArtist.of("The Beatles Band", CountryCode.UNDEFINED), true, 1965, ImmutableLabel.of("EMI", CountryCode.UNDEFINED)
+                                    Artist.of("The Beatles Band", CountryCode.UNDEFINED), true, 1965, Label.of("EMI", CountryCode.UNDEFINED)
                                 )
                         }
                 }
 
             // Test toString() and compareTo() for coverage
-            audioItem.album.toString() shouldContain "ImmutableAlbum"
+            audioItem.album.toString() shouldContain "Album"
             audioItem.album.toString() shouldContain "Help!"
             audioItem.artist.toString() shouldContain "The Beatles"
-            audioItem.album.compareTo(ImmutableAlbum.UNKNOWN) shouldNotBe 0
-            audioItem.artist.compareTo(ImmutableArtist.UNKNOWN) shouldNotBe 0
-            audioItem.album.label.compareTo(ImmutableLabel.UNKNOWN) shouldNotBe 0
+            audioItem.album.compareTo(Album.UNKNOWN) shouldNotBe 0
+            audioItem.artist.compareTo(Artist.UNKNOWN) shouldNotBe 0
+            audioItem.album.label.compareTo(Label.UNKNOWN) shouldNotBe 0
 
             // Test AudioFileType extension and toString() for coverage
             val fileExtension = audioItem.path.extension

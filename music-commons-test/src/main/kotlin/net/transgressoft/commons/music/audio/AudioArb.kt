@@ -88,7 +88,7 @@ fun Arb.Companion.audioItem(audioItem: AudioItem, changeAction: AudioItemChange.
             every { title } returns (change.title ?: audioItem.title)
             every { artist } returns (change.artist ?: audioItem.artist)
             every { album } returns
-                ImmutableAlbum(
+                Album(
                     change.albumName ?: audioItem.album.name,
                     change.albumArtist ?: audioItem.album.albumArtist,
                     change.isCompilation ?: audioItem.album.isCompilation,
@@ -163,7 +163,7 @@ fun Arb.Companion.audioItem(attributes: AudioItemTestAttributes): Arb<AudioItem>
 
 fun Arb.Companion.artist(givenName: String? = null, countryCode: CountryCode? = null): Arb<Artist> =
     arbitrary {
-        ImmutableArtist.of(
+        Artist.of(
             givenName ?: beautifyArtistName(Arb.string(1..100).bind()),
             countryCode ?: CountryCode.entries.toTypedArray().random()
         )
@@ -177,7 +177,7 @@ fun Arb.Companion.album(
     label: Label? = null
 ): Arb<Album> =
     arbitrary {
-        ImmutableAlbum(
+        Album(
             name ?: Arb.string(1..100).bind(),
             albumArtist ?: artist().bind(),
             isCompilation ?: Arb.boolean().bind(),
@@ -188,7 +188,7 @@ fun Arb.Companion.album(
 
 fun Arb.Companion.label(name: String? = null, countryCode: CountryCode? = null) =
     arbitrary {
-        ImmutableLabel.of(name ?: Arb.string(1..100).bind(), countryCode ?: CountryCode.entries.toTypedArray().random())
+        Label.of(name ?: Arb.string(1..100).bind(), countryCode ?: CountryCode.entries.toTypedArray().random())
     }
 
 fun Arb.Companion.audioFilePath(audioFileType: AudioFileType = Arb.enum<AudioFileType>().next()): Arb<Path> =

@@ -1,12 +1,12 @@
 package net.transgressoft.commons.fx.music.audio
 
+import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
+import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItemMetadata
 import net.transgressoft.commons.music.audio.Genre
-import net.transgressoft.commons.music.audio.ImmutableAlbum
-import net.transgressoft.commons.music.audio.ImmutableArtist
-import net.transgressoft.commons.music.audio.ImmutableLabel
 import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
+import net.transgressoft.commons.music.audio.Label
 import net.transgressoft.commons.music.audio.audioItemChange
 import net.transgressoft.commons.music.audio.testCoverBytes
 import net.transgressoft.commons.music.audio.update
@@ -78,16 +78,16 @@ internal class FXAudioItemTest : StringSpec({
         }
 
         lastDateUpdated = fxAudioItem.lastDateModified
-        fxAudioItem.artistProperty.set(ImmutableArtist.of("Bon Jovi"))
+        fxAudioItem.artistProperty.set(Artist.of("Bon Jovi"))
         eventually(100.milliseconds) {
             fxAudioItem.artist.name shouldBe "Bon Jovi"
-            fxAudioItem.artistsInvolved shouldContain ImmutableArtist.of("Bon Jovi")
+            fxAudioItem.artistsInvolved shouldContain Artist.of("Bon Jovi")
             fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
             fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
         }
 
         lastDateUpdated = fxAudioItem.lastDateModified
-        fxAudioItem.albumProperty.set(ImmutableAlbum("New Album", ImmutableArtist.of("Bon Jovi"), false, 2021, ImmutableLabel.UNKNOWN))
+        fxAudioItem.albumProperty.set(Album("New Album", Artist.of("Bon Jovi"), false, 2021, Label.UNKNOWN))
         eventually(100.milliseconds) {
             fxAudioItem.album.name shouldBe "New Album"
             fxAudioItem.album.albumArtist.name shouldBe "Bon Jovi"

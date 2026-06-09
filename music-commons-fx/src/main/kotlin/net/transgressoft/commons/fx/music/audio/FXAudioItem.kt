@@ -22,12 +22,18 @@ import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItemMetadata
 import net.transgressoft.commons.music.audio.AudioMetadataIO
 import net.transgressoft.commons.music.audio.Genre
-import net.transgressoft.commons.music.audio.ImmutableArtist
+import net.transgressoft.commons.music.audio.GenreConverter
+import net.transgressoft.commons.music.audio.PathConverter
 import net.transgressoft.commons.music.audio.UNASSIGNED_ID
 import net.transgressoft.commons.music.audio.audioItemTrackDiscNumberComparator
 import net.transgressoft.commons.music.audio.getArtistsNamesInvolved
 import net.transgressoft.commons.util.WindowsPathValidator
 import net.transgressoft.lirp.entity.ReactiveEntityBase
+import net.transgressoft.lirp.persistence.ElementCollection
+import net.transgressoft.lirp.persistence.Embedded
+import net.transgressoft.lirp.persistence.PersistenceIgnore
+import net.transgressoft.lirp.persistence.PersistenceMapping
+import net.transgressoft.lirp.persistence.PersistenceProperty
 import net.transgressoft.lirp.persistence.fx.fxFloat
 import net.transgressoft.lirp.persistence.fx.fxInteger
 import net.transgressoft.lirp.persistence.fx.fxObject
@@ -84,9 +90,11 @@ import kotlinx.serialization.modules.polymorphic
  * when a library back-ref is present. This deferred-IO contract is acceptable because callers
  * comparing freshly-deserialized items already accept the cost of resolving the path on disk.
  */
+@PersistenceMapping(name = "fx_audio_item")
 class FXAudioItem
     @JvmOverloads
     internal constructor(
+        @PersistenceProperty(converter = PathConverter::class)
         override val path: Path,
         override val id: Int = UNASSIGNED_ID,
         metadata: AudioItemMetadata
@@ -101,6 +109,9 @@ class FXAudioItem
          */
         @Transient
         internal var metadataIO: AudioMetadataIO? = null
+
+        @Embedded
+        var metadata: AudioItemMetadata by reactiveProperty(metadata)
 
         // Constructor for deserialization & iTunes import
         internal constructor(
@@ -125,14 +136,18 @@ class FXAudioItem
 
         /** Immutable properties */
 
+        @PersistenceIgnore
         @Serializable
         override val bitRate: Int = metadata.bitRate
 
+        @PersistenceIgnore
         override val duration: Duration = metadata.duration
 
+        @PersistenceIgnore
         @Serializable
         override val encoder: String? = metadata.encoder?.takeIf { it.isNotEmpty() }
 
+        @PersistenceIgnore
         @Serializable
         override val encoding: String? = metadata.encoding?.takeIf { it.isNotEmpty() }
 
@@ -145,14 +160,17 @@ class FXAudioItem
         @Transient
         override val dateOfCreationProperty: ReadOnlyObjectProperty<LocalDateTime> = SimpleObjectProperty(this, "date of creation", _dateOfCreation)
 
+        @PersistenceIgnore
         override val fileName by lazy {
             path.fileName.toString()
         }
 
+        @PersistenceIgnore
         override val extension by lazy {
             path.extension
         }
 
+        @PersistenceIgnore
         override val length by lazy {
             Files.size(path)
         }
@@ -191,32 +209,48 @@ class FXAudioItem
         @Suppress("UNCHECKED_CAST")
         override val artistProperty: ObjectProperty<Artist> = fxObject(metadata.artist) as ObjectProperty<Artist>
 
-        override var artist: Artist = metadata.artist
-            set(value) {
-                mutateAndPublish {
-                    field = value
-                    syncArtistsInvolved()
-                }
+        @Transient
+        private var _artist: Artist = metadata.artist
+
+        // Delegated reactive backing (over the private _artist field) so @Embedded has the reactive
+        // backing it requires; the setter — which is also the silent-hydration path — resyncs
+        // artistsInvolved and mirrors into artistProperty (the JavaFX source of truth), while the
+        // delegate publishes the mutation event. The artistProperty listener feeds external
+        // property edits back through this setter.
+        @Embedded
+        override var artist: Artist by reactiveProperty(
+            getter = { _artist },
+            setter = { value ->
+                _artist = value
+                syncArtistsInvolved()
                 artistProperty.set(value)
             }
+        )
 
         @Transient
         @Suppress("UNCHECKED_CAST")
         override val albumProperty: ObjectProperty<Album> = fxObject(metadata.album) as ObjectProperty<Album>
 
-        override var album: Album = metadata.album
-            set(value) {
-                mutateAndPublish {
-                    field = value
-                    syncArtistsInvolved()
-                }
+        @Transient
+        private var _album: Album = metadata.album
+
+        // Delegated reactive backing (over _album), mirroring into albumProperty (see artist above).
+        // album flattens its nested albumArtist/label embeddables into prefixed columns.
+        @Embedded
+        override var album: Album by reactiveProperty(
+            getter = { _album },
+            setter = { value ->
+                _album = value
+                syncArtistsInvolved()
                 albumProperty.set(value)
             }
+        )
 
         @Transient
         @Suppress("UNCHECKED_CAST")
         override val genresProperty: ObjectProperty<Set<Genre>> = fxObject(metadata.genres) as ObjectProperty<Set<Genre>>
 
+        @ElementCollection(elementConverter = GenreConverter::class)
         override var genres: Set<Genre> = metadata.genres
             set(value) {
                 val copy = value.toSet()
@@ -273,6 +307,7 @@ class FXAudioItem
             field = SimpleObjectProperty(this, "date of last modification", lastDateModified)
 
         @Transient
+        @PersistenceIgnore
         private var _coverImageBytes: ByteArray? = metadata.coverBytes?.copyOf()
 
         @Transient
@@ -288,6 +323,7 @@ class FXAudioItem
          * defensive copy without re-invoking the IO seam.
          */
         @Transient
+        @PersistenceIgnore
         override var coverImageBytes: ByteArray?
             get() {
                 if (!coverLoaded && metadataIO != null) {
@@ -328,7 +364,7 @@ class FXAudioItem
                 FXCollections.observableSet(
                     getArtistsNamesInvolved(
                         titleProperty.value, artistProperty.value.name, albumProperty.value.albumArtist.name
-                    ).map { ImmutableArtist.of(it) }.toMutableSet()
+                    ).map { Artist.of(it) }.toMutableSet()
                 )
             )
 
@@ -380,7 +416,7 @@ class FXAudioItem
             val involved =
                 getArtistsNamesInvolved(
                     title, artist.name, album.albumArtist.name
-                ).map { ImmutableArtist.of(it) }.toSet()
+                ).map { Artist.of(it) }.toSet()
             artistsInvolvedProperty.clear()
             artistsInvolvedProperty.addAll(involved)
         }

@@ -17,15 +17,46 @@
 
 package net.transgressoft.commons.music.audio
 
+import net.transgressoft.lirp.persistence.Embeddable
+import net.transgressoft.lirp.persistence.Embedded
+
 /**
- * Represents the album attributes of an audio item's album
+ * Concrete value type representing album metadata for an audio item.
+ *
+ * Unlike [Artist] and [Label], album instances are not cached because albums are less
+ * frequently deduplicated across audio items and the memory savings would be minimal
+ * compared to the overhead of maintaining a cache. The [albumArtist] and [label] properties
+ * are embedded as nested value types for SQL persistence.
+ *
+ * The [UNKNOWN] sentinel represents an album whose metadata is entirely unspecified.
  */
-interface Album : Comparable<Album> {
-    val name: String
-    val albumArtist: Artist
-    val isCompilation: Boolean
-    val year: Short?
-    val label: Label
+@Embeddable
+data class Album(
+    val name: String,
+    @Embedded val albumArtist: Artist = Artist.UNKNOWN,
+    val isCompilation: Boolean = false,
+    val year: Short? = null,
+    @Embedded val label: Label = Label.UNKNOWN
+) : Comparable<Album> {
+
+    override fun compareTo(other: Album): Int {
+        val nameComparison = compareValues(name, other.name)
+        val artistComparison = compareValues(albumArtist.name, other.albumArtist.name)
+        val labelComparison = compareValues(label.name, other.label.name)
+        val yearComparison = compareValues(year, other.year)
+        return when {
+            labelComparison != 0 -> labelComparison
+            yearComparison != 0 -> yearComparison
+            artistComparison != 0 -> artistComparison
+            else -> nameComparison
+        }
+    }
+
+    companion object {
+
+        @get:JvmName("UNKNOWN")
+        val UNKNOWN: Album = Album("", Artist.UNKNOWN, false, null, Label.UNKNOWN)
+    }
 }
 
 /**

@@ -166,13 +166,13 @@ class JAudioTaggerMetadataIO : AudioMetadataIO {
                 getFieldIfExisting(tag, FieldKey.COUNTRY)
                     ?.let { CountryCode.getByCode(it) ?: CountryCode.UNDEFINED }
                     ?: CountryCode.UNDEFINED
-            ImmutableArtist.of(beautifyArtistName(artistName), country)
-        } ?: ImmutableArtist.UNKNOWN
+            Artist.of(beautifyArtistName(artistName), country)
+        } ?: Artist.UNKNOWN
 
     private fun parseAlbum(tag: Tag): Album =
         getFieldIfExisting(tag, FieldKey.ALBUM).let { albumName ->
             return if (albumName == null) {
-                ImmutableAlbum.UNKNOWN
+                Album.UNKNOWN
             } else {
                 val albumArtistName = getFieldIfExisting(tag, FieldKey.ALBUM_ARTIST) ?: ""
                 val isCompilation =
@@ -183,8 +183,8 @@ class JAudioTaggerMetadataIO : AudioMetadataIO {
                             it == "true"
                     } ?: false
                 val year = getFieldIfExisting(tag, FieldKey.YEAR)?.toShortOrNull()?.takeIf { it > 0 }
-                val label = getFieldIfExisting(tag, FieldKey.GROUPING)?.let { ImmutableLabel.of(it) } ?: ImmutableLabel.UNKNOWN
-                ImmutableAlbum(albumName, ImmutableArtist.of(beautifyArtistName(albumArtistName)), isCompilation, year, label)
+                val label = getFieldIfExisting(tag, FieldKey.GROUPING)?.let { Label.of(it) } ?: Label.UNKNOWN
+                Album(albumName, Artist.of(beautifyArtistName(albumArtistName)), isCompilation, year, label)
             }
         }
 

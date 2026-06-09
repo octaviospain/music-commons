@@ -65,7 +65,7 @@ infix fun AudioItem.shouldMatch(attributes: AudioItemTestAttributes) {
         artistsInvolved shouldContainExactly
             getArtistsNamesInvolved(
                 title, artist.name, album.albumArtist.name
-            ).map { ImmutableArtist.of(it) }.toSet()
+            ).map { Artist.of(it) }.toSet()
     }
 }
 

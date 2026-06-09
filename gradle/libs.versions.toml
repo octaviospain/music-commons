@@ -2,7 +2,7 @@
 kotlin = "2.4.0"
 coroutines = "1.11.0"
 kotest = "6.1.11"
-lirp = "2.4.2"
+lirp = "2.5.0"
 ksp = "2.3.9"
 jaudiotagger = "3.0.1"
 nv-i18n = "1.29"
@@ -31,6 +31,7 @@ javasound-aac = "0.9.8"
 javasound-resloader = "0.1.3"
 jaad = "0.8.7"
 tritonus-share = "0.3.7.4"
+sqlite-jdbc = "3.49.1.0"
 
 [libraries]
 kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
@@ -44,6 +45,7 @@ lirp-api = { module = "net.transgressoft:lirp-api", version.ref = "lirp" }
 lirp-core = { module = "net.transgressoft:lirp-core", version.ref = "lirp" }
 lirp-ksp = { module = "net.transgressoft:lirp-ksp", version.ref = "lirp" }
 lirp-sql = { module = "net.transgressoft:lirp-sql", version.ref = "lirp" }
+lirp-sql-api = { module = "net.transgressoft:lirp-sql-api", version.ref = "lirp" }
 lirp-fx = { module = "net.transgressoft:lirp-fx", version.ref = "lirp" }
 jaudiotagger = { module = "net.jthink:jaudiotagger", version.ref = "jaudiotagger" }
 nv-i18n = { module = "com.neovisionaries:nv-i18n", version.ref = "nv-i18n" }
@@ -70,6 +72,7 @@ javasound-aac = { module = "com.tianscar.javasound:javasound-aac", version.ref =
 javasound-resloader = { module = "com.tianscar.javasound:javasound-resloader", version.ref = "javasound-resloader" }
 jaad = { module = "de.sfuhrm:jaad", version.ref = "jaad" }
 tritonus-share = { module = "com.googlecode.soundlibs:tritonus-share", version.ref = "tritonus-share" }
+sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite-jdbc" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

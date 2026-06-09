@@ -19,9 +19,8 @@ package net.transgressoft.commons.fx.music
 
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
+import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
-import net.transgressoft.commons.music.audio.ImmutableAlbum
-import net.transgressoft.commons.music.audio.ImmutableArtist
 import net.transgressoft.commons.music.audio.VirtualFiles
 import io.kotest.property.arbitrary.next
 
@@ -40,8 +39,8 @@ fun ObservableAudioLibrary.createItemsByArtist(
     artistConfigs: Map<String, Int>
 ): Map<Artist, List<ObservableAudioItem>> =
     artistConfigs.flatMap { (artistName, itemCount) ->
-        val artist = ImmutableArtist.of(artistName)
-        val album = ImmutableAlbum("$artistName Album", artist)
+        val artist = Artist.of(artistName)
+        val album = Album("$artistName Album", artist)
         List(itemCount) {
             createFromFile(
                 virtualFiles.virtualAudioFile {
@@ -65,9 +64,9 @@ fun ObservableAudioLibrary.createItemsWithMultipleAlbums(
     artistName: String,
     albumItemCounts: Map<String, Int>
 ): List<ObservableAudioItem> {
-    val artist = ImmutableArtist.of(artistName)
+    val artist = Artist.of(artistName)
     return albumItemCounts.flatMap { (albumName, count) ->
-        val album = ImmutableAlbum(albumName, artist)
+        val album = Album(albumName, artist)
         List(count) {
             createFromFile(
                 virtualFiles.virtualAudioFile {

@@ -42,7 +42,7 @@ import java.nio.file.Path
  * val io = VolatileAudioMetadataIO(jimfsFileSystem)
  * io.createVirtualFile(
  *     path = jimfsFileSystem.getPath("/music/song.mp3"),
- *     metadata = AudioItemMetadata(title = "Song", artist = ImmutableArtist.of("Artist"))
+ *     metadata = AudioItemMetadata(title = "Song", artist = Artist.of("Artist"))
  * )
  * ```
  */

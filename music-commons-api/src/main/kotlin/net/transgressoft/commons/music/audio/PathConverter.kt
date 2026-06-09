@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ * Copyright (C) 2026  Octavio Calleya Garcia                                 *
  *                                                                            *
  * This program is free software: you can redistribute it and/or modify       *
  * it under the terms of the GNU General Public License as published by       *
@@ -17,21 +17,21 @@
 
 package net.transgressoft.commons.music.audio
 
-fun <I : ReactiveAudioItem<I>> I.update(change: AudioItemChange) {
-    change.title?.let { title = it }
-    change.artist?.let { artist = it }
-    album =
-        Album(
-            change.albumName ?: album.name,
-            change.albumArtist ?: album.albumArtist,
-            change.isCompilation ?: album.isCompilation,
-            change.year?.takeIf { year -> year > 0 } ?: album.year,
-            change.label ?: album.label
-        )
-    change.genres?.let { genres = it }
-    change.comments?.let { comments = it }
-    change.trackNumber?.takeIf { it > 0 }?.let { trackNumber = it }
-    change.discNumber?.takeIf { it > 0 }?.let { discNumber = it }
-    change.bpm?.takeIf { it > 0 }?.let { bpm = it }
-    change.coverImageBytes?.let { coverImageBytes = it }
+import net.transgressoft.lirp.persistence.ColumnConverter
+import net.transgressoft.lirp.persistence.ColumnType
+import java.net.URI
+import java.nio.file.Path
+
+/**
+ * Maps [Path] values to URI-form strings for SQL persistence, matching the existing JSON wire
+ * format used by audio item serialization. The URI encoding preserves platform-independent
+ * path semantics and round-trips reliably across local file paths.
+ */
+object PathConverter : ColumnConverter<Path, String> {
+
+    override val sqlType = ColumnType.TextType
+
+    override fun toSql(value: Path): String = value.toUri().toString()
+
+    override fun fromSql(raw: String): Path = Path.of(URI(raw))
 }
