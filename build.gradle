@@ -255,12 +255,12 @@ subprojects {
     //   linux-only         Needs Linux-JDK path semantics                Included
     //   posix-only         Needs POSIX (chmod, /tmp semantics)           Included
     //   windows-only       Needs real Windows host                       EXCLUDED
-    //   requires-playback  Needs a working audio output device           Included
+    //   audio-hardware     Needs a working audio output device           Included
     //
-    //   -PexcludeLinuxOnly=true     skip linux-only tests   (use on macOS, Windows)
-    //   -PexcludePosixOnly=true     skip posix-only tests   (use on Windows)
-    //   -PincludeWindowsOnly=true   un-skip windows-only    (use on Windows)
-    //   -PexcludePlaybackTests=true skip requires-playback  (use on headless CI)
+    //   -PexcludeLinuxOnly=true      skip linux-only tests   (use on macOS, Windows)
+    //   -PexcludePosixOnly=true      skip posix-only tests   (use on Windows)
+    //   -PincludeWindowsOnly=true    un-skip windows-only    (use on Windows)
+    //   -PexcludeAudioHardware=true  skip audio-hardware tests  (use on headless CI)
     //
     // configureEach (not just `test { … }`) so any future or custom Test task in a subproject
     // — integration suites, split runs — gets the same JVM args and tag filtering.
@@ -276,7 +276,7 @@ subprojects {
         if (project.findProperty('includeWindowsOnly')?.toString()?.toBoolean()) excludeTags.remove('windows-only')
         if (project.findProperty('excludeLinuxOnly')?.toString()?.toBoolean()) excludeTags << 'linux-only'
         if (project.findProperty('excludePosixOnly')?.toString()?.toBoolean()) excludeTags << 'posix-only'
-        if (project.findProperty('excludePlaybackTests')?.toString()?.toBoolean()) excludeTags << 'requires-playback'
+        if (project.findProperty('excludeAudioHardware')?.toString()?.toBoolean()) excludeTags << 'audio-hardware'
         if (!excludeTags.isEmpty()) {
             systemProperty 'kotest.tags.exclude', excludeTags.join(',')
         }

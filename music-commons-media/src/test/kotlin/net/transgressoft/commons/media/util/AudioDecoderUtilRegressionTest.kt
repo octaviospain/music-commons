@@ -63,13 +63,8 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
             AudioSystem.NOT_SPECIFIED.toLong()
         )
 
-    fun validateReadablePcmStream(stream: AudioInputStream): AudioInputStream {
-        val method =
-            Class.forName("net.transgressoft.commons.media.util.AudioDecoderUtilKt")
-                .getDeclaredMethod("validateReadablePcmStream", AudioInputStream::class.java)
-                .apply { isAccessible = true }
-        return method.invoke(null, stream) as AudioInputStream
-    }
+    fun validateReadablePcmStream(stream: AudioInputStream): AudioInputStream =
+        net.transgressoft.commons.media.util.validateReadablePcmStream(stream)
 
     "AAC M4A decodes to valid PCM with correct endianness and known sample size" {
         val temp = resourceToTemp("testeable_aac.m4a")
@@ -92,7 +87,7 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
             pcmStream.close()
             total shouldBeGreaterThan 0
         } finally {
-            Files.deleteIfExists(temp)
+            deleteDecodedTempFile(temp)
         }
     }
 
@@ -117,7 +112,7 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
             pcmStream.close()
             total shouldBeGreaterThan 0
         } finally {
-            Files.deleteIfExists(temp)
+            deleteDecodedTempFile(temp)
         }
     }
 
@@ -141,7 +136,7 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
             pcmStream.close()
             total shouldBeGreaterThan 0
         } finally {
-            Files.deleteIfExists(temp)
+            deleteDecodedTempFile(temp)
         }
     }
 
@@ -165,7 +160,7 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
             pcmStream.close()
             total shouldBeGreaterThan 0
         } finally {
-            Files.deleteIfExists(temp)
+            deleteDecodedTempFile(temp)
         }
     }
 
@@ -200,7 +195,7 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
             decoded.format shouldBe PCM_FORMAT
             bytesRead shouldBeGreaterThan 0
         } finally {
-            Files.deleteIfExists(temp)
+            deleteDecodedTempFile(temp)
             unmockkStatic("net.transgressoft.commons.media.util.AudioDecoderUtilKt")
         }
     }
@@ -227,7 +222,7 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
             decoded.format shouldBe PCM_FORMAT
             bytesRead shouldBeGreaterThan 0
         } finally {
-            Files.deleteIfExists(temp)
+            deleteDecodedTempFile(temp)
             unmockkStatic("net.transgressoft.commons.media.util.AudioDecoderUtilKt")
         }
     }
@@ -254,7 +249,7 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
 
             error.message shouldContain "tried 2 providers"
         } finally {
-            Files.deleteIfExists(temp)
+            deleteDecodedTempFile(temp)
             unmockkStatic("net.transgressoft.commons.media.util.AudioDecoderUtilKt")
         }
     }
@@ -278,7 +273,7 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
 
             format.type shouldBe AudioFileFormat.Type.WAVE
         } finally {
-            Files.deleteIfExists(temp)
+            deleteDecodedTempFile(temp)
             unmockkStatic("net.transgressoft.commons.media.util.AudioDecoderUtilKt")
         }
     }
@@ -305,7 +300,7 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
 
             error.message shouldContain "tried 2 providers"
         } finally {
-            Files.deleteIfExists(temp)
+            deleteDecodedTempFile(temp)
             unmockkStatic("net.transgressoft.commons.media.util.AudioDecoderUtilKt")
         }
     }
@@ -322,6 +317,59 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
         val jaadClass = "net.sourceforge.jaad.spi.javasound.AACAudioFileReader"
 
         readerPriority(File("track.m4a"), jaadClass) shouldBeLessThan readerPriority(File("track.m4a"), mp3spiClass)
+    }
+
+    "readerPriority prefers javasound-alac over JAAD for m4a files" {
+        val alacClass = "com.beatofthedrum.alacdecoder.spi.AlacAudioFileReader"
+        val jaadClass = "net.sourceforge.jaad.spi.javasound.AACAudioFileReader"
+
+        readerPriority(File("track.m4a"), alacClass) shouldBeLessThan readerPriority(File("track.m4a"), jaadClass)
+    }
+
+    "ALAC M4A decodes to non-empty PCM via decodeToPcmStream" {
+        val temp = resourceToTemp("testeable_alac.m4a")
+        try {
+            val pcmStream = decodeToPcmStream(temp)
+            val format = pcmStream.format
+
+            format.encoding.toString() shouldBe "PCM_SIGNED"
+            format.sampleSizeInBits shouldBe 16
+
+            val buffer = ByteArray(8192)
+            var total = 0
+            var read = pcmStream.read(buffer)
+            while (read != -1) {
+                if (read > 0) total += read
+                read = pcmStream.read(buffer)
+            }
+            pcmStream.close()
+            total shouldBeGreaterThan 0
+        } finally {
+            deleteDecodedTempFile(temp)
+        }
+    }
+
+    "Opus OGG decodes to non-empty PCM via decodeToPcmStream" {
+        val temp = resourceToTemp("testeable_opus.ogg")
+        try {
+            val pcmStream = decodeToPcmStream(temp)
+            val format = pcmStream.format
+
+            format.encoding.toString() shouldBe "PCM_SIGNED"
+            format.sampleSizeInBits shouldBe 16
+
+            val buffer = ByteArray(8192)
+            var total = 0
+            var read = pcmStream.read(buffer)
+            while (read != -1) {
+                if (read > 0) total += read
+                read = pcmStream.read(buffer)
+            }
+            pcmStream.close()
+            total shouldBeGreaterThan 0
+        } finally {
+            deleteDecodedTempFile(temp)
+        }
     }
 
     "FLAC converts to PCM with known sample size" {
@@ -344,7 +392,7 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
             pcmStream.close()
             total shouldBeGreaterThan 0
         } finally {
-            Files.deleteIfExists(temp)
+            deleteDecodedTempFile(temp)
         }
     }
 
@@ -368,7 +416,7 @@ internal class AudioDecoderUtilRegressionTest : StringSpec({
             pcmStream.close()
             total shouldBeGreaterThan 0
         } finally {
-            Files.deleteIfExists(temp)
+            deleteDecodedTempFile(temp)
         }
     }
 })

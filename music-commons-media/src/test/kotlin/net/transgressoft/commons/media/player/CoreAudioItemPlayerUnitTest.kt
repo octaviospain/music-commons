@@ -60,7 +60,7 @@ private fun enumValue(name: String): Any {
 /**
  * Unit tests for [CoreAudioItemPlayer] that exercise the public API without triggering
  * real audio output. Complements [CoreAudioItemPlayerPlaybackTest], which requires a
- * working audio device and is gated behind the `requires-playback` tag.
+ * working audio device and is gated behind the `audio-hardware` tag.
  */
 internal class CoreAudioItemPlayerUnitTest : StringSpec({
 

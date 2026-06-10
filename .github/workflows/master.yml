@@ -68,13 +68,13 @@ jobs:
 
             -   name: Build with Virtual Display (Linux)
                 if: matrix.os == 'ubuntu-latest'
-                run: ./gradlew check -PexcludePlaybackTests=true
+                run: ./gradlew check -PexcludeAudioHardware=true
 
             -   name: Build (Windows, skip Linux-only and playback tests)
                 if: matrix.os == 'windows-latest'
                 # See branch-pr.yml for the rationale: windows-latest runners ship without a
                 # SourceDataLine-compatible audio output device.
-                run: ./gradlew check -PexcludeLinuxOnly=true -PexcludePosixOnly=true -PincludeWindowsOnly=true -PexcludePlaybackTests=true
+                run: ./gradlew check -PexcludeLinuxOnly=true -PexcludePosixOnly=true -PincludeWindowsOnly=true -PexcludeAudioHardware=true
 
             -   name: Upload coverage to Codecov
                 if: matrix.os == 'ubuntu-latest'

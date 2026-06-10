@@ -29,7 +29,8 @@ jobs:
                 uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
                 with:
                     java-version: 21
-                    distribution: 'zulu'
+                    distribution: 'liberica'
+                    java-package: 'jdk+fx'
 
             -   name: Install dependencies
                 run: |
@@ -67,7 +68,7 @@ jobs:
                         ${{ runner.os }}-gradle-
 
             -   name: Build with Gradle and Virtual Display
-                run: ./gradlew build -PexcludePlaybackTests=true -PversionIncrement=${{ inputs.version-increment }}
+                run: ./gradlew build -PexcludeAudioHardware=true -PversionIncrement=${{ inputs.version-increment }}
 
             -   name: Generate CycloneDX SBOM
                 # --no-parallel works around the cyclonedx-gradle-plugin parallel-resolution

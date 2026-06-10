@@ -17,6 +17,7 @@
 
 package net.transgressoft.commons.media.player
 
+import net.transgressoft.commons.media.util.loadAudioFileReaders
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
@@ -26,7 +27,7 @@ import io.kotest.matchers.string.shouldContain as shouldContainString
 import javax.sound.sampled.AudioSystem
 
 /**
- * Runtime verification that all 5 audio format SPI providers are installed
+ * Runtime verification that all 7 audio format SPI providers are installed
  * and operational through JavaSound's [AudioSystem] facade.
  *
  * Uses real test fixture files from music-commons-test resources.
@@ -85,11 +86,28 @@ internal class SpiProviderVerificationTest : FunSpec({
             stream.format.sampleRate shouldBe 44100.0f
             stream.close()
         }
+
+        test("ALAC-in-M4A decodes via javasound-alac SPI") {
+            val file = getTestFile("testeable_alac.m4a")
+            val stream = AudioSystem.getAudioInputStream(file)
+            stream.format.channels shouldBe 2
+            stream.close()
+        }
+
+        test("Opus-in-OGG decodes via jse-spi-opus SPI") {
+            val file = getTestFile("testeable_opus.ogg")
+            val stream = AudioSystem.getAudioInputStream(file)
+            stream.close()
+        }
+
+        // testeable_opus.m4a is intentionally NOT tested here.
+        // Opus-in-M4A has no pure-Java Maven Central SPI support (ecosystem gap).
+        // See AudioDecoderUtil KDoc for the documented limitation.
     }
 
     context("SPI registry enumeration") {
 
-        test("All 5 format extensions are recognized") {
+        test("All 7 format extensions are recognized") {
             val extensions =
                 AudioSystem.getAudioFileTypes()
                     .map { it.extension.lowercase() }
@@ -106,6 +124,14 @@ internal class SpiProviderVerificationTest : FunSpec({
             // via getAudioInputStream() but do NOT register in getAudioFileTypes().
             // This is a known limitation of these SPI implementations.
             // The individual decode tests above verify they work correctly.
+        }
+
+        test("loaded AudioFileReader SPI class names are recorded for routing") {
+            val readers = loadAudioFileReaders()
+            readers.shouldNotBeEmpty()
+            val classNames = readers.map { it.javaClass.name }
+            println("Loaded AudioFileReader SPI providers:")
+            classNames.forEach { println("  - $it") }
         }
     }
 })
