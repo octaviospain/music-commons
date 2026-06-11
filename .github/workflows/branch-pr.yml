@@ -62,9 +62,9 @@ jobs:
                     restore-keys: |
                         ${{ runner.os }}-gradle-
 
-            -   name: Build with and Virtual Display (Linux)
+            -   name: Build with Virtual Display (Linux)
                 if: matrix.os == 'ubuntu-latest'
-                run: ./gradlew check -PexcludeAudioHardware=true
+                run: ./gradlew check dokkaGenerate -PexcludeAudioHardware=true
 
             -   name: Build (Windows, skip Linux-only and audio-hardware tests)
                 if: matrix.os == 'windows-latest'

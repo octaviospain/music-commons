@@ -85,7 +85,11 @@ class ScalableAudioWaveform(
         }
     }
 
-    @Transient private var rawAudioPcm: IntArray? = null
+    // rawAudioPcm is read and written only inside computeNormalized(), which runs exclusively while
+    // holding cacheMutex (see amplitudes()). The mutex serializes all access and establishes the
+    // happens-before relationship, so no @Volatile is required for cross-thread visibility.
+    @Transient
+    private var rawAudioPcm: IntArray? = null
 
     private fun getRawAudioPcm(audioFilePath: Path): IntArray {
         if (!audioFilePath.exists()) {

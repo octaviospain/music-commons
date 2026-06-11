@@ -19,8 +19,8 @@ package net.transgressoft.commons.music.m3u
 
 import net.transgressoft.commons.music.MusicLibrary
 import net.transgressoft.commons.music.audio.AudioFileType
-import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
+import net.transgressoft.commons.music.audio.ReactiveAudioItem
+import net.transgressoft.commons.music.playlist.ReactiveAudioPlaylist
 import net.transgressoft.lirp.entity.toIds
 import mu.KotlinLogging
 import java.io.IOException
@@ -65,8 +65,8 @@ class M3uCycleException(message: String, cause: Throwable? = null) : Exception(m
 /**
  * Orchestrates importing tracks from an M3U playlist file into a [MusicLibrary].
  *
- * Parses the M3U file via [M3uParser], creates [AudioItem] instances for each resolved
- * path, assembles them into a [MutableAudioPlaylist], and recursively imports nested
+ * Parses the M3U file via [M3uParser], creates [ReactiveAudioItem] instances for each resolved
+ * path, assembles them into a [ReactiveAudioPlaylist], and recursively imports nested
  * playlist references (`.m3u` / `.m3u8`).
  *
  * Tracks referencing extensions outside [AudioFileType] are skipped with a warning,
@@ -74,11 +74,13 @@ class M3uCycleException(message: String, cause: Throwable? = null) : Exception(m
  * name collisions are detected up-front so the library is never left in a partially
  * imported state on failure.
  *
+ * @param I the concrete audio item type, mirroring [MusicLibrary]'s `I` bound
+ * @param P the concrete playlist type, mirroring [MusicLibrary]'s `P` bound
  * @param musicLibrary the target library to import into
  * @param maxDepth maximum nested playlist depth, with the root playlist at depth 0
  */
-class M3uImportService(
-    private val musicLibrary: MusicLibrary<AudioItem, MutableAudioPlaylist>,
+class M3uImportService<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>>(
+    private val musicLibrary: MusicLibrary<I, P>,
     private val maxDepth: Int = DEFAULT_MAX_DEPTH
 ) : AutoCloseable {
 
@@ -100,13 +102,13 @@ class M3uImportService(
      * into the library.
      *
      * @param rootM3u path to the M3U or M3U8 file
-     * @return a fully populated [MutableAudioPlaylist] with all referenced audio items
+     * @return a fully populated [P] with all referenced audio items
      * @throws M3uCycleException if a recursive playlist inclusion cycle is detected
      * @throws M3uImportException if the configured recursion depth limit is exceeded
      *         or a derived playlist name collides with an existing playlist
      * @throws M3uParseException if the root M3U file cannot be parsed
      */
-    fun import(rootM3u: Path): MutableAudioPlaylist {
+    fun import(rootM3u: Path): P {
         val plan = planImport(rootM3u, visited = emptyList(), depth = 0)
         rejectCollisions(plan)
         return materialize(plan, existingAudioItemsByPath())
@@ -119,7 +121,7 @@ class M3uImportService(
      * @return a [CompletableFuture] completing with the imported playlist. Cancelling
      *         the future propagates cancellation to the underlying coroutine.
      */
-    fun importAsync(rootM3u: Path): CompletableFuture<MutableAudioPlaylist> = importAsync(rootM3u, Dispatchers.IO)
+    fun importAsync(rootM3u: Path): CompletableFuture<P> = importAsync(rootM3u, Dispatchers.IO)
 
     /**
      * Asynchronously imports the M3U playlist at [rootM3u] using [dispatcher].
@@ -130,9 +132,9 @@ class M3uImportService(
      *         the future propagates cancellation to the underlying coroutine.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun importAsync(rootM3u: Path, dispatcher: CoroutineDispatcher): CompletableFuture<MutableAudioPlaylist> {
+    fun importAsync(rootM3u: Path, dispatcher: CoroutineDispatcher): CompletableFuture<P> {
         val deferred = serviceScope.async(dispatcher) { import(rootM3u) }
-        val future = CompletableFuture<MutableAudioPlaylist>()
+        val future = CompletableFuture<P>()
         deferred.invokeOnCompletion { error ->
             if (error == null) {
                 future.complete(deferred.getCompleted())
@@ -209,8 +211,8 @@ class M3uImportService(
 
     private fun materialize(
         plan: PlannedPlaylist,
-        audioItemsByPath: MutableMap<Path, AudioItem>
-    ): MutableAudioPlaylist {
+        audioItemsByPath: MutableMap<Path, I>
+    ): P {
         val children = plan.children.map { materialize(it, audioItemsByPath) }
         val audioItems = plan.audioPaths.mapNotNull { resolveAudioItem(it, audioItemsByPath) }
         val playlist = musicLibrary.createPlaylist(plan.name, audioItems.toIds())
@@ -230,7 +232,7 @@ class M3uImportService(
 
     private fun playlistName(m3uPath: Path): String = m3uPath.fileName.toString().substringBeforeLast('.')
 
-    private fun resolveAudioItem(path: Path, audioItemsByPath: MutableMap<Path, AudioItem>): AudioItem? {
+    private fun resolveAudioItem(path: Path, audioItemsByPath: MutableMap<Path, I>): I? {
         if (isUnsupportedFileType(path)) {
             logger.warn { "Skipping unsupported audio file type: ${path.toAbsolutePath()}" }
             return null
@@ -253,7 +255,7 @@ class M3uImportService(
         return AudioFileType.fromExtension(extension) == null
     }
 
-    private fun existingAudioItemsByPath(): MutableMap<Path, AudioItem> =
+    private fun existingAudioItemsByPath(): MutableMap<Path, I> =
         musicLibrary.audioLibrary().associateByTo(mutableMapOf()) { it.path.toAbsolutePath().normalize() }
 
     private data class PlannedPlaylist(
