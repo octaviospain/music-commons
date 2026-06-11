@@ -35,5 +35,7 @@ internal fun deleteDecodedTempFile(path: Path) {
         System.gc()
         Thread.sleep(50)
     }
-    runCatching { Files.deleteIfExists(path) }
+    if (runCatching { Files.deleteIfExists(path) }.isSuccess) return
+    // The handle is still held; let the JVM reclaim the file on exit rather than leak it.
+    path.toFile().deleteOnExit()
 }

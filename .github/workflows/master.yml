@@ -70,7 +70,7 @@ jobs:
                 if: matrix.os == 'ubuntu-latest'
                 run: ./gradlew check -PexcludeAudioHardware=true
 
-            -   name: Build (Windows, skip Linux-only and playback tests)
+            -   name: Build (Windows, skip Linux-only and audio-hardware tests)
                 if: matrix.os == 'windows-latest'
                 # See branch-pr.yml for the rationale: windows-latest runners ship without a
                 # SourceDataLine-compatible audio output device.

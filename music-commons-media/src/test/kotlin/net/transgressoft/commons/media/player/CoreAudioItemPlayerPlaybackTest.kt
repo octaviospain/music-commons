@@ -119,6 +119,9 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
                     pcmFormat.get() shouldNotBe null
                 }
 
+                // Guards a deliberate architectural decision: the player streams PCM through a
+                // bounded transfer buffer and must never hold the whole decoded track in memory.
+                // A reintroduced `pcmData` field would signal a regression back to full buffering.
                 runCatching { CoreAudioItemPlayer::class.java.getDeclaredField("pcmData") }.exceptionOrNull().shouldBeInstanceOf<NoSuchFieldException>()
             } finally {
                 player.dispose()
@@ -190,6 +193,9 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
     }
 
     test("forward and backward seek change current time deterministically") {
+        // FakeAudioLine drains instantly, so this test holds the pump with a never-ending stream,
+        // waits for pcmFormat resolution (confirming the pump entered the PLAYING streaming loop),
+        // then pauses before seeking so seekPreviewMillis is set and read back synchronously (D-04).
         val player =
             CoreAudioItemPlayer(
                 pcmStreamFactory = { neverEndingPcmStream() },

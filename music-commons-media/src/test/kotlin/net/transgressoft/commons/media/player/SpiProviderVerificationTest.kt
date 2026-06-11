@@ -97,6 +97,7 @@ internal class SpiProviderVerificationTest : FunSpec({
         test("Opus-in-OGG decodes via jse-spi-opus SPI") {
             val file = getTestFile("testeable_opus.ogg")
             val stream = AudioSystem.getAudioInputStream(file)
+            stream.format.channels shouldBe 2
             stream.close()
         }
 
@@ -107,7 +108,7 @@ internal class SpiProviderVerificationTest : FunSpec({
 
     context("SPI registry enumeration") {
 
-        test("All 7 format extensions are recognized") {
+        test("Core format extensions (WAV, FLAC, OGG) are recognized in getAudioFileTypes()") {
             val extensions =
                 AudioSystem.getAudioFileTypes()
                     .map { it.extension.lowercase() }
