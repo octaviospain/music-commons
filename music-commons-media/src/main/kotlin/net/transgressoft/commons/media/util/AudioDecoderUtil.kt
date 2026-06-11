@@ -64,6 +64,60 @@ fun decodeToPcmStream(path: Path): AudioInputStream {
 }
 
 /**
+ * Decodes [file] to PCM starting at [byteOffset] bytes into the file, using the same prioritized,
+ * exception-safe provider order as [decodeToPcmStream].
+ *
+ * Seeking opens the decoder on a mid-file byte position. Auto-detection via
+ * `AudioSystem.getAudioInputStream(InputStream)` is unreliable here because the ADTS-AAC sync
+ * word collides with the MPEG sync word, so the AAC provider can claim an MP3 frame and yield a
+ * 0-channel format. Trying the readers in the file's prioritized order (MPEG first for `.mp3`,
+ * Vorbis first for `.ogg`) decodes the intended codec instead. Each reader gets a freshly
+ * positioned, mark/reset-capable stream so a failed attempt never consumes another's input.
+ *
+ * @return a readable PCM stream positioned at [byteOffset], or null when [byteOffset] is out of
+ *   range or no registered provider can decode the data at that position.
+ */
+internal fun decodePcmStreamAt(file: File, byteOffset: Long): AudioInputStream? {
+    if (byteOffset < 0L || byteOffset >= file.length()) return null
+    val readers = prioritizeAudioFileReaders(file, loadAudioFileReaders())
+    for (reader in readers) {
+        var raw: AudioInputStream? = null
+        var decoded: AudioInputStream? = null
+        val fis = java.io.FileInputStream(file)
+        try {
+            if (skipFullyOnStream(fis, byteOffset) < byteOffset) return null
+            // BufferedInputStream supplies the mark/reset the readers use to probe the format.
+            raw = reader.getAudioInputStream(java.io.BufferedInputStream(fis))
+            decoded = validateReadablePcmStream(convertToPcmStream(raw))
+            return decoded
+        } catch (_: UnsupportedAudioFileException) {
+            // Provider cannot handle this stream; try the next one.
+        } catch (_: IOException) {
+            // Read error with this provider; try the next one.
+        } catch (_: RuntimeException) {
+            // Buggy provider; try the next one.
+        } finally {
+            if (decoded == null) {
+                closeQuietly(raw)
+                runCatching { fis.close() }
+            }
+        }
+    }
+    return null
+}
+
+/** Skips exactly [count] bytes, looping over short [java.io.InputStream.skip] returns until EOF. */
+private fun skipFullyOnStream(stream: java.io.InputStream, count: Long): Long {
+    var remaining = count
+    while (remaining > 0L) {
+        val n = stream.skip(remaining)
+        if (n <= 0L) break
+        remaining -= n
+    }
+    return count - remaining
+}
+
+/**
  * Reads audio file metadata using the same prioritized and exception-safe provider order as [decodeToPcmStream].
  */
 fun readAudioFileFormat(path: Path): AudioFileFormat {
