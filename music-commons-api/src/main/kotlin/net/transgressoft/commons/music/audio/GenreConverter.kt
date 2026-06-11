@@ -24,7 +24,7 @@ import net.transgressoft.lirp.persistence.ColumnType
  * Maps individual [Genre] elements for `@ElementCollection` storage.
  *
  * Each element is serialized as the genre's display name string. Standard genres round-trip via
- * [Genre.parseGenre]; custom genres that are not in the built-in registry are reconstructed as
+ * [parseGenre]; custom genres that are not in the built-in registry are reconstructed as
  * [Genre.Custom] instances. Individual genre names never contain commas (enforced by
  * [Genre.Custom]'s init block), so per-element encoding is unambiguous.
  */
@@ -34,5 +34,5 @@ object GenreConverter : ColumnConverter<Genre, String> {
 
     override fun toSql(value: Genre): String = value.name
 
-    override fun fromSql(raw: String): Genre = Genre.parseGenre(raw).firstOrNull() ?: Genre.Custom(raw)
+    override fun fromSql(raw: String): Genre = parseGenre(raw).firstOrNull() ?: Genre.Custom(raw)
 }

@@ -9,6 +9,7 @@ import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
 import net.transgressoft.commons.music.audio.Label
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
+import net.transgressoft.commons.music.audio.parseGenre
 import net.transgressoft.commons.music.playlist.ReactiveAudioPlaylist
 import net.transgressoft.commons.util.WindowsPathException
 import net.transgressoft.commons.util.WindowsPathValidator
@@ -226,7 +227,7 @@ class ItunesImportService<I, P>
                 year = track.year,
                 label = Label.UNKNOWN
             )
-        val genres = track.genre?.let { Genre.parseGenre(it) } ?: emptySet()
+        val genres = track.genre?.let { parseGenre(it) } ?: emptySet()
         return ItunesMetadata(artist, album, genres)
     }
 

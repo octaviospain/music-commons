@@ -230,8 +230,8 @@ fun Arb.Companion.genre(): Arb<Genre> =
     arbitrary {
         val samples =
             listOf(
-                Genre.Rock, Genre.Alternative, Genre.Jazz, Genre.Blues, Genre.Electronic,
-                Genre.HipHop, Genre.Classical, Genre.Folk, Genre.Metal, Genre.Pop
+                Rock, Alternative, Jazz, Blues, Electronic,
+                HipHop, Classical, Folk, Metal, Pop
             )
         if (Arb.boolean().bind()) samples[Arb.int(0 until samples.size).bind()]
         // Custom genre strings use alphanumeric chars only because JAudioTagger normalizes

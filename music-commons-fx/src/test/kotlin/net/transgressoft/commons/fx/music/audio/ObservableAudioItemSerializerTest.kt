@@ -1,7 +1,7 @@
 package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.AudioItemTestFactory
-import net.transgressoft.commons.music.audio.Genre
+import net.transgressoft.commons.music.audio.Rock
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.util.toJsonUri
 import io.kotest.assertions.json.shouldContainJsonKey
@@ -85,7 +85,7 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
     "ObservableAudioItemSerializer deserializes legacy single-genre field into genres set" {
         val path =
             files.virtualAudioFile {
-                this.genres = setOf(Genre.Rock)
+                this.genres = setOf(Rock)
             }.next()
         val original = FXAudioItemTestBridge.createFxAudioItem(path, AudioItemTestFactory.nextTestId(), files.metadataIO)
 
@@ -102,7 +102,7 @@ internal class ObservableAudioItemSerializerTest : StringSpec({
             }
 
         val decoded = json.decodeFromString(fxSerializer, legacyItem.toString())
-        decoded.genres shouldBe setOf(Genre.Rock)
+        decoded.genres shouldBe setOf(Rock)
     }
 
     "ObservableAudioItemSerializer inherits file:// URI format from ReactiveAudioItem.toJsonObject" {

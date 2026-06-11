@@ -1,12 +1,24 @@
 package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.Alternative
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItemMetadata
+import net.transgressoft.commons.music.audio.Blues
+import net.transgressoft.commons.music.audio.Classical
+import net.transgressoft.commons.music.audio.Electronic
+import net.transgressoft.commons.music.audio.Folk
 import net.transgressoft.commons.music.audio.Genre
+import net.transgressoft.commons.music.audio.HipHop
 import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
+import net.transgressoft.commons.music.audio.Jazz
 import net.transgressoft.commons.music.audio.Label
+import net.transgressoft.commons.music.audio.Metal
+import net.transgressoft.commons.music.audio.Pop
+import net.transgressoft.commons.music.audio.Punk
+import net.transgressoft.commons.music.audio.Reggae
+import net.transgressoft.commons.music.audio.Rock
 import net.transgressoft.commons.music.audio.audioItemChange
 import net.transgressoft.commons.music.audio.testCoverBytes
 import net.transgressoft.commons.music.audio.update
@@ -339,9 +351,9 @@ internal class FXAudioItemTest : StringSpec({
 fun Set<Genre>.randomDifferent(): Set<Genre> {
     val knownGenres =
         listOf(
-            Genre.Rock, Genre.Alternative, Genre.Jazz, Genre.Blues,
-            Genre.Electronic, Genre.HipHop, Genre.Classical, Genre.Folk,
-            Genre.Metal, Genre.Pop, Genre.Punk, Genre.Reggae
+            Rock, Alternative, Jazz, Blues,
+            Electronic, HipHop, Classical, Folk,
+            Metal, Pop, Punk, Reggae
         )
     val differentGenre = knownGenres.first { it !in this }
     return setOf(differentGenre)

@@ -194,9 +194,9 @@ abstract class AudioItemSerializerBase<I : ReactiveAudioItem<I>>(
         val genres: Set<Genre> =
             json["genres"]?.jsonArray
                 ?.mapNotNull { it.jsonPrimitive.contentOrNull }
-                ?.flatMap { Genre.parseGenre(it) }
+                ?.flatMap { parseGenre(it) }
                 ?.toSet()
-                ?: json["genre"]?.jsonPrimitive?.contentOrNull?.let { Genre.parseGenre(it) }
+                ?: json["genre"]?.jsonPrimitive?.contentOrNull?.let { parseGenre(it) }
                 ?: emptySet()
         val comments = json["comments"]?.jsonPrimitive?.contentOrNull
         val trackNumber = json["trackNumber"]?.jsonPrimitive?.intOrNull?.toShort()

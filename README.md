@@ -58,9 +58,15 @@ implementation("net.transgressoft:lirp-core:2.4.0")
 
 `Genre` is a sealed class with ~370 predefined genre constants (data objects) and a `Custom` variant for arbitrary genre strings. Audio items carry multiple genres as a `Set<Genre>`, populated by parsing comma-separated tags from audio file metadata.
 
+The `parseGenre` and `joinGenres` helpers are **top-level functions** in `net.transgressoft.commons.music.audio`; import them directly:
+
 ```kotlin
-val genres: Set<Genre> = Genre.parseGenre("Rock, Jazz")  // setOf(Genre.Rock, Genre.Jazz)
-val custom: Set<Genre> = Genre.parseGenre("Vaporwave")   // setOf(Genre.Custom("Vaporwave"))
+import net.transgressoft.commons.music.audio.parseGenre
+import net.transgressoft.commons.music.audio.joinGenres
+
+val genres: Set<Genre> = parseGenre("Rock, Jazz")  // setOf(Rock, Jazz)
+val custom: Set<Genre> = parseGenre("Vaporwave")   // setOf(Genre.Custom("Vaporwave"))
+val tag: String = joinGenres(genres)               // "Jazz, Rock"
 ```
 
 Unknown genre strings are preserved as `Genre.Custom(name)` instead of being discarded. Serialization uses a JSON array: `"genres": ["Rock", "Jazz"]`

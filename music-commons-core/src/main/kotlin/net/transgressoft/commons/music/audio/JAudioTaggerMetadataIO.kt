@@ -20,6 +20,8 @@ package net.transgressoft.commons.music.audio
 import net.transgressoft.commons.music.audio.AudioFileType.FLAC
 import net.transgressoft.commons.music.audio.AudioFileType.MP3
 import net.transgressoft.commons.music.audio.AudioFileType.WAV
+import net.transgressoft.commons.music.audio.joinGenres
+import net.transgressoft.commons.music.audio.parseGenre
 import com.neovisionaries.i18n.CountryCode
 import mu.KotlinLogging
 import org.jaudiotagger.audio.AudioFileIO
@@ -84,7 +86,7 @@ class JAudioTaggerMetadataIO : AudioMetadataIO {
             title = getFieldIfExisting(tag, FieldKey.TITLE) ?: "",
             artist = parseArtist(tag),
             album = parseAlbum(tag),
-            genres = getFieldIfExisting(tag, FieldKey.GENRE)?.let { Genre.parseGenre(it) } ?: emptySet(),
+            genres = getFieldIfExisting(tag, FieldKey.GENRE)?.let { parseGenre(it) } ?: emptySet(),
             comments = getFieldIfExisting(tag, FieldKey.COMMENT)?.takeIf { it.isNotEmpty() },
             trackNumber = parseOptionalShort(getFieldIfExisting(tag, FieldKey.TRACK)),
             discNumber = parseOptionalShort(getFieldIfExisting(tag, FieldKey.DISC_NO)),
@@ -259,7 +261,7 @@ class JAudioTaggerMetadataIO : AudioMetadataIO {
         tag.setField(FieldKey.ALBUM, album.name)
         tag.setField(FieldKey.ALBUM_ARTIST, album.albumArtist.name)
         tag.setField(FieldKey.ARTIST, artist.name)
-        tag.setField(FieldKey.GENRE, Genre.joinGenres(genres))
+        tag.setField(FieldKey.GENRE, joinGenres(genres))
         tag.setField(FieldKey.COUNTRY, artist.countryCode.name)
         comments?.let { tag.setField(FieldKey.COMMENT, it) }
         trackNumber?.let { tag.setField(FieldKey.TRACK, it.toString()) }

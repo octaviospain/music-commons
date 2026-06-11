@@ -22,6 +22,8 @@ import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItemMetadata
 import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.Label
+import net.transgressoft.commons.music.audio.Pop
+import net.transgressoft.commons.music.audio.Rock
 import net.transgressoft.lirp.persistence.sql.SqlRepository
 import net.transgressoft.lirp.persistence.sql.SqliteRepository
 import com.google.common.jimfs.Configuration
@@ -52,7 +54,7 @@ internal class FXAudioItemSqlRoundTripTest : StringSpec({
     fun testPath(name: String): Path = fs.getPath("/audio/$name.mp3")
 
     "FXAudioItem_LirpTableDef persists and reloads an FX audio item with artist, album and genres" {
-        val genres = setOf(Genre.Rock, Genre.Pop, Genre.Custom("MyCustomGenre"))
+        val genres = setOf(Rock, Pop, Genre.Custom("MyCustomGenre"))
         val artist = Artist.of("Daft Punk", CountryCode.FR)
         val album =
             Album(

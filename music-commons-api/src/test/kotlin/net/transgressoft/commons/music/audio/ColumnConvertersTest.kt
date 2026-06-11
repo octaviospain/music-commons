@@ -54,7 +54,7 @@ internal class ColumnConvertersTest : StringSpec({
     }
 
     "GenreConverter round-trips a standard Genre" {
-        val genre = Genre.Rock
+        val genre = Rock
         GenreConverter.fromSql(GenreConverter.toSql(genre)) shouldBe genre
     }
 
@@ -64,7 +64,7 @@ internal class ColumnConvertersTest : StringSpec({
     }
 
     "GenreConverter toSql returns genre name string" {
-        GenreConverter.toSql(Genre.Rock) shouldBe "Rock"
+        GenreConverter.toSql(Rock) shouldBe "Rock"
     }
 
     "CountryConverter round-trips a named CountryCode" {
