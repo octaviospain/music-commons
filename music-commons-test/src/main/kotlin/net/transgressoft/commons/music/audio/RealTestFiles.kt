@@ -23,7 +23,6 @@ import net.transgressoft.commons.music.audio.AudioFileTagType.MP4_INFO
 import net.transgressoft.commons.music.audio.AudioFileTagType.VORBIS_COMMENT
 import net.transgressoft.commons.music.audio.joinGenres
 import io.kotest.core.TestConfiguration
-import io.kotest.engine.spec.tempfile
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.arbitrary
 import io.kotest.property.arbitrary.enum
@@ -72,9 +71,13 @@ object ArbitraryAudioFile : TestConfiguration() {
             val tag = createTag(audioFileTagType, attributes, audioFileTagType.newActualTag())
             val extension = audioFileTagType.fileType.extension
             val testFile = audioFileTagType.testFile
-            tempfile(suffix = ".$extension").also { file ->
-                Files.copy(testFile.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            // Use a deleteOnExit temp file rather than Kotest's tempfile(): SPI/native audio
+            // decoders (AAC, Vorbis, MP3) can keep the file handle open past the test on Windows,
+            // where Kotest's afterSpec deletion then throws TempFileDeletionException. deleteOnExit
+            // defers cleanup to JVM shutdown, after the OS releases those handles.
+            File.createTempFile("realaudio-", ".$extension").also { file ->
                 file.deleteOnExit()
+                Files.copy(testFile.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
                 // Some fixtures (notably OGG variants without vorbis-comment headers) cannot be
                 // re-read by jaudiotagger. Skip tag-writing for those — the file is still a valid
                 // audio stream usable by tests that don't depend on its tag content.
@@ -131,7 +134,7 @@ object ArbitraryAudioFile : TestConfiguration() {
     }
 
     internal fun setArtworkTag(tag: Tag, coverBytes: ByteArray?) {
-        tempfile("tempCover", ".tmp").also {
+        File.createTempFile("tempCover", ".tmp").apply { deleteOnExit() }.also {
             Files.write(it.toPath(), coverBytes!!, StandardOpenOption.TRUNCATE_EXISTING)
             ArtworkFactory.createArtworkFromFile(it).let { artwork ->
                 tag.artworkList.clear()

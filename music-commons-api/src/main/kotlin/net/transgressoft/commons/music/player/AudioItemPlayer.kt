@@ -133,8 +133,32 @@ interface AudioItemPlayer : Flow.Publisher<AudioItemPlayerEvent> {
     /**
      * Requests a seek to [position] within the currently loaded audio item. The seek is
      * applied as soon as the pump thread observes the request; callers should not assume
-     * synchronous repositioning. Positions outside the track length are clamped by the
-     * implementation.
+     * synchronous repositioning. Positions outside the track length are clamped to the
+     * track boundary.
+     *
+     * **Per-format seek precision** (applies to [CoreAudioItemPlayer][net.transgressoft.commons.media.player.CoreAudioItemPlayer]
+     * and subclasses):
+     *
+     * - **FLAC**: sample-accurate. The decoder bisects the raw byte stream to the exact frame
+     *   containing the target sample, so the actual start position matches [position] to within
+     *   a single FLAC frame (typically 4096 samples).
+     * - **MP3**: frame-accurate via Xing/Info TOC when available, or frame-scan fallback for
+     *   CBR files. The actual start position may precede [position] by up to one MP3 frame
+     *   (26 ms at 48 kHz).
+     * - **OGG Vorbis**: sample-accurate. Bisection over Ogg page `granulepos` validates the
+     *   target in O(log file size) reads, then PCM is decoded forward from the start of the
+     *   stream to the exact requested offset. Because the Vorbis SPI decodes from the container
+     *   start regardless, wall-clock seek cost still scales with the target position, as with
+     *   AAC/M4A.
+     * - **WAV / AIFF**: byte-aligned to the nearest PCM frame. Precision is limited only by
+     *   the frame size (4 bytes for 16-bit stereo); effectively sample-accurate.
+     * - **AAC/M4A**: frame-accurate. The implementation decodes to PCM from the beginning of
+     *   the stream and discards bytes up to the target offset, so seeking near the end of a
+     *   long track is proportionally slower than seeking near the start.
+     *
+     * @param position the target playback position; negative values are clamped to
+     *   [Duration.ZERO], and positions beyond `totalDuration` are clamped to it once the total
+     *   duration is known (while it is still being resolved, the target is applied unclamped)
      */
     fun seek(position: Duration)
 

@@ -235,6 +235,16 @@ Bridges core module with JavaFX's property binding system.
 - `PlayableWaveformPane` -- Region component with progress fill, playhead, seek, and shimmer loading
 - `SeekEvent` -- Custom JavaFX event fired on click-to-seek and drag-to-scrub interactions
 
+### music-commons-media
+
+JavaFX-free audio playback engine based on `javax.sound.sampled` SPI decoders.
+
+- `CoreAudioItemPlayer` -- Headless audio player supporting MP3, FLAC, OGG, AAC/M4A, and WAV via SPI decoders. Bounded PCM streaming pipeline with `SourceDataLine` output and format-specific seek (see [Seek precision](#seek-precision))
+- `StallDetector` -- Detects and recovers from PCM read stalls in the pump loop
+- `DurationProber` -- Resolves playable duration including full-decode fallback for AAC/M4A containers
+- `PcmVolume` -- In-place linear gain application supporting 8/16/24/32-bit PCM
+- `FlacPcmStreamSeeker`, `Mp3PcmStreamSeeker`, `OggPcmStreamSeeker` -- Format-specific seek implementations
+
 ## Usage Examples
 
 ### Core module (headless)
@@ -356,6 +366,22 @@ player.seek(30000.0) // seek to 30 seconds
 
 player.dispose()
 ```
+
+#### Seek precision
+
+The `CoreAudioItemPlayer` (and `FXAudioItemPlayer`) resolve seek positions differently for each codec:
+
+| Format | Seek mechanism | Typical precision |
+|--------|---------------|-------------------|
+| **FLAC** | Byte-stream bisection to the nearest FLAC frame | ≤ 1 frame (~4096 samples ≈ 85 ms at 48 kHz) |
+| **MP3** | Xing/Info TOC lookup when present; frame-scan fallback for CBR | ≤ 1 MP3 frame (~26 ms at 48 kHz) |
+| **OGG Vorbis** | Ogg page bisection validates the target; PCM decoded forward to the exact offset | Sample-accurate, but seek cost grows linearly with position |
+| **WAV / AIFF** | Byte-aligned to the nearest PCM frame | Effectively sample-accurate (4 bytes for 16-bit stereo) |
+| **AAC / M4A** | Full-decode skip from the start (no TOC in the container) | Exact byte offset, but seek cost grows linearly with position |
+
+All formats clamp seek positions to `[0, totalDuration]`. The seek target is consumed by the pump
+thread on its next iteration, so there is a small delay between calling `seek()` and the position
+change becoming audible.
 
 ### Waveform Visualization (JavaFX)
 

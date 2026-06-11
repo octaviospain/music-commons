@@ -10,7 +10,6 @@ import net.transgressoft.commons.music.waveform.AudioWaveformProcessingException
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
-import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.floats.shouldBeWithinPercentageOf
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -18,6 +17,7 @@ import io.kotest.matchers.string.shouldContain
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import java.awt.Color
+import java.io.File
 import java.nio.file.Path
 import javax.imageio.ImageIO
 import kotlinx.coroutines.Dispatchers
@@ -40,7 +40,7 @@ internal class ScalableAudioWaveformTest : FunSpec({
                 "an m4a file" to Arb.realAudioFile(MP4_INFO).next()
             )
         ) {
-            val pngTempFile = tempfile(suffix = ".png")
+            val pngTempFile = deleteOnExitTempFile(".png")
             ScalableAudioWaveform(1, it).createImage(pngTempFile, Color.RED, Color.BLUE, 780, 335, testDispatcher)
             pngTempFile.exists() shouldBe true
 
@@ -58,7 +58,7 @@ internal class ScalableAudioWaveformTest : FunSpec({
 
     test("Creates a waveform image from an mp3 file") {
         val mp3Path = Arb.realAudioFile(ID3_V_24).next()
-        val pngTempFile = tempfile(suffix = ".png")
+        val pngTempFile = deleteOnExitTempFile(".png")
         ScalableAudioWaveform(1, mp3Path).createImage(pngTempFile, Color.RED, Color.BLUE, 780, 335, testDispatcher)
         pngTempFile.exists() shouldBe true
         pngTempFile.extension shouldBe "png"
@@ -66,16 +66,16 @@ internal class ScalableAudioWaveformTest : FunSpec({
 
     test("Creates a waveform image from an m4a file") {
         val m4aPath = Arb.realAudioFile(MP4_INFO).next()
-        val pngTempFile = tempfile(suffix = ".png")
+        val pngTempFile = deleteOnExitTempFile(".png")
         ScalableAudioWaveform(1, m4aPath).createImage(pngTempFile, Color.RED, Color.BLUE, 780, 335, testDispatcher)
         pngTempFile.exists() shouldBe true
         pngTempFile.extension shouldBe "png"
     }
 
     test("Throws AudioWaveformProcessingException when creating waveform from corrupted file") {
-        val corruptedFile = tempfile(suffix = ".mp3")
+        val corruptedFile = deleteOnExitTempFile(".mp3")
         corruptedFile.writeText("This is not a valid mp3 file")
-        val pngTempFile = tempfile(suffix = ".png")
+        val pngTempFile = deleteOnExitTempFile(".png")
 
         val exception =
             shouldThrow<AudioWaveformProcessingException> {
@@ -159,3 +159,9 @@ internal class ScalableAudioWaveformTest : FunSpec({
         }
     }
 })
+
+// Kotest's tempfile() deletes registered files in afterSpec; on Windows an audio/image decoder
+// that still holds the handle makes that deletion throw TempFileDeletionException and fails the
+// whole spec. deleteOnExit defers cleanup to JVM shutdown, after the handles are released.
+private fun deleteOnExitTempFile(suffix: String): File =
+    File.createTempFile("waveform-test-", suffix).apply { deleteOnExit() }

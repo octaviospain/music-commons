@@ -37,9 +37,9 @@ import javax.sound.sampled.AudioInputStream
 /**
  * Opens FLAC PCM streams at a requested decoded sample offset using jflac's random-access decoder.
  */
-internal object SeekableFlacPcmStreams {
+internal object FlacPcmStreamSeeker : PcmStreamSeeker {
 
-    fun open(file: File, requestedByteOffset: Long): SeekableFlacPcmStream? {
+    override fun open(file: File, requestedByteOffset: Long): SeekablePcmStream? {
         if (!file.extension.equals("flac", ignoreCase = true) || requestedByteOffset <= 0L) return null
 
         val input = RandomFileInputStream(file)
@@ -55,7 +55,7 @@ internal object SeekableFlacPcmStreams {
             val targetFrame = requestedByteOffset / format.frameSize.toLong()
             if (targetFrame >= totalSamples) {
                 val endOffset = totalSamples * format.frameSize.toLong()
-                return SeekableFlacPcmStream(
+                return SeekablePcmStream(
                     AudioInputStream(ByteArrayInputStream(ByteArray(0)), format, 0L),
                     endOffset
                 )
@@ -82,7 +82,7 @@ internal object SeekableFlacPcmStreams {
 
             val streamInput = DecoderPipeInputStream(pipeInput, thread, closed, failure)
             val remainingFrames = totalSamples - targetFrame
-            return SeekableFlacPcmStream(AudioInputStream(streamInput, format, remainingFrames), targetFrame * format.frameSize.toLong())
+            return SeekablePcmStream(AudioInputStream(streamInput, format, remainingFrames), targetFrame * format.frameSize.toLong())
         } finally {
             if (!handedOffToDecoderThread) {
                 runCatching { input.close() }
@@ -140,14 +140,6 @@ internal object SeekableFlacPcmStreams {
             isAccessible = true
         }
 }
-
-/**
- * PCM stream and absolute decoded byte offset for a random-access FLAC seek.
- */
-internal data class SeekableFlacPcmStream(
-    val stream: AudioInputStream,
-    val startByteOffset: Long
-)
 
 /**
  * Writes decoded FLAC PCM frames into a pipe while dropping the leading samples before the seek target.
