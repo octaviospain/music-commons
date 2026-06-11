@@ -17,12 +17,14 @@
 
 package net.transgressoft.commons.media.player
 
+import net.transgressoft.commons.media.util.decodeToPcmStream
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.AudioFileTagType.FLAC
 import net.transgressoft.commons.music.audio.AudioFileTagType.ID3_V_24
 import net.transgressoft.commons.music.audio.AudioFileTagType.MP4_INFO
 import net.transgressoft.commons.music.audio.AudioFileTagType.VORBIS_COMMENT
 import net.transgressoft.commons.music.audio.AudioFileTagType.WAV
+import net.transgressoft.commons.music.audio.FakeAudioLine
 import net.transgressoft.commons.music.audio.audioItem
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status
 import io.kotest.assertions.nondeterministic.eventually
@@ -36,20 +38,53 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
+import java.io.InputStream
 import java.nio.file.Files.createTempFile
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicReference
+import javax.sound.sampled.AudioFormat
+import javax.sound.sampled.AudioInputStream
+import javax.sound.sampled.AudioSystem
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
+private val PCM_FORMAT_PLAYBACK = AudioFormat(44_100f, 16, 2, true, false)
+
+private fun streamOf(bytes: ByteArray): AudioInputStream =
+    AudioInputStream(bytes.inputStream(), PCM_FORMAT_PLAYBACK, bytes.size.toLong() / PCM_FORMAT_PLAYBACK.frameSize)
+
 /**
- * Tests that exercise actual JavaSound SPI playback through [CoreAudioItemPlayer].
- *
- * Class-level [Tags] of `requires-playback` mean these tests are skipped when `-PexcludePlaybackTests=true` is set.
- *
- * Tests are parameterized across all supported audio formats (MP3, M4A, WAV, FLAC, OGG) to
- * detect codec-specific playback bugs.
+ * A PCM stream whose reads block until the pump thread is interrupted, so playback never
+ * completes on its own. [FakeAudioLine] drains real fixtures instantly, which would race the
+ * pump to READY before a test can pause or seek; a never-ending source keeps the player in
+ * PLAYING deterministically until the test drives the transition itself.
  */
-@Tags("requires-playback")
+private fun neverEndingPcmStream(): AudioInputStream {
+    val blocking =
+        object : InputStream() {
+            override fun read(): Int {
+                Thread.sleep(Long.MAX_VALUE)
+                return -1
+            }
+
+            override fun read(b: ByteArray, off: Int, len: Int): Int {
+                Thread.sleep(Long.MAX_VALUE)
+                return -1
+            }
+        }
+    return AudioInputStream(blocking, PCM_FORMAT_PLAYBACK, AudioSystem.NOT_SPECIFIED.toLong())
+}
+
+/**
+ * Tests that exercise playback state-machine, seek, and lifecycle scenarios for [CoreAudioItemPlayer].
+ *
+ * Most tests use [FakeAudioLine] for deterministic, hardware-free execution in CI (excluded with
+ * `-PexcludeAudioHardware=true`). One PCM-to-line smoke test is tagged `audio-hardware` and
+ * verifies the real JavaSound SPI pipeline on a device with audio output.
+ *
+ * Tests are parameterized across supported audio formats where applicable to detect
+ * codec-specific playback bugs.
+ */
 internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
 
     context("PCM decoding across all supported formats") {
@@ -62,7 +97,13 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
                 "ogg" to VORBIS_COMMENT
             )
         ) { tagType ->
-            val player = CoreAudioItemPlayer()
+            val player =
+                CoreAudioItemPlayer(
+                    pcmStreamFactory = ::decodeToPcmStream,
+                    lineFactory = { FakeAudioLine() },
+                    nanoTime = { 0L },
+                    stallThresholdNanos = Long.MAX_VALUE
+                )
             val realAudioPath = Arb.realAudioFile(tagType).next()
             val audioItem = Arb.audioItem { path = realAudioPath }.next()
             player.setVolume(0.0)
@@ -78,6 +119,9 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
                     pcmFormat.get() shouldNotBe null
                 }
 
+                // Guards a deliberate architectural decision: the player streams PCM through a
+                // bounded transfer buffer and must never hold the whole decoded track in memory.
+                // A reintroduced `pcmData` field would signal a regression back to full buffering.
                 runCatching { CoreAudioItemPlayer::class.java.getDeclaredField("pcmData") }.exceptionOrNull().shouldBeInstanceOf<NoSuchFieldException>()
             } finally {
                 player.dispose()
@@ -95,7 +139,13 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
                 "ogg" to VORBIS_COMMENT
             )
         ) { tagType ->
-            val player = CoreAudioItemPlayer()
+            val player =
+                CoreAudioItemPlayer(
+                    pcmStreamFactory = ::decodeToPcmStream,
+                    lineFactory = { FakeAudioLine() },
+                    nanoTime = { 0L },
+                    stallThresholdNanos = Long.MAX_VALUE
+                )
             val realAudioPath = Arb.realAudioFile(tagType).next()
             val audioItem = Arb.audioItem { path = realAudioPath }.next()
             player.setVolume(0.0)
@@ -117,8 +167,15 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
         }
     }
 
-    test("WAV playback completes and transitions to READY") {
-        val player = CoreAudioItemPlayer()
+    test("playback completes and transitions to READY using FakeAudioLine") {
+        // FakeAudioLine drains all bytes instantly, so completion is near-immediate
+        val player =
+            CoreAudioItemPlayer(
+                pcmStreamFactory = { streamOf(ByteArray(8_820)) },
+                lineFactory = { FakeAudioLine() },
+                nanoTime = { 0L },
+                stallThresholdNanos = Long.MAX_VALUE
+            )
         val realAudioPath = Arb.realAudioFile(WAV).next()
         val audioItem = Arb.audioItem { path = realAudioPath }.next()
         player.setVolume(0.0)
@@ -127,9 +184,7 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
             player.play(audioItem)
             player.status() shouldBe Status.PLAYING
 
-            // Wait for the WAV track (~9s) to finish playing back. The timeout is generous
-            // because audio output is real-time and CI runners can add latency.
-            eventually(15.seconds) {
+            eventually(500.milliseconds) {
                 player.status() shouldBe Status.READY
             }
         } finally {
@@ -137,36 +192,58 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
         }
     }
 
-    test("forward and backward seek change current time for WAV") {
-        val player = CoreAudioItemPlayer()
+    test("forward and backward seek change current time deterministically") {
+        // FakeAudioLine drains instantly, so this test holds the pump with a never-ending stream,
+        // waits for pcmFormat resolution (confirming the pump entered the PLAYING streaming loop),
+        // then pauses before seeking so seekPreviewMillis is set and read back synchronously (D-04).
+        val player =
+            CoreAudioItemPlayer(
+                pcmStreamFactory = { neverEndingPcmStream() },
+                lineFactory = { FakeAudioLine() },
+                nanoTime = { 0L },
+                stallThresholdNanos = Long.MAX_VALUE
+            )
         val realAudioPath = Arb.realAudioFile(WAV).next()
         val audioItem = Arb.audioItem { path = realAudioPath }.next()
         player.setVolume(0.0)
 
         try {
             player.play(audioItem)
+            // Wait until the pump has opened the PCM stream (pcmFormat resolved): by then it has
+            // entered the PLAYING streaming loop, so pause() deterministically reaches PAUSED
+            // regardless of scheduler timing. The never-ending stream keeps it from completing.
             eventually(3.seconds) {
-                player.status() shouldBe Status.PLAYING
+                val pcmFormatField = CoreAudioItemPlayer::class.java.getDeclaredField("pcmFormat")
+                pcmFormatField.isAccessible = true
+                (pcmFormatField.get(player) as AtomicReference<*>).get() shouldNotBe null
             }
+
+            // Pause before seeking to hold the pump — FakeAudioLine drains near-instantly so
+            // we must be in PAUSED state for seek() to set seekPreviewMillis synchronously
+            // and for getCurrentTime() to read it back (D-04 clock-jump discipline).
+            player.pause()
+            player.status() shouldBe Status.PAUSED
 
             player.seek(Duration.ofMillis(700))
-            eventually(1.seconds) {
-                player.getCurrentTime().toMillis() shouldBeGreaterThanLong 600L
-            }
+            player.getCurrentTime().toMillis() shouldBeGreaterThanLong 600L
 
             player.seek(Duration.ofMillis(200))
-            eventually(1.seconds) {
-                val currentMillis = player.getCurrentTime().toMillis()
-                currentMillis shouldBeGreaterThanLong 150L
-                currentMillis shouldBeLessThanOrEqual 450L
-            }
+            val currentMillis = player.getCurrentTime().toMillis()
+            currentMillis shouldBeGreaterThanLong 150L
+            currentMillis shouldBeLessThanOrEqual 450L
         } finally {
             player.dispose()
         }
     }
 
     test("dispose transitions to DISPOSED and is idempotent") {
-        val player = CoreAudioItemPlayer()
+        val player =
+            CoreAudioItemPlayer(
+                pcmStreamFactory = { streamOf(ByteArray(8_820)) },
+                lineFactory = { FakeAudioLine() },
+                nanoTime = { 0L },
+                stallThresholdNanos = Long.MAX_VALUE
+            )
         val realAudioPath = Arb.realAudioFile(WAV).next()
         val audioItem = Arb.audioItem { path = realAudioPath }.next()
         player.setVolume(0.0)
@@ -177,13 +254,19 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
         player.dispose()
         player.status() shouldBe Status.DISPOSED
 
-        // Second dispose should not throw
+        // Second dispose must not throw
         player.dispose()
         player.status() shouldBe Status.DISPOSED
     }
 
     test("play after dispose is ignored") {
-        val player = CoreAudioItemPlayer()
+        val player =
+            CoreAudioItemPlayer(
+                pcmStreamFactory = { streamOf(ByteArray(8_820)) },
+                lineFactory = { FakeAudioLine() },
+                nanoTime = { 0L },
+                stallThresholdNanos = Long.MAX_VALUE
+            )
         val realAudioPath = Arb.realAudioFile(WAV).next()
         val audioItem = Arb.audioItem { path = realAudioPath }.next()
         player.setVolume(0.0)
@@ -192,12 +275,18 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
         player.status() shouldBe Status.DISPOSED
 
         player.play(audioItem)
-        // Status should remain DISPOSED
+        // Status remains DISPOSED
         player.status() shouldBe Status.DISPOSED
     }
 
     test("play throws UnsupportedAudioPlaybackException for non-existent file") {
-        val player = CoreAudioItemPlayer()
+        val player =
+            CoreAudioItemPlayer(
+                pcmStreamFactory = ::decodeToPcmStream,
+                lineFactory = { FakeAudioLine() },
+                nanoTime = { 0L },
+                stallThresholdNanos = Long.MAX_VALUE
+            )
         val audioItem =
             Arb.audioItem {
                 path = createTempFile("nonexistent", ".mp3").also { it.toFile().delete() }
@@ -205,6 +294,35 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
 
         try {
             runCatching { player.play(audioItem) }.exceptionOrNull() shouldNotBe null
+        } finally {
+            player.dispose()
+        }
+    }
+})
+
+/**
+ * PCM-to-line smoke test for [CoreAudioItemPlayer] that opens a real [javax.sound.sampled.SourceDataLine].
+ *
+ * Excluded from default CI via `-PexcludeAudioHardware=true`; run on a machine with
+ * audio output to verify the full JavaSound SPI pipeline is intact end-to-end.
+ */
+@Tags("audio-hardware")
+internal class CoreAudioItemPlayerSmokeTest : FunSpec({
+
+    test("PCM-to-line smoke: WAV plays through real SourceDataLine") {
+        val player = CoreAudioItemPlayer()
+        val realAudioPath = Arb.realAudioFile(WAV).next()
+        val audioItem = Arb.audioItem { path = realAudioPath }.next()
+        player.setVolume(0.0)
+
+        try {
+            player.play(audioItem)
+            player.status() shouldBe Status.PLAYING
+
+            // Generous timeout because audio output is real-time and CI runners add latency
+            eventually(15.seconds) {
+                player.status() shouldBe Status.READY
+            }
         } finally {
             player.dispose()
         }

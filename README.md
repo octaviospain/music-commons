@@ -67,7 +67,7 @@ Unknown genre strings are preserved as `Genre.Custom(name)` instead of being dis
 
 ### Audio Library Management
 
-- **Multi-format support**: MP3, M4A, WAV, and FLAC with automatic metadata extraction
+- **Multi-format support**: MP3, M4A (AAC and ALAC), WAV, FLAC, and OGG (Vorbis and Opus) with automatic metadata extraction
 - **Artist catalog indexing**: Automatic organization by artist and album with aggregated views
 - **Batch operations**: Asynchronous batch creation via `CompletableFuture` API
 - **Reactive updates**: CRUD operations publish events through Java Flow API
@@ -430,7 +430,7 @@ Music Commons is free software under GNU GPL version 3 license, available [here]
 This project builds upon several excellent open-source libraries:
 
 - **[JAudioTagger](https://github.com/ericfarng/jaudiotagger)**: Audio metadata reading and writing library
-- **JavaSound SPI providers** ([mp3spi](https://github.com/umjammer/mp3spi), [javasound-flac](https://github.com/Tianscar/javasound-flac), [javasound-vorbis](https://github.com/Tianscar/javasound-vorbis), [javasound-aac](https://github.com/Tianscar/javasound-aac), [JAAD](https://github.com/Almax/jaad)): pure-Java audio decoders for MP3, FLAC, OGG Vorbis, and AAC/M4A; metadata and decoding use prioritized provider fallback, native FLAC seeks use the decoder's random-access path, generic compressed seeks discard decoded PCM to stay decoder-aligned, and playback volume scales signed PCM sample widths up to 32-bit
+- **JavaSound SPI providers** ([mp3spi](https://github.com/umjammer/mp3spi), [javasound-flac](https://github.com/Tianscar/javasound-flac), [javasound-vorbis](https://github.com/Tianscar/javasound-vorbis), [javasound-aac](https://github.com/Tianscar/javasound-aac), [JAAD](https://github.com/Almax/jaad), [javasound-alac](https://github.com/Tianscar/javasound-alac), [jse-spi-opus](https://github.com/jseproject/jse-spi)): pure-Java audio decoders for MP3, FLAC, OGG Vorbis, AAC/M4A, ALAC/M4A, and Opus/OGG; metadata and decoding use prioritized provider fallback, native FLAC seeks use the decoder's random-access path, generic compressed seeks discard decoded PCM to stay decoder-aligned, and playback volume scales signed PCM sample widths up to 32-bit. Opus-in-M4A is not supported (no pure-Java Maven Central SPI for Opus in ISO-BMFF/M4A containers).
 - **[Kotlin Coroutines](https://github.com/Kotlin/kotlinx.coroutines)**: Library support for Kotlin coroutines
 - **[kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization)**: Kotlin multiplatform serialization
 - **[lirp](https://github.com/octaviospain/lirp)**: Reactive entity framework and persistence infrastructure

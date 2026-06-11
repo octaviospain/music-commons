@@ -31,6 +31,8 @@ javasound-aac = "0.9.8"
 javasound-resloader = "0.1.3"
 jaad = "0.8.7"
 tritonus-share = "0.3.7.4"
+javasound-alac = "0.2.3"
+jse-spi-opus = "1.1.0"
 sqlite-jdbc = "3.49.1.0"
 
 [libraries]
@@ -72,6 +74,8 @@ javasound-aac = { module = "com.tianscar.javasound:javasound-aac", version.ref =
 javasound-resloader = { module = "com.tianscar.javasound:javasound-resloader", version.ref = "javasound-resloader" }
 jaad = { module = "de.sfuhrm:jaad", version.ref = "jaad" }
 tritonus-share = { module = "com.googlecode.soundlibs:tritonus-share", version.ref = "tritonus-share" }
+javasound-alac = { module = "com.tianscar.javasound:javasound-alac", version.ref = "javasound-alac" }
+jse-spi-opus = { module = "io.github.jseproject:jse-spi-opus", version.ref = "jse-spi-opus" }
 sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite-jdbc" }
 
 [plugins]

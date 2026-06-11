@@ -64,17 +64,17 @@ jobs:
 
             -   name: Build with and Virtual Display (Linux)
                 if: matrix.os == 'ubuntu-latest'
-                run: ./gradlew check -PexcludePlaybackTests=true
+                run: ./gradlew check -PexcludeAudioHardware=true
 
-            -   name: Build (Windows, skip Linux-only and playback tests)
+            -   name: Build (Windows, skip Linux-only and audio-hardware tests)
                 if: matrix.os == 'windows-latest'
                 # windows-latest GitHub runners ship without a usable audio output device:
                 # AudioSystem.getLine(SourceDataLine.class, format) throws IllegalArgumentException
                 # ("No line matching interface SourceDataLine supporting format … is supported")
                 # for every PCM_SIGNED 44100 Hz / 16-bit / stereo combo, regardless of endianness.
                 # That makes any test that opens a real line fail on the runner, so we skip them
-                # via the requires-playback tag.
-                run: ./gradlew check -PexcludeLinuxOnly=true -PexcludePosixOnly=true -PincludeWindowsOnly=true -PexcludePlaybackTests=true
+                # via the audio-hardware tag.
+                run: ./gradlew check -PexcludeLinuxOnly=true -PexcludePosixOnly=true -PincludeWindowsOnly=true -PexcludeAudioHardware=true
 
             -   name: Cross-check verification metadata against Maven Central
                 # Re-resolves every dependency with --refresh-dependencies (bypasses the

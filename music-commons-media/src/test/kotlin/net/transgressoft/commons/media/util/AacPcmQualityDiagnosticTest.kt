@@ -101,7 +101,7 @@ internal class AacPcmQualityDiagnosticTest : StringSpec({
             // For real audio, jumps should be reasonable (not near 65535)
             maxJump.toDouble() shouldBeLessThan 40000.0
         } finally {
-            Files.deleteIfExists(temp)
+            deleteDecodedTempFile(temp)
         }
     }
 
@@ -147,7 +147,7 @@ internal class AacPcmQualityDiagnosticTest : StringSpec({
 
             rmsRatio shouldBeLessThan 0.5
         } finally {
-            Files.deleteIfExists(temp)
+            deleteDecodedTempFile(temp)
         }
     }
 })

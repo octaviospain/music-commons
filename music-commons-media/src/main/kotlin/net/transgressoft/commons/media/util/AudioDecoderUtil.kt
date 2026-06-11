@@ -41,6 +41,12 @@ import javax.sound.sampled.spi.AudioFileReader
  *   `DecodedMP4AudioInputStream` (decoded PCM) when asked to convert AAC → PCM_SIGNED
  *   with matching channels, sample size, and endianness. We rely on this conversion
  *   path rather than reading raw bytes.
+ * - M4A/ALAC: javasound-alac SPI handles Apple Lossless audio in M4A containers.
+ *   The `AlacAudioFileReader` is prioritized over the AAC reader for `.m4a` files so
+ *   ALAC-encoded content is decoded losslessly instead of being rejected by the AAC path.
+ * - OGG/Opus: jse-spi-opus SPI handles Opus audio in OGG containers. Opus audio in
+ *   M4A/MPEG-4 containers is not supported — no pure-Java, Maven-Central-published
+ *   JavaSound SPI handles Opus in ISO-BMFF/M4A format at this time.
  *
  * The decoder probes every registered SPI reader end-to-end. A provider is skipped when
  * it crashes while opening the file, cannot convert the stream to PCM, or throws while
@@ -134,6 +140,8 @@ private fun decodePcmStream(rawStream: AudioInputStream): ReaderAttempt {
         ReaderAttempt(null, e)
     } finally {
         if (decodedStream == null) {
+            // Close pcmStream first (it may wrap rawStream); then close rawStream directly
+            // to cover SPIs that do not propagate close() through the conversion chain.
             closeQuietly(pcmStream)
             closeQuietly(rawStream)
         }
@@ -143,13 +151,14 @@ private fun decodePcmStream(rawStream: AudioInputStream): ReaderAttempt {
 private fun convertToPcmStream(rawStream: AudioInputStream): AudioInputStream {
     val baseFormat = rawStream.format
     val sampleSize = baseFormat.sampleSizeInBits.takeIf { it > 0 } ?: 16
+    val bytesPerSample = (sampleSize + 7) / 8
     val targetFormat =
         AudioFormat(
             AudioFormat.Encoding.PCM_SIGNED,
             baseFormat.sampleRate,
             sampleSize,
             baseFormat.channels,
-            baseFormat.channels * (sampleSize / 8),
+            baseFormat.channels * bytesPerSample,
             baseFormat.sampleRate,
             baseFormat.isBigEndian
         )
@@ -157,7 +166,7 @@ private fun convertToPcmStream(rawStream: AudioInputStream): AudioInputStream {
     return AudioSystem.getAudioInputStream(targetFormat, rawStream)
 }
 
-private fun validateReadablePcmStream(pcmStream: AudioInputStream): AudioInputStream {
+internal fun validateReadablePcmStream(pcmStream: AudioInputStream): AudioInputStream {
     val frameSize = pcmStream.format.frameSize.takeIf { it > 0 } ?: 1
     val probeSize = maxOf(frameSize, 4096)
     val pushbackStream = java.io.PushbackInputStream(pcmStream, probeSize)
@@ -180,7 +189,8 @@ internal fun readerPriority(file: File, readerClassName: String): Int {
     val preferredTokens =
         when (extension) {
             "mp3" -> listOf("mpeg", "mp3")
-            "m4a", "mp4", "aac" -> listOf("aac", "mp4")
+            "m4a", "mp4", "aac" -> listOf("alac", "aac", "mp4")
+            "alac" -> listOf("alac")
             "flac" -> listOf("flac")
             "ogg", "oga", "opus" -> listOf("vorbis", "ogg", "opus")
             "wav", "wave" -> listOf("wav", "wave")

@@ -31,9 +31,10 @@ jobs:
                       gstreamer1.0-tools \
                       libgstreamer-plugins-base1.0-dev \
                       xvfb
-                      export DISPLAY=:99.0
-                      Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-                      echo "DISPLAY=:99.0" >> $GITHUB_ENV
+                    export DISPLAY=:99.0
+                    Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+                    sleep 2
+                    echo "DISPLAY=:99.0" >> $GITHUB_ENV
 
             -   name: Cache SonarQube packages
                 uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
@@ -53,7 +54,7 @@ jobs:
                         ${{ runner.os }}-gradle-
 
             -   name: Build with Virtual Display
-                run: ./gradlew compileKotlin compileTestKotlin check -PexcludePlaybackTests=true
+                run: ./gradlew compileKotlin compileTestKotlin check -PexcludeAudioHardware=true
 
             -   name: Upload Artifacts
                 uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
