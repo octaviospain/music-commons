@@ -31,7 +31,7 @@ internal class M3uImportServiceTest : StringSpec({
     val fs: FileSystem = files.fileSystem
 
     lateinit var library: CoreMusicLibrary
-    lateinit var service: M3uImportService
+    lateinit var service: M3uImportService<AudioItem, MutableAudioPlaylist>
 
     beforeEach {
         library = CoreMusicLibrary.builder().metadataIO(files.metadataIO).build()
