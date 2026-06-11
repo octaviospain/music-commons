@@ -60,7 +60,7 @@ internal class MutableAudioItemTest : FunSpec({
             trackNumber = 13,
             discNumber = 1,
             comments = "Best song ever!",
-            genres = setOf(Genre.Rock),
+            genres = setOf(Rock),
             encoder = "transgressoft",
             coverImageBytes = testCoverBytes,
             playCount = 0

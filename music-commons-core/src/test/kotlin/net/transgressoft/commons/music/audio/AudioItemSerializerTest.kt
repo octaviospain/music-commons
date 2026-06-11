@@ -50,7 +50,7 @@ internal class AudioItemSerializerTest : StringSpec({
                 this.title = "Come Together"
                 this.artist = artist
                 this.album = album
-                this.genres = setOf(Genre.Rock)
+                this.genres = setOf(Rock)
                 this.comments = "Classic track"
                 this.trackNumber = 1
                 this.discNumber = 1
@@ -83,7 +83,7 @@ internal class AudioItemSerializerTest : StringSpec({
                 this.title = "Round Trip Song"
                 this.artist = artist
                 this.album = album
-                this.genres = setOf(Genre.Rock)
+                this.genres = setOf(Rock)
                 this.comments = "Test comment"
                 this.trackNumber = 3
                 this.discNumber = 2

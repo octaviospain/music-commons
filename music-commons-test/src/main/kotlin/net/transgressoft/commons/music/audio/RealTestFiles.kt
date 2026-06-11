@@ -21,6 +21,7 @@ import net.transgressoft.commons.music.audio.ArbitraryAudioFile.getResourceAsFil
 import net.transgressoft.commons.music.audio.AudioFileTagType.ID3_V_24
 import net.transgressoft.commons.music.audio.AudioFileTagType.MP4_INFO
 import net.transgressoft.commons.music.audio.AudioFileTagType.VORBIS_COMMENT
+import net.transgressoft.commons.music.audio.joinGenres
 import io.kotest.core.TestConfiguration
 import io.kotest.engine.spec.tempfile
 import io.kotest.property.Arb
@@ -110,7 +111,7 @@ object ArbitraryAudioFile : TestConfiguration() {
         tag.setField(FieldKey.COUNTRY, metadata.artist.countryCode.name)
         tag.setField(FieldKey.ALBUM_ARTIST, metadata.album.albumArtist.name)
         tag.setField(FieldKey.ARTIST, metadata.artist.name)
-        tag.setField(FieldKey.GENRE, Genre.joinGenres(metadata.genres))
+        tag.setField(FieldKey.GENRE, joinGenres(metadata.genres))
         metadata.comments?.let { tag.setField(FieldKey.COMMENT, it) }
         metadata.trackNumber?.let { tag.setField(FieldKey.TRACK, it.toString()) }
         metadata.discNumber?.let { tag.setField(FieldKey.DISC_NO, it.toString()) }

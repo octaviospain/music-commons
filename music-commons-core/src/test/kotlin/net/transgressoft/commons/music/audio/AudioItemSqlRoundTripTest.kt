@@ -51,7 +51,7 @@ internal class AudioItemSqlRoundTripTest : StringSpec({
     fun testPath(name: String): Path = fs.getPath("/audio/$name.mp3")
 
     "MutableAudioItem_LirpTableDef persists and reloads audio item with populated genres and artist" {
-        val genres = setOf(Genre.Rock, Genre.Pop, Genre.Custom("MyCustomGenre"))
+        val genres = setOf(Rock, Pop, Genre.Custom("MyCustomGenre"))
         val artist = Artist.of("Daft Punk", CountryCode.FR)
         val album =
             Album(
@@ -116,7 +116,7 @@ internal class AudioItemSqlRoundTripTest : StringSpec({
     "MutableAudioItem_LirpTableDef reload from file-backed SQLite repository preserves genres and duration" {
         val tmpDir = createTempDirectory("audio-sql-test")
         val dbPath = tmpDir.resolve("audio_test.db")
-        val genres = setOf(Genre.Jazz, Genre.Classical, Genre.Custom("CustomTestGenre"))
+        val genres = setOf(Jazz, Classical, Genre.Custom("CustomTestGenre"))
         val metadata =
             AudioItemMetadata(
                 title = "Persisted Track",
