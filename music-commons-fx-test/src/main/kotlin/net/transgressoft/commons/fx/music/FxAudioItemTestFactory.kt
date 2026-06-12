@@ -145,11 +145,7 @@ object FxAudioItemTestFactory {
         override val playCountProperty: ReadOnlyIntegerProperty =
             SimpleIntegerProperty(this, "play count", playCount.toInt())
 
-        override var coverImageBytes: ByteArray? = metadata.coverBytes?.copyOf()
-            get() = field?.copyOf()
-            set(value) {
-                field = value?.copyOf()
-            }
+        override var coverImageBytes: ByteArray? = metadata.coverBytes
 
         override fun setPlayCount(count: Short) {
             // Immutable test fixture: play count changes are not needed by current consumers.

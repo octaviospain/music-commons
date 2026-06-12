@@ -77,6 +77,7 @@ Unknown genre strings are preserved as `Genre.Custom(name)` instead of being dis
 - **Artist catalog indexing**: Automatic organization by artist and album with aggregated views
 - **Batch operations**: Asynchronous batch creation via `CompletableFuture` API
 - **Reactive updates**: CRUD operations publish events through Java Flow API
+- **Lazy cover-art loading**: `coverImageBytes` on `ReactiveAudioItem` is loaded on first access and cached — a full-library import retains no cover bytes until they are explicitly read. The getter and setter return and store the internal array reference directly; callers must treat the returned array as immutable and must not modify its contents. All mutations must go through the setter so reactive change notifications are published.
 
 ### Playlist Management
 

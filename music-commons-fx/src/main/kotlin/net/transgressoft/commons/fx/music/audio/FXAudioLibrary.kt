@@ -307,9 +307,7 @@ internal class FXAudioLibrary
             if (!Files.isReadable(audioItemPath)) {
                 throw InvalidAudioFilePathException("File '${audioItemPath.toAbsolutePath()}' is not readable")
             }
-            val tag = metadataIO.readMetadata(audioItemPath)
-            val cover = metadataIO.loadCover(audioItemPath)
-            val metadata = tag.copy(coverBytes = cover)
+            val metadata = metadataIO.readMetadata(audioItemPath)
             return FXAudioItem(audioItemPath, newId(), metadata).also { fxAudioItem ->
                 add(fxAudioItem)
                 logger.debug { "New ObservableAudioItem was created from file $audioItemPath with id ${fxAudioItem.id}" }

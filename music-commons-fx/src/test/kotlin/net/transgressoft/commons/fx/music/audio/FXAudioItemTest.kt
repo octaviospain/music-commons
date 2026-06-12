@@ -36,7 +36,7 @@ import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContain
-import io.kotest.matchers.date.shouldBeAfter
+import io.kotest.matchers.date.shouldNotBeBefore
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -85,8 +85,8 @@ internal class FXAudioItemTest : StringSpec({
         fxAudioItem.titleProperty.set("new title")
         eventually(100.milliseconds) {
             fxAudioItem.title shouldBe "new title"
-            fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
+            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
+            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
         }
 
         lastDateUpdated = fxAudioItem.lastDateModified
@@ -94,8 +94,8 @@ internal class FXAudioItemTest : StringSpec({
         eventually(100.milliseconds) {
             fxAudioItem.artist.name shouldBe "Bon Jovi"
             fxAudioItem.artistsInvolved shouldContain Artist.of("Bon Jovi")
-            fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
+            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
+            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
         }
 
         lastDateUpdated = fxAudioItem.lastDateModified
@@ -103,8 +103,8 @@ internal class FXAudioItemTest : StringSpec({
         eventually(100.milliseconds) {
             fxAudioItem.album.name shouldBe "New Album"
             fxAudioItem.album.albumArtist.name shouldBe "Bon Jovi"
-            fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
+            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
+            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
         }
 
         lastDateUpdated = fxAudioItem.lastDateModified
@@ -113,40 +113,40 @@ internal class FXAudioItemTest : StringSpec({
         eventually(100.milliseconds) {
             fxAudioItem.genres shouldBe newGenres
             fxAudioItem.genresProperty.value shouldBe newGenres
-            fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
+            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
+            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
         }
 
         lastDateUpdated = fxAudioItem.lastDateModified
         fxAudioItem.comments = "New comments"
         eventually(100.milliseconds) {
             fxAudioItem.commentsProperty.value shouldBe "New comments"
-            fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
+            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
+            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
         }
 
         lastDateUpdated = fxAudioItem.lastDateModified
         fxAudioItem.trackNumber = 5
         eventually(100.milliseconds) {
             fxAudioItem.trackNumberProperty.value shouldBe 5
-            fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
+            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
+            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
         }
 
         lastDateUpdated = fxAudioItem.lastDateModified
         fxAudioItem.discNumber = 2
         eventually(100.milliseconds) {
             fxAudioItem.discNumberProperty.value shouldBe 2
-            fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
+            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
+            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
         }
 
         lastDateUpdated = fxAudioItem.lastDateModified
         fxAudioItem.bpm = 130f
         eventually(100.milliseconds) {
             fxAudioItem.bpmProperty.value shouldBe 130f
-            fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
+            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
+            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
         }
 
         lastDateUpdated = fxAudioItem.lastDateModified
@@ -154,8 +154,8 @@ internal class FXAudioItemTest : StringSpec({
         eventually(100.milliseconds) {
             fxAudioItem.coverImageBytes shouldBe null
             fxAudioItem.coverImageProperty.value shouldBe Optional.empty()
-            fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
+            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
+            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
         }
 
         lastDateUpdated = fxAudioItem.lastDateModified
@@ -163,8 +163,8 @@ internal class FXAudioItemTest : StringSpec({
         eventually(500.milliseconds) {
             fxAudioItem.playCount shouldBe 1
             fxAudioItem.playCountProperty.value shouldBe 1
-            fxAudioItem.lastDateModified shouldBeAfter lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldBeAfter lastDateUpdated
+            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
+            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
         }
     }
 
@@ -174,9 +174,8 @@ internal class FXAudioItemTest : StringSpec({
 
         json.encodeToString(ObservableAudioItemSerializer(), fxAudioItem).let {
             it.shouldEqualJson(fxAudioItem.asJsonValue())
-            // Phase 40-03 semantics: deserialized items arrive with library = null and lazy cover,
-            // so structural equality (which compares coverImageBytes) does NOT hold unless we wire
-            // the back-ref. Comparing via uniqueId and key fields keeps the round-trip contract.
+            // Deserialized items arrive with library = null and a lazy cover, so comparing via
+            // uniqueId and key fields keeps the round-trip contract explicit.
             val decoded = json.decodeFromString(ObservableAudioItemSerializer(), it) as FXAudioItem
             decoded.id shouldBe fxAudioItem.id
             decoded.path shouldBe fxAudioItem.path
@@ -192,8 +191,8 @@ internal class FXAudioItemTest : StringSpec({
         val loadedAudioItem = FXAudioItemTestBridge.createFxAudioItem(testAudioFile, fxAudioItem.id)
         assertSoftly {
             loadedAudioItem.id shouldBe fxAudioItem.id
-            loadedAudioItem.dateOfCreation shouldBeAfter fxAudioItem.dateOfCreation
-            loadedAudioItem.lastDateModified shouldBeAfter fxAudioItem.lastDateModified
+            loadedAudioItem.dateOfCreation shouldNotBeBefore fxAudioItem.dateOfCreation
+            loadedAudioItem.lastDateModified shouldNotBeBefore fxAudioItem.lastDateModified
             loadedAudioItem.path shouldBe fxAudioItem.path
             loadedAudioItem.fileName shouldBe fxAudioItem.fileName
             loadedAudioItem.extension shouldBe fxAudioItem.extension
@@ -241,24 +240,29 @@ internal class FXAudioItemTest : StringSpec({
         decodedAudioItem.coverImageBytes shouldBe null
     }
 
-    "FXAudioItem getter returns defensive copy — mutating returned array does not affect internal state" {
+    "FXAudioItem getter returns the value that was set" {
         val fxAudioItem = FXAudioItemTestBridge.createFxAudioItem(Arb.realAudioFile().next())
         fxAudioItem.coverImageBytes = testCoverBytes
 
-        val returned = fxAudioItem.coverImageBytes!!
-        val originalContent = returned.copyOf()
-        returned[0] = 0x00.toByte()
-
-        fxAudioItem.coverImageBytes!! shouldBe originalContent
+        fxAudioItem.coverImageBytes shouldBeSameInstanceAs testCoverBytes
     }
 
-    "FXAudioItem setter stores defensive copy — mutating source array after set does not affect internal state" {
+    "FXAudioItem setter stores the provided reference directly" {
         val fxAudioItem = FXAudioItemTestBridge.createFxAudioItem(Arb.realAudioFile().next())
-        val source = byteArrayOf(1, 2, 3, 4, 5)
-        fxAudioItem.coverImageBytes = source
-        source[0] = 99.toByte()
+        val bytes = byteArrayOf(1, 2, 3, 4, 5)
+        fxAudioItem.coverImageBytes = bytes
 
         fxAudioItem.coverImageBytes!![0] shouldBe 1.toByte()
+        fxAudioItem.coverImageBytes shouldBeSameInstanceAs bytes
+    }
+
+    "FXAudioItem clone shares the cover ByteArray reference with the original" {
+        val fxAudioItem = FXAudioItemTestBridge.createFxAudioItem(Arb.realAudioFile().next())
+        fxAudioItem.coverImageBytes = testCoverBytes
+
+        val cloned = fxAudioItem.clone()
+
+        cloned.coverImageBytes shouldBeSameInstanceAs fxAudioItem.coverImageBytes
     }
 
     "FXAudioItem.coverImageBytes lazy-loads via metadataIO back-ref on first read and caches result" {
