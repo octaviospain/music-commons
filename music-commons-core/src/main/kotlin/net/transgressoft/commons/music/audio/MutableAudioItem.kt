@@ -79,6 +79,15 @@ internal class MutableAudioItem
         metadata: AudioItemMetadata
     ) : AudioItem, ReactiveEntityBase<Int, AudioItem>() {
 
+        /**
+         * Metadata-IO back-ref used by the lazy [coverImageBytes] getter to load and cache the
+         * cover image on demand. Wired by [DefaultAudioLibrary.add] when the item enters the library;
+         * left `null` for orphan items (e.g. freshly-deserialized JSON entities before the library
+         * rehydration pass attaches them) — in that case [coverImageBytes] returns `null`.
+         */
+        @Transient
+        internal var metadataIO: AudioMetadataIO? = null
+
         @Embedded
         var metadata: AudioItemMetadata by reactiveProperty(metadata)
 
@@ -208,15 +217,36 @@ internal class MutableAudioItem
 
         @Transient
         @PersistenceIgnore
-        private var _coverImageBytes: ByteArray? = metadata.coverBytes?.copyOf()
+        private var _coverImageBytes: ByteArray? = metadata.coverBytes
 
+        @Transient
+        private var coverLoaded: Boolean = metadata.coverBytes != null
+
+        /**
+         * Cover image bytes, loaded lazily through the wired [metadataIO] on first access.
+         *
+         * When [metadataIO] is null (orphan item, e.g. freshly-deserialized JSON entity before
+         * the library rehydration pass attaches it), returns `null`. Once wired, fetches via
+         * `metadataIO.loadCover(this)` on the first read, caches the result, and returns it
+         * directly on subsequent reads. The returned reference points directly to the internal
+         * array — callers must treat it as immutable.
+         */
         @PersistenceIgnore
         @Transient
         override var coverImageBytes: ByteArray?
-            by reactiveProperty(
-                getter = { _coverImageBytes?.copyOf() },
-                setter = { _coverImageBytes = it?.copyOf() }
-            )
+            get() {
+                if (!coverLoaded && metadataIO != null) {
+                    _coverImageBytes = metadataIO?.loadCover(this)
+                    coverLoaded = true
+                }
+                return _coverImageBytes
+            }
+            set(value) {
+                mutateAndPublish {
+                    _coverImageBytes = value
+                    coverLoaded = true
+                }
+            }
 
         internal fun incrementPlayCount() = _playCount++
 
@@ -262,12 +292,17 @@ internal class MutableAudioItem
                     encoding = encoding,
                     bitRate = bitRate,
                     duration = duration,
-                    coverBytes = _coverImageBytes?.copyOf()
+                    coverBytes = _coverImageBytes // share reference; safe under immutable contract
                 ),
                 dateOfCreation,
                 lastDateModified,
                 _playCount
-            )
+            ).also {
+                // Carry the lazy-load state so a clone of a not-yet-loaded coverable item can still
+                // resolve its cover, and a clone of a known-coverless item does not re-probe disk.
+                it.metadataIO = metadataIO
+                it.coverLoaded = coverLoaded
+            }
 
         override fun toString() = "AudioItem(id=$id, path=$path, title=$title, artist=${artist.name})"
     }

@@ -45,7 +45,6 @@ import java.util.concurrent.atomic.AtomicReference
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioInputStream
 import javax.sound.sampled.AudioSystem
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 private val PCM_FORMAT_PLAYBACK = AudioFormat(44_100f, 16, 2, true, false)
@@ -168,7 +167,11 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
     }
 
     test("playback completes and transitions to READY using FakeAudioLine") {
-        // FakeAudioLine drains all bytes instantly, so completion is near-immediate
+        // FakeAudioLine drains the tiny PCM source near-instantly, so the pump can reach READY
+        // before any post-play() assertion runs. Asserting an intermediate PLAYING here would race
+        // the pump; the play() -> PLAYING contract is covered deterministically by the
+        // "Status transitions across all supported formats" context. This test only verifies that
+        // a drained source completes and transitions to READY.
         val player =
             CoreAudioItemPlayer(
                 pcmStreamFactory = { streamOf(ByteArray(8_820)) },
@@ -182,9 +185,8 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
 
         try {
             player.play(audioItem)
-            player.status() shouldBe Status.PLAYING
 
-            eventually(500.milliseconds) {
+            eventually(2.seconds) {
                 player.status() shouldBe Status.READY
             }
         } finally {

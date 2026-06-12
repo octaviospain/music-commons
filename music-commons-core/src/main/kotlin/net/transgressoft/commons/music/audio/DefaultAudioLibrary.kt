@@ -65,6 +65,20 @@ internal class DefaultAudioLibrary
             }
         }
 
+        init {
+            // Wire the metadataIO back-ref onto items already hydrated from the repository.
+            // AudioLibraryBase.init iterates repository.forEach directly without routing through add(),
+            // so this loop is required in addition to the add() override to cover the hydration path.
+            repository.forEach { item ->
+                if (item is MutableAudioItem) item.metadataIO = metadataIO
+            }
+        }
+
+        override fun add(entity: AudioItem): Boolean {
+            if (entity is MutableAudioItem) entity.metadataIO = metadataIO
+            return super.add(entity)
+        }
+
         override fun createFromFile(audioItemPath: Path): AudioItem {
             if (!Files.exists(audioItemPath)) {
                 throw InvalidAudioFilePathException("File '${audioItemPath.toAbsolutePath()}' does not exist")
@@ -76,9 +90,7 @@ internal class DefaultAudioLibrary
                 throw InvalidAudioFilePathException("File '${audioItemPath.toAbsolutePath()}' is not readable")
             }
             val tag = metadataIO.readMetadata(audioItemPath)
-            val cover = metadataIO.loadCover(audioItemPath)
-            val metadata = tag.copy(coverBytes = cover)
-            return MutableAudioItem(audioItemPath, newId(), metadata).also { audioItem ->
+            return MutableAudioItem(audioItemPath, newId(), tag).also { audioItem ->
                 add(audioItem)
                 logger.debug { "New AudioItem was created from file $audioItemPath with id ${audioItem.id}" }
             }

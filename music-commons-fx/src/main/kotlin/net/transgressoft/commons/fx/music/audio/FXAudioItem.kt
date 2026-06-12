@@ -86,9 +86,8 @@ import kotlinx.serialization.modules.polymorphic
  * `library.loadCover(this)` and cache the result. Lifetimes are coterminous with the library:
  * items leave the library only by removal, which drops the library reference as well.
  *
- * [equals] / [hashCode] read [coverImageBytes], which triggers the lazy load on first comparison
- * when a library back-ref is present. This deferred-IO contract is acceptable because callers
- * comparing freshly-deserialized items already accept the cost of resolving the path on disk.
+ * [equals] / [hashCode] compare the cached cover-byte field directly rather than the lazy
+ * [coverImageBytes] getter, so comparing or hashing an item never triggers the lazy cover load.
  */
 @PersistenceMapping(name = "fx_audio_item")
 class FXAudioItem
@@ -308,7 +307,7 @@ class FXAudioItem
 
         @Transient
         @PersistenceIgnore
-        private var _coverImageBytes: ByteArray? = metadata.coverBytes?.copyOf()
+        private var _coverImageBytes: ByteArray? = metadata.coverBytes
 
         @Transient
         private var coverLoaded: Boolean = metadata.coverBytes != null
@@ -320,7 +319,8 @@ class FXAudioItem
          * the library rehydration pass attaches it), returns `null`. When set and the cache is
          * empty, fetches via `metadataIO.loadCover(this)`, caches, and fires a
          * [Platform.runLater] update to [coverImageProperty]. Subsequent reads return the cached
-         * defensive copy without re-invoking the IO seam.
+         * internal reference without re-invoking the IO seam. Callers must treat the returned
+         * array as immutable and must not modify its contents.
          */
         @Transient
         @PersistenceIgnore
@@ -336,14 +336,13 @@ class FXAudioItem
                         }
                     }
                 }
-                return _coverImageBytes?.copyOf()
+                return _coverImageBytes
             }
             set(value) {
-                val copy = value?.copyOf()
                 mutateAndPublish {
-                    _coverImageBytes = copy
+                    _coverImageBytes = value
                     coverLoaded = true
-                    coverImageProperty.set(Optional.ofNullable(copy).map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) })
+                    coverImageProperty.set(Optional.ofNullable(value).map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) })
                 }
             }
 
@@ -448,12 +447,11 @@ class FXAudioItem
                 genres == that.genres &&
                 comments == that.comments &&
                 duration == that.duration &&
-                playCount == that.playCount &&
-                coverImageBytes.contentEquals(that.coverImageBytes)
+                playCount == that.playCount
         }
 
         override fun hashCode() =
-            Objects.hash(path, title, artist, album, genres, comments, trackNumber, discNumber, bpm, duration, playCount, coverImageBytes.contentHashCode())
+            Objects.hash(path, title, artist, album, genres, comments, trackNumber, discNumber, bpm, duration, playCount)
 
         override fun clone(): FXAudioItem =
             FXAudioItem(
@@ -472,15 +470,19 @@ class FXAudioItem
                     encoding = encoding,
                     bitRate = bitRate,
                     duration = duration,
-                    // Seed the clone's cover cache with the current bytes so equals() in
-                    // mutateAndPublish's pre/post comparison sees the same state without triggering
-                    // a lazy load on either side.
-                    coverBytes = _coverImageBytes?.copyOf()
+                    // Share the cover reference (safe under the immutable contract — callers must
+                    // not mutate the array).
+                    coverBytes = _coverImageBytes
                 ),
                 dateOfCreation,
                 lastDateModified,
                 playCount
-            )
+            ).also {
+                // Carry the lazy-load state so a clone of a not-yet-loaded coverable item can still
+                // resolve its cover, and a clone of a known-coverless item does not re-probe disk.
+                it.metadataIO = metadataIO
+                it.coverLoaded = coverLoaded
+            }
 
         override fun toString() = "ObservableAudioItem(id=$id, path=$path, title=$title, artist=${artist.name})"
 

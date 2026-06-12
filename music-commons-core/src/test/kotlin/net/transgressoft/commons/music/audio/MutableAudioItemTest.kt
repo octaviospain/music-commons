@@ -26,6 +26,7 @@ import io.kotest.matchers.date.shouldNotBeBefore
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import java.nio.file.Files
@@ -191,24 +192,73 @@ internal class MutableAudioItemTest : FunSpec({
         }
     }
 
-    context("MutableAudioItem coverImageBytes defensive copy") {
-        test("MutableAudioItem getter returns defensive copy — mutating returned array does not affect internal state") {
+    context("MutableAudioItem coverImageBytes immutable contract") {
+        test("MutableAudioItem getter returns the same reference that was set") {
             val audioItem = createAudioItem(Arb.realAudioFile(ID3_V_24).next())
             audioItem.coverImageBytes = testCoverBytes
-            val returned = audioItem.coverImageBytes!!
-            val originalContent = returned.copyOf()
-            returned[0] = 0x00.toByte()
-
-            audioItem.coverImageBytes!! shouldBe originalContent
+            audioItem.coverImageBytes shouldBeSameInstanceAs testCoverBytes
         }
 
-        test("MutableAudioItem setter stores defensive copy — mutating source array after set does not affect internal state") {
+        test("MutableAudioItem setter stores the provided reference directly") {
             val audioItem = createAudioItem(Arb.realAudioFile(ID3_V_24).next())
-            val source = byteArrayOf(1, 2, 3, 4, 5)
-            audioItem.coverImageBytes = source
-            source[0] = 99.toByte()
+            val bytes = byteArrayOf(1, 2, 3, 4, 5)
+            audioItem.coverImageBytes = bytes
+            audioItem.coverImageBytes shouldBeSameInstanceAs bytes
+        }
+    }
 
-            audioItem.coverImageBytes!![0] shouldBe 1.toByte()
+    context("MutableAudioItem.coverImageBytes lazy-load via metadataIO back-ref") {
+        test("MutableAudioItem.coverImageBytes returns null for orphan item with no metadataIO wired") {
+            val path = Arb.realAudioFile(ID3_V_24).next()
+            val item = MutableAudioItem(path, 1, AudioItemMetadata())
+            item.coverImageBytes shouldBe null
+        }
+
+        test("MutableAudioItem.coverImageBytes lazy-loads via metadataIO back-ref on first read and caches result") {
+            val path = Arb.realAudioFile(ID3_V_24).next()
+            val item = MutableAudioItem(path, 2, AudioItemMetadata())
+            val metadataIO = JAudioTaggerMetadataIO()
+            val expected = metadataIO.loadCover(path)
+            item.metadataIO = metadataIO
+
+            val firstRead = item.coverImageBytes
+            firstRead shouldBe expected
+
+            val secondRead = item.coverImageBytes
+            secondRead shouldBe expected
+        }
+    }
+
+    context("MutableAudioItem zero-retention at import") {
+        test("DefaultAudioLibrary.createFromFile does not trigger cover load at import time") {
+            val path = Arb.realAudioFile(ID3_V_24).next()
+            var loadCoverCallCount = 0
+            val spyMetadataIO =
+                object : AudioMetadataIO {
+                    val delegate = JAudioTaggerMetadataIO()
+
+                    override fun readMetadata(path: java.nio.file.Path) = delegate.readMetadata(path)
+
+                    override fun loadCover(path: java.nio.file.Path): ByteArray? {
+                        loadCoverCallCount++
+                        return delegate.loadCover(path)
+                    }
+
+                    override fun writeMetadata(item: ReactiveAudioItem<*>) = delegate.writeMetadata(item)
+                }
+            val library = DefaultAudioLibrary(VolatileRepository("AudioLibrary"), spyMetadataIO)
+            library.createFromFile(path)
+
+            loadCoverCallCount shouldBe 0
+        }
+    }
+
+    context("MutableAudioItem clone shares cover reference") {
+        test("MutableAudioItem clone cover bytes are same instance as original") {
+            val audioItem = createAudioItem(Arb.realAudioFile(ID3_V_24).next())
+            audioItem.coverImageBytes = testCoverBytes
+            val clone = audioItem.clone()
+            clone.coverImageBytes shouldBeSameInstanceAs audioItem.coverImageBytes
         }
     }
 
