@@ -33,7 +33,7 @@ jaad = "0.8.7"
 tritonus-share = "0.3.7.4"
 javasound-alac = "0.2.3"
 jse-spi-opus = "1.1.0"
-sqlite-jdbc = "3.49.1.0"
+sqlite-jdbc = "3.53.2.0"
 
 [libraries]
 kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
