@@ -77,7 +77,7 @@ internal class FXAudioLibrary
         metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO()
     ) : AudioLibraryBase<ObservableAudioItem, ObservableArtistCatalog>(
             repository,
-            FXArtistCatalogRegistry(),
+            FXArtistCatalogRegistry(repository),
             metadataIO
         ),
         ObservableAudioLibrary {
@@ -153,6 +153,12 @@ internal class FXAudioLibrary
             artistCatalogPublisher.subscribe(CREATE, UPDATE, DELETE) { event ->
                 if (event.isDelete()) {
                     artistCatalogBacking.removeAll(event.entities.values.toSet())
+                } else if (event.isUpdate()) {
+                    // Replace old catalog with new: remove the stale version before adding the rebuilt one.
+                    // Each bucket recompute produces a fresh FXArtistCatalog instance, so the old
+                    // and new instances are not equal and both would accumulate without this removal.
+                    artistCatalogBacking.removeAll(event.oldEntities.values.toSet())
+                    artistCatalogBacking.addAll(event.entities.values)
                 } else {
                     artistCatalogBacking.addAll(event.entities.values)
                 }
@@ -177,8 +183,8 @@ internal class FXAudioLibrary
                 }
             }
 
-            // Populate catalog backing from registries created during AudioLibraryBase init
-            observableArtistCatalogRegistry.forEach { artistCatalogBacking.add(it) }
+            // Catalog backing is populated reactively via catalogSubscription as the projection
+            // fires CREATE events during its lazy initialization on first access.
             queueCatalogRefresh()
 
             // Subscribe to the player events to update the play count

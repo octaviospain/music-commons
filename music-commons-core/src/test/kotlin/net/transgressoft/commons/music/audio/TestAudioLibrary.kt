@@ -12,7 +12,7 @@ import java.nio.file.Path
 internal class TestAudioLibrary(
     repository: Repository<Int, AudioItem>,
     metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO()
-) : AudioLibraryBase<AudioItem, ArtistCatalog<AudioItem>>(repository, DefaultArtistCatalogRegistry(), metadataIO) {
+) : AudioLibraryBase<AudioItem, ArtistCatalog<AudioItem>>(repository, DefaultArtistCatalogRegistry(repository), metadataIO) {
 
     override fun createFromFile(audioItemPath: Path): AudioItem {
         val tag = metadataIO.readMetadata(audioItemPath)

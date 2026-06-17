@@ -37,13 +37,18 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
  * Base implementation for [ReactiveAudioLibrary] providing artist catalog management.
  *
- * Maintains an [DefaultArtistCatalogRegistry] that automatically synchronizes with repository
- * changes to provide efficient artist-based queries. Delegates repository operations
- * to the underlying repository while managing the artist catalog as a secondary index.
+ * Manages the artist catalog through a projection-backed [ArtistCatalogRegistryBase]. The
+ * projection is driven directly from the audio-item repository's CRUD events: adds, removes,
+ * and key-changing Updates (artist or album change) are handled automatically by the projection
+ * framework without any manual catalog diffing.
  *
- * The artist catalog registry is kept in sync with the repository through event subscriptions:
- * when audio items are added, updated, or removed from the repository, the corresponding
- * artist catalogs are automatically updated to reflect these changes.
+ * A per-item mutation subscription (the "mutation bridge") is maintained for each audio item in
+ * the library. When an item's properties change, the bridge emits a repository-level UPDATE event
+ * so the projection's reverse index can re-key the item to its new artist bucket. This bridge is
+ * necessary because [net.transgressoft.lirp.persistence.VolatileRepository] and
+ * [net.transgressoft.lirp.persistence.json.JsonFileRepository] do not emit CrudEvent.UPDATE on
+ * in-place entity mutation — only SqlRepository does. On SqlRepository-backed libraries the bridge
+ * causes a redundant but benign double UPDATE; it is kept simple with no repository-type branching.
  *
  * @param I The type of audio items stored in this library
  * @param AC The concrete artist catalog type (used by subclasses for specialized implementations)
@@ -64,7 +69,8 @@ abstract class AudioLibraryBase<I, AC>(
      * This allows consumers to subscribe to artist catalog events without accessing
      * the mutable registry directly, maintaining encapsulation while providing reactive updates.
      */
-    override val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>> = observableArtistCatalogRegistry
+    override val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>> =
+        observableArtistCatalogRegistry.artistCatalogPublisher
 
     private val entitySubscriptions: MutableMap<Int, LirpEventSubscription<in I, MutationEvent.Type, MutationEvent<Int, I>>> =
         ConcurrentHashMap()
@@ -72,57 +78,52 @@ abstract class AudioLibraryBase<I, AC>(
     init {
         if (repository.isEmpty.not()) {
             repository.forEach {
-                observableArtistCatalogRegistry.addAudioItem(it)
                 subscribeMutations(it)
             }
         }
     }
 
     /**
-     * Subscribes to an audio item's mutation events and bridges them to repository UPDATE events.
+     * Subscribes to an audio item's mutation events and emits a repository-level UPDATE.
      *
-     * When an audio item's properties change directly (not through repository operations),
-     * this subscription detects the change and emits a repository-level UPDATE event,
-     * enabling the artist catalog registry to stay synchronized with entity-level mutations.
+     * This bridge is required so that the artist catalog projection receives an UPDATE event
+     * when an audio item's properties change in-place. The projection's reverse index then
+     * re-keys the item to its current artist bucket, handling cross-bucket moves and within-bucket
+     * re-sorts automatically.
+     *
+     * Emitting Update also causes JsonFileRepository to persist the change.
      */
     private fun subscribeMutations(audioItem: I) {
         val subscription =
-            audioItem.subscribe { mutationEvent ->
-                repository.emitAsync(Update(mutationEvent.newEntity, mutationEvent.oldEntity))
+            audioItem.subscribe { _ ->
+                // Both args are the same instance on purpose: the multi-key projection re-keys from
+                // its own reverse index rather than from a previous snapshot, so the "old" value is
+                // unused — Update only needs the current item to trigger the re-key and persistence.
+                repository.emitAsync(Update(audioItem, audioItem))
             }
         entitySubscriptions[audioItem.id] = subscription
     }
 
     /**
-     * Subscription to repository events that keeps the artist catalog registry synchronized.
+     * Subscription to repository events that manages per-entity mutation subscriptions.
      *
-     * This subscription ensures that:
-     * - CREATE events add audio items to their respective artist catalogs and subscribe to mutations
-     * - UPDATE events modify catalogs when artist/album/ordering changes occur
-     * - DELETE events remove audio items, delete empty catalogs, and unsubscribe from mutations
-     * - READ events are ignored (no catalog changes needed)
-     * - CONFLICT events are ignored — music-commons uses in-memory and JSON-file repositories where
-     *   optimistic lock failures are not expected; SQL-backed deployments must handle reconciliation
-     *   at a higher layer
+     * - CREATE: subscribe to mutation events for new audio items so catalog and persistence stay in sync
+     * - UPDATE: catalog updates are handled by the projection via the mutation bridge above
+     * - DELETE: cancel per-entity mutation subscriptions when items are removed
+     * - READ, CONFLICT, RECOVERY_FAILED: no action needed
      *
+     * The projection itself subscribes to the same repository (CREATE, UPDATE, DELETE) and
+     * maintains the artist catalog incrementally — no explicit catalog add/remove calls are
+     * needed here.
      */
     private val subscription =
         repository.subscribe { event ->
             when (event.type) {
                 CREATE -> {
-                    observableArtistCatalogRegistry.addAudioItems(event.entities.values)
                     event.entities.values.forEach { subscribeMutations(it) }
                 }
-                UPDATE -> {
-                    event.entities.values.forEach { updatedAudioItem ->
-                        val oldEntity =
-                            event.oldEntities.values.firstOrNull { old -> old.id == updatedAudioItem.id }
-                                ?: error("Old entity not found for updated one with id ${updatedAudioItem.id}")
-                        observableArtistCatalogRegistry.updateCatalog(updatedAudioItem, oldEntity)
-                    }
-                }
+                UPDATE -> Unit
                 DELETE -> {
-                    observableArtistCatalogRegistry.removeAudioItems(event.entities.values)
                     event.entities.values.forEach { entitySubscriptions.remove(it.id)?.cancel() }
                 }
                 READ, CONFLICT, RECOVERY_FAILED -> Unit
@@ -157,19 +158,20 @@ abstract class AudioLibraryBase<I, AC>(
         }
 
     override fun getRandomAudioItemsFromArtist(artist: Artist, size: Short): List<I> =
-        repository.search(size.toInt()) { it.artist == artist }.shuffled().toList()
+        repository.search(size.toInt()) { it.artistsInvolved.contains(artist) }.shuffled().toList()
 
     /**
      * Cancels all event subscriptions managed by this library.
      *
-     * Cancels the repository event subscription that synchronizes the artist catalog registry,
-     * all per-entity mutation subscriptions, and the player subscriber's subscription.
+     * Cancels the repository event subscription, all per-entity mutation subscriptions,
+     * the player subscriber's subscription, and the artist catalog registry.
      */
     override fun close() {
         subscription.cancel()
         entitySubscriptions.values.forEach { it.cancel() }
         entitySubscriptions.clear()
         playerSubscriber.cancelSubscription()
+        observableArtistCatalogRegistry.close()
     }
 
     override fun equals(other: Any?): Boolean {

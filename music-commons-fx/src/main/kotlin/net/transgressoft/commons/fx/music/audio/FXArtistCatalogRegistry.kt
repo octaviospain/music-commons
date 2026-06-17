@@ -19,30 +19,40 @@ package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.ArtistCatalogRegistryBase
+import net.transgressoft.lirp.persistence.Repository
+import net.transgressoft.lirp.persistence.fx.projection.FxObservableProjection
+import net.transgressoft.lirp.persistence.fx.projection.registryFxMultiKeyProjection
 
 /**
- * JavaFX-specific artist catalog registry that creates [FXArtistCatalog] instances directly.
+ * JavaFX artist catalog registry backed by a two-phase value-transform multi-key registry projection.
  *
- * Each catalog owns its audio item state and manages its own JavaFX observable properties.
- * Mutation operations are dispatched to [FXArtistCatalog] internal methods.
+ * Groups audio items from [repository] by every artist involved in each item (its `artistsInvolved`
+ * set), so a track that features additional artists appears in each of their catalogs. The two-phase
+ * split keeps [FXArtistCatalog] construction thread-safe:
+ *
+ * - **dataTransform** (background thread): pure snapshot of the bucket as a `List<ObservableAudioItem>`;
+ *   must not touch any JavaFX property or node.
+ * - **fxFactory** (FX Application Thread): constructs the [FXArtistCatalog] from the snapshot, safe to
+ *   initialize JavaFX properties.
+ *
+ * Shared CRUD-event republishing, catalog queries, and lifecycle live in [ArtistCatalogRegistryBase];
+ * the projection's entries-changed callback fires on the FX Application Thread.
+ *
+ * @param repository The observable audio-item repository to project
  */
-internal class FXArtistCatalogRegistry :
-    ArtistCatalogRegistryBase<ObservableAudioItem, ObservableArtistCatalog>("FXArtistCatalogRegistry") {
+internal class FXArtistCatalogRegistry(repository: Repository<Int, ObservableAudioItem>)
+: ArtistCatalogRegistryBase<ObservableAudioItem, ObservableArtistCatalog>("FXArtistCatalogRegistry") {
 
-    override fun createCatalog(artist: Artist): ObservableArtistCatalog = FXArtistCatalog(artist)
+    override val projection: FxObservableProjection<Artist, ObservableArtistCatalog> =
+        registryFxMultiKeyProjection(
+            registry = repository,
+            keyExtractor = ObservableAudioItem::artistsInvolved,
+            dataTransform = { _, items -> items.toList() },
+            fxFactory = { artist, data -> FXArtistCatalog(artist, data) },
+            dispatchToFxThread = true
+        )
 
-    override fun ObservableArtistCatalog.addItem(audioItem: ObservableAudioItem): Boolean =
-        (this as FXArtistCatalog).addAudioItem(audioItem)
-
-    override fun ObservableArtistCatalog.removeItem(audioItem: ObservableAudioItem): Boolean =
-        (this as FXArtistCatalog).removeAudioItem(audioItem)
-
-    override fun ObservableArtistCatalog.merge(audioItem: ObservableAudioItem): Boolean =
-        (this as FXArtistCatalog).mergeAudioItem(audioItem)
-
-    override fun ObservableArtistCatalog.containsItem(audioItem: ObservableAudioItem): Boolean =
-        (this as FXArtistCatalog).containsAudioItem(audioItem)
-
-    override fun ObservableArtistCatalog.cloneCatalog(): ObservableArtistCatalog =
-        (this as FXArtistCatalog).clone()
+    init {
+        observeCatalogChanges(projection)
+    }
 }

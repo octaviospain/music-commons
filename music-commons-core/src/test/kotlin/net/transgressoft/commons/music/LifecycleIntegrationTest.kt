@@ -3,6 +3,8 @@ package net.transgressoft.commons.music
 import net.transgressoft.commons.media.waveform.AudioWaveformMapSerializer
 import net.transgressoft.commons.media.waveform.ScalableAudioWaveform
 import net.transgressoft.commons.media.waveform.audioWaveformRepository
+import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemMapSerializer
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
@@ -71,10 +73,20 @@ internal class LifecycleIntegrationTest : StringSpec({
     }
 
     "AudioLibrary close() stops reacting to repository events" {
-        val audioItem = audioLibrary.createFromFile(files.virtualAudioFile().next())
+        val artist = Artist.of("Joy Division")
+        val album = Album("Unknown Pleasures", artist)
+        val audioItem =
+            audioLibrary.createFromFile(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = album
+                    title = "She's Lost Control"
+                }.next()
+            )
         reactive.advance()
 
-        audioLibrary.findAlbumAudioItems(audioItem.artist, audioItem.album.name).size shouldBe 1
+        // Catalog key is Artist derived from name (no country code)
+        audioLibrary.findAlbumAudioItems(artist, album.name).size shouldBe 1
 
         audioLibrary.close()
 
@@ -83,7 +95,8 @@ internal class LifecycleIntegrationTest : StringSpec({
 
         // After close(), the artist catalog registry subscription is cancelled
         // so newly added items are not indexed in the catalog
-        audioLibrary.findAlbumAudioItems(audioItem2.artist, audioItem2.album.name).any { it.id == audioItem2.id } shouldBe false
+        audioLibrary.findAlbumAudioItems(Artist.of(audioItem2.artist.name), audioItem2.album.name)
+            .any { it.id == audioItem2.id } shouldBe false
         audioLibrary.size() shouldBe 2
     }
 

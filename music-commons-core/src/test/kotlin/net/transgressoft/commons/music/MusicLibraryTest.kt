@@ -1,6 +1,8 @@
 package net.transgressoft.commons.music
 
 import net.transgressoft.commons.media.waveform.AudioWaveformMapSerializer
+import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItemMapSerializer
 import net.transgressoft.commons.music.audio.AudioItemSerializer
 import net.transgressoft.commons.music.audio.virtualFiles
@@ -65,14 +67,24 @@ internal class MusicLibraryTest : StringSpec({
     "MusicLibrary curated methods delegate to components" {
         val library = CoreMusicLibrary.builder().metadataIO(files.metadataIO).build()
 
-        val audioItem = library.audioItemFromFile(files.virtualAudioFile().next())
+        // Deterministic artist (no country code) so catalog key matches the name-derived Artist
+        val artist = Artist.of("Portishead")
+        val album = Album("Dummy", artist)
+        val audioItem =
+            library.audioItemFromFile(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = album
+                    title = "Glory Box"
+                }.next()
+            )
         reactive.advance()
 
         library.createPlaylist("Curated Playlist")
 
         library.audioLibrary().size() shouldBe 1
         library.findPlaylistByName("Curated Playlist") shouldBePresent { it.name shouldBe "Curated Playlist" }
-        library.findAlbumAudioItems(audioItem.artist, audioItem.album.name).any { it.id == audioItem.id } shouldBe true
+        library.findAlbumAudioItems(artist, album.name).any { it.id == audioItem.id } shouldBe true
 
         library.close()
     }
@@ -80,14 +92,23 @@ internal class MusicLibraryTest : StringSpec({
     "MusicLibrary close disposes all components" {
         val library = CoreMusicLibrary.builder().metadataIO(files.metadataIO).build()
 
-        val audioItem = library.audioItemFromFile(files.virtualAudioFile().next())
+        val artist = Artist.of("Massive Attack")
+        val album = Album("Mezzanine", artist)
+        val audioItem =
+            library.audioItemFromFile(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = album
+                    title = "Teardrop"
+                }.next()
+            )
         reactive.advance()
 
         val playlist = library.createPlaylist("Close Test Playlist")
         playlist.addAudioItem(audioItem)
         reactive.advance()
 
-        library.audioLibrary().findAlbumAudioItems(audioItem.artist, audioItem.album.name)
+        library.audioLibrary().findAlbumAudioItems(artist, album.name)
             .any { it.id == audioItem.id } shouldBe true
 
         library.close()
@@ -96,7 +117,7 @@ internal class MusicLibraryTest : StringSpec({
         val item2 = library.audioItemFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
-        library.audioLibrary().findAlbumAudioItems(item2.artist, item2.album.name)
+        library.audioLibrary().findAlbumAudioItems(Artist.of(item2.artist.name), item2.album.name)
             .none { it.id == item2.id } shouldBe true
     }
 

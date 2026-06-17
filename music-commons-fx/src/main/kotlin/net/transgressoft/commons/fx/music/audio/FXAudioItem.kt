@@ -191,14 +191,17 @@ class FXAudioItem
         @Transient
         override val titleProperty: StringProperty = fxString(metadata.title)
 
-        override var title: String = metadata.title
-            set(value) {
-                mutateAndPublish {
-                    field = value
-                    syncArtistsInvolved()
-                }
+        @Transient
+        private var _title: String = metadata.title
+
+        override var title: String by reactiveProperty(
+            getter = { _title },
+            setter = { value ->
+                _title = value
+                syncArtistsInvolved()
                 titleProperty.set(value)
             }
+        )
 
         // LirpObjectProperty<T> extends SimpleObjectProperty<T?>, so it is ObjectProperty<T?> in
         // Kotlin's type system. The cast to ObjectProperty<T> (non-nullable) is safe at runtime
@@ -249,50 +252,75 @@ class FXAudioItem
         @Suppress("UNCHECKED_CAST")
         override val genresProperty: ObjectProperty<Set<Genre>> = fxObject(metadata.genres) as ObjectProperty<Set<Genre>>
 
+        @Transient
+        private var _genres: Set<Genre> = metadata.genres
+
         @ElementCollection(elementConverter = GenreConverter::class)
-        override var genres: Set<Genre> = metadata.genres
-            set(value) {
+        override var genres: Set<Genre> by reactiveProperty(
+            getter = { _genres },
+            setter = { value ->
                 val copy = value.toSet()
-                mutateAndPublish { field = copy }
+                _genres = copy
                 genresProperty.set(copy)
             }
+        )
 
         @Transient
         override val commentsProperty: StringProperty by fxString(metadata.comments ?: "")
 
-        override var comments: String? = metadata.comments
-            set(value) {
-                mutateAndPublish { field = value }
+        @Transient
+        private var _comments: String? = metadata.comments
+
+        override var comments: String? by reactiveProperty(
+            getter = { _comments },
+            setter = { value ->
+                _comments = value
                 commentsProperty.set(value ?: "")
             }
+        )
 
         @Transient
         override val trackNumberProperty: IntegerProperty by fxInteger(metadata.trackNumber?.toInt() ?: -1)
 
-        override var trackNumber: Short? = metadata.trackNumber
-            set(value) {
-                mutateAndPublish { field = value }
+        @Transient
+        private var _trackNumber: Short? = metadata.trackNumber
+
+        override var trackNumber: Short? by reactiveProperty(
+            getter = { _trackNumber },
+            setter = { value ->
+                _trackNumber = value
                 trackNumberProperty.set(value?.toInt() ?: -1)
             }
+        )
 
         @Transient
         override val discNumberProperty: IntegerProperty by fxInteger(metadata.discNumber?.toInt() ?: -1)
 
-        override var discNumber: Short? = metadata.discNumber
-            set(value) {
-                mutateAndPublish { field = value }
+        @Transient
+        private var _discNumber: Short? = metadata.discNumber
+
+        override var discNumber: Short? by reactiveProperty(
+            getter = { _discNumber },
+            setter = { value ->
+                _discNumber = value
                 discNumberProperty.set(value?.toInt() ?: -1)
             }
+        )
 
         @Transient
         override val bpmProperty: FloatProperty by fxFloat(metadata.bpm ?: -1f)
 
-        override var bpm: Float? = metadata.bpm
-            set(value) {
+        @Transient
+        private var _bpm: Float? = metadata.bpm
+
+        override var bpm: Float? by reactiveProperty(
+            getter = { _bpm },
+            setter = { value ->
                 value?.let { require(it.isFinite()) { "bpm must be a finite Float (got $it)" } }
-                mutateAndPublish { field = value }
+                _bpm = value
                 bpmProperty.set(value ?: -1f)
             }
+        )
 
         @Serializable
         override var lastDateModified: LocalDateTime = dateOfCreation
@@ -307,9 +335,11 @@ class FXAudioItem
 
         @Transient
         @PersistenceIgnore
+        @Volatile
         private var _coverImageBytes: ByteArray? = metadata.coverBytes
 
         @Transient
+        @Volatile
         private var coverLoaded: Boolean = metadata.coverBytes != null
 
         /**
@@ -326,13 +356,16 @@ class FXAudioItem
         @PersistenceIgnore
         override var coverImageBytes: ByteArray?
             get() {
-                if (!coverLoaded && metadataIO != null) {
-                    _coverImageBytes = metadataIO?.loadCover(this)
-                    coverLoaded = true
-                    val bytes = _coverImageBytes
-                    if (bytes != null) {
-                        runOnFxThread {
-                            coverImageProperty.set(Optional.of(Image(ByteArrayInputStream(bytes))))
+                if (coverLoaded) return _coverImageBytes
+                synchronized(this) {
+                    if (!coverLoaded && metadataIO != null) {
+                        _coverImageBytes = metadataIO?.loadCover(this)
+                        coverLoaded = true
+                        val bytes = _coverImageBytes
+                        if (bytes != null) {
+                            runOnFxThread {
+                                coverImageProperty.set(Optional.of(Image(ByteArrayInputStream(bytes))))
+                            }
                         }
                     }
                 }

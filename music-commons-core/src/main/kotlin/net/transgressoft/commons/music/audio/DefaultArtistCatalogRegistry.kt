@@ -17,25 +17,34 @@
 
 package net.transgressoft.commons.music.audio
 
+import net.transgressoft.lirp.persistence.Repository
+import net.transgressoft.lirp.persistence.projection.ObservableProjection
+import net.transgressoft.lirp.persistence.projection.registryMultiKeyProjection
+
 /**
- * Core registry managing artist catalogs with [ArtistCatalog] instances.
+ * Artist catalog registry backed by a lirp value-transform multi-key registry projection.
  *
- * Creates [MutableArtistCatalog] instances internally and delegates mutation
- * operations to the [ArtistCatalog] interface methods.
+ * Builds one [ArtistCatalog] per involved artist directly in the projection's value transform: an
+ * item is placed under every artist in its `artistsInvolved` set, so a track that features additional
+ * artists appears in each of their catalogs — consistent with the audio library's artist set and
+ * `containsAudioItemWithArtist`, which also reason over `artistsInvolved`. Shared CRUD-event
+ * republishing, catalog queries, and lifecycle live in [ArtistCatalogRegistryBase].
+ *
+ * @param I The audio item type
+ * @param repository The audio-item repository to project
  */
-internal class DefaultArtistCatalogRegistry<I> :
-    ArtistCatalogRegistryBase<I, ArtistCatalog<I>>("ArtistCatalogRegistry")
+internal class DefaultArtistCatalogRegistry<I>(repository: Repository<Int, I>)
+: ArtistCatalogRegistryBase<I, ArtistCatalog<I>>("ArtistCatalogRegistry")
     where I : ReactiveAudioItem<I>, I : Comparable<I> {
 
-    override fun createCatalog(artist: Artist): ArtistCatalog<I> = MutableArtistCatalog(artist)
+    override val projection: ObservableProjection<Artist, ArtistCatalog<I>> =
+        registryMultiKeyProjection(
+            registry = repository,
+            keyExtractor = { it.artistsInvolved },
+            valueTransform = { artist, items -> ImmutableArtistCatalog(artist, items) }
+        )
 
-    override fun ArtistCatalog<I>.addItem(audioItem: I) = (this as MutableArtistCatalog<I>).addAudioItem(audioItem)
-
-    override fun ArtistCatalog<I>.removeItem(audioItem: I) = (this as MutableArtistCatalog<I>).removeAudioItem(audioItem)
-
-    override fun ArtistCatalog<I>.merge(audioItem: I) = (this as MutableArtistCatalog<I>).mergeAudioItem(audioItem)
-
-    override fun ArtistCatalog<I>.containsItem(audioItem: I) = (this as MutableArtistCatalog<I>).containsAudioItem(audioItem)
-
-    override fun ArtistCatalog<I>.cloneCatalog() = (this as MutableArtistCatalog<I>).clone()
+    init {
+        observeCatalogChanges(projection)
+    }
 }

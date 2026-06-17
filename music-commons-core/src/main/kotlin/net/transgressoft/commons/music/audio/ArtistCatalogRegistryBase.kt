@@ -19,226 +19,113 @@ package net.transgressoft.commons.music.audio
 
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.FlowEventPublisher
+import net.transgressoft.lirp.event.LirpEventPublisher
 import net.transgressoft.lirp.event.StandardCrudEvent.Create
 import net.transgressoft.lirp.event.StandardCrudEvent.Delete
 import net.transgressoft.lirp.event.StandardCrudEvent.Update
-import net.transgressoft.lirp.persistence.RegistryBase
+import net.transgressoft.lirp.persistence.projection.ObservableProjection
 import mu.KotlinLogging
 import java.util.Optional
-import java.util.stream.Collectors.partitioningBy
 
 /**
- * Abstract base class for registries managing artist catalogs within an audio library.
+ * Abstract base for artist catalog registries backed by a lirp [ObservableProjection].
  *
- * Provides collection management and CRUD event publishing for artist catalogs.
- * Subclasses define how catalogs are created and how mutation operations are
- * dispatched, enabling different catalog types (e.g., core vs. JavaFX observable).
+ * Both the core and FX registries project the audio-item repository into one artist catalog per
+ * involved artist; they differ only in the concrete projection they build. This base owns the
+ * shared behavior: it subscribes to the projection's per-entry changes and republishes them as
+ * [artistCatalogPublisher] CRUD events (a null old value is a Create, a null new value is a Delete,
+ * and both-present is an Update), exposes catalog query methods over the live projection, and
+ * releases the projection on [close]. Subclasses supply the projection via [observeCatalogChanges].
  *
  * @param I The type of audio items stored in catalogs
  * @param AC The concrete artist catalog type managed by this registry
  * @param publisherName Name for the event publisher, used in logging
  */
-abstract class ArtistCatalogRegistryBase<I, AC>(
-    publisherName: String = "ArtistCatalogRegistry"
-) : RegistryBase<Artist, AC>(publisher = FlowEventPublisher(publisherName))
-    where I : ReactiveAudioItem<I>, I : Comparable<I>,
-          AC : ReactiveArtistCatalog<AC, I>, AC : Comparable<AC> {
+abstract class ArtistCatalogRegistryBase<I, AC>(private val publisherName: String = "ArtistCatalogRegistry")
+    where I : ReactiveAudioItem<I>, I : Comparable<I>, AC : ReactiveArtistCatalog<AC, I>, AC : Comparable<AC> {
 
     private val log = KotlinLogging.logger {}
 
-    init {
-        activateEvents(CrudEvent.Type.CREATE, CrudEvent.Type.UPDATE, CrudEvent.Type.DELETE)
-    }
-
-    /**
-     * Creates a new artist catalog for the given artist.
-     *
-     * @param artist The artist to create a catalog for
-     * @return A new catalog instance for the artist
-     */
-    protected abstract fun createCatalog(artist: Artist): AC
-
-    /**
-     * Adds an audio item to the given catalog.
-     */
-    protected abstract fun AC.addItem(audioItem: I): Boolean
-
-    /**
-     * Removes an audio item from the given catalog.
-     */
-    protected abstract fun AC.removeItem(audioItem: I): Boolean
-
-    /**
-     * Re-sorts an audio item within its catalog after ordering properties changed.
-     */
-    protected abstract fun AC.merge(audioItem: I): Boolean
-
-    /**
-     * Checks whether the given catalog contains the specified audio item.
-     */
-    protected abstract fun AC.containsItem(audioItem: I): Boolean
-
-    /**
-     * Creates a deep copy of the given catalog.
-     */
-    protected abstract fun AC.cloneCatalog(): AC
-
-    internal fun addAudioItem(audioItem: I): Boolean = addAudioItems(listOf(audioItem))
-
-    /**
-     * Adds audio items to their respective artist catalogs, creating new catalogs or
-     * updating existing ones as needed.
-     *
-     * For each audio item, this method either creates a new catalog if the
-     * artist doesn't exist yet, or adds the item to an existing catalog. Duplicate items
-     * (items already in a catalog) are ignored.
-     *
-     * Events are emitted for newly created and updated catalogs, allowing subscribers to
-     * react to changes in the artist collection.
-     *
-     * @param audioItems The audio items to add
-     * @return true if any catalogs were created or updated, false otherwise
-     */
-    internal fun addAudioItems(audioItems: Collection<I>): Boolean {
-        synchronized(this) {
-            val catalogsBeforeUpdate = mutableListOf<AC>()
-
-            val addedOrReplacedCatalogs: Map<Boolean, List<AC>> =
-                audioItems.stream()
-                    .filter { audioItem -> entitiesById.any { it.value.containsItem(audioItem) }.not() }
-                    .map { audioItem ->
-                        val newCatalog = createCatalog(audioItem.artist).apply { addItem(audioItem) }
-                        checkNotNull(
-                            entitiesById.merge(audioItem.artist, newCatalog) { artistCatalog, _ ->
-                                val catalogBeforeUpdate = artistCatalog.cloneCatalog()
-                                artistCatalog.addItem(audioItem)
-                                catalogsBeforeUpdate.add(catalogBeforeUpdate)
-                                artistCatalog
-                            }
-                        ) { "merge() returned null for artist '${audioItem.artist}' — remapping function must not return null" }
-                    }.collect(partitioningBy { it.size == 1 })
-
-            addedOrReplacedCatalogs[true]?.let { createdCatalogs ->
-                if (createdCatalogs.isNotEmpty()) {
-                    publisher.emitAsync(Create(createdCatalogs))
-                    log.debug { "${createdCatalogs.size} artist catalogs were created" }
-                }
-            }
-
-            addedOrReplacedCatalogs[false]?.let { updatedCatalogs ->
-                if (updatedCatalogs.isNotEmpty()) {
-                    publisher.emitAsync(Update(updatedCatalogs, catalogsBeforeUpdate))
-                    log.debug { "${updatedCatalogs.size} artist catalogs were updated" }
-                }
-            }
-
-            return addedOrReplacedCatalogs.isNotEmpty()
+    /** CRUD event publisher for artist catalog changes — exposed to [AudioLibraryBase] consumers. */
+    val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>> =
+        FlowEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>>(publisherName).also {
+            it.activateEvents(CrudEvent.Type.CREATE, CrudEvent.Type.UPDATE, CrudEvent.Type.DELETE)
         }
-    }
+
+    protected abstract val projection: ObservableProjection<Artist, AC>
+
+    private var entriesChangedHandle: AutoCloseable? = null
 
     /**
-     * Updates catalogs in response to an audio item being modified.
-     *
-     * This method handles three distinct update scenarios:
-     * 1. Artist or album changed: Removes item from old catalog and adds to new one
-     * 2. Track/disc number changed: Re-sorts the item within its existing catalog
-     * 3. Other metadata changed: No catalog update needed
-     *
-     * Appropriate events are emitted based on which scenario applies.
-     *
-     * @param updatedAudioItem The audio item with updated properties
-     * @param oldAudioItem The audio item before the update
+     * Adopts [projection] as the live catalog lookup and republishes its per-entry changes as
+     * artist catalog CRUD events. Subclasses call this once from their constructor with the
+     * projection they build. Registration replays the current catalogs as Create events for items
+     * already present in the repository.
      */
-    internal fun updateCatalog(updatedAudioItem: I, oldAudioItem: I) {
-        synchronized(this) {
-            if (artistOrAlbumChanged(updatedAudioItem, oldAudioItem)) {
-                val removed = removeAudioItem(oldAudioItem)
-                val added = addAudioItem(updatedAudioItem)
-                check(removed || added) { "Update of an audio item in the catalog is supposed to happen at this point" }
-
-                log.debug { "Artist catalog of ${updatedAudioItem.artist.name} was updated as a result of updating $updatedAudioItem" }
-            } else if (audioItemOrderingChanged(updatedAudioItem, oldAudioItem)) {
-                val artistCatalog =
-                    entitiesById[updatedAudioItem.artist] ?: error(
-                        "Artist catalog for ${updatedAudioItem.artistUniqueId()} should exist already at this point"
-                    )
-                val artistCatalogBeforeUpdate = artistCatalog.cloneCatalog()
-                val reordered = artistCatalog.merge(updatedAudioItem)
-                if (reordered) {
-                    publisher.emitAsync(Update(artistCatalog, artistCatalogBeforeUpdate))
-                }
-            }
-        }
-    }
-
-    private fun artistOrAlbumChanged(updatedAudioItem: I, oldAudioItem: I): Boolean {
-        val artistChanged = updatedAudioItem.artist != oldAudioItem.artist
-        val albumChanged = updatedAudioItem.album != oldAudioItem.album
-        return artistChanged || albumChanged
-    }
-
-    private fun audioItemOrderingChanged(updatedAudioItem: I, oldAudioItem: I): Boolean {
-        val trackNumberChanged = updatedAudioItem.trackNumber != oldAudioItem.trackNumber
-        val discNumberChanged = updatedAudioItem.discNumber != oldAudioItem.discNumber
-        return trackNumberChanged || discNumberChanged
-    }
-
-    internal fun removeAudioItem(audioItem: I): Boolean = removeAudioItems(listOf(audioItem))
-
-    /**
-     * Removes audio items from their respective artist catalogs.
-     *
-     * If removing an item empties a catalog completely, that catalog is deleted and a
-     * DELETE event is emitted. If items remain, an UPDATE event is emitted with the
-     * modified catalog.
-     *
-     * @param audioItems The audio items to remove
-     * @return true if any catalogs were updated or deleted, false otherwise
-     */
-    internal fun removeAudioItems(audioItems: Collection<I>): Boolean {
-        synchronized(this) {
-            val removedCatalogs = mutableListOf<AC>()
-            val catalogsBeforeUpdate = mutableListOf<AC>()
-            val updatedCatalogs = mutableListOf<AC>()
-
-            audioItems.forEach { audioItem ->
-                entitiesById[audioItem.artist]?.let {
-                    val oldArtistCatalog = it.cloneCatalog()
-                    val wasRemoved = it.removeItem(audioItem)
-                    if (wasRemoved) {
-                        if (it.isEmpty) {
-                            removedCatalogs.add(it)
-                            entitiesById.remove(audioItem.artist)
-                        } else {
-                            updatedCatalogs.add(it)
-                            catalogsBeforeUpdate.add(oldArtistCatalog)
+    protected fun observeCatalogChanges(projection: ObservableProjection<Artist, AC>) {
+        entriesChangedHandle =
+            projection.addOnEntriesChangedListener { changes ->
+                for ((artist, oldCatalog, newCatalog) in changes) {
+                    when {
+                        oldCatalog == null && newCatalog != null -> {
+                            artistCatalogPublisher.emitAsync(Create(newCatalog))
+                            log.debug { "Artist catalog created for ${artist.name}" }
+                        }
+                        oldCatalog != null && newCatalog != null -> {
+                            artistCatalogPublisher.emitAsync(Update(newCatalog, oldCatalog))
+                            log.debug { "Artist catalog updated for ${artist.name}" }
+                        }
+                        oldCatalog != null && newCatalog == null -> {
+                            artistCatalogPublisher.emitAsync(Delete(oldCatalog))
+                            log.debug { "Artist catalog deleted for ${artist.name}" }
                         }
                     }
                 }
             }
-
-            if (removedCatalogs.isNotEmpty()) {
-                publisher.emitAsync(Delete(removedCatalogs))
-                log.debug { "Artist catalogs of ${removedCatalogs.toArtistNames()} were deleted as a result of removing $audioItems from them" }
-            }
-
-            if (updatedCatalogs.isNotEmpty()) {
-                publisher.emitAsync(Update(updatedCatalogs, catalogsBeforeUpdate))
-                log.debug { "Audio items $audioItems were removed from artist catalogs of ${updatedCatalogs.toArtistNames()}" }
-            }
-
-            return removedCatalogs.isNotEmpty() || updatedCatalogs.isNotEmpty()
-        }
     }
 
-    private fun Collection<AC>.toArtistNames(): List<String> = map { it.artist.name }
+    /** Returns the catalog for the given artist, or empty if none exists. */
+    fun findById(artist: Artist): Optional<AC> = Optional.ofNullable(projection[artist])
 
-    private fun ReactiveAudioItem<I>.artistUniqueId() = artist.id()
+    /**
+     * Returns the first catalog whose artist name contains [artistName] (case-insensitive),
+     * or empty if none matches.
+     */
+    fun findFirst(artistName: String): Optional<AC> =
+        Optional.ofNullable(
+            projection.entries.firstOrNull {
+                it.key.name.lowercase().contains(artistName.lowercase())
+            }?.value
+        )
 
-    internal fun findFirst(artistName: String): Optional<AC> =
-        Optional.ofNullable(entitiesById.entries.firstOrNull { it.key.name.lowercase().contains(artistName.lowercase()) }?.value)
+    /**
+     * Returns the first catalog matching [predicate], or empty if none matches.
+     */
+    fun findFirst(predicate: (AC) -> Boolean): Optional<AC> =
+        Optional.ofNullable(projection.values.firstOrNull(predicate))
 
-    internal fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I> = entitiesById[artist]?.albumAudioItems(albumName) ?: emptySet()
+    /** Returns the audio items for the given artist and album name, or empty set if not found. */
+    fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I> =
+        projection[artist]?.albumAudioItems(albumName) ?: emptySet()
 
-    override fun toString() = "${this::class.simpleName}(numberOfArtists=${entitiesById.size})"
+    /** Iterates all current catalog values. */
+    fun forEach(action: (AC) -> Unit) = projection.values.forEach(action)
+
+    /** Returns the number of artist catalogs. */
+    fun size(): Int = projection.size
+
+    /** Returns `true` if there are no artist catalogs. */
+    val isEmpty: Boolean get() = projection.isEmpty()
+
+    /** Returns `true` if any catalog satisfies [predicate]. */
+    fun contains(predicate: (AC) -> Boolean): Boolean = projection.values.any(predicate)
+
+    /** Releases the projection subscription and the projection. Called when the owning library is closed. */
+    open fun close() {
+        entriesChangedHandle?.close()
+        projection.close()
+        log.debug { "$publisherName closed" }
+    }
+
+    override fun toString() = "${this::class.simpleName}(numberOfArtists=${projection.size})"
 }
