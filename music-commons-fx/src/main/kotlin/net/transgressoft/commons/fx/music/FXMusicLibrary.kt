@@ -187,15 +187,41 @@ class FXMusicLibrary private constructor(
         private var waveformRepository: Repository<Int, AudioWaveform> = VolatileRepository("FXWaveformRepository")
         private var metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO()
 
-        /** Injects the [repository] backing the observable audio library. */
+        /**
+         * Injects the [repository] backing the observable audio library.
+         *
+         * To observe async persistence failures, wire a [net.transgressoft.lirp.event.LirpErrorHandler]
+         * via the `onError` parameter when constructing the repository:
+         * ```kotlin
+         * JsonFileRepository(file, serializer, onError = LirpErrorHandler { throwable, ctx ->
+         *     logger.error("${ctx.repository}/${ctx.operation} failed", throwable)
+         * })
+         * ```
+         * The handler is notify-only and never receives entity field values — only identity
+         * information (`LirpErrorContext.operation`, `entityIds`, `repository`).
+         * Failure surfaces: [net.transgressoft.lirp.event.LirpOperation.FLUSH] (persistence write)
+         * and [net.transgressoft.lirp.event.LirpOperation.EMIT] (event-channel drain).
+         */
         fun audioRepository(repository: Repository<Int, ObservableAudioItem>): Builder =
             apply { audioRepository = repository }
 
-        /** Injects the [repository] backing the observable playlist hierarchy. */
+        /**
+         * Injects the [repository] backing the observable playlist hierarchy.
+         *
+         * To observe async persistence failures, wire a [net.transgressoft.lirp.event.LirpErrorHandler]
+         * via the `onError` parameter when constructing the repository (same contract as
+         * [audioRepository] — notify-only, identity-only context, no field values).
+         */
         fun playlistRepository(repository: Repository<Int, ObservablePlaylist>): Builder =
             apply { playlistRepository = repository }
 
-        /** Injects the [repository] backing the waveform repository. */
+        /**
+         * Injects the [repository] backing the waveform repository.
+         *
+         * To observe async persistence failures, wire a [net.transgressoft.lirp.event.LirpErrorHandler]
+         * via the `onError` parameter when constructing the repository (same contract as
+         * [audioRepository] — notify-only, identity-only context, no field values).
+         */
         fun waveformRepository(repository: Repository<Int, AudioWaveform>): Builder =
             apply { waveformRepository = repository }
 
@@ -211,8 +237,8 @@ class FXMusicLibrary private constructor(
         fun build(): FXMusicLibrary {
             val audioLibrary = FXAudioLibrary(audioRepository, metadataIO)
             var playlistRepoRegistered = false
-
             var waveformRepo: AudioWaveformRepository<AudioWaveform, ObservableAudioItem>? = null
+            var playlistHierarchy: FXPlaylistHierarchy? = null
             try {
                 val audioItemSubscriber = AudioItemEventSubscriber<ObservableAudioItem>("AudioWaveformRepositorySubscriber")
                 waveformRepo =
@@ -226,21 +252,19 @@ class FXMusicLibrary private constructor(
                     playlistRepoRegistered = true
                     (playlistRepository as PersistentRepository<*, *>).load()
                 }
-                val playlistHierarchy = FXPlaylistHierarchy(playlistRepository)
+                playlistHierarchy = FXPlaylistHierarchy(playlistRepository)
 
-                try {
-                    audioLibrary.subscribe(waveformRepo)
-                    audioLibrary.subscribe(playlistHierarchy)
-                } catch (subscribeEx: Exception) {
-                    playlistHierarchy.close()
-                    throw subscribeEx
-                }
+                // Flow.Subscriber overload — arms the async bridge for each dependent component;
+                // not the lambda subscribe { } form and unaffected by the synchronous-by-default classification.
+                audioLibrary.subscribe(waveformRepo)
+                audioLibrary.subscribe(playlistHierarchy)
 
                 return FXMusicLibrary(audioLibrary, playlistHierarchy, waveformRepo)
             } catch (ex: Exception) {
                 if (playlistRepoRegistered) {
                     RegistryBase.deregisterRepository(ObservablePlaylist::class.java)
                 }
+                playlistHierarchy?.close()
                 waveformRepo?.close()
                 audioLibrary.close()
                 throw ex

@@ -45,11 +45,11 @@ dependencies {
 }
 ```
 
-The core module depends on [lirp](https://github.com/octaviospain/lirp):
+The core module depends on [lirp](https://github.com/octaviospain/lirp) 3.0.0. The version is declared once in `gradle/libs.versions.toml` and shared across all modules:
 
 ```kotlin
-implementation("net.transgressoft:lirp-api:2.4.0")
-implementation("net.transgressoft:lirp-core:2.4.0")
+implementation("net.transgressoft:lirp-api:3.0.0")
+implementation("net.transgressoft:lirp-core:3.0.0")
 ```
 
 ## Key Features
@@ -74,7 +74,7 @@ Unknown genre strings are preserved as `Genre.Custom(name)` instead of being dis
 ### Audio Library Management
 
 - **Multi-format support**: MP3, M4A (AAC and ALAC), WAV, FLAC, and OGG (Vorbis and Opus) with automatic metadata extraction
-- **Artist catalog indexing**: Automatic organization by artist and album with aggregated views
+- **Artist catalog indexing**: Automatic organization by artist and album with aggregated views. An item is indexed under every artist it involves (primary, album, and featured artists), so a collaboration appears in each contributor's catalog. The catalog is backed by a lirp multi-key registry projection — artist buckets update incrementally as items are added, modified, or removed, with no manual CRUD dispatch
 - **Batch operations**: Asynchronous batch creation via `CompletableFuture` API
 - **Reactive updates**: CRUD operations publish events through Java Flow API
 - **Lazy cover-art loading**: `coverImageBytes` on `ReactiveAudioItem` is loaded on first access and cached — a full-library import retains no cover bytes until they are explicitly read. The getter and setter return and store the internal array reference directly; callers must treat the returned array as immutable and must not modify its contents. All mutations must go through the setter so reactive change notifications are published.
@@ -106,11 +106,45 @@ Unknown genre strings are preserved as `Genre.Custom(name)` instead of being dis
 - **SQL storage**: Consumer-provided `SqlRepository` — add [lirp-sql](https://github.com/octaviospain/lirp) to your build to inject `SqlRepository` instances (HikariCP + JetBrains Exposed)
 - **Automatic serialization**: Built-in kotlinx-serialization serializers for all entities
 - **Transparent persistence**: Entity changes are persisted without manual save operations
+- **Async error observability**: Wire a `LirpErrorHandler` on each repository to observe flush and event-drain failures that would otherwise be log-only
+
+#### Observing Async Persistence Failures
+
+Repositories flush entity changes and drain event channels asynchronously. Failures in these
+paths are logged by the framework but are not surfaced to application code by default. To observe
+them — for example, to increment a metric or trigger an alert — pass a `LirpErrorHandler` via
+the `onError` parameter at repository construction time:
+
+```kotlin
+val audioRepo = JsonFileRepository(
+    file = File("audio-library.json"),
+    mapSerializer = AudioItemMapSerializer,
+    onError = LirpErrorHandler { throwable, ctx ->
+        // ctx.operation is FLUSH (persistence write failure) or EMIT (event-drain failure)
+        // ctx.repository is the repository name passed at construction time
+        // ctx.entityIds contains affected entity IDs (empty for flush-cycle failures)
+        logger.error("${ctx.repository}/${ctx.operation} failed", throwable)
+        metrics.increment("persistence.error", "repo" to ctx.repository)
+    }
+)
+
+val library = CoreMusicLibrary.builder()
+    .audioRepository(audioRepo)
+    .build()
+```
+
+The handler is **notify-only**: the framework logs the failure first, then invokes the handler.
+The handler cannot retry or alter control flow — the library keeps running regardless of what
+the handler does. Handler exceptions are swallowed.
+
+The `LirpErrorContext` passed to the handler carries only entity identity information
+(`operation`, `entityIds`, `repository`). Entity field values are never included, avoiding
+sensitive data in error paths.
 
 ### JavaFX Integration
 
 - **Observable properties**: Direct binding to JavaFX TableView, ListView, and other controls
-- **Thread safety**: JavaFX-facing library and artist-catalog projections coalesce burst updates onto the JavaFX Application Thread, keeping large imports responsive while converging to the correct observable state
+- **Thread safety**: JavaFX-facing library and artist-catalog projections coalesce burst updates onto the JavaFX Application Thread. The FX artist catalog uses `registryFxMultiKeyProjectionMap` (lirp 3.0.0) with a two-phase approach — background data transformation followed by FX-thread construction — keeping large imports responsive while converging to the correct observable state
 - **Custom controls**: `WaveformPane` for static waveforms, `PlayableWaveformPane` for playback-aware visualization with seek
 
 ### Typed Path Validation Exceptions
@@ -216,12 +250,13 @@ Defines contracts and interfaces for the audio management domain.
 
 ### music-commons-core
 
-Concrete implementations with JSON file persistence via [lirp](https://github.com/octaviospain/lirp) and reactive event subscriptions.
+Concrete implementations with JSON file persistence via [lirp](https://github.com/octaviospain/lirp) 3.0.0 and reactive event subscriptions.
 
 - `CoreMusicLibrary` -- Unified facade for headless audio management implementing `MusicLibrary<AudioItem, MutableAudioPlaylist>` (builder-based entry point)
 - `AudioLibrary` -- Narrowed `ReactiveAudioLibrary` for `AudioItem` and `ArtistCatalog` types
 - `PlaylistHierarchy` -- Narrowed `ReactivePlaylistHierarchy` for `AudioItem` and `MutableAudioPlaylist` types
 - Internal implementations: `DefaultAudioLibrary`, `DefaultPlaylistHierarchy`, `DefaultAudioWaveformRepository`
+- Artist catalog registry backed by `registryMultiKeyProjectionMap` (lirp 3.0.0): each item is bucketed under every artist it involves, and buckets update incrementally as audio items change, replacing hand-rolled CRUD dispatch. The public `ReactiveArtistCatalog` and `AudioLibrary.artistCatalogs()` surface is unchanged.
 - Event subscribers for reactive synchronization between components
 
 ### music-commons-fx

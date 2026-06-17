@@ -200,8 +200,6 @@ class ItunesImportService<I, P>
     }
 
     private fun applyItunesMetadata(audioItem: I, track: ItunesTrack) {
-        @Suppress("UNCHECKED_CAST")
-        val audioItemBeforeUpdate = audioItem.clone() as I
         val (artist, album, genres) = resolveItunesMetadata(track)
         audioItem.withEventsDisabled {
             audioItem.title = track.title
@@ -213,7 +211,7 @@ class ItunesImportService<I, P>
             audioItem.discNumber = track.discNumber
             audioItem.bpm = track.bpm
         }
-        audioItem.emitAsync(ReactiveMutationEvent(audioItem, audioItemBeforeUpdate))
+        audioItem.emitAsync(ReactiveMutationEvent(audioItem))
     }
 
     private fun resolveItunesMetadata(track: ItunesTrack): ItunesMetadata {

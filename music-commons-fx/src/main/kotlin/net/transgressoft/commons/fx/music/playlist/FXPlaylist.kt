@@ -85,26 +85,18 @@ internal class FXPlaylist(
     override val nameProperty: ReadOnlyStringProperty
         field = SimpleStringProperty(this, "name", name)
 
-    override var name: String
-        get() = nameProperty.value
-        set(value) {
-            mutateAndPublish {
-                nameProperty.set(value)
-                value
-            }
-        }
+    override var name: String by reactiveProperty(
+        getter = { nameProperty.value },
+        setter = { value -> nameProperty.set(value) }
+    )
 
     override val isDirectoryProperty: ReadOnlyBooleanProperty
         field = SimpleBooleanProperty(this, "isDirectory", isDirectory)
 
-    override var isDirectory: Boolean
-        get() = isDirectoryProperty.value
-        set(value) {
-            mutateAndPublish {
-                isDirectoryProperty.set(value)
-                value
-            }
-        }
+    override var isDirectory: Boolean by reactiveProperty(
+        getter = { isDirectoryProperty.value },
+        setter = { value -> isDirectoryProperty.set(value) }
+    )
 
     override val audioItemsRecursiveProperty: ReadOnlyListProperty<ObservableAudioItem>
         field =

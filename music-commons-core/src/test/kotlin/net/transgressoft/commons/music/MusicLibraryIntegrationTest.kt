@@ -67,13 +67,23 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     }
 
     "Operations on audio items impact subscribed repositories" {
-        val audioItem = audioLibrary.createFromFile(files.virtualAudioFile().next())
+        // Deterministic artist and title so catalog lookups use Artist(name, UNDEFINED) consistently
+        val itemArtist = Artist.of("Portishead")
+        val itemAlbum = Album("Dummy", itemArtist)
+        val audioItem =
+            audioLibrary.createFromFile(
+                files.virtualAudioFile {
+                    artist = itemArtist
+                    album = itemAlbum
+                    title = "Glory Box"
+                }.next()
+            )
 
         reactive.advance()
 
         // Compare via JSON key/value using the file:// URI form that toJsonUri() serializes.
         audioFile.readText().shouldContainJsonKeyValue("${audioItem.id}.path", audioItem.path.toJsonUri())
-        audioLibrary.findAlbumAudioItems(audioItem.artist, audioItem.album.name).shouldContainOnly(audioItem)
+        audioLibrary.findAlbumAudioItems(itemArtist, itemAlbum.name).shouldContainOnly(audioItem)
 
         val waveform = waveforms.getOrCreateWaveformAsync(audioItem, 780, 335, reactive.dispatcher.asExecutor())
 
@@ -96,7 +106,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
 
         audioLibrary.contains { it.title == "New title" }
         audioLibrary.size() shouldBe 1
-        audioLibrary.findAlbumAudioItems(audioItem.artist, audioItem.album.name).shouldContainOnly(audioItem)
+        audioLibrary.findAlbumAudioItems(itemArtist, itemAlbum.name).shouldContainOnly(audioItem)
 
         audioFile.readText() shouldContain "New title"
         val updatedPlaylist = playlistHierarchy.findByName("Test Playlist").get()
@@ -107,7 +117,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
 
         reactive.advance()
 
-        audioLibrary.findAlbumAudioItems(audioItem.artist, audioItem.album.name).isEmpty() shouldBe true
+        audioLibrary.findAlbumAudioItems(itemArtist, itemAlbum.name).isEmpty() shouldBe true
         audioFile.readText() shouldBe "{}"
 
         playlistHierarchy.findByName("Test Playlist") shouldBePresent {
@@ -198,14 +208,24 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     }
 
     "Lifecycle close integration — subscribe, close library, verify no further events propagate" {
-        val audioItem = audioLibrary.createFromFile(files.virtualAudioFile().next())
+        // Deterministic artist so catalog lookup by Artist works predictably
+        val itemArtist = Artist.of("Nick Cave")
+        val itemAlbum = Album("Murder Ballads", itemArtist)
+        val audioItem =
+            audioLibrary.createFromFile(
+                files.virtualAudioFile {
+                    artist = itemArtist
+                    album = itemAlbum
+                    title = "The Curse Of Millhaven"
+                }.next()
+            )
         reactive.advance()
 
         val playlist = playlistHierarchy.createPlaylist("Close Integration Playlist")
         playlist.addAudioItem(audioItem)
         reactive.advance()
 
-        audioLibrary.findAlbumAudioItems(audioItem.artist, audioItem.album.name).any { it.id == audioItem.id } shouldBe true
+        audioLibrary.findAlbumAudioItems(itemArtist, itemAlbum.name).any { it.id == audioItem.id } shouldBe true
 
         audioLibrary.close()
 
@@ -213,7 +233,8 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         val item2 = audioLibrary.createFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
-        audioLibrary.findAlbumAudioItems(item2.artist, item2.album.name).none { it.id == item2.id } shouldBe true
+        audioLibrary.findAlbumAudioItems(Artist.of(item2.artist.name), item2.album.name)
+            .none { it.id == item2.id } shouldBe true
         // Playlist still holds audioItem because playlist hierarchy subscription is separate
         playlistHierarchy.findByName("Close Integration Playlist") shouldBePresent {
             it.audioItems.any { item -> item.id == audioItem.id } shouldBe true

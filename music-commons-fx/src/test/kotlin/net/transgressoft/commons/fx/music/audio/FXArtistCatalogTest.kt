@@ -12,12 +12,11 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.property.arbitrary.next
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
-import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 /**
- * Tests for [FXArtistCatalog] equality and hash code behavior, ensuring
- * `audioItemsByAlbumName` is included in structural comparison.
+ * Tests for [FXArtistCatalog] equality, hash code, observable properties, and album grouping,
+ * verifying that the build-once construction from a list snapshot produces correct state.
  */
 @ExperimentalCoroutinesApi
 internal class FXArtistCatalogTest : StringSpec({
@@ -33,9 +32,6 @@ internal class FXArtistCatalogTest : StringSpec({
     }
 
     "FXArtistCatalog returns false for equals when audioItemsByAlbumName differs" {
-        val catalog1 = FXArtistCatalog(artist)
-        val catalog2 = FXArtistCatalog(artist)
-
         val path =
             files.virtualAudioFile {
                 this.artist = artist
@@ -43,15 +39,13 @@ internal class FXArtistCatalogTest : StringSpec({
             }.next()
         val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
 
-        catalog1.addAudioItem(audioItem)
+        val catalog1 = FXArtistCatalog(artist, listOf(audioItem))
+        val catalog2 = FXArtistCatalog(artist, emptyList())
 
         catalog1 shouldNotBe catalog2
     }
 
     "FXArtistCatalog returns true for equals when artist and audioItemsByAlbumName match" {
-        val catalog1 = FXArtistCatalog(artist)
-        val catalog2 = FXArtistCatalog(artist)
-
         val path =
             files.virtualAudioFile {
                 this.artist = artist
@@ -59,16 +53,13 @@ internal class FXArtistCatalogTest : StringSpec({
             }.next()
         val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
 
-        catalog1.addAudioItem(audioItem)
-        catalog2.addAudioItem(audioItem)
+        val catalog1 = FXArtistCatalog(artist, listOf(audioItem))
+        val catalog2 = FXArtistCatalog(artist, listOf(audioItem))
 
         catalog1 shouldBe catalog2
     }
 
     "FXArtistCatalog produces different hashCode when audioItemsByAlbumName differs" {
-        val catalog1 = FXArtistCatalog(artist)
-        val catalog2 = FXArtistCatalog(artist)
-
         val path =
             files.virtualAudioFile {
                 this.artist = artist
@@ -76,62 +67,28 @@ internal class FXArtistCatalogTest : StringSpec({
             }.next()
         val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
 
-        catalog1.addAudioItem(audioItem)
+        val catalog1 = FXArtistCatalog(artist, listOf(audioItem))
+        val catalog2 = FXArtistCatalog(artist, emptyList())
 
         catalog1.hashCode() shouldNotBe catalog2.hashCode()
     }
 
-    "FXArtistCatalog detects state change after addAudioItem via clone comparison" {
-        val catalog = FXArtistCatalog(artist)
-        val cloneBefore = catalog.clone()
-
+    "FXArtistCatalog clone produces an equal but distinct instance" {
         val path =
             files.virtualAudioFile {
                 this.artist = artist
                 this.album = album
             }.next()
         val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
-        catalog.addAudioItem(audioItem)
+        val catalog = FXArtistCatalog(artist, listOf(audioItem))
 
-        cloneBefore shouldNotBe catalog
-    }
+        val cloned = catalog.clone()
 
-    "FXArtistCatalog removes an item from the resolved album bucket when the item's album changed before removal" {
-        val renamedAlbum = Album("Renamed Album", artist)
-        val catalog = FXArtistCatalog(artist)
-        val path =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-            }.next()
-        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
-
-        catalog.addAudioItem(audioItem)
-        audioItem.album = renamedAlbum
-
-        catalog.containsAudioItem(audioItem) shouldBe true
-        catalog.removeAudioItem(audioItem) shouldBe true
-        catalog.albums shouldBe emptySet()
-    }
-
-    "FXArtistCatalog albums uses the current audio item album when a bucket is stale" {
-        val renamedAlbum = Album("Renamed Album", artist)
-        val catalog = FXArtistCatalog(artist)
-        val path =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-            }.next()
-        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
-
-        catalog.addAudioItem(audioItem)
-        audioItem.album = renamedAlbum
-
-        catalog.albums.single().albumName shouldBe renamedAlbum.name
+        cloned shouldBe catalog
+        (cloned === catalog) shouldBe false
     }
 
     "FXArtistCatalog stores items with the same ordering and unique id when repository ids differ" {
-        val catalog = FXArtistCatalog(artist)
         val path =
             files.virtualAudioFile {
                 this.artist = artist
@@ -142,8 +99,7 @@ internal class FXArtistCatalogTest : StringSpec({
         val firstAudioItem = FXAudioItemTestBridge.createFxAudioItem(path, 1, files.metadataIO)
         val secondAudioItem = FXAudioItemTestBridge.createFxAudioItem(path, 2, files.metadataIO)
 
-        catalog.addAudioItem(firstAudioItem) shouldBe true
-        catalog.addAudioItem(secondAudioItem) shouldBe true
+        val catalog = FXArtistCatalog(artist, listOf(firstAudioItem, secondAudioItem))
 
         catalog.size shouldBe 2
         catalog.albumAudioItems(firstAudioItem.album.name) shouldBe setOf(firstAudioItem, secondAudioItem)
@@ -177,148 +133,42 @@ internal class FXArtistCatalogTest : StringSpec({
         }
     }
 
-    "FXArtistCatalog coalesces burst mutations into one JavaFX property refresh" {
-        val catalog = FXArtistCatalog(artist)
-        val sizeChangeCount = AtomicInteger()
-        catalog.sizeProperty.addListener { _, _, _ -> sizeChangeCount.incrementAndGet() }
-
-        repeat(50) {
-            val path =
+    "FXArtistCatalog observable properties are populated at construction with correct values" {
+        val paths =
+            (1..50).map {
                 files.virtualAudioFile {
                     this.artist = artist
                     this.album = album
                 }.next()
-            catalog.addAudioItem(FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO))
-        }
+            }
+        val items = paths.map { FXAudioItemTestBridge.createFxAudioItem(it, files.metadataIO) }
 
-        reactive.advance()
+        val catalog = FXArtistCatalog(artist, items)
+
         WaitForAsyncUtils.waitForFxEvents()
 
         catalog.sizeProperty.get() shouldBe 50
         catalog.albumCountProperty.get() shouldBe 1
-        sizeChangeCount.get() shouldBe 1
     }
 
     "FXArtistCatalog returns false for equals with different types or null" {
-        val catalog = FXArtistCatalog(artist)
+        val catalog = FXArtistCatalog(artist, emptyList())
 
         (catalog.equals(null)) shouldBe false
         (catalog.equals("not a catalog")) shouldBe false
     }
 
-    "FXArtistCatalog mergeAudioItem reorders item when track number changed" {
-        val catalog = FXArtistCatalog(artist)
-        val firstPath =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-                trackNumber = 1
-                discNumber = 1
-            }.next()
-        val secondPath =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-                trackNumber = 2
-                discNumber = 1
-            }.next()
-        val first = FXAudioItemTestBridge.createFxAudioItem(firstPath, files.metadataIO)
-        val second = FXAudioItemTestBridge.createFxAudioItem(secondPath, files.metadataIO)
-
-        catalog.addAudioItem(first) shouldBe true
-        catalog.addAudioItem(second) shouldBe true
-
-        first.trackNumber = 10
-        catalog.mergeAudioItem(first) shouldBe true
-
-        val ordered = catalog.albumAudioItems(album.name).toList()
-        ordered.last() shouldBe first
-    }
-
-    "FXArtistCatalog mergeAudioItem returns false when album bucket is unknown" {
-        val catalog = FXArtistCatalog(artist)
-        val path =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-            }.next()
-        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
-
-        catalog.mergeAudioItem(audioItem) shouldBe false
-    }
-
-    "FXArtistCatalog mergeAudioItem returns false for single-item album" {
-        val catalog = FXArtistCatalog(artist)
-        val path =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-            }.next()
-        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
-
-        catalog.addAudioItem(audioItem) shouldBe true
-        audioItem.trackNumber = 99
-        catalog.mergeAudioItem(audioItem) shouldBe false
-    }
-
-    "FXArtistCatalog mergeAudioItem returns false when the position did not change" {
-        val catalog = FXArtistCatalog(artist)
-        val firstPath =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-                trackNumber = 1
-                discNumber = 1
-            }.next()
-        val secondPath =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-                trackNumber = 2
-                discNumber = 1
-            }.next()
-        val first = FXAudioItemTestBridge.createFxAudioItem(firstPath, files.metadataIO)
-        val second = FXAudioItemTestBridge.createFxAudioItem(secondPath, files.metadataIO)
-
-        catalog.addAudioItem(first) shouldBe true
-        catalog.addAudioItem(second) shouldBe true
-
-        catalog.mergeAudioItem(first) shouldBe false
-    }
-
-    "FXArtistCatalog mergeAudioItem returns false when the item reference is missing from the album list" {
-        val catalog = FXArtistCatalog(artist)
-        val firstPath =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-            }.next()
-        val secondPath =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-            }.next()
-        val tracked = FXAudioItemTestBridge.createFxAudioItem(firstPath, files.metadataIO)
-        val untracked = FXAudioItemTestBridge.createFxAudioItem(firstPath, files.metadataIO)
-        val sibling = FXAudioItemTestBridge.createFxAudioItem(secondPath, files.metadataIO)
-
-        catalog.addAudioItem(tracked) shouldBe true
-        catalog.addAudioItem(sibling) shouldBe true
-
-        catalog.mergeAudioItem(untracked) shouldBe false
-    }
-
     "FXArtistCatalog exposes empty, artist and uniqueId properties consistent with state" {
-        val catalog = FXArtistCatalog(artist)
+        val catalog = FXArtistCatalog(artist, emptyList())
 
         catalog.emptyProperty.get() shouldBe true
         catalog.artistProperty.get() shouldBe artist
         catalog.uniqueId shouldBe artist.id()
-        catalog.compareTo(FXArtistCatalog(artist)) shouldBe 0
+        catalog.compareTo(FXArtistCatalog(artist, emptyList())) shouldBe 0
     }
 
     "FXArtistCatalog albumAudioItems returns empty set for unknown album" {
-        val catalog = FXArtistCatalog(artist)
+        val catalog = FXArtistCatalog(artist, emptyList())
         catalog.albumAudioItems("Nonexistent") shouldBe emptySet()
     }
 })

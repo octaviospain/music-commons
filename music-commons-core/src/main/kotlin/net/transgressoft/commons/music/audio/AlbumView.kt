@@ -24,9 +24,8 @@ package net.transgressoft.commons.music.audio
  * audio items. The items are maintained in sorted order (by disc and track number), and all items
  * are guaranteed to belong to the same album.
  *
- * This is an internal implementation used by [MutableArtistCatalog] to expose album data
- * to consumers in a read-only manner. While the underlying catalog may change, this snapshot
- * remains immutable once created.
+ * This is an internal implementation used by [ImmutableArtistCatalog] and [net.transgressoft.commons.fx.music.audio.FXArtistCatalog]
+ * to expose album data to consumers in a read-only manner.
  *
  * @param I The type of audio items on this album view
  * @param albumName The name of the album

@@ -134,12 +134,21 @@ class CoreMusicLibrary private constructor(
 
     /**
      * Subscribes [subscriber] to audio item CRUD events emitted by the audio library.
+     *
+     * Uses the `subscribe(Flow.Subscriber)` overload — a distinct Java-Flow-based overload that arms
+     * the async bridge for the given subscriber. This is separate from the lambda-based
+     * `subscribe { event -> ... }` overload and is not affected by the synchronous-by-default
+     * classification that applies only to lambda subscriptions.
      */
     fun subscribeToAudioItemEvents(subscriber: Flow.Subscriber<CrudEvent<Int, AudioItem>>) =
         _audioLibrary.subscribe(subscriber)
 
     /**
      * Subscribes [subscriber] to playlist CRUD events emitted by the playlist hierarchy.
+     *
+     * Uses the `subscribe(Flow.Subscriber)` overload — a distinct Java-Flow-based overload, separate
+     * from the lambda `subscribe { }` form. The synchronous-by-default classification does not apply;
+     * no rename to `subscribeAsync` is needed.
      */
     fun subscribeToPlaylistEvents(subscriber: Flow.Subscriber<CrudEvent<Int, MutableAudioPlaylist>>) =
         _playlistHierarchy.subscribe(subscriber)
@@ -187,14 +196,40 @@ class CoreMusicLibrary private constructor(
         private var waveformRepository: Repository<Int, AudioWaveform> = VolatileRepository("AudioWaveformRepository")
         private var metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO()
 
-        /** Injects the [repository] backing the audio library. */
+        /**
+         * Injects the [repository] backing the audio library.
+         *
+         * To observe async persistence failures, wire a [net.transgressoft.lirp.event.LirpErrorHandler]
+         * via the `onError` parameter when constructing the repository:
+         * ```kotlin
+         * JsonFileRepository(file, serializer, onError = LirpErrorHandler { throwable, ctx ->
+         *     logger.error("${ctx.repository}/${ctx.operation} failed", throwable)
+         * })
+         * ```
+         * The handler is notify-only and never receives entity field values — only identity
+         * information (`LirpErrorContext.operation`, `entityIds`, `repository`).
+         * Failure surfaces: [net.transgressoft.lirp.event.LirpOperation.FLUSH] (persistence write)
+         * and [net.transgressoft.lirp.event.LirpOperation.EMIT] (event-channel drain).
+         */
         fun audioRepository(repository: Repository<Int, AudioItem>): Builder = apply { audioRepository = repository }
 
-        /** Injects the [repository] backing the playlist hierarchy. */
+        /**
+         * Injects the [repository] backing the playlist hierarchy.
+         *
+         * To observe async persistence failures, wire a [net.transgressoft.lirp.event.LirpErrorHandler]
+         * via the `onError` parameter when constructing the repository (same contract as
+         * [audioRepository] — notify-only, identity-only context, no field values).
+         */
         fun playlistRepository(repository: Repository<Int, MutableAudioPlaylist>): Builder =
             apply { playlistRepository = repository }
 
-        /** Injects the [repository] backing the waveform repository. */
+        /**
+         * Injects the [repository] backing the waveform repository.
+         *
+         * To observe async persistence failures, wire a [net.transgressoft.lirp.event.LirpErrorHandler]
+         * via the `onError` parameter when constructing the repository (same contract as
+         * [audioRepository] — notify-only, identity-only context, no field values).
+         */
         fun waveformRepository(repository: Repository<Int, AudioWaveform>): Builder =
             apply { waveformRepository = repository }
 
@@ -229,6 +264,8 @@ class CoreMusicLibrary private constructor(
                 playlistHierarchy = DefaultPlaylistHierarchy(playlistRepository)
 
                 // 4. Wire subscriptions so audio library events propagate to subscribers
+                // Flow.Subscriber overload — arms the async bridge for each dependent component;
+                // not the lambda subscribe { } form and unaffected by the synchronous-by-default classification.
                 audioLibrary.subscribe(waveformRepo)
                 audioLibrary.subscribe(playlistHierarchy)
 
