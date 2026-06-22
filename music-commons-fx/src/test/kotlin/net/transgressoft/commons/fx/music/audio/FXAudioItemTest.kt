@@ -31,7 +31,6 @@ import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.assertSoftly
-import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
@@ -49,16 +48,9 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.Optional
 import kotlin.time.Duration.Companion.milliseconds
-import kotlinx.serialization.json.Json
 
 internal class FXAudioItemTest : StringSpec({
     val files = virtualFiles()
-
-    val json =
-        Json {
-            serializersModule = observableAudioItemSerializerModule
-            prettyPrint = true
-        }
 
     "Changes its properties when observable properties are updated" {
         val path = files.virtualAudioFile { coverImageBytes = testCoverBytes }.next()
@@ -168,20 +160,9 @@ internal class FXAudioItemTest : StringSpec({
         }
     }
 
-    "Creates an audio item, that is serializable to json, and write changes to metadata" {
+    "Creates an audio item and writes changes to metadata" {
         val testAudioFile = Arb.realAudioFile().next()
         val fxAudioItem = FXAudioItemTestBridge.createFxAudioItem(testAudioFile)
-
-        json.encodeToString(ObservableAudioItemSerializer(), fxAudioItem).let {
-            it.shouldEqualJson(fxAudioItem.asJsonValue())
-            // Deserialized items arrive with library = null and a lazy cover, so comparing via
-            // uniqueId and key fields keeps the round-trip contract explicit.
-            val decoded = json.decodeFromString(ObservableAudioItemSerializer(), it) as FXAudioItem
-            decoded.id shouldBe fxAudioItem.id
-            decoded.path shouldBe fxAudioItem.path
-            decoded.title shouldBe fxAudioItem.title
-            decoded.uniqueId shouldBe fxAudioItem.uniqueId
-        }
 
         val audioItemChanges = Arb.audioItemChange().next()
         fxAudioItem.update(audioItemChanges)
@@ -223,21 +204,6 @@ internal class FXAudioItemTest : StringSpec({
             loadedAudioItem.uniqueId shouldBe fxAudioItem.uniqueId
             loadedAudioItem.toString() shouldBe fxAudioItem.toString()
         }
-    }
-
-    "coverImageBytes is null after deserialization (cover travels out of band)" {
-        // Option A semantics (Phase 40-02/03): deserialized items always start with null cover bytes
-        // and library = null; covers are re-loaded by FXAudioLibrary.loadCover(item) once the back-ref
-        // is wired by FXAudioLibrary.add (plan 40-04 formalizes the AudioLibrary interface).
-        val fxAudioItem = FXAudioItemTestBridge.createFxAudioItem(Arb.realAudioFile { coverImageBytes = null }.next())
-
-        fxAudioItem.coverImageBytes = testCoverBytes
-        JAudioTaggerMetadataIO().writeMetadata(fxAudioItem)
-
-        val encodedAudioItem = json.encodeToString(ObservableAudioItemSerializer(), fxAudioItem)
-        val decodedAudioItem = json.decodeFromString(ObservableAudioItemSerializer(), encodedAudioItem) as FXAudioItem
-
-        decodedAudioItem.coverImageBytes shouldBe null
     }
 
     "FXAudioItem getter returns the value that was set" {
@@ -303,17 +269,19 @@ internal class FXAudioItemTest : StringSpec({
 
     "FXAudioLibrary.createFromFile throws InvalidAudioFilePathException when file does not exist" {
         val nonExistent = Paths.get("/tmp/fx-nonexistent-${System.nanoTime()}.mp3")
-        val library = FXAudioLibrary(VolatileRepository("FXAudioLibrary"), files.metadataIO)
-        val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(nonExistent) }
-        ex.message!! shouldContain "does not exist"
+        FXAudioLibrary(VolatileRepository("FXAudioLibrary"), files.metadataIO).use { library ->
+            val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(nonExistent) }
+            ex.message!! shouldContain "does not exist"
+        }
     }
 
     "FXAudioLibrary.createFromFile throws InvalidAudioFilePathException when path is a directory" {
         val dir = Files.createTempDirectory("fx-dir-test")
         try {
-            val library = FXAudioLibrary(VolatileRepository("FXAudioLibrary"), files.metadataIO)
-            val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(dir) }
-            ex.message!! shouldContain "is not a regular file"
+            FXAudioLibrary(VolatileRepository("FXAudioLibrary"), files.metadataIO).use { library ->
+                val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(dir) }
+                ex.message!! shouldContain "is not a regular file"
+            }
         } finally {
             Files.deleteIfExists(dir)
         }
@@ -321,8 +289,9 @@ internal class FXAudioItemTest : StringSpec({
 
     "FXAudioLibrary.createFromFile InvalidAudioFilePathException is catchable" {
         val nonExistent = Paths.get("/tmp/fx-nonexistent-${System.nanoTime()}.mp3")
-        val library = FXAudioLibrary(VolatileRepository("FXAudioLibrary"), files.metadataIO)
-        shouldThrow<InvalidAudioFilePathException> { library.createFromFile(nonExistent) }
+        FXAudioLibrary(VolatileRepository("FXAudioLibrary"), files.metadataIO).use { library ->
+            shouldThrow<InvalidAudioFilePathException> { library.createFromFile(nonExistent) }
+        }
     }
 
     "FXAudioItem throws WindowsPathException for a reserved-name path when isWindows=true" {
@@ -344,9 +313,10 @@ internal class FXAudioItemTest : StringSpec({
             val fs = Jimfs.newFileSystem(Configuration.unix())
             fs.use { fs ->
                 val forbidden = fs.getPath("/tmp/fx-nonexistent-bad|name-${System.nanoTime()}.mp3")
-                val library = FXAudioLibrary(VolatileRepository("FXAudioLibrary"), files.metadataIO)
-                val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(forbidden) }
-                ex.message!! shouldContain "does not exist"
+                FXAudioLibrary(VolatileRepository("FXAudioLibrary"), files.metadataIO).use { library ->
+                    val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(forbidden) }
+                    ex.message!! shouldContain "does not exist"
+                }
             }
         }
     }

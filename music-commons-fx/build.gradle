@@ -1,6 +1,5 @@
 plugins {
     id 'org.openjfx.javafxplugin'
-    id 'com.google.devtools.ksp'
 }
 
 description = 'Transgressoft Music Commons - JavaFX'
@@ -79,16 +78,6 @@ dependencies {
     implementation libs.lirp.fx.get()
     implementation libs.javafx.controls.get()
 
-    implementation libs.lirp.sql.api.get()
-
-    ksp libs.lirp.ksp.get()
-    ksp libs.lirp.sql.api.get()
-    ksp("net.transgressoft:lirp-sql") { version { require libs.versions.lirp.get() } }
-    kspTest libs.lirp.ksp.get()
-
-    testImplementation("net.transgressoft:lirp-sql") { version { require libs.versions.lirp.get() } }
-    testImplementation libs.sqlite.jdbc.get()
-
     testImplementation project(path: ':music-commons-fx-test')
     testImplementation(platform(libs.junit.bom.get()))
     testImplementation(libs.junit.jupiter.get())
@@ -103,6 +92,3 @@ dependencies {
     testImplementation libs.openjfx.monocle.get()
 }
 
-ksp {
-    arg('lirp.sql.generate', 'true')
-}

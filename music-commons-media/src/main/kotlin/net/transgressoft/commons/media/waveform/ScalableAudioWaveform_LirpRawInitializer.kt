@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:filename")
+
 /******************************************************************************
  * Copyright (C) 2026  Octavio Calleya Garcia                                 *
  *                                                                            *
@@ -15,24 +17,31 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.music.audio
+package net.transgressoft.commons.media.waveform
 
-import net.transgressoft.lirp.persistence.ColumnConverter
-import net.transgressoft.lirp.persistence.ColumnType
+import net.transgressoft.lirp.persistence.LirpRawInitializer
+import net.transgressoft.lirp.persistence.RawInitEntry
 
 /**
- * Maps individual [Genre] elements for `@ElementCollection` storage.
+ * Co-located population SPI for [ScalableAudioWaveform].
  *
- * Each element is serialized as the genre's display name string. Standard genres round-trip via
- * [parseGenre]; custom genres that are not in the built-in registry are reconstructed as
- * [Genre.Custom] instances. Individual genre names never contain commas (enforced by
- * [Genre.Custom]'s init block), so per-element encoding is unambiguous.
+ * Resolved at runtime by lirp via `Class.forName` on the entity's binary name plus the
+ * `_LirpRawInitializer` suffix. Restores the `lastDateModified` timestamp into an already-constructed
+ * instance without firing reactive events.
+ *
+ * Construction of the cache-bearing instance is handled by the co-located
+ * `ScalableAudioWaveform_LirpRawConstructor`; this initializer only restores the reactive
+ * timestamp afterward. Waveform persistence is JSON-only, so no SQL bulk-load path is involved.
  */
-object GenreConverter : ColumnConverter<Genre, String> {
-
-    override val sqlType = ColumnType.TextType
-
-    override fun toSql(value: Genre): String = value.name
-
-    override fun fromSql(raw: String): Genre = parseGenre(raw).firstOrNull() ?: Genre.Custom(raw)
+@Suppress("UNCHECKED_CAST", "ClassName")
+internal class ScalableAudioWaveform_LirpRawInitializer : LirpRawInitializer<ScalableAudioWaveform> {
+    override val entries: List<RawInitEntry<ScalableAudioWaveform>> =
+        listOf(
+            RawInitEntry(
+                name = "lastDateModified",
+                silentSetter = { entity, value ->
+                    entity.lastDateModified = value as java.time.LocalDateTime
+                }
+            )
+        )
 }

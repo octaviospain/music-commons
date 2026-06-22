@@ -7,14 +7,12 @@ import net.transgressoft.commons.music.waveform.AudioWaveform
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.LirpEventSubscriberBase
-import net.transgressoft.lirp.persistence.json.JsonFileRepository
-import net.transgressoft.lirp.persistence.json.JsonRepository
+import net.transgressoft.lirp.persistence.Repository
+import net.transgressoft.lirp.persistence.VolatileRepository
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
 import io.kotest.property.arbitrary.next
-import java.io.File
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalCoroutinesApi
@@ -22,25 +20,23 @@ internal class DefaultAudioWaveformRepositoryTest : StringSpec({
 
     val reactive = reactiveScope()
     val files = virtualFiles()
-    lateinit var jsonFile: File
-    lateinit var jsonFileRepository: JsonRepository<Int, AudioWaveform>
+    lateinit var backingRepository: Repository<Int, AudioWaveform>
     lateinit var audioWaveformRepository: AudioWaveformRepository<AudioWaveform, AudioItem>
 
     beforeEach {
-        jsonFile = tempfile("audioWaveformRepository-test", ".json").also { it.deleteOnExit() }
-        jsonFileRepository = JsonFileRepository(jsonFile, AudioWaveformMapSerializer)
+        backingRepository = VolatileRepository("audioWaveformRepository-test")
         val subscriber =
             object : LirpEventSubscriberBase<
                 AudioItem,
                 CrudEvent.Type,
                 CrudEvent<Int, AudioItem>
             >("test-subscriber") {}
-        audioWaveformRepository = DefaultAudioWaveformRepository(jsonFileRepository, subscriber)
+        audioWaveformRepository = DefaultAudioWaveformRepository(backingRepository, subscriber)
     }
 
     afterEach {
         audioWaveformRepository.close()
-        jsonFileRepository.close()
+        backingRepository.close()
     }
 
     "DefaultAudioWaveformRepository add and findById in media module" {
@@ -53,24 +49,6 @@ internal class DefaultAudioWaveformRepositoryTest : StringSpec({
         reactive.advance()
     }
 
-    "DefaultAudioWaveformRepository loads from JSON file correctly" {
-        val audioFilePath = files.virtualAudioFile().next()
-        val audioWaveform = ScalableAudioWaveform(1, audioFilePath)
-
-        audioWaveformRepository.add(audioWaveform) shouldBe true
-        reactive.advance()
-
-        val subscriber =
-            object : LirpEventSubscriberBase<
-                AudioItem,
-                CrudEvent.Type,
-                CrudEvent<Int, AudioItem>
-            >("test-subscriber-2") {}
-        val loadedRepository = DefaultAudioWaveformRepository(jsonFileRepository, subscriber)
-        loadedRepository.size() shouldBe 1
-        loadedRepository.findById(audioWaveform.id) shouldBePresent { found -> found shouldBe audioWaveform }
-    }
-
     "audioWaveformRepository factory function creates valid repository in media module" {
         val subscriber =
             object : LirpEventSubscriberBase<
@@ -78,7 +56,7 @@ internal class DefaultAudioWaveformRepositoryTest : StringSpec({
                 CrudEvent.Type,
                 CrudEvent<Int, AudioItem>
             >("factory-test") {}
-        val repo = audioWaveformRepository(jsonFileRepository, subscriber)
+        val repo = audioWaveformRepository(backingRepository, subscriber)
 
         repo.size() shouldBe 0
         repo.isEmpty shouldBe true

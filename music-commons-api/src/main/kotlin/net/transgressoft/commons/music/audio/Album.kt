@@ -17,26 +17,22 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.lirp.persistence.Embeddable
-import net.transgressoft.lirp.persistence.Embedded
-
 /**
  * Concrete value type representing album metadata for an audio item.
  *
  * Unlike [Artist] and [Label], album instances are not cached because albums are less
  * frequently deduplicated across audio items and the memory savings would be minimal
  * compared to the overhead of maintaining a cache. The [albumArtist] and [label] properties
- * are embedded as nested value types for SQL persistence.
+ * are nested value types.
  *
  * The [UNKNOWN] sentinel represents an album whose metadata is entirely unspecified.
  */
-@Embeddable
 data class Album(
     val name: String,
-    @Embedded val albumArtist: Artist = Artist.UNKNOWN,
+    val albumArtist: Artist = Artist.UNKNOWN,
     val isCompilation: Boolean = false,
     val year: Short? = null,
-    @Embedded val label: Label = Label.UNKNOWN
+    val label: Label = Label.UNKNOWN
 ) : Comparable<Album> {
 
     override fun compareTo(other: Album): Int {

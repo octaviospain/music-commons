@@ -7,6 +7,7 @@ import net.transgressoft.commons.music.audio.AudioFileTagType.MP4_INFO
 import net.transgressoft.commons.music.audio.AudioFileTagType.WAV
 import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
 import net.transgressoft.commons.music.audio.MutableAudioItemTestBridge.createAudioItem
+import net.transgressoft.commons.persistence.music.audio.AudioItemMapSerializer
 import net.transgressoft.commons.util.InvalidAudioFilePathException
 import net.transgressoft.commons.util.OsDetector
 import net.transgressoft.commons.util.WindowsPathException
@@ -15,7 +16,6 @@ import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.assertSoftly
-import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.Isolate
@@ -116,9 +116,8 @@ internal class MutableAudioItemTest : FunSpec({
             audioItem.path.extension.toAudioFileType().toString() shouldBe fileExtension
             audioItem.path.extension.toAudioFileType().extension shouldBe fileExtension
 
-            json.encodeToString(AudioItemSerializer(), audioItem).let {
-                it shouldEqualJson audioItem.asJsonValue()
-                (json.decodeFromString(AudioItemSerializer(), it) as MutableAudioItem) shouldBe audioItem
+            json.encodeToString(AudioItemMapSerializer, mapOf(audioItem.id to audioItem)).let {
+                (json.decodeFromString(AudioItemMapSerializer, it).getValue(audioItem.id) as MutableAudioItem) shouldBe audioItem
             }
 
             val audioItemChanges = Arb.audioItemChange().next()
@@ -185,8 +184,9 @@ internal class MutableAudioItemTest : FunSpec({
         // Option A semantics (Phase 40-02): deserialized items always start with null cover bytes;
         // covers are re-loaded by the audio library via library.loadCover(item) added in plan 40-04.
         eventually(200.milliseconds) {
-            val encodedAudioItem = json.encodeToString(AudioItemSerializer(), audioItem)
-            val decodedAudioItem = json.decodeFromString(AudioItemSerializer(), encodedAudioItem) as MutableAudioItem
+            val encodedAudioItem = json.encodeToString(AudioItemMapSerializer, mapOf(audioItem.id to audioItem))
+            val decodedAudioItem =
+                json.decodeFromString(AudioItemMapSerializer, encodedAudioItem).getValue(audioItem.id) as MutableAudioItem
 
             decodedAudioItem.coverImageBytes shouldBe null
         }

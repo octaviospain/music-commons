@@ -22,18 +22,11 @@ import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItemMetadata
 import net.transgressoft.commons.music.audio.AudioMetadataIO
 import net.transgressoft.commons.music.audio.Genre
-import net.transgressoft.commons.music.audio.GenreConverter
-import net.transgressoft.commons.music.audio.PathConverter
 import net.transgressoft.commons.music.audio.UNASSIGNED_ID
 import net.transgressoft.commons.music.audio.audioItemTrackDiscNumberComparator
 import net.transgressoft.commons.music.audio.getArtistsNamesInvolved
 import net.transgressoft.commons.util.WindowsPathValidator
 import net.transgressoft.lirp.entity.ReactiveEntityBase
-import net.transgressoft.lirp.persistence.ElementCollection
-import net.transgressoft.lirp.persistence.Embedded
-import net.transgressoft.lirp.persistence.PersistenceIgnore
-import net.transgressoft.lirp.persistence.PersistenceMapping
-import net.transgressoft.lirp.persistence.PersistenceProperty
 import net.transgressoft.lirp.persistence.fx.fxFloat
 import net.transgressoft.lirp.persistence.fx.fxInteger
 import net.transgressoft.lirp.persistence.fx.fxObject
@@ -61,12 +54,6 @@ import java.util.Optional
 import kotlin.io.path.extension
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
-
-// Serializer is wired via `observableAudioItemSerializerModule` polymorphic registration (see bottom of this file).
-// The serializer is a stateful class (ObservableAudioItemSerializer(FileSystem)) so it cannot be referenced as a
-// bare `@Serializable(with = ...)` target — kotlinx-serialization requires KSerializer-typed ctor params.
 
 /**
  * JavaFX implementation of [ObservableAudioItem] with lirp-fx scalar properties.
@@ -89,11 +76,9 @@ import kotlinx.serialization.modules.polymorphic
  * [equals] / [hashCode] compare the cached cover-byte field directly rather than the lazy
  * [coverImageBytes] getter, so comparing or hashing an item never triggers the lazy cover load.
  */
-@PersistenceMapping(name = "fx_audio_item")
 class FXAudioItem
     @JvmOverloads
     internal constructor(
-        @PersistenceProperty(converter = PathConverter::class)
         override val path: Path,
         override val id: Int = UNASSIGNED_ID,
         metadata: AudioItemMetadata
@@ -109,7 +94,6 @@ class FXAudioItem
         @Transient
         internal var metadataIO: AudioMetadataIO? = null
 
-        @Embedded
         var metadata: AudioItemMetadata by reactiveProperty(metadata)
 
         // Constructor for deserialization & iTunes import
@@ -135,18 +119,14 @@ class FXAudioItem
 
         /** Immutable properties */
 
-        @PersistenceIgnore
         @Serializable
         override val bitRate: Int = metadata.bitRate
 
-        @PersistenceIgnore
         override val duration: Duration = metadata.duration
 
-        @PersistenceIgnore
         @Serializable
         override val encoder: String? = metadata.encoder?.takeIf { it.isNotEmpty() }
 
-        @PersistenceIgnore
         @Serializable
         override val encoding: String? = metadata.encoding?.takeIf { it.isNotEmpty() }
 
@@ -159,17 +139,14 @@ class FXAudioItem
         @Transient
         override val dateOfCreationProperty: ReadOnlyObjectProperty<LocalDateTime> = SimpleObjectProperty(this, "date of creation", _dateOfCreation)
 
-        @PersistenceIgnore
         override val fileName by lazy {
             path.fileName.toString()
         }
 
-        @PersistenceIgnore
         override val extension by lazy {
             path.extension
         }
 
-        @PersistenceIgnore
         override val length by lazy {
             Files.size(path)
         }
@@ -214,12 +191,10 @@ class FXAudioItem
         @Transient
         private var _artist: Artist = metadata.artist
 
-        // Delegated reactive backing (over the private _artist field) so @Embedded has the reactive
-        // backing it requires; the setter — which is also the silent-hydration path — resyncs
-        // artistsInvolved and mirrors into artistProperty (the JavaFX source of truth), while the
-        // delegate publishes the mutation event. The artistProperty listener feeds external
-        // property edits back through this setter.
-        @Embedded
+        // Delegated reactive backing (over the private _artist field); the setter — which is also
+        // the silent-hydration path — resyncs artistsInvolved and mirrors into artistProperty (the
+        // JavaFX source of truth), while the delegate publishes the mutation event. The
+        // artistProperty listener feeds external property edits back through this setter.
         override var artist: Artist by reactiveProperty(
             getter = { _artist },
             setter = { value ->
@@ -237,8 +212,6 @@ class FXAudioItem
         private var _album: Album = metadata.album
 
         // Delegated reactive backing (over _album), mirroring into albumProperty (see artist above).
-        // album flattens its nested albumArtist/label embeddables into prefixed columns.
-        @Embedded
         override var album: Album by reactiveProperty(
             getter = { _album },
             setter = { value ->
@@ -255,7 +228,6 @@ class FXAudioItem
         @Transient
         private var _genres: Set<Genre> = metadata.genres
 
-        @ElementCollection(elementConverter = GenreConverter::class)
         override var genres: Set<Genre> by reactiveProperty(
             getter = { _genres },
             setter = { value ->
@@ -334,7 +306,6 @@ class FXAudioItem
             field = SimpleObjectProperty(this, "date of last modification", lastDateModified)
 
         @Transient
-        @PersistenceIgnore
         @Volatile
         private var _coverImageBytes: ByteArray? = metadata.coverBytes
 
@@ -353,7 +324,6 @@ class FXAudioItem
          * array as immutable and must not modify its contents.
          */
         @Transient
-        @PersistenceIgnore
         override var coverImageBytes: ByteArray?
             get() {
                 if (coverLoaded) return _coverImageBytes
@@ -529,29 +499,4 @@ class FXAudioItem
                 action()
             }
         }
-    }
-
-/**
- * Kotlinx [SerializersModule] registering the polymorphic subtype consumed by
- * [ObservableAudioItemMapSerializer] when round-tripping FX audio-library JSON.
- *
- * Registers `ObservableAudioItem` → [ObservableAudioItemSerializer] (which materializes
- * deserialized entries as [FXAudioItem] with their JavaFX property bindings reconstructed).
- *
- * Pass this module as `serializersModule` when constructing a `Json` instance manually:
- *
- * ```
- * val json = Json { serializersModule = observableAudioItemSerializerModule }
- * ```
- *
- * `JsonFileRepository(audioFile, ObservableAudioItemMapSerializer)` registers this module
- * automatically, so consumers using the convenience repository do not need to touch it.
- *
- * Thread-safety: immutable; safe to share across threads.
- *
- * @see ObservableAudioItemMapSerializer
- */
-val observableAudioItemSerializerModule =
-    SerializersModule {
-        polymorphic(ObservableAudioItem::class, ObservableAudioItemSerializer())
     }

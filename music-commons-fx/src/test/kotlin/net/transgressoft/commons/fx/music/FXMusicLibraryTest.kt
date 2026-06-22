@@ -1,19 +1,15 @@
 package net.transgressoft.commons.fx.music
 
-import net.transgressoft.commons.fx.music.playlist.ObservablePlaylistMapSerializer
 import net.transgressoft.commons.music.audio.testCoverBytes
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.commons.util.OsDetector
 import net.transgressoft.commons.util.WindowsPathException
-import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.engine.spec.tempfile
-import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
@@ -124,34 +120,6 @@ internal class FXMusicLibraryTest : StringSpec({
 
         eventuallyAfterFxEvents {
             playlist.coverImageProperty.get().isPresent shouldBe true
-        }
-
-        library.close()
-    }
-
-    "FXMusicLibrary resolves playlist self-references after JSON deserialization" {
-        val playlistFile = tempfile("playlist-self-ref-test", ".json").also { it.deleteOnExit() }
-        playlistFile.writeText(
-            """
-            {
-                "1": { "id": 1, "name": "ROOT", "isDirectory": true, "audioItems": [], "playlists": [2] },
-                "2": { "id": 2, "name": "CHILD", "isDirectory": false, "audioItems": [], "playlists": [] }
-            }
-            """.trimIndent()
-        )
-
-        val library =
-            FXMusicLibrary.builder()
-                .playlistRepository(JsonFileRepository(playlistFile, ObservablePlaylistMapSerializer, loadOnInit = false))
-                .build()
-
-        reactive.advance()
-        WaitForAsyncUtils.waitForFxEvents()
-
-        val root = library.findPlaylistByName("ROOT")
-        root shouldBePresent {
-            it.playlists.size shouldBe 1
-            it.playlists.map { p -> p.name } shouldContain "CHILD"
         }
 
         library.close()

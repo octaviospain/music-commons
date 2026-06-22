@@ -28,6 +28,8 @@ import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
 import net.transgressoft.lirp.event.LirpEventPublisher
 import net.transgressoft.lirp.event.LirpEventSubscription
 import net.transgressoft.lirp.event.MutationEvent
+import net.transgressoft.lirp.event.PropertyChanged
+import net.transgressoft.lirp.event.ReactiveMutationEvent
 import net.transgressoft.lirp.event.StandardCrudEvent.Update
 import net.transgressoft.lirp.persistence.Repository
 import java.util.*
@@ -42,13 +44,15 @@ import java.util.concurrent.atomic.AtomicInteger
  * and key-changing Updates (artist or album change) are handled automatically by the projection
  * framework without any manual catalog diffing.
  *
- * A per-item mutation subscription (the "mutation bridge") is maintained for each audio item in
- * the library. When an item's properties change, the bridge emits a repository-level UPDATE event
- * so the projection's reverse index can re-key the item to its new artist bucket. This bridge is
- * necessary because [net.transgressoft.lirp.persistence.VolatileRepository] and
+ * A per-item subscription is maintained for each audio item in the library. It re-keys the artist
+ * catalog only when a catalog-relevant property changes — the item's artist or album — by emitting
+ * a repository-level UPDATE event so the projection's reverse index re-keys the item to its current
+ * artist bucket. Bulk mutations (a [ReactiveMutationEvent] emitted after a batch of changes) also
+ * trigger the re-key. Non-key mutations such as title, bpm, or track number are deliberately
+ * ignored to avoid catalog projection churn. The repository-level UPDATE is required because
+ * [net.transgressoft.lirp.persistence.VolatileRepository] and
  * [net.transgressoft.lirp.persistence.json.JsonFileRepository] do not emit CrudEvent.UPDATE on
- * in-place entity mutation — only SqlRepository does. On SqlRepository-backed libraries the bridge
- * causes a redundant but benign double UPDATE; it is kept simple with no repository-type branching.
+ * in-place entity mutation — only SqlRepository does.
  *
  * @param I The type of audio items stored in this library
  * @param AC The concrete artist catalog type (used by subclasses for specialized implementations)
@@ -78,38 +82,48 @@ abstract class AudioLibraryBase<I, AC>(
     init {
         if (repository.isEmpty.not()) {
             repository.forEach {
-                subscribeMutations(it)
+                subscribeArtistAlbumChanges(it)
             }
         }
     }
 
     /**
-     * Subscribes to an audio item's mutation events and emits a repository-level UPDATE.
+     * Subscribes to an audio item's mutation events and emits a repository-level UPDATE only when a
+     * catalog-relevant property (artist or album) changes, or when a bulk [ReactiveMutationEvent] is
+     * emitted after a batch of changes.
      *
-     * This bridge is required so that the artist catalog projection receives an UPDATE event
-     * when an audio item's properties change in-place. The projection's reverse index then
-     * re-keys the item to its current artist bucket, handling cross-bucket moves and within-bucket
-     * re-sorts automatically.
-     *
-     * Emitting Update also causes JsonFileRepository to persist the change.
+     * Scoping the emission to artist/album keeps the artist catalog projection from re-keying on
+     * non-key mutations (title, bpm, track number, …), which would otherwise cause needless catalog
+     * churn. The projection's reverse index re-keys the item to its current artist bucket from the
+     * UPDATE; emitting Update also causes JsonFileRepository to persist the change.
      */
-    private fun subscribeMutations(audioItem: I) {
+    private fun subscribeArtistAlbumChanges(audioItem: I) {
         val subscription =
-            audioItem.subscribe { _ ->
-                // Both args are the same instance on purpose: the multi-key projection re-keys from
-                // its own reverse index rather than from a previous snapshot, so the "old" value is
-                // unused — Update only needs the current item to trigger the re-key and persistence.
-                repository.emitAsync(Update(audioItem, audioItem))
+            audioItem.subscribe { event ->
+                val isCatalogRelevant =
+                    when (event) {
+                        is PropertyChanged<*, *, *> ->
+                            event.property.name == ReactiveAudioItem<*>::artist.name ||
+                                event.property.name == ReactiveAudioItem<*>::album.name
+                        is ReactiveMutationEvent<*, *> -> true
+                        else -> false
+                    }
+                if (isCatalogRelevant) {
+                    // Both args are the same instance on purpose: the multi-key projection re-keys from
+                    // its own reverse index rather than from a previous snapshot, so the "old" value is
+                    // unused — Update only needs the current item to trigger the re-key and persistence.
+                    repository.emitAsync(Update(audioItem, audioItem))
+                }
             }
         entitySubscriptions[audioItem.id] = subscription
     }
 
     /**
-     * Subscription to repository events that manages per-entity mutation subscriptions.
+     * Subscription to repository events that manages per-entity catalog-sync subscriptions.
      *
-     * - CREATE: subscribe to mutation events for new audio items so catalog and persistence stay in sync
-     * - UPDATE: catalog updates are handled by the projection via the mutation bridge above
-     * - DELETE: cancel per-entity mutation subscriptions when items are removed
+     * - CREATE: subscribe to artist/album changes for new audio items so catalog and persistence stay in sync
+     * - UPDATE: catalog updates are handled by the projection via the artist/album subscription above
+     * - DELETE: cancel per-entity subscriptions when items are removed
      * - READ, CONFLICT, RECOVERY_FAILED: no action needed
      *
      * The projection itself subscribes to the same repository (CREATE, UPDATE, DELETE) and
@@ -120,7 +134,7 @@ abstract class AudioLibraryBase<I, AC>(
         repository.subscribe { event ->
             when (event.type) {
                 CREATE -> {
-                    event.entities.values.forEach { subscribeMutations(it) }
+                    event.entities.values.forEach { subscribeArtistAlbumChanges(it) }
                 }
                 UPDATE -> Unit
                 DELETE -> {

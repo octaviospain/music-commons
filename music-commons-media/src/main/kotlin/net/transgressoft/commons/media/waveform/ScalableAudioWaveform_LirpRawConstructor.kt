@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:filename")
+
 /******************************************************************************
  * Copyright (C) 2026  Octavio Calleya Garcia                                 *
  *                                                                            *
@@ -15,23 +17,31 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.music.audio
+package net.transgressoft.commons.media.waveform
 
-import net.transgressoft.lirp.persistence.ColumnConverter
-import net.transgressoft.lirp.persistence.ColumnType
-import java.net.URI
+import net.transgressoft.lirp.persistence.LirpRawConstructor
 import java.nio.file.Path
 
 /**
- * Maps [Path] values to URI-form strings for SQL persistence, matching the existing JSON wire
- * format used by audio item serialization. The URI encoding preserves platform-independent
- * path semantics and round-trips reliably across local file paths.
+ * Co-located construction SPI for [ScalableAudioWaveform].
+ *
+ * Resolved at runtime via `Class.forName` on the entity's binary name plus the
+ * `_LirpRawConstructor` suffix — the same convention lirp's loaders use. Living in the entity's
+ * own module, it reaches the cache-bearing deserialization constructor that a persistence module
+ * cannot call directly, restoring the cached display width and normalized amplitudes so a reloaded
+ * waveform serves same-width amplitude requests without re-reading the audio file.
+ *
+ * The [construct] `params` map is keyed by constructor parameter name. Expected keys:
+ * `id` ([Int]), `audioFilePath` ([Path]), `cachedWidth` ([Int]), `normalizedAmplitudes`
+ * ([FloatArray]).
  */
-object PathConverter : ColumnConverter<Path, String> {
-
-    override val sqlType = ColumnType.TextType
-
-    override fun toSql(value: Path): String = value.toUri().toString()
-
-    override fun fromSql(raw: String): Path = Path.of(URI(raw))
+@Suppress("ClassName")
+internal class ScalableAudioWaveform_LirpRawConstructor : LirpRawConstructor<ScalableAudioWaveform> {
+    override fun construct(params: Map<String, Any?>): ScalableAudioWaveform =
+        ScalableAudioWaveform(
+            params["id"] as Int,
+            params["audioFilePath"] as Path,
+            params["cachedWidth"] as Int,
+            params["normalizedAmplitudes"] as FloatArray
+        )
 }

@@ -20,14 +20,11 @@ package net.transgressoft.commons.music.audio
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
 import net.transgressoft.commons.util.InvalidAudioFilePathException
 import net.transgressoft.lirp.event.StandardCrudEvent.Update
-import net.transgressoft.lirp.persistence.LirpRepository
 import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.Repository
 import mu.KotlinLogging
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
 
 /**
  * Default implementation of [AudioLibrary] for managing [AudioItem] instances.
@@ -40,7 +37,6 @@ import kotlinx.serialization.modules.polymorphic
  * via [RegistryBase.registerRepository], enabling playlist hierarchies to resolve audio item references
  * lazily through the context. Deregisters on [close] to support repeated construction within the same JVM.
  */
-@LirpRepository
 internal class DefaultAudioLibrary
     @JvmOverloads
     constructor(
@@ -102,33 +98,4 @@ internal class DefaultAudioLibrary
         }
 
         override fun toString() = "AudioItemJsonRepository(audioItemsCount=${size()})"
-    }
-
-/**
- * Kotlinx [SerializersModule] registering the polymorphic subtypes consumed by
- * [AudioItemMapSerializer] when round-tripping audio-library JSON.
- *
- * Registered polymorphic subtypes:
- * - [AudioItem] → [AudioItemSerializer] (delegates to [MutableAudioItem])
- *
- * [Artist], [Album] and [Label] are concrete `data class` types and do not require
- * polymorphic registration; the [AudioItemSerializer] constructs them directly.
- *
- * Pass this module as `serializersModule` when constructing a `Json` instance manually:
- *
- * ```
- * val json = Json { serializersModule = audioItemSerializerModule }
- * ```
- *
- * `JsonFileRepository(audioFile, AudioItemMapSerializer)` registers this module automatically, so
- * consumers using the convenience repository do not need to touch it.
- *
- * Thread-safety: immutable; safe to share across threads.
- *
- * @see AudioItemMapSerializer
- */
-@get:JvmName("audioItemSerializerModule")
-val audioItemSerializerModule =
-    SerializersModule {
-        polymorphic(AudioItem::class, AudioItemSerializer())
     }
