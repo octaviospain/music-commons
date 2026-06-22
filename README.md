@@ -22,11 +22,30 @@ Music Commons leverages [lirp](https://github.com/octaviospain/lirp), which prov
 
 ### Architecture
 
-The library is organized into three main modules:
+The library is split into a reactive core and a set of opt-in persistence mapping modules. The
+reactive modules manage the domain entirely in memory through lirp's reactive/event model and
+ship no JSON or SQL persistence code. Persistence is a consumer choice, layered on top.
+
+**Reactive modules:**
 
 - **`music-commons-api`**: Interfaces and contracts defining the audio management domain model
-- **`music-commons-core`**: Implementations with JSON persistence and reactive event subscriptions
+- **`music-commons-core`**: Reactive implementations with in-memory storage and event subscriptions
 - **`music-commons-fx`**: JavaFX integration layer with observable properties and UI components
+- **`music-commons-media`**: JavaFX-free audio playback engine and waveform generation
+
+**Persistence mapping modules (opt-in):**
+
+- **`music-commons-persistence`**: JSON serializers and SQL table definitions for the core entities
+- **`music-commons-persistence-fx`**: JSON serializers and SQL table definitions for the JavaFX entities
+
+The persistence modules are mapping-only: they define no entities, only serializers,
+`SqlTableDef`s, and `ColumnConverter`s for the real reactive entities. A consumer enables
+persistence by injecting a concrete lirp `Repository` wired with these mappings, or skips them
+entirely and subscribes to library events to persist in their own model.
+
+Waveforms persist to JSON only. Their serializer (`AudioWaveformMapSerializer`, package
+`net.transgressoft.commons.media.persistence.waveform`) ships directly from `music-commons-media`
+alongside the `ScalableAudioWaveform` entity, so no separate waveform-persistence module is needed.
 
 ## Requirements
 
@@ -41,16 +60,27 @@ The library is organized into three main modules:
 dependencies {
     implementation("net.transgressoft:music-commons-api:$version")
     implementation("net.transgressoft:music-commons-core:$version")
-    implementation("net.transgressoft:music-commons-fx:$version") // Optional, for JavaFX apps
+    implementation("net.transgressoft:music-commons-fx:$version")    // Optional, for JavaFX apps
+    implementation("net.transgressoft:music-commons-media:$version")  // Optional, for headless playback + waveforms
+
+    // Persistence is opt-in — add only the mapping module(s) you wire into a repository
+    implementation("net.transgressoft:music-commons-persistence:$version")        // core-tier serializers + SQL table defs
+    implementation("net.transgressoft:music-commons-persistence-fx:$version")     // JavaFX-tier serializers + SQL table defs
+    // The waveform JSON serializer ships from music-commons-media — no extra module needed
 }
 ```
 
-The core module depends on [lirp](https://github.com/octaviospain/lirp) 3.0.0. The version is declared once in `gradle/libs.versions.toml` and shared across all modules:
+The reactive modules depend on [lirp](https://github.com/octaviospain/lirp) 3.0.0 for the
+reactive/event model only (`lirp-api`, `lirp-core`). The version is declared once in
+`gradle/libs.versions.toml` and shared across all modules:
 
 ```kotlin
 implementation("net.transgressoft:lirp-api:3.0.0")
 implementation("net.transgressoft:lirp-core:3.0.0")
 ```
+
+SQL persistence additionally pulls in `lirp-sql` (transitively, through the persistence modules)
+plus a JDBC driver of your choice. The reactive modules never see `lirp-sql` on their classpath.
 
 ## Key Features
 
@@ -102,11 +132,26 @@ Unknown genre strings are preserved as `Genre.Custom(name)` instead of being dis
 
 ### Persistence
 
-- **JSON file storage**: Inject [lirp](https://github.com/octaviospain/lirp)'s `JsonFileRepository` into the `MusicLibrary.Builder` for debounced file I/O
-- **SQL storage**: Consumer-provided `SqlRepository` — add [lirp-sql](https://github.com/octaviospain/lirp) to your build to inject `SqlRepository` instances (HikariCP + JetBrains Exposed)
-- **Automatic serialization**: Built-in kotlinx-serialization serializers for all entities
-- **Transparent persistence**: Entity changes are persisted without manual save operations
-- **Async error observability**: Wire a `LirpErrorHandler` on each repository to observe flush and event-drain failures that would otherwise be log-only
+The reactive modules store everything in memory and never write to disk on their own. Persistence
+is enabled by injecting a concrete repository, and there are two ways to do it:
+
+**Library-managed persistence (lirp path)** — inject a lirp `Repository` wired with the mappings
+from the opt-in persistence modules. lirp persists and reloads the library's real entities:
+
+- **JSON file storage**: inject `JsonFileRepository(file, <MapSerializer>)` for debounced file I/O,
+  using the map serializers from `music-commons-persistence` / `music-commons-persistence-fx`, plus
+  `AudioWaveformMapSerializer` from `music-commons-media` for waveforms
+- **SQL storage**: inject `SqliteRepository.fileBacked(db, <SqlTableDef>)` (HikariCP + JetBrains
+  Exposed), using the table definitions from the persistence modules — add a JDBC driver
+  (e.g. `org.xerial:sqlite-jdbc`) to your build. Audio items and playlists have both JSON and SQL
+  options; waveforms are JSON-only
+- **Transparent persistence**: entity changes are persisted without manual save operations
+- **Async error observability**: wire a `LirpErrorHandler` on each repository to observe flush and
+  event-drain failures that would otherwise be log-only
+
+**Bring-your-own persistence** — construct the library with no repository arguments. Every
+aggregate defaults to an in-memory repository, and you subscribe to library and entity events to
+persist in your own model and format. No persistence module is required for this path.
 
 #### Observing Async Persistence Failures
 
@@ -250,7 +295,9 @@ Defines contracts and interfaces for the audio management domain.
 
 ### music-commons-core
 
-Concrete implementations with JSON file persistence via [lirp](https://github.com/octaviospain/lirp) 3.0.0 and reactive event subscriptions.
+Reactive, in-memory implementations built on [lirp](https://github.com/octaviospain/lirp) 3.0.0's
+reactive/event model. Ships no JSON or SQL persistence code — persistence is supplied by the opt-in
+`music-commons-persistence` module.
 
 - `CoreMusicLibrary` -- Unified facade for headless audio management implementing `MusicLibrary<AudioItem, MutableAudioPlaylist>` (builder-based entry point)
 - `AudioLibrary` -- Narrowed `ReactiveAudioLibrary` for `AudioItem` and `ArtistCatalog` types
@@ -273,13 +320,34 @@ Bridges core module with JavaFX's property binding system.
 
 ### music-commons-media
 
-JavaFX-free audio playback engine based on `javax.sound.sampled` SPI decoders.
+JavaFX-free audio playback engine based on `javax.sound.sampled` SPI decoders, plus reactive
+waveform generation. Also ships the JSON serializer for waveforms (waveforms are JSON-only),
+co-located with the `ScalableAudioWaveform` entity.
 
 - `CoreAudioItemPlayer` -- Headless audio player supporting MP3, FLAC, OGG, AAC/M4A, and WAV via SPI decoders. Bounded PCM streaming pipeline with `SourceDataLine` output and format-specific seek (see [Seek precision](#seek-precision))
+- `ScalableAudioWaveform` -- Reactive waveform entity with on-demand amplitude generation and cached scaling
+- `AudioWaveformMapSerializer` -- map serializer for `JsonFileRepository`, preserving cached width and amplitudes (package `net.transgressoft.commons.media.persistence.waveform`)
 - `StallDetector` -- Detects and recovers from PCM read stalls in the pump loop
 - `DurationProber` -- Resolves playable duration including full-decode fallback for AAC/M4A containers
 - `PcmVolume` -- In-place linear gain application supporting 8/16/24/32-bit PCM
 - `FlacPcmStreamSeeker`, `Mp3PcmStreamSeeker`, `OggPcmStreamSeeker` -- Format-specific seek implementations
+
+### music-commons-persistence
+
+Opt-in JSON and SQL mapping for the core-tier entities. Mapping-only — defines no entity classes.
+
+- `AudioItemMapSerializer` / `AudioPlaylistMapSerializer` -- kotlinx-serialization map serializers for `JsonFileRepository`
+- `audioItemSerializersModule` -- contextual `SerializersModule` for the domain value types (artist, album, label, genre, metadata), so the domain stays annotation-free
+- `MutableAudioItemSqlTableDef` / `AudioPlaylistSqlTableDef` -- SQL table definitions for `SqliteRepository`
+- `CountryConverter`, `DurationConverter`, `GenreConverter`, `PathConverter` -- column converters for SQL persistence
+
+### music-commons-persistence-fx
+
+Opt-in JSON and SQL mapping for the JavaFX-tier entities. Mapping-only — reuses the core-tier
+contextual serializers and column converters.
+
+- `ObservableAudioItemMapSerializer` / `ObservablePlaylistMapSerializer` -- map serializers for `JsonFileRepository`
+- `FXAudioItemSqlTableDef` / `ObservablePlaylistSqlTableDef` -- SQL table definitions for `SqliteRepository`
 
 ## Usage Examples
 
@@ -289,26 +357,31 @@ Use `CoreMusicLibrary.builder()` as the single entry point for headless audio ma
 
 ```kotlin
 import net.transgressoft.commons.music.CoreMusicLibrary
-import net.transgressoft.commons.music.audio.MutableAudioItem_LirpTableDef
 import net.transgressoft.commons.music.m3u.M3uImportService
+import net.transgressoft.commons.persistence.music.audio.AudioItemMapSerializer
+import net.transgressoft.commons.persistence.music.audio.MutableAudioItemSqlTableDef
+import net.transgressoft.commons.persistence.music.playlist.AudioPlaylistMapSerializer
+import net.transgressoft.commons.media.persistence.waveform.AudioWaveformMapSerializer
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.sql.SqliteRepository
 
-// In-memory (volatile) storage -- no files needed
+// Bring-your-own persistence: no repository arguments -> in-memory storage.
+// Subscribe to library/entity events to persist in your own model and format.
 val library = CoreMusicLibrary.builder().build()
 
-// JSON file persistence -- inject JsonFileRepository instances directly
+// Library-managed JSON persistence -- inject JsonFileRepository instances wired with the
+// serializers from music-commons-persistence (audio items, playlists) and music-commons-media (waveforms)
 val library = CoreMusicLibrary.builder()
     .audioRepository(JsonFileRepository(File("audio-library.json"), AudioItemMapSerializer))
     .playlistRepository(JsonFileRepository(File("playlists.json"), AudioPlaylistMapSerializer))
     .waveformRepository(JsonFileRepository(File("waveforms.json"), AudioWaveformMapSerializer))
     .build()
 
-// SQL persistence -- add lirp-sql and a JDBC driver (e.g. org.xerial:sqlite-jdbc) to your build;
-// the KSP-generated MutableAudioItem_LirpTableDef is a ready SqlTableDef<AudioItem> (its fromRow
-// reconstructs the flyweight Artist/Label embeddables via their @PersistenceCreator of() factories)
+// Library-managed SQL persistence -- add a JDBC driver (e.g. org.xerial:sqlite-jdbc) to your build;
+// MutableAudioItemSqlTableDef (from music-commons-persistence) is a ready SqlTableDef<AudioItem>
+// that reconstructs the real entity through lirp's construction SPI -- no factory needed
 val library = CoreMusicLibrary.builder()
-    .audioRepository(SqliteRepository.fileBacked(Path.of("audio-library.db"), MutableAudioItem_LirpTableDef))
+    .audioRepository(SqliteRepository.fileBacked(Path.of("audio-library.db"), MutableAudioItemSqlTableDef))
     .build()
 
 // Add audio files
@@ -344,7 +417,11 @@ Use `FXMusicLibrary.builder()` for JavaFX applications with observable property 
 
 ```kotlin
 import net.transgressoft.commons.fx.music.FXMusicLibrary
-import net.transgressoft.commons.fx.music.audio.FXAudioItem_LirpTableDef
+import net.transgressoft.commons.persistence.fx.music.audio.FXAudioItemSqlTableDef
+import net.transgressoft.commons.persistence.fx.music.audio.ObservableAudioItemMapSerializer
+import net.transgressoft.commons.persistence.fx.music.playlist.ObservablePlaylistMapSerializer
+import net.transgressoft.commons.media.persistence.waveform.AudioWaveformMapSerializer
+import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.sql.SqliteRepository
 
 val fxLibrary = FXMusicLibrary.builder()
@@ -353,10 +430,10 @@ val fxLibrary = FXMusicLibrary.builder()
     .waveformRepository(JsonFileRepository(File("waveforms.json"), AudioWaveformMapSerializer))
     .build()
 
-// SQL persistence -- add lirp-sql and a JDBC driver (e.g. org.xerial:sqlite-jdbc) to your build;
-// use the KSP-generated FXAudioItem_LirpTableDef (a ready SqlTableDef<ObservableAudioItem>)
+// Library-managed SQL persistence -- add a JDBC driver (e.g. org.xerial:sqlite-jdbc) to your build;
+// FXAudioItemSqlTableDef (from music-commons-persistence-fx) is a ready SqlTableDef<ObservableAudioItem>
 val fxLibrary = FXMusicLibrary.builder()
-    .audioRepository(SqliteRepository.fileBacked(Path.of("audio-library.db"), FXAudioItem_LirpTableDef))
+    .audioRepository(SqliteRepository.fileBacked(Path.of("audio-library.db"), FXAudioItemSqlTableDef))
     .build()
 
 // Bind directly to JavaFX UI components

@@ -1,0 +1,78 @@
+plugins {
+    id 'org.openjfx.javafxplugin'
+}
+
+description = 'Transgressoft Music Commons - Persistence FX'
+
+javafx {
+    version = JavaVersion.VERSION_21
+    modules = ['javafx.controls']
+}
+
+test {
+    useJUnitPlatform()
+
+    jvmArgs = [
+            '-Djava.awt.headless=false',
+            '-Dtestfx.robot=glass',
+            '-Dtestfx.headless=true',
+            '-Dprism.order=sw',
+            '-Dprism.text=t2k',
+            '-Dglass.platform=Monocle',
+            '-Dmonocle.platform=Headless',
+            '-Djdk.gtk.version=2',
+            "-Dprism.verbose=${System.getenv('PRISM_VERBOSE') ?: 'false'}",
+            '-Xmx2g',
+            '--add-exports', 'javafx.graphics/com.sun.glass.ui=ALL-UNNAMED',
+            '--add-exports', 'javafx.graphics/com.sun.glass.ui.monocle=ALL-UNNAMED',
+            '--add-exports', 'javafx.graphics/com.sun.javafx.util=ALL-UNNAMED',
+            '--add-exports', 'javafx.base/com.sun.javafx.logging=ALL-UNNAMED',
+            '--add-opens', 'javafx.graphics/com.sun.glass.ui.monocle=ALL-UNNAMED',
+            '--add-opens', 'javafx.graphics/com.sun.glass.ui=ALL-UNNAMED',
+            '--add-opens', 'javafx.graphics/com.sun.javafx.application=ALL-UNNAMED',
+            '--add-opens', 'javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED',
+            '--add-opens', 'javafx.base/javafx.beans.property=ALL-UNNAMED',
+            '--add-opens', 'javafx.base/javafx.collections=ALL-UNNAMED',
+            '--add-opens', 'javafx.base/com.sun.javafx.collections=ALL-UNNAMED',
+            '--add-opens', 'javafx.base/com.sun.javafx.binding=ALL-UNNAMED'
+    ]
+
+    systemProperty 'testfx.setup.timeout', '60000'
+    systemProperty 'kotest.framework.config.fqn', 'net.transgressoft.commons.fx.music.persistence.testing.FxPersistenceKotestProjectConfig'
+
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat = 'full'
+    }
+}
+
+dependencies {
+    constraints {
+        // Pin assertj to a patched version — the 3.13.2 transitive pulled by testfx-core carries CVE-2026-24400.
+        testImplementation('org.assertj:assertj-core:3.27.7') {
+            because 'Pin patched assertj to clear CVE-2026-24400; transitive of testfx-core'
+        }
+    }
+
+    api project(path: ':music-commons-fx')
+    api project(path: ':music-commons-persistence')
+
+    implementation libs.lirp.core.get()
+    implementation libs.lirp.sql.api.get()
+    implementation("net.transgressoft:lirp-sql") { version { require libs.versions.lirp.get() } }
+    implementation libs.javafx.controls.get()
+
+    testImplementation project(path: ':music-commons-fx-test')
+    testImplementation(platform(libs.junit.bom.get()))
+    testImplementation(libs.junit.jupiter.get())
+    testImplementation libs.sqlite.jdbc.get()
+    testImplementation libs.mockk.get()
+    testImplementation libs.kotest.runner.junit6.get()
+    testImplementation libs.kotest.assertions.core.get()
+    testImplementation libs.kotest.property.get()
+    testImplementation libs.kotest.assertions.json.get()
+    testImplementation libs.coroutines.test.get()
+    testImplementation libs.testfx.core.get()
+    testImplementation libs.testfx.junit5.get()
+    testImplementation libs.openjfx.monocle.get()
+}
