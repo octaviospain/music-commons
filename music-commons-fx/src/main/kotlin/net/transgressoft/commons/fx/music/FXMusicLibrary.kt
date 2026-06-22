@@ -163,22 +163,9 @@ class FXMusicLibrary private constructor(
      *
      * Each component defaults to a [VolatileRepository] (in-memory). Inject a different repository
      * implementation — `JsonFileRepository`, `SqlRepository`, or a custom one — to configure
-     * persistence. The `lirp-sql` artifact and a JDBC driver are optional consumer dependencies:
-     * add them to your build only if you intend to back any component with a SQL repository.
-     *
-     * For SQL persistence of audio items, the KSP-generated `FXAudioItem_LirpTableDef` is a ready
-     * `SqlTableDef<ObservableAudioItem>`: its `fromRow` rebuilds the entity and reconstructs the
-     * flyweight `Artist`/`Label` embeddables through their `@PersistenceCreator` `of()` factories.
-     * Pass it straight to a `SqlRepository`/`SqliteRepository`.
-     *
-     * ```kotlin
-     * // consumer build.gradle — a JDBC driver is a consumer-side dependency
-     * // implementation("org.xerial:sqlite-jdbc:<version>")
-     *
-     * val library = FXMusicLibrary.builder()
-     *     .audioRepository(SqliteRepository.fileBacked(audioItemsPath, FXAudioItem_LirpTableDef))
-     *     .build()
-     * ```
+     * persistence. JSON and SQL mappings for the library's entities are supplied by the opt-in
+     * `music-commons-persistence-fx` module; add it (plus `lirp-sql` and a JDBC driver) to your
+     * build only if you intend to back any component with a persistent repository.
      */
     class Builder {
 

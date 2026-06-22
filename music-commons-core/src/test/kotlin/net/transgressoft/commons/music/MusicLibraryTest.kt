@@ -1,13 +1,12 @@
 package net.transgressoft.commons.music
 
-import net.transgressoft.commons.media.waveform.AudioWaveformMapSerializer
+import net.transgressoft.commons.media.persistence.waveform.AudioWaveformMapSerializer
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
-import net.transgressoft.commons.music.audio.AudioItemMapSerializer
-import net.transgressoft.commons.music.audio.AudioItemSerializer
 import net.transgressoft.commons.music.audio.virtualFiles
-import net.transgressoft.commons.music.playlist.AudioPlaylistMapSerializer
 import net.transgressoft.commons.music.testing.reactiveScope
+import net.transgressoft.commons.persistence.music.audio.AudioItemMapSerializer
+import net.transgressoft.commons.persistence.music.playlist.AudioPlaylistMapSerializer
 import net.transgressoft.commons.util.OsDetector
 import net.transgressoft.commons.util.WindowsPathException
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
@@ -21,8 +20,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.property.arbitrary.next
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.serialization.builtins.MapSerializer
-import kotlinx.serialization.builtins.serializer
 
 @ExperimentalCoroutinesApi
 internal class MusicLibraryTest : StringSpec({
@@ -48,7 +45,7 @@ internal class MusicLibraryTest : StringSpec({
         val library =
             CoreMusicLibrary.builder()
                 .metadataIO(files.metadataIO)
-                .audioRepository(JsonFileRepository(audioFile, MapSerializer(Int.serializer(), AudioItemSerializer(files.fileSystem))))
+                .audioRepository(JsonFileRepository(audioFile, AudioItemMapSerializer))
                 .playlistRepository(JsonFileRepository(playlistsFile, AudioPlaylistMapSerializer))
                 .waveformRepository(JsonFileRepository(waveformsFile, AudioWaveformMapSerializer))
                 .build()

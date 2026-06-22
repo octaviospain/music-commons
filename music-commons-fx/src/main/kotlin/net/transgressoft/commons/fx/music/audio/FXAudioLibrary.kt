@@ -28,7 +28,6 @@ import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
 import net.transgressoft.lirp.event.ReactiveScope
-import net.transgressoft.lirp.persistence.LirpRepository
 import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.Repository
 import net.transgressoft.lirp.persistence.fx.FxAggregateList
@@ -69,7 +68,6 @@ import kotlinx.coroutines.launch
  * collection and property mutations; any exception indicates a programming error that should surface
  * through the default uncaught exception handler.
  */
-@LirpRepository
 internal class FXAudioLibrary
     @JvmOverloads
     constructor(

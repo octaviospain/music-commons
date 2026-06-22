@@ -17,9 +17,6 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.lirp.persistence.Embeddable
-import net.transgressoft.lirp.persistence.PersistenceIgnore
-import net.transgressoft.lirp.persistence.PersistenceProperty
 import java.time.Duration
 
 /**
@@ -32,34 +29,26 @@ import java.time.Duration
  * when constructing fresh items and left `null` when the value is hydrated from JSON
  * deserialization, where covers travel out-of-band.
  *
- * Annotated as `@Embeddable` for SQL persistence via lirp, but it contributes only the
- * file-header-derived columns ([bitRate], [duration], [encoder], [encoding]) when embedded by an
- * entity. Those fields are immutable after construction, so embedding them carries no risk of
- * diverging from live entity state. Every tag field that is *mutable* on the owning entity
- * ([title], [artist], [album], [genres], [comments], [trackNumber], [discNumber], [bpm]) is
- * `@PersistenceIgnore`d here: the entity persists those values directly as its own columns, which
- * is the single source of truth for mutations. [coverBytes] is also `@PersistenceIgnore`d and
- * travels out-of-band.
+ * The [coverBytes] field travels out-of-band rather than as part of the value's own state.
  *
  * Serialization stays at the entity level (see core's audio item serializer); this type is not
  * `@Serializable` because its consumers serialize the broader audio item rather than the metadata
  * value in isolation.
  */
-@Embeddable
 data class AudioItemMetadata(
-    @PersistenceIgnore val title: String = "",
-    @PersistenceIgnore val artist: Artist = Artist.UNKNOWN,
-    @PersistenceIgnore val album: Album = Album.UNKNOWN,
-    @PersistenceIgnore val genres: Set<Genre> = emptySet(),
-    @PersistenceIgnore val comments: String? = null,
-    @PersistenceIgnore val trackNumber: Short? = null,
-    @PersistenceIgnore val discNumber: Short? = null,
-    @PersistenceIgnore val bpm: Float? = null,
+    val title: String = "",
+    val artist: Artist = Artist.UNKNOWN,
+    val album: Album = Album.UNKNOWN,
+    val genres: Set<Genre> = emptySet(),
+    val comments: String? = null,
+    val trackNumber: Short? = null,
+    val discNumber: Short? = null,
+    val bpm: Float? = null,
     val encoder: String? = null,
     val encoding: String? = null,
     val bitRate: Int = 0,
-    @PersistenceProperty(converter = DurationConverter::class) val duration: Duration = Duration.ZERO,
-    @PersistenceIgnore val coverBytes: ByteArray? = null
+    val duration: Duration = Duration.ZERO,
+    val coverBytes: ByteArray? = null
 ) {
     init {
         bpm?.let {

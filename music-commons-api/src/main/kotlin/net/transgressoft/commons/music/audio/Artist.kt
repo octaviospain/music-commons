@@ -18,9 +18,6 @@
 package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.util.expungeStaleEntries
-import net.transgressoft.lirp.persistence.Embeddable
-import net.transgressoft.lirp.persistence.PersistenceCreator
-import net.transgressoft.lirp.persistence.PersistenceProperty
 import com.neovisionaries.i18n.CountryCode
 import java.lang.ref.ReferenceQueue
 import java.lang.ref.SoftReference
@@ -36,10 +33,9 @@ import java.util.concurrent.ConcurrentHashMap
  * Access instances via the [of] factory rather than the constructor directly.
  */
 @ConsistentCopyVisibility
-@Embeddable
 data class Artist internal constructor(
     val name: String,
-    @PersistenceProperty(converter = CountryConverter::class) val countryCode: CountryCode = CountryCode.UNDEFINED
+    val countryCode: CountryCode = CountryCode.UNDEFINED
 ) : Comparable<Artist> {
 
     override fun compareTo(other: Artist): Int {
@@ -67,7 +63,6 @@ data class Artist internal constructor(
          */
         @JvmStatic
         @JvmOverloads
-        @PersistenceCreator
         fun of(name: String, countryCode: CountryCode = CountryCode.UNDEFINED): Artist {
             val normalizedName = name.trim()
             if (normalizedName.isEmpty() && countryCode == CountryCode.UNDEFINED) return UNKNOWN

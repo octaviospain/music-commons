@@ -19,11 +19,6 @@ package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.util.WindowsPathValidator
 import net.transgressoft.lirp.entity.ReactiveEntityBase
-import net.transgressoft.lirp.persistence.ElementCollection
-import net.transgressoft.lirp.persistence.Embedded
-import net.transgressoft.lirp.persistence.PersistenceIgnore
-import net.transgressoft.lirp.persistence.PersistenceMapping
-import net.transgressoft.lirp.persistence.PersistenceProperty
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
@@ -46,10 +41,6 @@ interface AudioItem : ReactiveAudioItem<AudioItem> {
     override fun clone(): AudioItem
 }
 
-// Serializer is wired via `audioItemSerializerModule` polymorphic registration (see DefaultAudioLibrary).
-// The serializer is a stateful class (AudioItemSerializer(FileSystem)) so it cannot be referenced as a
-// bare `@Serializable(with = ...)` target — kotlinx-serialization requires KSerializer-typed ctor params.
-
 /**
  * Mutable implementation of [AudioItem].
  *
@@ -58,22 +49,16 @@ interface AudioItem : ReactiveAudioItem<AudioItem> {
  * [DefaultAudioLibrary]; this class only validates the path shape via [WindowsPathValidator] and
  * exposes reactive mutators.
  *
- * Annotated with [PersistenceMapping] for SQL persistence via lirp. Mutable tag fields ([title],
- * [artist], [album], [genres], [comments], [trackNumber], [discNumber], [bpm]) are persisted as the
- * entity's own columns so live edits are captured: [genres] via `@ElementCollection`, [artist] and
- * [album] via `@Embedded`. [album] flattens its nested [Album.albumArtist] and [Album.label]
- * embeddables into prefixed columns (`album_album_artist_name`, `album_label_name`, …). The
- * [metadata] property remains `@Embedded` but contributes only the immutable file-header columns
- * ([bitRate], [duration], [encoder], [encoding]). The [path] property uses [PathConverter] to
- * serialise to a URI string.
+ * Mutable tag fields ([title], [artist], [album], [genres], [comments], [trackNumber],
+ * [discNumber], [bpm]) are the entity's own reactive state so live edits are captured directly.
+ * The [metadata] property carries the immutable file-header-derived values ([bitRate], [duration],
+ * [encoder], [encoding]).
  *
  * @see <a href=https://www.jthink.net/jaudiotagger/>JAudioTagger website</a>
  */
-@PersistenceMapping(name = "audio_item")
 internal class MutableAudioItem
     @JvmOverloads
     constructor(
-        @PersistenceProperty(converter = PathConverter::class)
         override val path: Path,
         override val id: Int = UNASSIGNED_ID,
         metadata: AudioItemMetadata
@@ -88,7 +73,6 @@ internal class MutableAudioItem
         @Transient
         internal var metadataIO: AudioMetadataIO? = null
 
-        @Embedded
         var metadata: AudioItemMetadata by reactiveProperty(metadata)
 
         // Constructor for deserialization & iTunes import
@@ -111,20 +95,16 @@ internal class MutableAudioItem
             WindowsPathValidator.validatePath(path)
         }
 
-        // Persisted via the @Embedded metadata; these are read-through mirrors for the API surface only
-        @PersistenceIgnore
+        // Read-through mirrors over the immutable metadata header values for the API surface only.
         @Serializable
         override val bitRate: Int = metadata.bitRate
 
-        @PersistenceIgnore
         @Serializable
         override val duration: Duration = metadata.duration
 
-        @PersistenceIgnore
         @Serializable
         override val encoder: String? = metadata.encoder?.takeIf { it.isNotEmpty() }
 
-        @PersistenceIgnore
         @Serializable
         override val encoding: String? = metadata.encoding?.takeIf { it.isNotEmpty() }
 
@@ -143,12 +123,10 @@ internal class MutableAudioItem
         override val playCount: Short
             get() = _playCount
 
-        @PersistenceIgnore
         override val fileName by lazy {
             path.fileName.toString()
         }
 
-        @PersistenceIgnore
         override val extension by lazy {
             path.extension
         }
@@ -156,7 +134,6 @@ internal class MutableAudioItem
         override val artistsInvolved
             get() = getArtistsNamesInvolved(title, artist.name, album.albumArtist.name).map { Artist.of(it) }.toSet()
 
-        @PersistenceIgnore
         override val length by lazy {
             Files.size(path)
         }
@@ -175,11 +152,9 @@ internal class MutableAudioItem
         @Serializable
         override var title: String by reactiveProperty(metadata.title)
 
-        @Embedded
         @Serializable
         override var artist: Artist by reactiveProperty(metadata.artist)
 
-        @ElementCollection(elementConverter = GenreConverter::class)
         @Serializable
         override var genres: Set<Genre> by reactiveProperty(metadata.genres)
 
@@ -211,12 +186,10 @@ internal class MutableAudioItem
                 }
             )
 
-        @Embedded
         @Serializable
         override var album: Album by reactiveProperty(metadata.album)
 
         @Transient
-        @PersistenceIgnore
         private var _coverImageBytes: ByteArray? = metadata.coverBytes
 
         @Transient
@@ -231,7 +204,6 @@ internal class MutableAudioItem
          * directly on subsequent reads. The returned reference points directly to the internal
          * array — callers must treat it as immutable.
          */
-        @PersistenceIgnore
         @Transient
         override var coverImageBytes: ByteArray?
             get() {

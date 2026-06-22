@@ -18,8 +18,6 @@
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.lirp.persistence.PersistenceIgnore
-import net.transgressoft.lirp.persistence.PersistenceMapping
 import net.transgressoft.lirp.persistence.mutableAggregateList
 import net.transgressoft.lirp.persistence.mutableAggregateSet
 
@@ -35,12 +33,7 @@ import net.transgressoft.lirp.persistence.mutableAggregateSet
  *
  * Registered in LirpContext via [net.transgressoft.lirp.persistence.RegistryBase.registerRepository]
  * by [DefaultPlaylistHierarchy] on construction.
- *
- * Annotated with [PersistenceMapping] so lirp KSP generates a [MutablePlaylist_LirpTableDef] for use
- * with SQL repositories. Scalar columns (id, name, isDirectory) are generated; aggregate references
- * are handled separately by [MutablePlaylist_LirpRefAccessor].
  */
-@PersistenceMapping(name = "playlist")
 internal class MutablePlaylist(
     id: Int,
     name: String,
@@ -50,12 +43,8 @@ internal class MutablePlaylist(
 ) : MutablePlaylistBase<AudioItem, MutableAudioPlaylist>(id, name, isDirectory),
     MutableAudioPlaylist {
 
-    // @Aggregate is intentionally omitted here — a manual MutablePlaylist_LirpRefAccessor is
-    // provided instead, because KSP generates a public accessor that cannot reference internal classes.
-    @PersistenceIgnore
     override val audioItems by mutableAggregateList<Int, AudioItem>(initialAudioItemIds)
 
-    @PersistenceIgnore
     override val playlists by mutableAggregateSet<Int, MutableAudioPlaylist>(initialPlaylistIds)
 
     override fun clone(): MutablePlaylist =

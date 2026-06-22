@@ -1,18 +1,18 @@
 package net.transgressoft.commons.music
 
-import net.transgressoft.commons.media.waveform.AudioWaveformMapSerializer
+import net.transgressoft.commons.media.persistence.waveform.AudioWaveformMapSerializer
 import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItem
-import net.transgressoft.commons.music.audio.AudioItemMapSerializer
 import net.transgressoft.commons.music.audio.AudioLibrary
 import net.transgressoft.commons.music.audio.virtualFiles
-import net.transgressoft.commons.music.playlist.AudioPlaylistMapSerializer
 import net.transgressoft.commons.music.playlist.PlaylistHierarchy
 import net.transgressoft.commons.music.playlist.asJsonKeyValues
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
+import net.transgressoft.commons.persistence.music.audio.AudioItemMapSerializer
+import net.transgressoft.commons.persistence.music.playlist.AudioPlaylistMapSerializer
 import net.transgressoft.commons.util.toJsonUri
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import io.kotest.assertions.json.shouldContainJsonKeyValue

@@ -1,24 +1,16 @@
 package net.transgressoft.commons.fx.music.playlist
 
-import net.transgressoft.commons.fx.music.audio.FXAudioLibrary
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.fx.music.fxAudioItem
-import net.transgressoft.commons.music.playlist.asJsonKeyValues
 import net.transgressoft.commons.music.testing.reactiveScope
-import net.transgressoft.lirp.persistence.VolatileRepository
-import net.transgressoft.lirp.persistence.json.JsonFileRepository
-import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.equals.shouldBeEqual
 import io.kotest.matchers.optional.shouldBePresent
-import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import io.mockk.every
@@ -27,7 +19,6 @@ import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
 import java.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalCoroutinesApi
@@ -48,133 +39,6 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
                 assertion()
             }
         }
-    }
-
-    "Reflects changes on a JsonFileRepository" {
-        val jsonFile = tempfile("observablePlaylistHierarchy-test", ".json").apply { deleteOnExit() }
-        val jsonFileRepository = JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer)
-        val playlistHierarchy = FXPlaylistHierarchy(jsonFileRepository)
-
-        val rockAudioItem = Arb.fxAudioItem { title = "50s Rock hit 1" }.next()
-        val rockAudioItems = listOf(rockAudioItem)
-        val rock = playlistHierarchy.createPlaylist("Rock", rockAudioItems)
-
-        reactive.advance()
-        WaitForAsyncUtils.waitForFxEvents()
-
-        eventuallyOnFxThread {
-            playlistHierarchy.playlistsProperty.shouldContainOnly(rock)
-        }
-
-        val rockFavAudioItem = Arb.fxAudioItem { title = "Rock fav" }.next()
-        val rockFavoritesAudioItems = listOf(rockFavAudioItem)
-        val rockFavorites = playlistHierarchy.createPlaylist("Rock favorites", rockFavoritesAudioItems)
-
-        playlistHierarchy.movePlaylist(rockFavorites.name, rock.name)
-
-        reactive.advance()
-        WaitForAsyncUtils.waitForFxEvents()
-
-        eventuallyOnFxThread {
-            playlistHierarchy.playlistsProperty shouldContainExactly setOf(rock, rockFavorites)
-            playlistHierarchy.findById(rock.id) shouldBePresent { updatedRock ->
-                updatedRock.playlists.shouldContainOnly(rockFavorites)
-                updatedRock.id shouldBe rock.id
-                updatedRock.isDirectory shouldBe false
-                updatedRock.name shouldBe "Rock"
-                updatedRock.audioItems.shouldContainExactly(rockAudioItems)
-                updatedRock.playlists.shouldContainExactly(rockFavorites)
-            }
-        }
-
-        reactive.advance()
-
-        jsonFile.readText().shouldEqualJson(listOf(rock, rockFavorites).asJsonKeyValues())
-
-        rock.isDirectory = true
-        rock.name = "Rock directory"
-
-        reactive.advance()
-        WaitForAsyncUtils.waitForFxEvents()
-
-        eventuallyOnFxThread {
-            playlistHierarchy.findByUniqueId(rock.uniqueId) shouldBePresent {
-                it.isDirectory shouldBe true
-                it.name shouldBe "Rock directory"
-            }
-        }
-
-        reactive.advance()
-
-        eventually(2.seconds) {
-            jsonFile.readText().shouldEqualJson(listOf(rock, rockFavorites).asJsonKeyValues())
-        }
-
-        playlistHierarchy.close()
-        jsonFileRepository.close()
-    }
-
-    "Initializes from a non empty JsonFileRepository without AudioLibrary resolves to empty audio items" {
-        // Create a hierarchy to write a playlist with a reference audio item id to a JSON file
-        val audioItem = Arb.fxAudioItem {}.next()
-        val jsonFile =
-            tempfile("observablePlaylistHierarchy-test", ".json").apply { deleteOnExit() }
-        val writeHierarchy = FXPlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
-        val writtenPlaylist = writeHierarchy.createPlaylistDirectory("Rock")
-        writtenPlaylist.addAudioItem(audioItem)
-        reactive.advance()
-        writeHierarchy.close()
-
-        // No audio library registered — audio item IDs are preserved but entities cannot be resolved
-        val playlistHierarchy = FXPlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
-
-        playlistHierarchy.size() shouldBe 1
-        playlistHierarchy.contains {
-            it.id == writtenPlaylist.id && it.isDirectory && it.name == "Rock" && it.playlists.isEmpty()
-        } shouldBe true
-
-        playlistHierarchy.close()
-    }
-
-    "Initializes from a non empty JsonFileRepository and AudioLibrary" {
-        val audioItem = Arb.fxAudioItem {}.next()
-        // Create a hierarchy to write a playlist with a reference audio item id to a JSON file
-        val jsonFile =
-            tempfile("observablePlaylistHierarchy-test", ".json").apply { deleteOnExit() }
-        val writeHierarchy = FXPlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
-        val writtenPlaylist = writeHierarchy.createPlaylistDirectory("Rock")
-        writtenPlaylist.addAudioItem(audioItem)
-        reactive.advance()
-        writeHierarchy.close()
-
-        val audioItemRepository = VolatileRepository<Int, ObservableAudioItem>()
-        audioItemRepository.add(audioItem)
-        val audioLibrary = FXAudioLibrary(audioItemRepository)
-
-        val playlistHierarchy = FXPlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
-
-        playlistHierarchy.size() shouldBe 1
-        playlistHierarchy.contains {
-            it.id == writtenPlaylist.id && it.isDirectory && it.name == "Rock" && it.audioItems == listOf(audioItem) && it.playlists.isEmpty()
-        } shouldBe true
-
-        WaitForAsyncUtils.waitForFxEvents()
-
-        eventuallyOnFxThread {
-            playlistHierarchy.playlistsProperty should {
-                it.size shouldBe 1
-                it.first().id shouldBe writtenPlaylist.id
-                it.first().isDirectory shouldBe true
-                it.first().name shouldBe "Rock"
-                it.first().audioItems shouldContainExactly listOf(audioItem)
-                it.first().playlists.isEmpty() shouldBe true
-                it.first().shouldBeInstanceOf<ObservablePlaylist>()
-            }
-        }
-
-        playlistHierarchy.close()
-        audioLibrary.close()
-        audioItemRepository.close()
     }
 
     /** The following playlist hierarchy is used for the test:
@@ -903,60 +767,6 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
         top.audioItemsRecursiveProperty.map { it: ObservableAudioItem -> it.title } shouldContainExactly listOf("Deep")
 
         hierarchy.close()
-    }
-
-    "Recursive audio items property reflects nested descendants after JSON round-trip" {
-        val jsonFile = tempfile("observablePlaylistHierarchy-recursive-roundtrip", ".json").apply { deleteOnExit() }
-
-        val seed = Arb.fxAudioItem { title = "RoundtripSeed" }.next()
-        val seed2 = Arb.fxAudioItem { title = "RoundtripSeed2" }.next()
-
-        // Author phase: build folder + nested leaf with audio items, then persist.
-        val writeHierarchy = FXPlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
-        val leaf = writeHierarchy.createPlaylist("Leaf")
-        val folder = writeHierarchy.createPlaylistDirectory("Folder")
-        folder.addPlaylist(leaf)
-        leaf.addAudioItems(listOf(seed, seed2))
-
-        reactive.advance()
-        WaitForAsyncUtils.waitForFxEvents()
-
-        folder.audioItemsRecursiveProperty.size shouldBe 2
-
-        writeHierarchy.close()
-
-        // Reload phase: simulate app restart — the audio library must be available so the
-        // playlist hierarchy can resolve the persisted audio item ids back to entities.
-        val audioItemRepository = VolatileRepository<Int, ObservableAudioItem>()
-        audioItemRepository.add(seed)
-        audioItemRepository.add(seed2)
-        val audioLibrary = FXAudioLibrary(audioItemRepository)
-
-        val readHierarchy = FXPlaylistHierarchy(JsonFileRepository(jsonFile, ObservablePlaylistMapSerializer))
-
-        reactive.advance()
-        WaitForAsyncUtils.waitForFxEvents()
-
-        val reloadedFolder = readHierarchy.findByName("Folder").get()
-        val reloadedLeaf = readHierarchy.findByName("Leaf").get()
-
-        reloadedLeaf.audioItemsRecursiveProperty.size shouldBe 2
-        reloadedFolder.audioItemsRecursiveProperty.size shouldBe 2
-        reloadedFolder.audioItemsRecursiveProperty.map { it: ObservableAudioItem -> it.title } shouldContainExactly listOf("RoundtripSeed", "RoundtripSeed2")
-
-        // Subsequent runtime mutations on the reloaded leaf must propagate to the reloaded folder.
-        val late = Arb.fxAudioItem { title = "RoundtripLate" }.next()
-        audioItemRepository.add(late)
-        reloadedLeaf.addAudioItems(listOf(late))
-
-        reactive.advance()
-        WaitForAsyncUtils.waitForFxEvents()
-
-        reloadedFolder.audioItemsRecursiveProperty.size shouldBe 3
-
-        readHierarchy.close()
-        audioLibrary.close()
-        audioItemRepository.close()
     }
 
     "Recursive audio items property stops propagating after a child is removed" {
