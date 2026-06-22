@@ -1,18 +1,15 @@
-description = 'Transgressoft Music Commons - Core'
+description = 'Transgressoft Music Commons - Persistence'
 
 dependencies {
-    api project(path: ':music-commons-api')
-    api 'org.jetbrains.kotlinx:kotlinx-coroutines-core'
+    api project(path: ':music-commons-core')
 
-    implementation project(':music-commons-media')
-    implementation libs.jaudiotagger.get()
     implementation libs.lirp.core.get()
-    implementation libs.dd.plist.get()
+    implementation libs.lirp.sql.api.get()
+    implementation("net.transgressoft:lirp-sql") { version { require libs.versions.lirp.get() } }
 
     testImplementation project(path: ':music-commons-test')
-    testImplementation project(path: ':music-commons-persistence')
     testImplementation(platform(libs.junit.bom.get()))
-    testImplementation libs.jimfs.get()
+    testImplementation libs.sqlite.jdbc.get()
     testImplementation libs.mockk.get()
     testImplementation libs.kotest.runner.junit6.get()
     testImplementation libs.kotest.assertions.core.get()
@@ -23,5 +20,5 @@ dependencies {
 
 tasks.withType(Test).configureEach {
     systemProperty 'java.awt.headless', 'true'
-    systemProperty 'kotest.framework.config.fqn', 'net.transgressoft.commons.music.testing.CoreKotestProjectConfig'
+    systemProperty 'kotest.framework.config.fqn', 'net.transgressoft.commons.music.persistence.testing.PersistenceKotestProjectConfig'
 }

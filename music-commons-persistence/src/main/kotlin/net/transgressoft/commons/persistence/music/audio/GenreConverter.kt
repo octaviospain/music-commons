@@ -1,5 +1,3 @@
-@file:Suppress("ktlint:standard:filename")
-
 /******************************************************************************
  * Copyright (C) 2026  Octavio Calleya Garcia                                 *
  *                                                                            *
@@ -17,28 +15,26 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.media.waveform
+package net.transgressoft.commons.persistence.music.audio
 
-import net.transgressoft.lirp.persistence.LirpRawInitializer
-import net.transgressoft.lirp.persistence.RawInitEntry
+import net.transgressoft.commons.music.audio.Genre
+import net.transgressoft.commons.music.audio.parseGenre
+import net.transgressoft.lirp.persistence.ColumnConverter
+import net.transgressoft.lirp.persistence.ColumnType
 
 /**
- * Co-located population SPI for [ScalableAudioWaveform].
+ * Maps individual [Genre] elements to their display-name string for SQL persistence.
  *
- * Resolved at runtime by lirp via `Class.forName` on the entity's binary name plus the
- * `_LirpRawInitializer` suffix. Restores the `lastDateModified` timestamp into an already-constructed
- * instance without firing reactive events. Waveform persistence is JSON-only, so no SQL bulk-load
- * path is involved.
+ * Each element is serialized as the genre's display name string. Standard genres round-trip via
+ * [parseGenre]; custom genres that are not in the built-in registry are reconstructed as
+ * [Genre.Custom] instances. Individual genre names never contain commas (enforced by
+ * [Genre.Custom]'s init block), so per-element encoding is unambiguous.
  */
-@Suppress("UNCHECKED_CAST", "ClassName")
-internal class ScalableAudioWaveform_LirpRawInitializer : LirpRawInitializer<ScalableAudioWaveform> {
-    override val entries: List<RawInitEntry<ScalableAudioWaveform>> =
-        listOf(
-            RawInitEntry(
-                name = "lastDateModified",
-                silentSetter = { entity, value ->
-                    entity.lastDateModified = value as java.time.LocalDateTime
-                }
-            )
-        )
+object GenreConverter : ColumnConverter<Genre, String> {
+
+    override val sqlType = ColumnType.TextType
+
+    override fun toSql(value: Genre): String = value.name
+
+    override fun fromSql(raw: String): Genre = parseGenre(raw).firstOrNull() ?: Genre.Custom(raw)
 }

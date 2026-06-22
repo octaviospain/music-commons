@@ -1,5 +1,3 @@
-@file:Suppress("ktlint:standard:filename")
-
 /******************************************************************************
  * Copyright (C) 2026  Octavio Calleya Garcia                                 *
  *                                                                            *
@@ -17,28 +15,26 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.media.waveform
+package net.transgressoft.commons.persistence.music.audio
 
-import net.transgressoft.lirp.persistence.LirpRawInitializer
-import net.transgressoft.lirp.persistence.RawInitEntry
+import net.transgressoft.lirp.persistence.ColumnConverter
+import net.transgressoft.lirp.persistence.ColumnType
+import com.neovisionaries.i18n.CountryCode
 
 /**
- * Co-located population SPI for [ScalableAudioWaveform].
+ * Maps [CountryCode] values to alpha-2 strings for SQL persistence.
  *
- * Resolved at runtime by lirp via `Class.forName` on the entity's binary name plus the
- * `_LirpRawInitializer` suffix. Restores the `lastDateModified` timestamp into an already-constructed
- * instance without firing reactive events. Waveform persistence is JSON-only, so no SQL bulk-load
- * path is involved.
+ * [CountryCode.UNDEFINED] serializes as `"UNDEFINED"` — the ISO 3166-1 alpha-2 lookup
+ * (`getByCode`) returns null for this sentinel value, so the fallback `valueOf` (enum constant
+ * name lookup) is used to reconstruct it during deserialization.
  */
-@Suppress("UNCHECKED_CAST", "ClassName")
-internal class ScalableAudioWaveform_LirpRawInitializer : LirpRawInitializer<ScalableAudioWaveform> {
-    override val entries: List<RawInitEntry<ScalableAudioWaveform>> =
-        listOf(
-            RawInitEntry(
-                name = "lastDateModified",
-                silentSetter = { entity, value ->
-                    entity.lastDateModified = value as java.time.LocalDateTime
-                }
-            )
-        )
+object CountryConverter : ColumnConverter<CountryCode, String> {
+
+    override val sqlType = ColumnType.TextType
+
+    override fun toSql(value: CountryCode): String = value.getAlpha2()
+
+    // CountryCode.getByCode("UNDEFINED") returns null because "UNDEFINED" is not a valid
+    // ISO alpha-2 code; valueOf falls back to enum constant name lookup which always works.
+    override fun fromSql(raw: String): CountryCode = CountryCode.getByCode(raw) ?: CountryCode.valueOf(raw)
 }

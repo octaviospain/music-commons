@@ -44,6 +44,8 @@ dependencies {
     implementation project(':music-commons-fx')
     implementation project(':music-commons-test')
     implementation project(':music-commons-media')
+    implementation project(':music-commons-persistence')
+    implementation project(':music-commons-persistence-fx')
     api libs.kotlin.stdlib.get()
 
     // Aggregated Dokka HTML site — published library modules only (test utility modules excluded)
@@ -51,6 +53,8 @@ dependencies {
     dokka project(':music-commons-core')
     dokka project(':music-commons-fx')
     dokka project(':music-commons-media')
+    dokka project(':music-commons-persistence')
+    dokka project(':music-commons-persistence-fx')
 }
 
 dokka {
@@ -101,7 +105,9 @@ sonar {
                 '**/music-commons-api/src/main/**',
                 '**/music-commons-core/src/main/**',
                 '**/music-commons-fx/src/main/**',
-                '**/music-commons-media/src/main/**'
+                '**/music-commons-media/src/main/**',
+                '**/music-commons-persistence/src/main/**',
+                '**/music-commons-persistence-fx/src/main/**'
         ]
         property 'sonar.test.exclusions', '**/test/**'
         def buildDir = project.layout.buildDirectory.get().asFile.absolutePath

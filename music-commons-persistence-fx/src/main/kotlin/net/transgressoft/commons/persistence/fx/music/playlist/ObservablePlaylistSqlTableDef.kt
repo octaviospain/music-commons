@@ -1,5 +1,3 @@
-@file:Suppress("ktlint:standard:filename")
-
 /******************************************************************************
  * Copyright (C) 2026  Octavio Calleya Garcia                                 *
  *                                                                            *
@@ -17,28 +15,26 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.media.waveform
+package net.transgressoft.commons.persistence.fx.music.playlist
 
-import net.transgressoft.lirp.persistence.LirpRawInitializer
-import net.transgressoft.lirp.persistence.RawInitEntry
+import net.transgressoft.commons.fx.music.playlist.ObservablePlaylist
+import net.transgressoft.lirp.persistence.ColumnDef
+import net.transgressoft.lirp.persistence.ColumnType
+import net.transgressoft.lirp.persistence.LirpTableDef
 
 /**
- * Co-located population SPI for [ScalableAudioWaveform].
+ * SQL table descriptor for the JavaFX playlist entity.
  *
- * Resolved at runtime by lirp via `Class.forName` on the entity's binary name plus the
- * `_LirpRawInitializer` suffix. Restores the `lastDateModified` timestamp into an already-constructed
- * instance without firing reactive events. Waveform persistence is JSON-only, so no SQL bulk-load
- * path is involved.
+ * Stays a bare [LirpTableDef] column descriptor rather than a `RawConstructibleTableDef`: only
+ * `last_date_modified` is a mapped scalar column. The playlist's identity (`id`), `name`,
+ * `is_directory` flag, and the aggregate `audioItems`/`playlists` collections are resolved at the
+ * application level through the entity's co-located reference accessor and lirp's junction-row
+ * wiring, so this table carries no construction parameters and needs no in-base raw constructor here.
  */
-@Suppress("UNCHECKED_CAST", "ClassName")
-internal class ScalableAudioWaveform_LirpRawInitializer : LirpRawInitializer<ScalableAudioWaveform> {
-    override val entries: List<RawInitEntry<ScalableAudioWaveform>> =
+object ObservablePlaylistSqlTableDef : LirpTableDef<ObservablePlaylist> {
+    override val tableName: String = "fx_playlist"
+    override val columns: List<ColumnDef> =
         listOf(
-            RawInitEntry(
-                name = "lastDateModified",
-                silentSetter = { entity, value ->
-                    entity.lastDateModified = value as java.time.LocalDateTime
-                }
-            )
+            ColumnDef(name = "last_date_modified", type = ColumnType.DateTimeType, nullable = false, primaryKey = false, isVersion = false)
         )
 }
