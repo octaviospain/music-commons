@@ -98,6 +98,7 @@ abstract class AudioLibraryBase<I, AC>(
      * UPDATE; emitting Update also causes JsonFileRepository to persist the change.
      */
     private fun subscribeArtistAlbumChanges(audioItem: I) {
+        entitySubscriptions.remove(audioItem.id)?.cancel()
         val subscription =
             audioItem.subscribe { event ->
                 val isCatalogRelevant =

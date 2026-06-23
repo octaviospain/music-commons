@@ -33,7 +33,6 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.Table
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDateTime
-import kotlinx.serialization.json.Json
 
 /**
  * Construction-free [RawConstructibleTableDef] mapping the audio item to a SQLite table.
@@ -48,7 +47,7 @@ import kotlinx.serialization.json.Json
  * Column order and the `audio_item` table name are stable; the `date_of_creation` and `play_count`
  * columns back the constructor parameters of the same name.
  */
-internal object MutableAudioItemSqlTableDef : RawConstructibleTableDef<AudioItem> {
+object MutableAudioItemSqlTableDef : RawConstructibleTableDef<AudioItem> {
 
     override val tableName: String = "audio_item"
 
@@ -116,7 +115,7 @@ internal object MutableAudioItemSqlTableDef : RawConstructibleTableDef<AudioItem
             cols.getValue("title") to entity.title,
             cols.getValue("artist_name") to entity.artist.name,
             cols.getValue("artist_country_code") to CountryConverter.toSql(entity.artist.countryCode),
-            cols.getValue("genres") to Json.encodeToString(entity.genres.map { GenreConverter.toSql(it) }),
+            cols.getValue("genres") to GenreConverter.encodeGenres(entity.genres),
             cols.getValue("comments") to entity.comments,
             cols.getValue("track_number") to entity.trackNumber?.toInt(),
             cols.getValue("disc_number") to entity.discNumber?.toInt(),
@@ -134,9 +133,7 @@ internal object MutableAudioItemSqlTableDef : RawConstructibleTableDef<AudioItem
     override fun applyRow(entity: AudioItem, row: ResultRow, table: Table) {
         val column = column(table)
         entity.title = row[column("title")] as String
-        entity.genres =
-            Json.decodeFromString<List<String>>(row[column("genres")] as String)
-                .map { GenreConverter.fromSql(it) }.toSet()
+        entity.genres = GenreConverter.decodeGenres(row[column("genres")] as String)
         entity.comments = row[column("comments")] as? String
         entity.trackNumber = (row[column("track_number")] as? Number)?.toShort()
         entity.discNumber = (row[column("disc_number")] as? Number)?.toShort()
@@ -193,9 +190,7 @@ internal object MutableAudioItemSqlTableDef : RawConstructibleTableDef<AudioItem
                             name = row[column("artist_name")] as String,
                             countryCode = CountryConverter.fromSql(row[column("artist_country_code")] as String)
                         )
-                    "genres" ->
-                        Json.decodeFromString<List<String>>(row[column("genres")] as String)
-                            .map { GenreConverter.fromSql(it) }.toSet()
+                    "genres" -> GenreConverter.decodeGenres(row[column("genres")] as String)
                     "album" ->
                         Album(
                             name = row[column("album_name")] as String,

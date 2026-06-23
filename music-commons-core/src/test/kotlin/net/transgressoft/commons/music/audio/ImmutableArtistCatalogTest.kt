@@ -103,8 +103,8 @@ internal class ImmutableArtistCatalogTest : StringSpec({
 
     "ImmutableArtistCatalog albums returns one entry per distinct album" {
         val artist = Arb.artist().next()
-        val album1 = Arb.album().next()
-        val album2 = Arb.album().next()
+        val album1 = Album("First Album", artist)
+        val album2 = Album("Second Album", artist)
         val item1 =
             Arb.audioItem {
                 this.artist = artist
@@ -144,8 +144,8 @@ internal class ImmutableArtistCatalogTest : StringSpec({
     }
 
     "ImmutableArtistCatalog equals returns false for different artist" {
-        val firstArtist = Arb.artist().next()
-        val secondArtist = Arb.artist().next()
+        val firstArtist = Artist.of("First Artist")
+        val secondArtist = Artist.of("Second Artist")
         val item1 = Arb.audioItem { artist = firstArtist }.next()
         val item2 = Arb.audioItem { artist = secondArtist }.next()
 

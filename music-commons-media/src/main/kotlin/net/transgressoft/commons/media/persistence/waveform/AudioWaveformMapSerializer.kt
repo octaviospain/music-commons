@@ -24,6 +24,8 @@ import net.transgressoft.commons.util.toPathFromJsonUri
 import java.nio.ByteBuffer
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.util.Base64
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
@@ -37,6 +39,7 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -73,7 +76,8 @@ val AudioWaveformMapSerializer: KSerializer<Map<Int, AudioWaveform>> = MapSerial
  * the cache-bearing instance through the entity's `internal` deserialization constructor directly —
  * no reflection and no public factory.
  *
- * All four fields (`id`, `audioFilePath`, `cachedWidth`, `normalizedAmplitudes`) are required.
+ * The four cache fields (`id`, `audioFilePath`, `cachedWidth`, `normalizedAmplitudes`) are required;
+ * `lastDateModified` is optional and absent in waveforms persisted before it was round-tripped.
  * Malformed Base64 payloads and cache size mismatches produce [kotlinx.serialization.SerializationException].
  *
  * @param fileSystem the [FileSystem] used to materialize the [java.nio.file.Path] backing
@@ -92,6 +96,7 @@ class AudioWaveformSerializer
                 element<String>("audioFilePath")
                 element<Int>("cachedWidth")
                 element<String>("normalizedAmplitudes")
+                element<Long>("lastDateModified", isOptional = true)
             }
 
         override fun deserialize(decoder: Decoder): AudioWaveform {
@@ -130,7 +135,29 @@ class AudioWaveformSerializer
                     audioFilePathString.toPathFromJsonUri(fileSystem)
                 }
 
-            return ScalableAudioWaveform(id, audioFilePath, cachedWidth, decodedAmplitudes)
+            // Optional: absent in waveforms persisted before timestamp round-tripping was added.
+            // A present-but-malformed value is corruption, not a legacy file, so it fails loudly.
+            val lastDateModified =
+                jsonObject["lastDateModified"]
+                    ?.jsonPrimitive
+                    ?.contentOrNull
+                    ?.let { raw ->
+                        raw.toLongOrNull()
+                            ?: throw SerializationException("Malformed lastDateModified for AudioWaveform id=$id")
+                    }
+                    ?.let { epochSecond ->
+                        try {
+                            LocalDateTime.ofEpochSecond(epochSecond, 0, ZoneOffset.UTC)
+                        } catch (e: RuntimeException) {
+                            throw SerializationException("Invalid lastDateModified for AudioWaveform id=$id", e)
+                        }
+                    }
+
+            return ScalableAudioWaveform(id, audioFilePath, cachedWidth, decodedAmplitudes).also { waveform ->
+                if (lastDateModified != null) {
+                    waveform.lastDateModified = lastDateModified
+                }
+            }
         }
 
         override fun serialize(encoder: Encoder, value: AudioWaveform) {
@@ -143,6 +170,7 @@ class AudioWaveformSerializer
                     put("audioFilePath", value.audioFilePath.toJsonUri())
                     put("cachedWidth", sw.cachedWidth)
                     put("normalizedAmplitudes", snapshot.toBase64String())
+                    put("lastDateModified", sw.lastDateModified.toEpochSecond(ZoneOffset.UTC))
                 }
             jsonOutput.encodeJsonElement(jsonObject)
         }
