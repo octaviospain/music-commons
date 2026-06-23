@@ -27,13 +27,13 @@ import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.sql.SqliteRepository
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
+import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 
 @DisplayName("AudioPlaylistSqlTableDef")
@@ -42,8 +42,8 @@ internal class AudioPlaylistSqlTableDefTest : StringSpec({
     val reactive = reactiveScope()
 
     "AudioPlaylistSqlTableDef round-trips playlists through SQLite preserving per-row fidelity and aggregate id references" {
-        val dbFile = tempfile("playlistHierarchy-sql", ".db").apply { deleteOnExit() }
-        val audioFile = tempfile("audioLibrary-sql-pl", ".json").apply { deleteOnExit() }
+        val dbFile = File.createTempFile("playlistHierarchy-sql", ".db").apply { deleteOnExit() }
+        val audioFile = File.createTempFile("audioLibrary-sql-pl", ".json").apply { deleteOnExit() }
 
         val library =
             CoreMusicLibrary.builder()
@@ -95,9 +95,9 @@ internal class AudioPlaylistSqlTableDefTest : StringSpec({
         reloaded.close()
     }
 
-    "AudioPlaylistSqlTableDef constructs playlists without firing CrudEvents and keeps reactive wiring live after load" {
-        val dbFile = tempfile("playlistHierarchy-events", ".db").apply { deleteOnExit() }
-        val audioFile = tempfile("audioLibrary-events-pl", ".json").apply { deleteOnExit() }
+    "AudioPlaylistSqlTableDef keeps reactive wiring live after construction-free load" {
+        val dbFile = File.createTempFile("playlistHierarchy-events", ".db").apply { deleteOnExit() }
+        val audioFile = File.createTempFile("audioLibrary-events-pl", ".json").apply { deleteOnExit() }
 
         val seedLibrary =
             CoreMusicLibrary.builder()

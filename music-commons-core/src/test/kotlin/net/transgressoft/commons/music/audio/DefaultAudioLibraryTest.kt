@@ -101,8 +101,8 @@ internal class DefaultAudioLibraryTest: StringSpec({
 
         audioItem should {
             audioRepository.size() shouldBe 1
-            audioRepository.contains { audioItem -> it.title == "New title" } shouldBe true
-            audioRepository.search { audioItem -> it.title == "New title" }.shouldContainOnly(it)
+            audioRepository.contains { audioItem -> audioItem.title == "New title" } shouldBe true
+            audioRepository.search { audioItem -> audioItem.title == "New title" }.shouldContainOnly(it)
             audioRepository.findByUniqueId(it.uniqueId) shouldBePresent { found -> found shouldBe it }
             audioRepository.containsAudioItemWithArtist(it.artist.name) shouldBe true
             audioRepository.containsAudioItemWithArtist(it.album.albumArtist.name) shouldBe true

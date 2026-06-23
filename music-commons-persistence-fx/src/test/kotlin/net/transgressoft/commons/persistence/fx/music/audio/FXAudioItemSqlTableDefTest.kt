@@ -25,13 +25,13 @@ import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.persistence.sql.SqliteRepository
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
+import java.io.File
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -45,7 +45,7 @@ internal class FXAudioItemSqlTableDefTest : StringSpec({
     beforeSpec { FxToolkit.registerPrimaryStage() }
 
     "FXAudioItemSqlTableDef round-trips an FX library through SQLite preserving per-row scalar fidelity" {
-        val dbFile = tempfile("fxAudioLibrary-sql", ".db").apply { deleteOnExit() }
+        val dbFile = File.createTempFile("fxAudioLibrary-sql", ".db").apply { deleteOnExit() }
 
         val library =
             FXMusicLibrary.builder()
@@ -85,7 +85,7 @@ internal class FXAudioItemSqlTableDefTest : StringSpec({
     }
 
     "FXAudioItemSqlTableDef round-trips playCount, comments, bpm and creation timestamps through the raw constructor and scalar initializer" {
-        val dbFile = tempfile("fxAudioLibrary-sql-spi", ".db").apply { deleteOnExit() }
+        val dbFile = File.createTempFile("fxAudioLibrary-sql-spi", ".db").apply { deleteOnExit() }
 
         val library =
             FXMusicLibrary.builder()
@@ -126,8 +126,8 @@ internal class FXAudioItemSqlTableDefTest : StringSpec({
         reloadedLibrary.close()
     }
 
-    "FXAudioItemSqlTableDef constructs items without firing CrudEvents and keeps reactive wiring live after load" {
-        val dbFile = tempfile("fxAudioLibrary-events", ".db").apply { deleteOnExit() }
+    "FXAudioItemSqlTableDef keeps reactive wiring live after construction-free load" {
+        val dbFile = File.createTempFile("fxAudioLibrary-events", ".db").apply { deleteOnExit() }
 
         val seedLibrary =
             FXMusicLibrary.builder()

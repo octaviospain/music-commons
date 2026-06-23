@@ -125,6 +125,9 @@ internal class FXArtistCatalogTest : StringSpec({
             audioLibrary.add(firstAudioItem)
             audioLibrary.add(secondAudioItem)
             reactive.advance()
+            // The catalog registry materializes catalogs on the FX thread, so wait for that pass to
+            // drain before reading them — otherwise the lookups race the projection on slower runners.
+            WaitForAsyncUtils.waitForFxEvents()
 
             audioLibrary.getArtistCatalog(firstArtist).isPresent shouldBe true
             audioLibrary.getArtistCatalog(secondArtist).isPresent shouldBe true
