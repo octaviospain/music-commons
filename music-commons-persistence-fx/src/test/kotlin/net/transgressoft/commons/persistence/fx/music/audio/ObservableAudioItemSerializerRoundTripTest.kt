@@ -35,11 +35,13 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
 import java.time.Duration
+import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalCoroutinesApi
@@ -91,6 +93,56 @@ internal class ObservableAudioItemSerializerRoundTripTest : StringSpec({
         loaded.genres shouldBe original.genres
         loaded.trackNumber shouldBe original.trackNumber
         loaded.discNumber shouldBe original.discNumber
+
+        reloaded.close()
+    }
+
+    "ObservableAudioItemMapSerializer round-trips playCount, comments and creation timestamps via the reflective serializer" {
+        val audioFile = tempfile("fxAudioLibrary-spi-rt", ".json").apply { deleteOnExit() }
+
+        val library =
+            FXMusicLibrary.builder()
+                .audioRepository(JsonFileRepository(audioFile, ObservableAudioItemMapSerializer))
+                .build()
+
+        val original = library.audioItemFromFile(Arb.realAudioFile(ID3_V_24).next())
+        // setPlayCount is event-suppressed; the comments/bpm mutations that follow fire events,
+        // re-serializing the library map with the seeded play count included.
+        original.setPlayCount(9)
+        original.comments = "json comment"
+        original.bpm = 96.0f
+        reactive.advance()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        val expectedPlayCount = original.playCount
+        val expectedComments = original.comments
+        val expectedBpm = original.bpm
+        // Whole-second truncation: LocalDateTimeContextualSerializer encodes UTC epoch seconds.
+        val expectedCreation = original.dateOfCreation.truncatedTo(ChronoUnit.SECONDS)
+        val expectedModified = original.lastDateModified.truncatedTo(ChronoUnit.SECONDS)
+        val id = original.id
+
+        library.close()
+
+        // Serialize-side proof: the identity/scalar fields are actually on the wire (FX play count
+        // and the timestamps previously reset on reload), so the round-trip below is genuine.
+        val persistedJson = audioFile.readText()
+        persistedJson shouldContain "\"playCount\""
+        persistedJson shouldContain "\"dateOfCreation\""
+        persistedJson shouldContain "\"lastDateModified\""
+
+        val reloaded =
+            FXMusicLibrary.builder()
+                .audioRepository(JsonFileRepository(audioFile, ObservableAudioItemMapSerializer))
+                .build()
+
+        val loaded = reloaded.audioLibrary().findById(id).orElse(null)
+        loaded.shouldNotBeNull()
+        loaded.playCount shouldBe expectedPlayCount
+        loaded.comments shouldBe expectedComments
+        loaded.bpm shouldBe expectedBpm
+        loaded.dateOfCreation.truncatedTo(ChronoUnit.SECONDS) shouldBe expectedCreation
+        loaded.lastDateModified.truncatedTo(ChronoUnit.SECONDS) shouldBe expectedModified
 
         reloaded.close()
     }

@@ -47,7 +47,7 @@ import kotlinx.datetime.toKotlinLocalDateTime
  *
  * Column order and the `audio_playlist` table name are stable.
  */
-internal object AudioPlaylistSqlTableDef : RawConstructibleTableDef<MutableAudioPlaylist> {
+object AudioPlaylistSqlTableDef : RawConstructibleTableDef<MutableAudioPlaylist> {
 
     override val tableName: String = "audio_playlist"
 

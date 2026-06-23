@@ -3,9 +3,13 @@ description = 'Transgressoft Music Commons - Persistence'
 dependencies {
     api project(path: ':music-commons-core')
 
+    // lirp-api, lirp-sql-api and lirp-sql appear in this module's public API: the SQL table defs
+    // implement RawConstructibleTableDef (lirp-sql-api) and expose ColumnDef/LirpTableDef (lirp-api)
+    // and Exposed ResultRow/Table/Column (lirp-sql) in their signatures, so consumers must see them.
+    api libs.lirp.api.get()
+    api libs.lirp.sql.api.get()
+    api("net.transgressoft:lirp-sql") { version { require libs.versions.lirp.get() } }
     implementation libs.lirp.core.get()
-    implementation libs.lirp.sql.api.get()
-    implementation("net.transgressoft:lirp-sql") { version { require libs.versions.lirp.get() } }
 
     testImplementation project(path: ':music-commons-test')
     testImplementation(platform(libs.junit.bom.get()))

@@ -32,6 +32,7 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 @DisplayName("MutableAudioItemSqlTableDef")
@@ -79,6 +80,50 @@ internal class MutableAudioItemSqlTableDefTest : StringSpec({
         }
 
         reloadedLibrary.close()
+    }
+
+    "MutableAudioItemSqlTableDef round-trips playCount, comments, bpm and creation timestamps through the raw constructor and scalar initializer" {
+        val dbFile = tempfile("audioLibrary-sql-spi", ".db").apply { deleteOnExit() }
+        val playlistsFile = tempfile("playlistHierarchy-sql-spi", ".json").apply { deleteOnExit() }
+
+        val library =
+            CoreMusicLibrary.builder()
+                .audioRepository(SqliteRepository.fileBacked(dbFile.toPath(), MutableAudioItemSqlTableDef))
+                .playlistRepository(JsonFileRepository(playlistsFile, AudioPlaylistMapSerializer))
+                .build()
+
+        val original = library.audioItemFromFile(Arb.realAudioFile(ID3_V_24).next())
+        // setPlayCount is event-suppressed by design; the comments/bpm mutations that follow fire
+        // events, forcing a full-row rewrite that captures the seeded play count too.
+        original.setPlayCount(7)
+        original.comments = "seeded comment"
+        original.bpm = 128.5f
+        reactive.advance()
+
+        val expectedPlayCount = original.playCount
+        val expectedComments = original.comments
+        val expectedBpm = original.bpm
+        val expectedCreation = original.dateOfCreation.truncatedTo(ChronoUnit.SECONDS)
+        val expectedModified = original.lastDateModified.truncatedTo(ChronoUnit.SECONDS)
+        val id = original.id
+
+        library.close()
+
+        val reloaded =
+            CoreMusicLibrary.builder()
+                .audioRepository(SqliteRepository.fileBacked(dbFile.toPath(), MutableAudioItemSqlTableDef))
+                .playlistRepository(JsonFileRepository(playlistsFile, AudioPlaylistMapSerializer))
+                .build()
+
+        val loaded = reloaded.audioLibrary().findById(id).orElse(null)
+        loaded.shouldNotBeNull()
+        loaded.playCount shouldBe expectedPlayCount
+        loaded.comments shouldBe expectedComments
+        loaded.bpm shouldBe expectedBpm
+        loaded.dateOfCreation.truncatedTo(ChronoUnit.SECONDS) shouldBe expectedCreation
+        loaded.lastDateModified.truncatedTo(ChronoUnit.SECONDS) shouldBe expectedModified
+
+        reloaded.close()
     }
 
     "MutableAudioItemSqlTableDef constructs items without firing CrudEvents and keeps reactive wiring live after load" {

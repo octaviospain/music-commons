@@ -81,7 +81,10 @@ class FXAudioItem
     internal constructor(
         override val path: Path,
         override val id: Int = UNASSIGNED_ID,
-        metadata: AudioItemMetadata
+        metadata: AudioItemMetadata,
+        override val dateOfCreation: LocalDateTime = LocalDateTime.now(),
+        lastDateModified: LocalDateTime = dateOfCreation,
+        playCount: Short = 0
     ): ObservableAudioItem, Comparable<ObservableAudioItem>,
         ReactiveEntityBase<Int, ObservableAudioItem>() {
 
@@ -95,23 +98,6 @@ class FXAudioItem
         internal var metadataIO: AudioMetadataIO? = null
 
         var metadata: AudioItemMetadata by reactiveProperty(metadata)
-
-        // Constructor for deserialization & iTunes import
-        internal constructor(
-            path: Path,
-            id: Int,
-            metadata: AudioItemMetadata,
-            dateOfCreation: LocalDateTime,
-            lastDateModified: LocalDateTime,
-            playCount: Short
-        ): this(path, id, metadata) {
-            disableEvents()
-            this._dateOfCreation = dateOfCreation
-            this.lastDateModified = lastDateModified
-            playCountProperty.set(playCount.toInt())
-            this.metadataIO = null
-            enableEvents()
-        }
 
         init {
             WindowsPathValidator.validatePath(path)
@@ -130,14 +116,8 @@ class FXAudioItem
         @Serializable
         override val encoding: String? = metadata.encoding?.takeIf { it.isNotEmpty() }
 
-        private var _dateOfCreation: LocalDateTime = LocalDateTime.now()
-
-        @Serializable
-        override val dateOfCreation: LocalDateTime
-            get() = _dateOfCreation
-
         @Transient
-        override val dateOfCreationProperty: ReadOnlyObjectProperty<LocalDateTime> = SimpleObjectProperty(this, "date of creation", _dateOfCreation)
+        override val dateOfCreationProperty: ReadOnlyObjectProperty<LocalDateTime> = SimpleObjectProperty(this, "date of creation", dateOfCreation)
 
         override val fileName by lazy {
             path.fileName.toString()
@@ -295,7 +275,7 @@ class FXAudioItem
         )
 
         @Serializable
-        override var lastDateModified: LocalDateTime = dateOfCreation
+        override var lastDateModified: LocalDateTime = lastDateModified
             set(value) {
                 field = value
                 lastDateModifiedProperty.set(value)
@@ -379,7 +359,7 @@ class FXAudioItem
 
         @Transient
         override val playCountProperty: ReadOnlyIntegerProperty
-            field = SimpleIntegerProperty(this, "play count", 0)
+            field = SimpleIntegerProperty(this, "play count", playCount.toInt())
 
         init {
             titleProperty.addListener { _, _, newTitle ->
