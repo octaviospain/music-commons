@@ -85,6 +85,11 @@ object DurationContextualSerializer : KSerializer<Duration> {
     override fun deserialize(decoder: Decoder): Duration = Duration.ofSeconds(decoder.decodeLong())
 }
 
+/**
+ * Encodes a [LocalDateTime] as a UTC epoch-second [Long] for a compact wire form.
+ *
+ * Sub-second precision is intentionally dropped: timestamps round-trip truncated to whole seconds.
+ */
 object LocalDateTimeContextualSerializer : KSerializer<LocalDateTime> {
 
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("LocalDateTime", PrimitiveKind.LONG)
@@ -105,6 +110,14 @@ object CountryCodeContextualSerializer : KSerializer<CountryCode> {
     override fun deserialize(decoder: Decoder): CountryCode = CountryCode.valueOf(decoder.decodeString())
 }
 
+/**
+ * Encodes a [Genre] as its display name.
+ *
+ * On read the name is resolved through [parseGenre], so a name matching a standard genre
+ * (case-insensitively) is canonicalized to that standard subtype and any other name is preserved as
+ * [Genre.Custom] — identical to [GenreConverter]'s SQL behavior, keeping the two persistence paths
+ * consistent with metadata parsing.
+ */
 object GenreContextualSerializer : KSerializer<Genre> {
 
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("Genre", PrimitiveKind.STRING)

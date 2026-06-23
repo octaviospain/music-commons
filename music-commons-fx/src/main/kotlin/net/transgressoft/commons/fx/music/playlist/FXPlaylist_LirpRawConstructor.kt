@@ -26,21 +26,28 @@ import net.transgressoft.lirp.persistence.LirpRawConstructor
  *
  * Resolved at runtime by `SqlRepository.loadFromStore` (via a `RawConstructibleTableDef`) through
  * `Class.forName` on the entity's binary name plus the `_LirpRawConstructor` suffix. Living in the
- * entity's own module, it reaches the `internal` constructor a persistence module cannot call. Only
- * the identity/scalar constructor parameters are supplied here; the aggregate collections default to
- * empty and are populated afterward through [FXPlaylist_LirpRefAccessor], and the scalar reactive
- * fields are re-applied by [FXPlaylist_LirpRawInitializer].
+ * entity's own module, it reaches the `internal` constructor a persistence module cannot call. The
+ * scalar reactive fields are re-applied afterward by [FXPlaylist_LirpRawInitializer].
+ *
+ * Aggregate references may be restored at construction time: the `fxAggregateList`/`fxAggregateSet`
+ * delegates capture their backing IDs from the constructor arguments, so the SQL persistence side
+ * passes the audio-item and child-playlist IDs here. When the keys are absent (the JSON path supplies
+ * only identity/scalar fields), the collections default to empty and are populated afterward through
+ * [FXPlaylist_LirpRefAccessor].
  *
  * The [construct] `params` map is keyed by constructor parameter name and produced by the
  * persistence-side `RawConstructibleTableDef.constructorParams`. Expected keys: `id` ([Int]),
- * `name` ([String]), `isDirectory` ([Boolean]).
+ * `name` ([String]), `isDirectory` ([Boolean]). Optional keys: `initialAudioItemIds`
+ * ([List]<[Int]>), `initialPlaylistIds` ([Set]<[Int]>).
  */
-@Suppress("ClassName")
+@Suppress("ClassName", "UNCHECKED_CAST")
 internal class FXPlaylist_LirpRawConstructor : LirpRawConstructor<FXPlaylist> {
     override fun construct(params: Map<String, Any?>): FXPlaylist =
         FXPlaylist(
             id = params["id"] as Int,
             name = params["name"] as String,
-            isDirectory = params["isDirectory"] as Boolean
+            isDirectory = params["isDirectory"] as Boolean,
+            initialAudioItemIds = (params["initialAudioItemIds"] as? List<Int>) ?: emptyList(),
+            initialPlaylistIds = (params["initialPlaylistIds"] as? Set<Int>) ?: emptySet()
         )
 }

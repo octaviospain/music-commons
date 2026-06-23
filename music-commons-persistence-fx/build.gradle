@@ -57,9 +57,13 @@ dependencies {
     api project(path: ':music-commons-fx')
     api project(path: ':music-commons-persistence')
 
+    // lirp-api, lirp-sql-api and lirp-sql appear in this module's public API: the FX SQL table defs
+    // implement RawConstructibleTableDef (lirp-sql-api) and expose ColumnDef/LirpTableDef (lirp-api)
+    // and Exposed ResultRow/Table/Column (lirp-sql) in their signatures, so consumers must see them.
+    api libs.lirp.api.get()
+    api libs.lirp.sql.api.get()
+    api("net.transgressoft:lirp-sql") { version { require libs.versions.lirp.get() } }
     implementation libs.lirp.core.get()
-    implementation libs.lirp.sql.api.get()
-    implementation("net.transgressoft:lirp-sql") { version { require libs.versions.lirp.get() } }
     implementation libs.javafx.controls.get()
 
     testImplementation project(path: ':music-commons-fx-test')

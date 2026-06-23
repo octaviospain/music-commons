@@ -61,7 +61,9 @@ internal class MutableAudioItem
     constructor(
         override val path: Path,
         override val id: Int = UNASSIGNED_ID,
-        metadata: AudioItemMetadata
+        metadata: AudioItemMetadata,
+        override val dateOfCreation: LocalDateTime = LocalDateTime.now(),
+        lastDateModified: LocalDateTime = dateOfCreation
     ) : AudioItem, ReactiveEntityBase<Int, AudioItem>() {
 
         /**
@@ -83,10 +85,8 @@ internal class MutableAudioItem
             dateOfCreation: LocalDateTime,
             lastDateModified: LocalDateTime,
             playCount: Short
-        ) : this(path, id, metadata) {
+        ) : this(path, id, metadata, dateOfCreation, lastDateModified) {
             disableEvents()
-            this._dateOfCreation = dateOfCreation
-            this.lastDateModified = lastDateModified
             this._playCount = playCount
             enableEvents()
         }
@@ -108,14 +108,7 @@ internal class MutableAudioItem
         @Serializable
         override val encoding: String? = metadata.encoding?.takeIf { it.isNotEmpty() }
 
-        private var _dateOfCreation: LocalDateTime = LocalDateTime.now()
-
-        @Serializable
-        override val dateOfCreation: LocalDateTime
-            get() = _dateOfCreation
-
-        @Serializable
-        override var lastDateModified: LocalDateTime = _dateOfCreation
+        override var lastDateModified: LocalDateTime = lastDateModified
 
         private var _playCount: Short by reactiveProperty(0.toShort())
 
