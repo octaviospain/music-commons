@@ -18,15 +18,16 @@
 package net.transgressoft.commons.fx.music
 
 import net.transgressoft.commons.fx.music.audio.FXAudioLibrary
+import net.transgressoft.commons.fx.music.audio.ObservableAlbumCatalog
 import net.transgressoft.commons.fx.music.audio.ObservableArtistCatalog
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
+import net.transgressoft.commons.fx.music.audio.ObservableGenreCatalog
 import net.transgressoft.commons.fx.music.playlist.FXPlaylistHierarchy
 import net.transgressoft.commons.fx.music.playlist.ObservablePlaylist
 import net.transgressoft.commons.fx.music.playlist.ObservablePlaylistHierarchy
 import net.transgressoft.commons.media.waveform.audioWaveformRepository
 import net.transgressoft.commons.music.MusicLibrary
-import net.transgressoft.commons.music.audio.Album
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioMetadataIO
 import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
@@ -41,7 +42,6 @@ import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.Repository
 import net.transgressoft.lirp.persistence.VolatileRepository
 import javafx.beans.property.ReadOnlyBooleanProperty
-import javafx.beans.property.ReadOnlyIntegerProperty
 import javafx.beans.property.ReadOnlyListProperty
 import javafx.beans.property.ReadOnlySetProperty
 import java.nio.file.Path
@@ -84,17 +84,14 @@ class FXMusicLibrary private constructor(
     /** Boolean property that is true when the library contains no audio items. */
     val emptyLibraryProperty: ReadOnlyBooleanProperty get() = _audioLibrary.emptyLibraryProperty
 
-    /** Observable set of all distinct artists in the library. */
-    val artistsProperty: ReadOnlySetProperty<Artist> get() = _audioLibrary.artistsProperty
-
     /** Observable set of all artist catalogs, each grouping albums and items by artist. */
     val artistCatalogsProperty: ReadOnlySetProperty<ObservableArtistCatalog> get() = _audioLibrary.artistCatalogsProperty
 
-    /** Observable set of all albums across all artists in the library. */
-    val albumsProperty: ReadOnlySetProperty<Album> get() = _audioLibrary.albumsProperty
+    /** Observable set of all album catalogs, each grouping items by album. */
+    val albumCatalogsProperty: ReadOnlySetProperty<ObservableAlbumCatalog> get() = _audioLibrary.albumCatalogsProperty
 
-    /** Observable count of distinct albums in the library. */
-    val albumCountProperty: ReadOnlyIntegerProperty get() = _audioLibrary.albumCountProperty
+    /** Observable set of all genre catalogs, each grouping items by genre. */
+    val genreCatalogsProperty: ReadOnlySetProperty<ObservableGenreCatalog> get() = _audioLibrary.genreCatalogsProperty
 
     /** Observable set of all playlists in the hierarchy. */
     val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist> get() = _playlistHierarchy.playlistsProperty

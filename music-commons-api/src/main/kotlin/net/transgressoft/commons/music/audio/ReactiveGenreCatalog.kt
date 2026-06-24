@@ -20,54 +20,36 @@ package net.transgressoft.commons.music.audio
 import net.transgressoft.lirp.entity.ReactiveEntity
 
 /**
- * Represents a reactive catalog of all audio items for a specific artist.
+ * Represents a reactive flat catalog of all audio items for a specific genre.
  *
- * A catalog organizes an artist's audio items by album and provides efficient access
- * to the artist's discography. This interface extends [ReactiveEntity] to support
- * reactive updates when the catalog contents change, enabling consumers to subscribe
- * to changes in an artist's collection.
+ * Each catalog instance holds all audio items associated with a single [Genre] key.
+ * Because an audio item may belong to multiple genres simultaneously, a single item
+ * can appear in multiple genre catalogs at the same time. This interface extends
+ * [ReactiveEntity] to support reactive updates when the catalog contents change.
  *
- * @param AC The concrete type of this artist catalog, allowing for self-referential
- *           generic types in reactive operations
+ * Unlike the artist catalog, there is no sub-grouping within the bucket: every audio
+ * item tagged with this genre is exposed directly via [audioItems]. Items whose
+ * [ReactiveAudioItem.genres] set is empty will not appear in any genre catalog.
+ *
+ * @param GC The concrete type of this genre catalog, for self-referential generics
  * @param I The type of audio items contained in this catalog
  */
-interface ReactiveArtistCatalog<AC : ReactiveArtistCatalog<AC, I>, I : ReactiveAudioItem<I>> : ReactiveEntity<Artist, AC> {
+interface ReactiveGenreCatalog<GC : ReactiveGenreCatalog<GC, I>, I : ReactiveAudioItem<I>> : ReactiveEntity<Genre, GC> {
 
     /**
-     * The artist this catalog represents.
+     * The genre this catalog represents.
      */
-    val artist: Artist
+    val genre: Genre
 
     /**
-     * The display name of the artist this catalog represents.
+     * All audio items in this catalog, in natural comparable order, de-duplicated.
      */
-    val artistName: String get() = artist.name
+    val audioItems: Set<I>
 
     /**
-     * All albums in this artist's catalog, each containing its audio items.
-     */
-    val albums: Set<AlbumSet<I>>
-
-    /**
-     * The total number of audio items in this catalog across all albums.
+     * The total number of audio items in this catalog.
      */
     val size: Int
-
-    /**
-     * Retrieves all audio items for the specified album.
-     *
-     * @param album The album to retrieve items for
-     * @return Set of audio items belonging to the album, or empty set if album not found
-     */
-    fun albumAudioItems(album: Album): Set<I> = albumAudioItems(album.name)
-
-    /**
-     * Retrieves all audio items for the album with the specified name.
-     *
-     * @param albumName The name of the album to retrieve items for
-     * @return Set of audio items belonging to the album, or empty set if album not found
-     */
-    fun albumAudioItems(albumName: String): Set<I>
 
     /**
      * Indicates whether this catalog contains any audio items.

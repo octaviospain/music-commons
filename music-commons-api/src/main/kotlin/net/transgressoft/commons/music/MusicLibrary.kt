@@ -41,7 +41,7 @@ interface MusicLibrary<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>
     /**
      * Returns the underlying audio library for direct access to audio item management.
      */
-    fun audioLibrary(): ReactiveAudioLibrary<I, *>
+    fun audioLibrary(): ReactiveAudioLibrary<I, *, *, *>
 
     /**
      * Returns the underlying playlist hierarchy for direct access to playlist management.
