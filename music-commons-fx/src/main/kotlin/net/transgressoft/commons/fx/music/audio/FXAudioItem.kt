@@ -32,6 +32,7 @@ import net.transgressoft.lirp.persistence.fx.fxInteger
 import net.transgressoft.lirp.persistence.fx.fxObject
 import net.transgressoft.lirp.persistence.fx.fxString
 import javafx.application.Platform
+import javafx.beans.InvalidationListener
 import javafx.beans.property.FloatProperty
 import javafx.beans.property.IntegerProperty
 import javafx.beans.property.ObjectProperty
@@ -42,6 +43,7 @@ import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleSetProperty
 import javafx.beans.property.StringProperty
+import javafx.beans.value.ChangeListener
 import javafx.collections.FXCollections
 import javafx.scene.image.Image
 import java.io.ByteArrayInputStream
@@ -70,8 +72,14 @@ import kotlinx.serialization.Transient
  *
  * Cover image bytes are loaded lazily. The owning [FXAudioLibrary] is held as a strong back-ref
  * (wired by [FXAudioLibrary.add]) so [coverImageBytes] can fetch on first access through
- * `library.loadCover(this)` and cache the result. Lifetimes are coterminous with the library:
+ * `metadataIO.loadCover(this)` and cache the result. Lifetimes are coterminous with the library:
  * items leave the library only by removal, which drops the library reference as well.
+ *
+ * Observing [coverImageProperty] — binding a listener or reading its value — triggers the lazy
+ * cover load on first access when [metadataIO] is wired. UI code that binds an `ImageView` to
+ * [coverImageProperty] therefore loads the cover on demand the moment the cell first displays the
+ * track, without any explicit call to [coverImageBytes]. The property then propagates the decoded
+ * [Image] to all bound listeners through the normal JavaFX notification path.
  *
  * [equals] / [hashCode] compare the cached cover-byte field directly rather than the lazy
  * [coverImageBytes] getter, so comparing or hashing an item never triggers the lazy cover load.
@@ -329,15 +337,48 @@ class FXAudioItem
                 }
             }
 
+        // UI code binds to coverImageProperty and never calls coverImageBytes directly, so the lazy
+        // load would never fire through a plain SimpleObjectProperty. This subclass intercepts the
+        // first observation (listener attach or value read) and delegates to coverImageBytes, which
+        // performs the synchronized fetch+cache and dispatches the property update via runOnFxThread.
+        @Transient
+        @Volatile
+        private var coverObservationTriggered: Boolean = coverLoaded
+
         @Transient
         override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>>
             field =
-            SimpleObjectProperty(
-                this,
+            object : SimpleObjectProperty<Optional<Image>>(
+                this@FXAudioItem,
                 "cover image",
                 Optional.ofNullable(_coverImageBytes)
                     .map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) }
-            )
+            ) {
+                override fun addListener(listener: InvalidationListener) {
+                    super.addListener(listener)
+                    triggerLazyCoverLoad()
+                }
+
+                override fun addListener(listener: ChangeListener<in Optional<Image>>) {
+                    super.addListener(listener)
+                    triggerLazyCoverLoad()
+                }
+
+                override fun get(): Optional<Image> {
+                    triggerLazyCoverLoad()
+                    return super.get()
+                }
+            }
+
+        private fun triggerLazyCoverLoad() {
+            if (!coverObservationTriggered) {
+                // Set the flag before invoking the getter to prevent re-entrance when the getter
+                // calls coverImageProperty.set(...) back, which would otherwise recurse via the
+                // addListener/get override path.
+                coverObservationTriggered = true
+                coverImageBytes
+            }
+        }
 
         @Transient
         override val artistsInvolvedProperty: ReadOnlySetProperty<Artist> =
