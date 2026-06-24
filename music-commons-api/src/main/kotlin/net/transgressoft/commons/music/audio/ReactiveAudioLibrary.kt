@@ -38,33 +38,27 @@ import kotlinx.coroutines.future.future
  * Generic library of audio items with repository capabilities and reactive event publishing.
  *
  * This interface extends [Repository] for CRUD operations and [Flow.Publisher] to publish
- * events when audio items are created, updated, or deleted. It also provides artist-centric
- * views through catalogs that organize items by artist and album.
+ * events when audio items are created, updated, or deleted. It also provides artist-, album-,
+ * and genre-centric views through catalogs that organize items by their respective key.
  *
  * Narrowed versions for concrete item types are available in the core and FX modules.
  *
  * @param I The type of audio items stored in this library
  * @param AC The type of artist catalog exposed by this library
+ * @param ALC The type of album catalog exposed by this library
+ * @param GC The type of genre catalog exposed by this library
  */
-interface ReactiveAudioLibrary<I: ReactiveAudioItem<I>, AC: ReactiveArtistCatalog<AC, I>>: Repository<Int, I>, Flow.Publisher<CrudEvent<Int, I>> {
+interface ReactiveAudioLibrary<
+    I : ReactiveAudioItem<I>,
+    AC : ReactiveArtistCatalog<AC, I>,
+    ALC : ReactiveAlbumCatalog<ALC, I>,
+    GC : ReactiveGenreCatalog<GC, I>
+> : Repository<Int, I>, Flow.Publisher<CrudEvent<Int, I>> {
 
     /**
      * Subscriber for receiving player events such as when audio items are played.
      */
     val playerSubscriber: Flow.Subscriber<AudioItemPlayerEvent>
-
-    /**
-     * Publisher for artist catalog events, enabling consumers to subscribe to changes
-     * in artist catalogs (creation, updates, deletion).
-     *
-     * Consumers can subscribe to be notified when:
-     * - A new artist catalog is created (new artist added to an audio library)
-     * - An artist catalog is updated (audio items added/removed for an artist)
-     * - An artist catalog is deleted (all items for an artist removed from an audio library)
-     *
-     * The published catalogs are immutable views that update reactively in the background.
-     */
-    val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>>
 
     /**
      * Creates an audio item via the supplied [factory] and adds it to the library.
@@ -95,6 +89,19 @@ interface ReactiveAudioLibrary<I: ReactiveAudioItem<I>, AC: ReactiveArtistCatalo
      * @return Set of audio items matching the artist and album, or empty set if not found
      */
     fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I>
+
+    /**
+     * Publisher for artist catalog events, enabling consumers to subscribe to changes
+     * in artist catalogs (creation, updates, deletion).
+     *
+     * Consumers can subscribe to be notified when:
+     * - A new artist catalog is created (new artist added to an audio library)
+     * - An artist catalog is updated (audio items added/removed for an artist)
+     * - An artist catalog is deleted (all items for an artist removed from an audio library)
+     *
+     * The published catalogs are immutable views that update reactively in the background.
+     */
+    val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>>
 
     /**
      * Retrieves the artist catalog for the specified artist.
@@ -128,6 +135,94 @@ interface ReactiveAudioLibrary<I: ReactiveAudioItem<I>, AC: ReactiveArtistCatalo
      * @return List of randomly selected audio items from the artist
      */
     fun getRandomAudioItemsFromArtist(artist: Artist, size: Short = 100): List<I>
+
+    /**
+     * Publisher for album catalog events, enabling consumers to subscribe to changes
+     * in album catalogs (creation, updates, deletion).
+     *
+     * Consumers can subscribe to be notified when:
+     * - A new album catalog is created (a new album is encountered in the library)
+     * - An album catalog is updated (audio items added or removed for an album)
+     * - An album catalog is deleted (all items for an album removed from the library)
+     */
+    val albumCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Album, ALC>>
+
+    /**
+     * Retrieves the album catalog for the specified album.
+     *
+     * @param album The album to get the catalog for
+     * @return Optional containing the album catalog if found, or empty if the album is not in the library
+     */
+    fun getAlbumCatalog(album: Album): Optional<out ALC>
+
+    /**
+     * Retrieves the first album catalog matching the specified name.
+     *
+     * @param albumName The album name to search for (case-insensitive substring match)
+     * @return Optional containing the first matching album catalog, or empty if not found
+     */
+    fun getAlbumCatalog(albumName: String): Optional<out ALC>
+
+    /**
+     * Checks whether the library contains any audio item with the specified album name.
+     *
+     * @param albumName The album name to check for (case-insensitive)
+     * @return true if at least one audio item has a matching album, false otherwise
+     */
+    fun containsAudioItemWithAlbum(albumName: String): Boolean
+
+    /**
+     * Retrieves a random selection of audio items from the specified album.
+     *
+     * @param album The album to get items from
+     * @param size Maximum number of random items to return (default: 100)
+     * @return List of randomly selected audio items from the album
+     */
+    fun getRandomAudioItemsFromAlbum(album: Album, size: Short = 100): List<I>
+
+    /**
+     * Publisher for genre catalog events, enabling consumers to subscribe to changes
+     * in genre catalogs (creation, updates, deletion).
+     *
+     * Consumers can subscribe to be notified when:
+     * - A new genre catalog is created (a new genre is encountered in the library)
+     * - A genre catalog is updated (audio items added or removed for a genre)
+     * - A genre catalog is deleted (all items for a genre removed from the library)
+     */
+    val genreCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Genre, GC>>
+
+    /**
+     * Retrieves the genre catalog for the specified genre.
+     *
+     * @param genre The genre to get the catalog for
+     * @return Optional containing the genre catalog if found, or empty if the genre is not in the library
+     */
+    fun getGenreCatalog(genre: Genre): Optional<out GC>
+
+    /**
+     * Retrieves the first genre catalog matching the specified name.
+     *
+     * @param genreName The genre name to search for (case-insensitive substring match)
+     * @return Optional containing the first matching genre catalog, or empty if not found
+     */
+    fun getGenreCatalog(genreName: String): Optional<out GC>
+
+    /**
+     * Checks whether the library contains any audio item with the specified genre name.
+     *
+     * @param genreName The genre name to check for (case-insensitive)
+     * @return true if at least one audio item has a matching genre, false otherwise
+     */
+    fun containsAudioItemWithGenre(genreName: String): Boolean
+
+    /**
+     * Retrieves a random selection of audio items from the specified genre.
+     *
+     * @param genre The genre to get items from
+     * @param size Maximum number of random items to return (default: 100)
+     * @return List of randomly selected audio items from the genre
+     */
+    fun getRandomAudioItemsFromGenre(genre: Genre, size: Short = 100): List<I>
 
     /**
      * Creates audio items asynchronously from a batch of file paths using the specified dispatcher.

@@ -51,6 +51,51 @@ private fun compareTrackNumbers(track1: Short?, track2: Short?): Int =
         else -> track1 - track2
     }
 
+/**
+ * Creates a comparator for sorting audio items by primary artist, then album, then disc and track number.
+ *
+ * This ordering is suitable for flat cross-album catalogs (e.g. genre catalogs) where items span
+ * multiple artists and albums and a predictable, musically meaningful traversal order is needed.
+ */
+fun <I : ReactiveAudioItem<I>> audioItemArtistAlbumTrackComparator(): Comparator<I> =
+    compareBy<I>({ it.artist }, { it.album }).thenComparing(audioItemTrackDiscNumberComparator())
+
+/**
+ * Creates an identity tie-break comparator that distinguishes between two distinct audio items
+ * whose primary comparator returns 0.
+ *
+ * This comparator exists so that flat-bucket [java.util.TreeSet]s retain both items when their
+ * primary sort key is identical (e.g. two different tracks with the same disc and track number).
+ * When both items have an assigned id, comparison is by id; otherwise it falls back to [ReactiveAudioItem.uniqueId].
+ */
+fun <I : ReactiveAudioItem<I>> audioItemIdentityComparator(): Comparator<I> =
+    Comparator { a, b ->
+        when {
+            a.id != UNASSIGNED_ID && b.id != UNASSIGNED_ID -> a.id.compareTo(b.id)
+            else -> a.uniqueId.compareTo(b.uniqueId)
+        }
+    }
+
+/**
+ * Returns the cover image bytes of the first item in [items] that has a non-null cover, or `null`
+ * if no item carries cover data.
+ *
+ * Iterates [items] in their natural iteration order and returns the first non-null
+ * [ReactiveAudioItem.coverImageBytes]. Accessing an item's cover may trigger a lazy load from the
+ * underlying audio file; this function does not cache the result beyond what each item's own
+ * implementation already does.
+ *
+ * @param items The collection of audio items to search.
+ * @return The raw cover image bytes of the first covered item, or `null`.
+ */
+fun <I : ReactiveAudioItem<I>> firstCoverImageBytes(items: Iterable<I>): ByteArray? {
+    for (item in items) {
+        val bytes = item.coverImageBytes
+        if (bytes != null) return bytes
+    }
+    return null
+}
+
 /**********************************************************************************
  *  Functions to get artist names in the title, artist field and album artist field
  **********************************************************************************/

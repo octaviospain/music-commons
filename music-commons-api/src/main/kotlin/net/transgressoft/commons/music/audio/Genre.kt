@@ -18,16 +18,21 @@
 package net.transgressoft.commons.music.audio
 
 /**
- * Represents a music genre as a sealed type hierarchy.
+ * Represents a music genre as a sealed type hierarchy with natural ordering by name.
  *
  * Known genres are predefined [data object] singletons from the
  * [whatlastgenre whitelist](https://github.com/YetAnotherNerd/whatlastgenre).
  * Unrecognized genre strings are preserved via [Custom] instead of being
  * mapped to a lossy fallback.
  *
+ * The natural ordering is case-sensitive and based on [name], matching the convention
+ * established by [Album]. All subtypes inherit [compareTo] from this sealed base.
+ *
  * @property name display-friendly genre name (e.g. "Hip Hop", "Drum And Bass")
  */
-sealed class Genre(open val name: String) {
+sealed class Genre(open val name: String) : Comparable<Genre> {
+
+    override fun compareTo(other: Genre): Int = name.compareTo(other.name)
 
     data class Custom(override val name: String) : Genre(name) {
         init {

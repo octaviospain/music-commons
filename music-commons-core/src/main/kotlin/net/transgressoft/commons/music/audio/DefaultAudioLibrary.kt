@@ -42,7 +42,13 @@ internal class DefaultAudioLibrary
     constructor(
         repository: Repository<Int, AudioItem>,
         metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO()
-    ) : AudioLibraryBase<AudioItem, ArtistCatalog<AudioItem>>(repository, DefaultArtistCatalogRegistry(repository), metadataIO),
+    ) : AudioLibraryBase<AudioItem, ArtistCatalog<AudioItem>, AlbumCatalog<AudioItem>, GenreCatalog<AudioItem>>(
+            repository,
+            DefaultArtistCatalogRegistry(repository),
+            DefaultAlbumCatalogRegistry(repository),
+            DefaultGenreCatalogRegistry(repository),
+            metadataIO
+        ),
         AudioLibrary {
         private val logger = KotlinLogging.logger {}
 

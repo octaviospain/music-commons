@@ -17,11 +17,8 @@
 
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.music.audio.Album
-import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.ReactiveAudioLibrary
 import javafx.beans.property.ReadOnlyBooleanProperty
-import javafx.beans.property.ReadOnlyIntegerProperty
 import javafx.beans.property.ReadOnlyListProperty
 import javafx.beans.property.ReadOnlySetProperty
 
@@ -31,8 +28,12 @@ import javafx.beans.property.ReadOnlySetProperty
  * Extends [ReactiveAudioLibrary] with concrete JavaFX-observable type parameters and adds
  * JavaFX properties for direct binding to UI components, enabling reactive table views,
  * list views, and other JavaFX controls without manual synchronization.
+ *
+ * Flat artist, album, and genre sets are no longer exposed directly; derive them from the catalog
+ * set properties (e.g. `albumCatalogsProperty.map { it.album }.toSet()`).
  */
-interface ObservableAudioLibrary : ReactiveAudioLibrary<ObservableAudioItem, ObservableArtistCatalog> {
+interface ObservableAudioLibrary :
+    ReactiveAudioLibrary<ObservableAudioItem, ObservableArtistCatalog, ObservableAlbumCatalog, ObservableGenreCatalog> {
 
     /**
      * Observable list of all audio items in the library, suitable for direct JavaFX binding.
@@ -45,22 +46,17 @@ interface ObservableAudioLibrary : ReactiveAudioLibrary<ObservableAudioItem, Obs
     val emptyLibraryProperty: ReadOnlyBooleanProperty
 
     /**
-     * Observable set of all distinct artists in the library.
-     */
-    val artistsProperty: ReadOnlySetProperty<Artist>
-
-    /**
      * Observable set of all artist catalogs, each grouping albums and items by artist.
      */
     val artistCatalogsProperty: ReadOnlySetProperty<ObservableArtistCatalog>
 
     /**
-     * Observable set of all albums across all artists in the library.
+     * Observable set of all album catalogs, each grouping items by album.
      */
-    val albumsProperty: ReadOnlySetProperty<Album>
+    val albumCatalogsProperty: ReadOnlySetProperty<ObservableAlbumCatalog>
 
     /**
-     * Observable count of distinct albums in the library.
+     * Observable set of all genre catalogs, each grouping items by genre.
      */
-    val albumCountProperty: ReadOnlyIntegerProperty
+    val genreCatalogsProperty: ReadOnlySetProperty<ObservableGenreCatalog>
 }

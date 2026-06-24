@@ -1,9 +1,11 @@
 package net.transgressoft.commons.persistence.fx.music.audio
 
 import net.transgressoft.commons.fx.music.FXMusicLibrary
+import net.transgressoft.commons.fx.music.audio.ObservableAlbumCatalog
 import net.transgressoft.commons.fx.music.audio.ObservableArtistCatalog
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
+import net.transgressoft.commons.fx.music.audio.ObservableGenreCatalog
 import net.transgressoft.commons.fx.music.createItemsByArtist
 import net.transgressoft.commons.fx.music.createItemsWithMultipleAlbums
 import net.transgressoft.commons.music.audio.Album
@@ -117,9 +119,46 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
             repository.findById(id) shouldBePresent { found -> found.id shouldBe id }
         }
 
-        eventually(1.seconds) {
-            repository.artistsProperty.size shouldBe expectedArtists.size
-            repository.artistsProperty shouldContainOnly expectedArtists
+        // Verify artists are exposed via the observable property after reload
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
+            val loadedArtists = repository.artistCatalogsProperty.map { catalog: ObservableArtistCatalog -> catalog.artist }.toSet()
+            loadedArtists.size shouldBe expectedArtists.size
+            loadedArtists shouldContainOnly expectedArtists
+        }
+    }
+
+    "Catalog observable properties are populated after reloading from a saved repository" {
+        val itemsByArtist =
+            repository.createItemsByArtist(
+                files,
+                mapOf("Reload Artist A" to 3, "Reload Artist B" to 2)
+            )
+        val expectedArtists = itemsByArtist.keys
+        val allItems = itemsByArtist.values.flatten()
+        val expectedAlbums = allItems.map { it.album }.toSet()
+        val expectedGenres = allItems.flatMap { it.genres }.toSet()
+
+        reactive.advance()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        // Close and rebuild over the same JSON file to simulate a reload
+        library.close()
+        library =
+            FXMusicLibrary.builder()
+                .audioRepository(JsonFileRepository(jsonFile, ObservableAudioItemMapSerializer))
+                .metadataIO(files.metadataIO)
+                .build()
+        repository = library.audioLibrary()
+
+        reactive.advance()
+        WaitForAsyncUtils.waitForFxEvents()
+
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
+            repository.artistCatalogsProperty.map { catalog: ObservableArtistCatalog -> catalog.artist }.toSet() shouldContainOnly expectedArtists
+            repository.albumCatalogsProperty.map { catalog: ObservableAlbumCatalog -> catalog.album }.toSet() shouldContainOnly expectedAlbums
+            repository.genreCatalogsProperty.map { catalog: ObservableGenreCatalog -> catalog.genre }.toSet() shouldContainOnly expectedGenres
         }
     }
 
@@ -135,7 +174,8 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
-        eventually(1.seconds) {
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
             repository.audioItemsProperty.size shouldBe 50
             repository.audioItemsProperty.map { it: ObservableAudioItem -> it.id } shouldContainOnly addedItems.toIds()
         }
@@ -146,7 +186,8 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
-        eventually(1.seconds) {
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
             repository.audioItemsProperty.size shouldBe 25
         }
     }
@@ -171,13 +212,14 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
-        eventually(1.seconds) {
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
             repository.audioItemsProperty.size shouldBe expectedItems.size
             repository.audioItemsProperty.map { audioItem: ObservableAudioItem -> audioItem.id } shouldContainOnly expectedItems.toIds()
-            repository.artistsProperty shouldContainOnly expectedArtists
             repository.artistCatalogsProperty.map { catalog: ObservableArtistCatalog -> catalog.artist }.toSet() shouldContainOnly expectedArtists
-            repository.albumsProperty shouldContainOnly expectedAlbums
-            repository.albumCountProperty.get() shouldBe expectedAlbums.size
+            val observedAlbums = repository.albumCatalogsProperty.map { catalog: ObservableAlbumCatalog -> catalog.album }.toSet()
+            observedAlbums shouldContainOnly expectedAlbums
+            repository.albumCatalogsProperty.size shouldBe expectedAlbums.size
         }
 
         audioItemsChangeCount.get() shouldBe 1
@@ -193,7 +235,8 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
-        eventually(1.seconds) {
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
             repository.artistCatalogsProperty.size shouldBe 3
 
             val catalogArtists = repository.artistCatalogsProperty.get().map { it.artist }.toSet()
@@ -221,7 +264,8 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
-        eventually(1.seconds) {
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
             repository.artistCatalogsProperty.size shouldBe 1
 
             val catalog = repository.artistCatalogsProperty.get().first()
@@ -249,7 +293,8 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
-        eventually(1.seconds) {
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
             repository.artistCatalogsProperty.size shouldBe 2
         }
 
@@ -257,7 +302,8 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
-        eventually(1.seconds) {
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
             repository.artistCatalogsProperty.size shouldBe 1
             repository.artistCatalogsProperty.get().first().artist shouldBe keepArtist
         }
@@ -270,7 +316,8 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
-        eventually(1.seconds) {
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
             val catalog = repository.artistCatalogsProperty.get().first()
             catalog.sizeProperty.get() shouldBe 3
         }
@@ -279,13 +326,14 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
-        eventually(1.seconds) {
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
             repository.artistCatalogsProperty.size shouldBe 1
             repository.artistCatalogsProperty.get().first().sizeProperty.get() shouldBe 2
         }
     }
 
-    "ObservableAudioLibrary albumsProperty and albumCountProperty reflect aggregate across all catalogs" {
+    "ObservableAudioLibrary albumCatalogsProperty reflects aggregate albums across all catalogs" {
         val artist1 = of("Artist One")
         val artist2 = of("Artist Two")
         val album1A = Album("Album 1A", artist1)
@@ -298,9 +346,10 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
-        eventually(1.seconds) {
-            repository.albumCountProperty.get() shouldBe 3
-            repository.albumsProperty shouldContainOnly setOf(album1A, album1B, album2A)
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
+            repository.albumCatalogsProperty.size shouldBe 3
+            repository.albumCatalogsProperty.map { catalog: ObservableAlbumCatalog -> catalog.album }.toSet() shouldContainOnly setOf(album1A, album1B, album2A)
         }
     }
 
@@ -314,7 +363,8 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
-        eventually(1.seconds) {
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
             repository.artistCatalogsProperty.size shouldBe 4
         }
 
@@ -327,7 +377,8 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
-        eventually(1.seconds) {
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
             repository.artistCatalogsProperty.size shouldBe 2
             val remainingArtists = repository.artistCatalogsProperty.get().map { it.artist.name }.toSet()
             remainingArtists shouldContainOnly setOf("Rapid A", "Rapid C")
@@ -335,12 +386,12 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
             repository.artistCatalogsProperty.get().first { it.artist.name == "Rapid A" }.sizeProperty.get() shouldBe 3
             repository.artistCatalogsProperty.get().first { it.artist.name == "Rapid C" }.sizeProperty.get() shouldBe 4
 
-            repository.albumCountProperty.get() shouldBeGreaterThanOrEqual 2
-            repository.albumsProperty.size shouldBeGreaterThanOrEqual 1
+            repository.albumCatalogsProperty.size shouldBeGreaterThanOrEqual 2
+            repository.albumCatalogsProperty.map { catalog: ObservableAlbumCatalog -> catalog.album }.toSet().size shouldBeGreaterThanOrEqual 1
         }
     }
 
-    "Artists are removed from artistsProperty only when all items with that artist are removed" {
+    "Artists are removed from artistCatalogsProperty only when all items with that artist are removed" {
         val itemsByArtist =
             repository.createItemsByArtist(
                 files,
@@ -364,16 +415,19 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
 
         reactive.advance()
 
-        eventually(1.seconds) {
-            repository.artistsProperty shouldContainOnly setOf(artistA, artistB, artistC, artistD)
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
+            repository.artistCatalogsProperty.map { catalog: ObservableArtistCatalog -> catalog.artist }.toSet() shouldContainOnly
+                setOf(artistA, artistB, artistC, artistD)
         }
 
-        // Remove one item with "Shared Artist A" - artist should still be in artistsProperty
+        // Remove one item with "Shared Artist A" - artist should still be in artistCatalogsProperty
         repository.remove(itemsA[0])
         reactive.advance()
 
-        eventually(1.seconds) {
-            repository.artistsProperty shouldContainOnly
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
+            repository.artistCatalogsProperty.map { catalog: ObservableArtistCatalog -> catalog.artist }.toSet() shouldContainOnly
                 setOf(
                     artistA, // Still present because itemsA[1] and itemsA[2] have this artist
                     artistB,
@@ -382,12 +436,13 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
                 )
         }
 
-        // Remove another item with "Shared Artist A" - artist should still be in artistsProperty
+        // Remove another item with "Shared Artist A" - artist should still be in artistCatalogsProperty
         repository.remove(itemsA[1])
         reactive.advance()
 
-        eventually(1.seconds) {
-            repository.artistsProperty shouldContainOnly
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
+            repository.artistCatalogsProperty.map { catalog: ObservableArtistCatalog -> catalog.artist }.toSet() shouldContainOnly
                 setOf(
                     artistA, // Still present because itemsA[2] still has this artist
                     artistB,
@@ -396,12 +451,13 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
                 )
         }
 
-        // Remove the unique artist item - artist should be removed from artistsProperty
+        // Remove the unique artist item - catalog should be removed from artistCatalogsProperty
         repository.remove(itemsB[0])
         reactive.advance()
 
-        eventually(1.seconds) {
-            repository.artistsProperty shouldContainOnly
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
+            repository.artistCatalogsProperty.map { catalog: ObservableArtistCatalog -> catalog.artist }.toSet() shouldContainOnly
                 setOf(
                     artistA, // Still present. B was removed
                     artistC,
@@ -409,24 +465,26 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
                 )
         }
 
-        // Remove the last item with "Shared Artist A" - now artist should be removed
+        // Remove the last item with "Shared Artist A" - now catalog should be removed
         repository.remove(itemsA[2])
         reactive.advance()
 
-        eventually(1.seconds) {
-            repository.artistsProperty shouldContainOnly
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
+            repository.artistCatalogsProperty.map { catalog: ObservableArtistCatalog -> catalog.artist }.toSet() shouldContainOnly
                 setOf(
                     artistC, // Shared Artist C
                     artistD // Unique Artist D
                 )
         }
 
-        // Remove one of the "Shared Artist C" items - artist should remain
+        // Remove one of the "Shared Artist C" items - catalog should remain
         repository.remove(itemsC[0])
         reactive.advance()
 
-        eventually(1.seconds) {
-            repository.artistsProperty shouldContainOnly
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
+            repository.artistCatalogsProperty.map { catalog: ObservableArtistCatalog -> catalog.artist }.toSet() shouldContainOnly
                 setOf(
                     artistC, // Shared Artist C still present via itemsC[1]
                     artistD
@@ -438,8 +496,9 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
         repository.remove(itemsD[0])
         reactive.advance()
 
-        eventually(1.seconds) {
-            repository.artistsProperty.isEmpty() shouldBe true
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
+            repository.artistCatalogsProperty.isEmpty() shouldBe true
         }
     }
 

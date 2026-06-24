@@ -18,11 +18,13 @@
 package net.transgressoft.commons.music.audio
 
 /**
- * Narrowed audio library interface for [AudioItem], [ArtistCatalog], [AlbumCatalog], and [GenreCatalog] types.
+ * Concrete genre catalog type used internally by the audio library infrastructure.
  *
- * Provides a clean, non-generic entry point for consumers that work with the core domain types.
- * Extends [ReactiveAudioLibrary] with concrete type parameters, removing the need to specify
- * generics at call sites.
+ * Extends [ReactiveGenreCatalog] as a typed marker for catalog instances managed by
+ * the registry. Because an audio item may belong to multiple genres simultaneously,
+ * a single item can appear in multiple genre catalog instances. Mutation operations
+ * are internal to the concrete implementations.
+ *
+ * @param I The type of audio items contained in this catalog
  */
-interface AudioLibrary :
-    ReactiveAudioLibrary<AudioItem, ArtistCatalog<AudioItem>, AlbumCatalog<AudioItem>, GenreCatalog<AudioItem>>
+interface GenreCatalog<I : ReactiveAudioItem<I>> : ReactiveGenreCatalog<GenreCatalog<I>, I>, Comparable<GenreCatalog<I>>

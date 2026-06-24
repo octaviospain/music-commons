@@ -17,8 +17,6 @@
 
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.music.audio.Album
-import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioLibraryBase
 import net.transgressoft.commons.music.audio.AudioMetadataIO
 import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
@@ -34,10 +32,8 @@ import net.transgressoft.lirp.persistence.fx.FxAggregateList
 import net.transgressoft.lirp.persistence.fx.fxAggregateList
 import javafx.application.Platform
 import javafx.beans.property.ReadOnlyBooleanProperty
-import javafx.beans.property.ReadOnlyIntegerProperty
 import javafx.beans.property.ReadOnlyListProperty
 import javafx.beans.property.ReadOnlySetProperty
-import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleListProperty
 import javafx.beans.property.SimpleSetProperty
 import javafx.collections.FXCollections.observableSet
@@ -73,9 +69,11 @@ internal class FXAudioLibrary
     constructor(
         repository: Repository<Int, ObservableAudioItem>,
         metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO()
-    ) : AudioLibraryBase<ObservableAudioItem, ObservableArtistCatalog>(
+    ) : AudioLibraryBase<ObservableAudioItem, ObservableArtistCatalog, ObservableAlbumCatalog, ObservableGenreCatalog>(
             repository,
             FXArtistCatalogRegistry(repository),
+            FXAlbumCatalogRegistry(repository),
+            FXGenreCatalogRegistry(repository),
             metadataIO
         ),
         ObservableAudioLibrary {
@@ -92,7 +90,6 @@ internal class FXAudioLibrary
         private val pendingCreatedAudioItems = ConcurrentLinkedQueue<ObservableAudioItem>()
         private val pendingDeletedAudioItemIds = ConcurrentLinkedQueue<Int>()
         private val audioItemsRefreshQueued = AtomicBoolean(false)
-        private val recomputeArtistsRequested = AtomicBoolean(false)
 
         @get:JvmName("audioItemsProperty")
         override val audioItemsProperty: ReadOnlyListProperty<ObservableAudioItem> =
@@ -100,9 +97,6 @@ internal class FXAudioLibrary
 
         @get:JvmName("emptyLibraryProperty")
         override val emptyLibraryProperty: ReadOnlyBooleanProperty = audioItemsProperty.emptyProperty()
-
-        @get:JvmName("artistsProperty")
-        override val artistsProperty: ReadOnlySetProperty<Artist> = SimpleSetProperty(this, "artists", observableSet())
 
         // Thread-safe backing for artist catalogs -- updated directly from catalog subscription
         private val artistCatalogBacking: CopyOnWriteArraySet<ObservableArtistCatalog> = CopyOnWriteArraySet()
@@ -115,16 +109,23 @@ internal class FXAudioLibrary
         override val artistCatalogsProperty: ReadOnlySetProperty<ObservableArtistCatalog> =
             SimpleSetProperty(this, "artist catalogs", observableArtistCatalogSet)
 
-        @get:JvmName("albumsProperty")
-        override val albumsProperty: ReadOnlySetProperty<Album>
-            field = SimpleSetProperty<Album>(this, "albums", observableSet())
+        // Thread-safe backing for album catalogs -- updated directly from album catalog subscription
+        private val albumCatalogBacking: CopyOnWriteArraySet<ObservableAlbumCatalog> = CopyOnWriteArraySet()
+        private val observableAlbumCatalogSet: ObservableSet<ObservableAlbumCatalog> = observableSet()
 
-        @get:JvmName("albumCountProperty")
-        override val albumCountProperty: ReadOnlyIntegerProperty
-            field = SimpleIntegerProperty(this, "albumCount", 0)
+        @get:JvmName("albumCatalogsProperty")
+        override val albumCatalogsProperty: ReadOnlySetProperty<ObservableAlbumCatalog> =
+            SimpleSetProperty(this, "album catalogs", observableAlbumCatalogSet)
 
-        // Subscribe to repository events to populate audioItemsDelegate and artistsProperty.
-        // artistsProperty tracks all artists from artistsInvolved (primary + featured artists).
+        // Thread-safe backing for genre catalogs -- updated directly from genre catalog subscription
+        private val genreCatalogBacking: CopyOnWriteArraySet<ObservableGenreCatalog> = CopyOnWriteArraySet()
+        private val observableGenreCatalogSet: ObservableSet<ObservableGenreCatalog> = observableSet()
+
+        @get:JvmName("genreCatalogsProperty")
+        override val genreCatalogsProperty: ReadOnlySetProperty<ObservableGenreCatalog> =
+            SimpleSetProperty(this, "genre catalogs", observableGenreCatalogSet)
+
+        // Subscribe to repository events to populate audioItemsDelegate.
         private val internalSubscription =
             subscribe(CREATE, UPDATE, DELETE) { event ->
                 if (event.isDelete()) {
@@ -132,7 +133,6 @@ internal class FXAudioLibrary
                         audioItemIds.remove(id)
                         pendingDeletedAudioItemIds.add(id)
                     }
-                    recomputeArtistsRequested.set(true)
                     queueAudioItemsRefresh()
                 } else if (event.isCreate()) {
                     event.entities.values.forEach { item ->
@@ -142,12 +142,11 @@ internal class FXAudioLibrary
                     }
                     queueAudioItemsRefresh()
                 } else {
-                    recomputeArtistsRequested.set(true)
                     queueAudioItemsRefresh()
                 }
             }
 
-        private val catalogSubscription =
+        private val artistCatalogSubscription =
             artistCatalogPublisher.subscribe(CREATE, UPDATE, DELETE) { event ->
                 if (event.isDelete()) {
                     artistCatalogBacking.removeAll(event.entities.values.toSet())
@@ -163,11 +162,37 @@ internal class FXAudioLibrary
                 queueCatalogRefresh()
             }
 
+        private val albumCatalogSubscription =
+            albumCatalogPublisher.subscribe(CREATE, UPDATE, DELETE) { event ->
+                if (event.isDelete()) {
+                    albumCatalogBacking.removeAll(event.entities.values.toSet())
+                } else if (event.isUpdate()) {
+                    albumCatalogBacking.removeAll(event.oldEntities.values.toSet())
+                    albumCatalogBacking.addAll(event.entities.values)
+                } else {
+                    albumCatalogBacking.addAll(event.entities.values)
+                }
+                queueCatalogRefresh()
+            }
+
+        private val genreCatalogSubscription =
+            genreCatalogPublisher.subscribe(CREATE, UPDATE, DELETE) { event ->
+                if (event.isDelete()) {
+                    genreCatalogBacking.removeAll(event.entities.values.toSet())
+                } else if (event.isUpdate()) {
+                    genreCatalogBacking.removeAll(event.oldEntities.values.toSet())
+                    genreCatalogBacking.addAll(event.entities.values)
+                } else {
+                    genreCatalogBacking.addAll(event.entities.values)
+                }
+                queueCatalogRefresh()
+            }
+
         init {
             RegistryBase.deregisterRepository(ObservableAudioItem::class.java)
             RegistryBase.registerRepository(ObservableAudioItem::class.java, repository)
 
-            // Populate fxAggregateList and artistsProperty from existing items
+            // Populate fxAggregateList from existing items
             val initialAudioItems = toList()
             // Wire the library back-ref on items rehydrated from JSON so coverImageBytes can lazy-load.
             initialAudioItems.forEach { item ->
@@ -177,13 +202,21 @@ internal class FXAudioLibrary
             if (initialAudioItems.isNotEmpty()) {
                 Platform.runLater {
                     audioItems.addAll(initialAudioItems)
-                    artistsProperty.addAll(initialAudioItems.flatMap { it.artistsInvolved })
                 }
             }
 
-            // Catalog backing is populated reactively via catalogSubscription as the projection
-            // fires CREATE events during its lazy initialization on first access.
-            queueCatalogRefresh()
+            // Items already present at construction (reload from a saved repository) have their catalogs
+            // built by the registry projections during initialization — before the catalog subscriptions
+            // above are wired — so those initial catalogs never reach the subscriptions. Pull them
+            // directly from the registries on the FX thread (the FX projections build their catalogs
+            // on the FX thread; this runLater is enqueued after those build tasks, so the catalogs
+            // exist when it runs). Subsequent CRUD changes flow through the subscriptions as before.
+            Platform.runLater {
+                observableArtistCatalogRegistry.forEach { artistCatalogBacking.add(it) }
+                observableAlbumCatalogRegistry.forEach { albumCatalogBacking.add(it) }
+                observableGenreCatalogRegistry.forEach { genreCatalogBacking.add(it) }
+                refreshCatalogProperties()
+            }
 
             // Subscribe to the player events to update the play count
             playerSubscriber.addOnNextEventAction(PLAYED) { event ->
@@ -227,18 +260,10 @@ internal class FXAudioLibrary
             if (createdAudioItems.isNotEmpty()) {
                 audioItems.addAll(createdAudioItems)
             }
-
-            if (recomputeArtistsRequested.getAndSet(false)) {
-                val allArtists = audioItems.flatMap { it.artistsInvolved }.toSet()
-                artistsProperty.retainAll(allArtists)
-                artistsProperty.addAll(allArtists)
-            } else if (createdAudioItems.isNotEmpty()) {
-                artistsProperty.addAll(createdAudioItems.flatMap { it.artistsInvolved })
-            }
         }
 
         private fun hasPendingAudioItemRefresh(): Boolean =
-            pendingCreatedAudioItems.isNotEmpty() || pendingDeletedAudioItemIds.isNotEmpty() || recomputeArtistsRequested.get()
+            pendingCreatedAudioItems.isNotEmpty() || pendingDeletedAudioItemIds.isNotEmpty()
 
         private fun queueCatalogRefresh() {
             catalogRefreshRequested.set(true)
@@ -266,15 +291,14 @@ internal class FXAudioLibrary
                 clear()
                 addAll(artistCatalogBacking)
             }
-            val allAlbums =
-                artistCatalogBacking.flatMap { catalog ->
-                    catalog.albums.map { it.first().album }
-                }.toSet()
-            albumsProperty.apply {
+            observableAlbumCatalogSet.apply {
                 clear()
-                addAll(allAlbums)
+                addAll(albumCatalogBacking)
             }
-            albumCountProperty.set(allAlbums.size)
+            observableGenreCatalogSet.apply {
+                clear()
+                addAll(genreCatalogBacking)
+            }
         }
 
         /**
@@ -284,7 +308,9 @@ internal class FXAudioLibrary
         override fun close() {
             super.close()
             internalSubscription.cancel()
-            catalogSubscription.cancel()
+            artistCatalogSubscription.cancel()
+            albumCatalogSubscription.cancel()
+            genreCatalogSubscription.cancel()
             RegistryBase.deregisterRepository(ObservableAudioItem::class.java)
         }
 
@@ -293,11 +319,10 @@ internal class FXAudioLibrary
             audioItemIds.clear()
             pendingCreatedAudioItems.clear()
             pendingDeletedAudioItemIds.clear()
-            Platform.runLater {
-                audioItems.clear()
-                artistsProperty.clear()
-            }
+            Platform.runLater { audioItems.clear() }
             artistCatalogBacking.clear()
+            albumCatalogBacking.clear()
+            genreCatalogBacking.clear()
             queueCatalogRefresh()
         }
 

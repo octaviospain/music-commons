@@ -61,10 +61,9 @@ internal class FXMusicLibraryTest : StringSpec({
 
         library.audioItemsProperty.shouldNotBeNull()
         library.emptyLibraryProperty.shouldNotBeNull()
-        library.artistsProperty.shouldNotBeNull()
         library.artistCatalogsProperty.shouldNotBeNull()
-        library.albumsProperty.shouldNotBeNull()
-        library.albumCountProperty.shouldNotBeNull()
+        library.albumCatalogsProperty.shouldNotBeNull()
+        library.genreCatalogsProperty.shouldNotBeNull()
         library.playlistsProperty.shouldNotBeNull()
 
         library.emptyLibraryProperty.get() shouldBe true
