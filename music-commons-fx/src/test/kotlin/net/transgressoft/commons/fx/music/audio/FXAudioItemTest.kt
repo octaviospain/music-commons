@@ -43,11 +43,13 @@ import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import javafx.scene.image.Image
+import org.testfx.util.WaitForAsyncUtils
 import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.Optional
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 internal class FXAudioItemTest : StringSpec({
     val files = virtualFiles()
@@ -265,6 +267,50 @@ internal class FXAudioItemTest : StringSpec({
 
         val secondRead = freshItem.coverImageBytes
         secondRead shouldBe expected
+    }
+
+    "FXAudioItem.coverImageProperty triggers lazy cover load on first observation and resolves to a present image" {
+        // Model the rehydration path: item created without pre-seeded cover bytes, metadataIO wired
+        // afterward. The getter is never called before observing the property — the cover must
+        // populate through the property path alone.
+        // Seed the real audio file with embedded cover art so the lazy load has artwork to decode.
+        val path = Arb.realAudioFile { coverImageBytes = testCoverBytes }.next()
+        val freshItem =
+            FXAudioItem(
+                path,
+                2,
+                AudioItemMetadata(),
+                java.time.LocalDateTime.now(),
+                java.time.LocalDateTime.now(),
+                0
+            )
+        freshItem.metadataIO = JAudioTaggerMetadataIO()
+
+        // Simulate a UI binding: attach a listener to trigger the first observation.
+        // The FXAudioItem.runOnFxThread fallback executes the property update inline when the
+        // JavaFX toolkit has not been started, so the property is already populated after
+        // addListener returns in this headless test context.
+        freshItem.coverImageProperty.addListener { _, _, _ -> }
+
+        // In the headless test context, FXAudioItem.runOnFxThread falls back to inline execution
+        // when the JavaFX toolkit has not been started, so the property update is synchronous.
+        // When a toolkit IS running (e.g. in an FX-enabled test container), waitForFxEvents()
+        // drains the FX queue before asserting.
+        eventually(2.seconds) {
+            try {
+                WaitForAsyncUtils.waitForFxEvents()
+            } catch (_: Exception) {
+                // Toolkit not initialized — the inline fallback already populated the property.
+            }
+            freshItem.coverImageProperty.value shouldBePresent {
+                (it.height > 0.0) shouldBe true
+                (it.width > 0.0) shouldBe true
+            }
+        }
+
+        // Second observation must not re-probe or throw — the property stays present.
+        freshItem.coverImageProperty.addListener { _, _, _ -> }
+        freshItem.coverImageProperty.value shouldBePresent { (it.height > 0.0) shouldBe true }
     }
 
     "FXAudioLibrary.createFromFile throws InvalidAudioFilePathException when file does not exist" {
