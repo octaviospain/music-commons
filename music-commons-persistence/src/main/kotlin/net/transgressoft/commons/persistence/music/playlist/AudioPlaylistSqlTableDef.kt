@@ -119,7 +119,14 @@ object AudioPlaylistSqlTableDef : RawConstructibleTableDef<MutableAudioPlaylist>
         (collection as AggregateCollectionRef<*, *>).referenceIds
 
     private fun parseIds(text: String): List<Int> =
-        if (text.isBlank()) emptyList() else text.split(",").mapNotNull { it.trim().toIntOrNull() }
+        if (text.isBlank()) {
+            emptyList()
+        } else {
+            text.split(",").map { token ->
+                token.trim().toIntOrNull()
+                    ?: throw IllegalArgumentException("Invalid aggregate id '$token' in persisted playlist reference column '$text'")
+            }
+        }
 
     private fun column(table: Table): (String) -> Column<*> {
         val byName = table.columns.associateBy { it.name }

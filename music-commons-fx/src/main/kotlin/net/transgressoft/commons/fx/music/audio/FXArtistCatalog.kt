@@ -51,21 +51,22 @@ import java.util.concurrent.ConcurrentHashMap
  * The dispatches to observable properties intentionally omit error handling because they perform
  * only simple property mutations; any exception indicates a programming error that should surface
  * through the default uncaught exception handler.
- *
- * @param artist The artist this catalog represents
- * @param audioItems The snapshot of audio items to build this catalog from
  */
-internal class FXArtistCatalog(
+internal class FXArtistCatalog private constructor(
     override val artist: Artist,
-    audioItems: List<ObservableAudioItem>
+    // Built once; sorted and de-duplicated. Never mutated after construction, so reads need no lock.
+    private val audioItemsByAlbumName: Map<String, List<ObservableAudioItem>>
 ) : ObservableArtistCatalog,
     Comparable<ObservableArtistCatalog>,
     ReactiveEntityBase<Artist, ObservableArtistCatalog>() {
 
     private val logger = KotlinLogging.logger {}
 
-    // Built once from the snapshot; sorted and de-duplicated, so reads need no lock.
-    private val audioItemsByAlbumName: Map<String, List<ObservableAudioItem>> = buildAlbumMap(audioItems)
+    /**
+     * @param artist the artist this catalog represents
+     * @param audioItems the snapshot of audio items to build this catalog from
+     */
+    internal constructor(artist: Artist, audioItems: List<ObservableAudioItem>) : this(artist, buildAlbumMap(audioItems))
 
     override val albumsProperty: ReadOnlySetProperty<Album>
         field = SimpleSetProperty<Album>(this, "albums", observableSet())
@@ -114,32 +115,25 @@ internal class FXArtistCatalog(
     }
 
     /**
-     * Copy constructor for [clone]: constructs from the other catalog's already-built album map,
-     * preserving item order without re-sorting.
+     * Copy constructor for [clone]: copies the other catalog's already-built album map verbatim,
+     * preserving its album keys and item order rather than re-keying from the items' current albums.
      */
     internal constructor(other: FXArtistCatalog) : this(
         other.artist,
-        other.audioItemsByAlbumName.values.flatten()
+        other.audioItemsByAlbumName.mapValues { (_, items) -> items.toList() }
     )
 
     override val albums: Set<AlbumSet<ObservableAudioItem>>
         get() =
-            audioItemsByAlbumName.values
+            audioItemsByAlbumName.entries
                 .asSequence()
-                .flatten()
-                .distinctBy(::audioItemIdentity)
-                .groupBy { it.album.name }
                 .mapNotNull { (albumName, audioItems) ->
-                    val stableAudioItems = audioItems.filter { it.album.name == albumName }
-                    if (stableAudioItems.isEmpty()) {
+                    if (audioItems.isEmpty()) {
                         null
                     } else {
-                        runCatching { AlbumView(albumName, stableAudioItems) }.getOrNull()
+                        runCatching { AlbumView(albumName, audioItems) }.getOrNull()
                     }
                 }.toSet()
-
-    private fun audioItemIdentity(audioItem: ObservableAudioItem): Any =
-        if (audioItem.id != UNASSIGNED_ID) audioItem.id else audioItem.uniqueId
 
     override fun albumAudioItems(albumName: String): Set<ObservableAudioItem> =
         audioItemsByAlbumName[albumName]?.toSet() ?: emptySet()

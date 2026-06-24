@@ -271,7 +271,7 @@ object AudioItemMetadataContextualSerializer : KSerializer<AudioItemMetadata> {
             obj["genres"]?.let { element ->
                 (element as? kotlinx.serialization.json.JsonArray)
                     ?.mapNotNull { it.jsonPrimitive.contentOrNull }
-                    ?.flatMap { parseGenre(it) }
+                    ?.flatMap { raw -> parseGenre(raw).ifEmpty { listOf(Genre.Custom(raw)) } }
                     ?.toSet()
             } ?: emptySet()
         return AudioItemMetadata(

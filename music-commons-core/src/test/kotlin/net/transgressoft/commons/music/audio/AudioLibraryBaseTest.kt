@@ -101,8 +101,14 @@ internal class AudioLibraryBaseTest : StringSpec({
 
         audioLibrary.close()
 
-        // Add another item directly to repository after close — catalog should not pick it up
-        val virtualPath = files.virtualAudioFile().next()
+        // Add another item directly to repository after close — catalog should not pick it up.
+        // Fixed artist distinct from "The Cure" so the assertions below cannot collide by chance.
+        val newArtist = Artist.of("Aphex Twin")
+        val virtualPath =
+            files.virtualAudioFile {
+                this.artist = newArtist
+                this.album = Album("Selected Ambient Works", newArtist)
+            }.next()
         val newItem = MutableAudioItem(virtualPath, Int.MAX_VALUE - 1, files.metadataIO.readMetadata(virtualPath))
         repository.add(newItem)
         reactive.advance()

@@ -339,7 +339,7 @@ Opt-in JSON and SQL mapping for the core-tier entities. Mapping-only — defines
 - `AudioItemMapSerializer` / `AudioPlaylistMapSerializer` -- kotlinx-serialization map serializers for `JsonFileRepository`
 - `audioItemSerializersModule` -- contextual `SerializersModule` for the domain value types (artist, album, label, genre, metadata), so the domain stays annotation-free
 - `MutableAudioItemSqlTableDef` / `AudioPlaylistSqlTableDef` -- SQL table definitions for `SqliteRepository`
-- `CountryConverter`, `DurationConverter`, `GenreConverter`, `PathConverter` -- column converters for SQL persistence
+- `CountryConverter`, `GenreConverter` -- column converters for SQL persistence (duration and path columns reuse lirp's built-in converters)
 
 ### music-commons-persistence-fx
 

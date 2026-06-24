@@ -27,7 +27,6 @@ import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.sql.SqliteRepository
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -36,6 +35,7 @@ import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
+import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
@@ -48,8 +48,8 @@ internal class ObservablePlaylistSqlTableDefTest : StringSpec({
     beforeSpec { FxToolkit.registerPrimaryStage() }
 
     "ObservablePlaylistSqlTableDef round-trips FX playlists through SQLite preserving identity, folder flag and aggregate id references" {
-        val dbFile = tempfile("fxPlaylistHierarchy-sql", ".db").apply { deleteOnExit() }
-        val audioFile = tempfile("fxAudioLibrary-sql-pl", ".json").apply { deleteOnExit() }
+        val dbFile = File.createTempFile("fxPlaylistHierarchy-sql", ".db").apply { deleteOnExit() }
+        val audioFile = File.createTempFile("fxAudioLibrary-sql-pl", ".json").apply { deleteOnExit() }
 
         val library =
             FXMusicLibrary.builder()
@@ -104,8 +104,8 @@ internal class ObservablePlaylistSqlTableDefTest : StringSpec({
     }
 
     "ObservablePlaylistSqlTableDef constructs playlists without firing CrudEvents and keeps reactive wiring live after load" {
-        val dbFile = tempfile("fxPlaylistHierarchy-events", ".db").apply { deleteOnExit() }
-        val audioFile = tempfile("fxAudioLibrary-events-pl", ".json").apply { deleteOnExit() }
+        val dbFile = File.createTempFile("fxPlaylistHierarchy-events", ".db").apply { deleteOnExit() }
+        val audioFile = File.createTempFile("fxAudioLibrary-events-pl", ".json").apply { deleteOnExit() }
 
         val seedLibrary =
             FXMusicLibrary.builder()

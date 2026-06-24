@@ -27,11 +27,11 @@ import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.sql.SqliteRepository
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
+import java.io.File
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -41,8 +41,8 @@ internal class MutableAudioItemSqlTableDefTest : StringSpec({
     val reactive = reactiveScope()
 
     "MutableAudioItemSqlTableDef round-trips a library through SQLite preserving per-row scalar fidelity" {
-        val dbFile = tempfile("audioLibrary-sql", ".db").apply { deleteOnExit() }
-        val playlistsFile = tempfile("playlistHierarchy-sql", ".json").apply { deleteOnExit() }
+        val dbFile = File.createTempFile("audioLibrary-sql", ".db").apply { deleteOnExit() }
+        val playlistsFile = File.createTempFile("playlistHierarchy-sql", ".json").apply { deleteOnExit() }
 
         val library =
             CoreMusicLibrary.builder()
@@ -83,8 +83,8 @@ internal class MutableAudioItemSqlTableDefTest : StringSpec({
     }
 
     "MutableAudioItemSqlTableDef round-trips playCount, comments, bpm and creation timestamps through the raw constructor and scalar initializer" {
-        val dbFile = tempfile("audioLibrary-sql-spi", ".db").apply { deleteOnExit() }
-        val playlistsFile = tempfile("playlistHierarchy-sql-spi", ".json").apply { deleteOnExit() }
+        val dbFile = File.createTempFile("audioLibrary-sql-spi", ".db").apply { deleteOnExit() }
+        val playlistsFile = File.createTempFile("playlistHierarchy-sql-spi", ".json").apply { deleteOnExit() }
 
         val library =
             CoreMusicLibrary.builder()
@@ -127,8 +127,8 @@ internal class MutableAudioItemSqlTableDefTest : StringSpec({
     }
 
     "MutableAudioItemSqlTableDef constructs items without firing CrudEvents and keeps reactive wiring live after load" {
-        val dbFile = tempfile("audioLibrary-events", ".db").apply { deleteOnExit() }
-        val playlistsFile = tempfile("playlistHierarchy-events", ".json").apply { deleteOnExit() }
+        val dbFile = File.createTempFile("audioLibrary-events", ".db").apply { deleteOnExit() }
+        val playlistsFile = File.createTempFile("playlistHierarchy-events", ".json").apply { deleteOnExit() }
 
         val seedLibrary =
             CoreMusicLibrary.builder()
