@@ -313,6 +313,42 @@ internal class FXAudioItemTest : StringSpec({
         freshItem.coverImageProperty.value shouldBePresent { (it.height > 0.0) shouldBe true }
     }
 
+    "FXAudioItem.coverImageProperty observed before metadataIO is wired still resolves once the back-ref is attached" {
+        // Orphan item observed before the library attaches metadataIO (e.g. a view binds the cell
+        // before rehydration completes). The first observation must not permanently consume the
+        // lazy-load trigger, or the cover would stay empty forever after wiring.
+        val path = Arb.realAudioFile { coverImageBytes = testCoverBytes }.next()
+        val orphanItem =
+            FXAudioItem(
+                path,
+                3,
+                AudioItemMetadata(),
+                java.time.LocalDateTime.now(),
+                java.time.LocalDateTime.now(),
+                0
+            )
+
+        // Observe while metadataIO is still null: nothing can load yet, and the property stays empty.
+        orphanItem.coverImageProperty.addListener { _, _, _ -> }
+        orphanItem.coverImageProperty.value shouldBe Optional.empty()
+
+        // Wire the back-ref (the rehydration pass) and observe again — the cover now resolves.
+        orphanItem.metadataIO = JAudioTaggerMetadataIO()
+        orphanItem.coverImageProperty.addListener { _, _, _ -> }
+
+        eventually(2.seconds) {
+            try {
+                WaitForAsyncUtils.waitForFxEvents()
+            } catch (_: Exception) {
+                // Toolkit not initialized — the inline fallback already populated the property.
+            }
+            orphanItem.coverImageProperty.value shouldBePresent {
+                (it.height > 0.0) shouldBe true
+                (it.width > 0.0) shouldBe true
+            }
+        }
+    }
+
     "FXAudioLibrary.createFromFile throws InvalidAudioFilePathException when file does not exist" {
         val nonExistent = Paths.get("/tmp/fx-nonexistent-${System.nanoTime()}.mp3")
         FXAudioLibrary(VolatileRepository("FXAudioLibrary"), files.metadataIO).use { library ->
