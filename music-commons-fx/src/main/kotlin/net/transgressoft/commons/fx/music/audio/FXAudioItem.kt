@@ -371,12 +371,21 @@ class FXAudioItem
             }
 
         private fun triggerLazyCoverLoad() {
-            if (!coverObservationTriggered) {
-                // Set the flag before invoking the getter to prevent re-entrance when the getter
-                // calls coverImageProperty.set(...) back, which would otherwise recurse via the
-                // addListener/get override path.
-                coverObservationTriggered = true
+            if (coverObservationTriggered) return
+            // Nothing can be loaded until metadataIO is wired (orphan item observed before the
+            // library attaches the back-ref). Do not consume the trigger here, or a later
+            // observation after wiring would be a permanent no-op and the cover would stay empty.
+            if (!coverLoaded && metadataIO == null) return
+
+            // Guard re-entrance only for the duration of the load: the getter dispatches
+            // coverImageProperty.set(...), which can recurse back through the addListener/get
+            // override. Reset to coverLoaded afterwards so a coverless-yet-unwired item retries
+            // once metadataIO arrives, while a loaded (or known-coverless) item stays settled.
+            coverObservationTriggered = true
+            try {
                 coverImageBytes
+            } finally {
+                coverObservationTriggered = coverLoaded
             }
         }
 
