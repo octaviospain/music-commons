@@ -53,7 +53,7 @@ class VirtualFiles internal constructor() {
 
     fun virtualAlbumAudioFiles(
         artist: Artist? = null,
-        album: Album? = null,
+        album: AlbumDetails? = null,
         size: IntRange = 20..50,
         fileSystem: FileSystem = this.fileSystem
     ): Arb<List<Path>> =

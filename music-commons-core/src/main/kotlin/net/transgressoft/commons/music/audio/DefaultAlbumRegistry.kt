@@ -22,32 +22,33 @@ import net.transgressoft.lirp.persistence.projection.ObservableProjection
 import net.transgressoft.lirp.persistence.projection.registryProjection
 
 /**
- * Album catalog registry backed by a lirp single-key value-transform registry projection.
+ * Album registry backed by a lirp single-key value-transform registry projection.
  *
- * Builds one [AlbumCatalog] per album using the single-key form of [registryProjection]:
+ * Builds one [Album] per album using the single-key form of [registryProjection]:
  * each audio item is placed into exactly one album bucket determined by its `album` property.
  * When an item's album changes, lirp re-keys the item from the old bucket to the new one
- * automatically. Shared CRUD-event republishing, catalog queries, and lifecycle live in
- * [AlbumCatalogRegistryBase].
+ * automatically. The projection maintains each bucket's track list in disc-then-track order via
+ * [audioItemTrackDiscNumberComparator]. Shared CRUD-event republishing, album queries, and
+ * lifecycle live in [AlbumRegistryBase].
  *
- * Unlike the genre catalog (which uses a multi-key projection because items can belong to
+ * Unlike the genre index (which uses a multi-key projection because items can belong to
  * multiple genres), an item always belongs to exactly one album, making single-key sufficient.
  *
  * @param I The audio item type
  * @param repository The audio-item repository to project
  */
-internal class DefaultAlbumCatalogRegistry<I>(repository: Repository<Int, I>)
-: AlbumCatalogRegistryBase<I, AlbumCatalog<I>>("AlbumCatalogRegistry")
+internal class DefaultAlbumRegistry<I>(repository: Repository<Int, I>)
+: AlbumRegistryBase<I, Album<I>>("AlbumRegistry")
     where I : ReactiveAudioItem<I>, I : Comparable<I> {
 
-    override val projection: ObservableProjection<Album, AlbumCatalog<I>> =
+    override val projection: ObservableProjection<AlbumDetails, Album<I>> =
         registryProjection(
             registry = repository,
             keyExtractor = { it.album },
-            valueTransform = { album, items -> ImmutableAlbumCatalog(album, items) }
-        )
+            entryOrdering = audioItemTrackDiscNumberComparator()
+        ) { albumDetails, tracks -> ImmutableAlbum(albumDetails, tracks) }
 
     init {
-        observeCatalogChanges(projection)
+        observeAlbumChanges(projection)
     }
 }

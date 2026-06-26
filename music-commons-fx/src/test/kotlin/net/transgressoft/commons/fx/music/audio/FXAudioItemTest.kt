@@ -1,6 +1,6 @@
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Alternative
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.Artist
@@ -93,7 +93,7 @@ internal class FXAudioItemTest : StringSpec({
         }
 
         lastDateUpdated = fxAudioItem.lastDateModified
-        fxAudioItem.albumProperty.set(Album("New Album", Artist.of("Bon Jovi"), false, 2021, Label.UNKNOWN))
+        fxAudioItem.albumProperty.set(AlbumDetails("New Album", Artist.of("Bon Jovi"), false, 2021.toShort(), Label.UNKNOWN))
         eventually(100.milliseconds) {
             fxAudioItem.album.name shouldBe "New Album"
             fxAudioItem.album.albumArtist.name shouldBe "Bon Jovi"

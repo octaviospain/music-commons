@@ -69,11 +69,11 @@ internal class FXAudioLibrary
     constructor(
         repository: Repository<Int, ObservableAudioItem>,
         metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO()
-    ) : AudioLibraryBase<ObservableAudioItem, ObservableArtistCatalog, ObservableAlbumCatalog, ObservableGenreCatalog>(
+    ) : AudioLibraryBase<ObservableAudioItem, ObservableArtistCatalog, ObservableAlbum, ObservableGenreIndex>(
             repository,
             FXArtistCatalogRegistry(repository),
-            FXAlbumCatalogRegistry(repository),
-            FXGenreCatalogRegistry(repository),
+            FXAlbumRegistry(repository),
+            FXGenreIndexRegistry(repository),
             metadataIO
         ),
         ObservableAudioLibrary {
@@ -109,21 +109,21 @@ internal class FXAudioLibrary
         override val artistCatalogsProperty: ReadOnlySetProperty<ObservableArtistCatalog> =
             SimpleSetProperty(this, "artist catalogs", observableArtistCatalogSet)
 
-        // Thread-safe backing for album catalogs -- updated directly from album catalog subscription
-        private val albumCatalogBacking: CopyOnWriteArraySet<ObservableAlbumCatalog> = CopyOnWriteArraySet()
-        private val observableAlbumCatalogSet: ObservableSet<ObservableAlbumCatalog> = observableSet()
+        // Thread-safe backing for album buckets -- updated directly from album subscription
+        private val albumBacking: CopyOnWriteArraySet<ObservableAlbum> = CopyOnWriteArraySet()
+        private val observableAlbumSet: ObservableSet<ObservableAlbum> = observableSet()
 
-        @get:JvmName("albumCatalogsProperty")
-        override val albumCatalogsProperty: ReadOnlySetProperty<ObservableAlbumCatalog> =
-            SimpleSetProperty(this, "album catalogs", observableAlbumCatalogSet)
+        @get:JvmName("albumsProperty")
+        override val albumsProperty: ReadOnlySetProperty<ObservableAlbum> =
+            SimpleSetProperty(this, "albums", observableAlbumSet)
 
-        // Thread-safe backing for genre catalogs -- updated directly from genre catalog subscription
-        private val genreCatalogBacking: CopyOnWriteArraySet<ObservableGenreCatalog> = CopyOnWriteArraySet()
-        private val observableGenreCatalogSet: ObservableSet<ObservableGenreCatalog> = observableSet()
+        // Thread-safe backing for genre indexes -- updated directly from genre index subscription
+        private val genreIndexBacking: CopyOnWriteArraySet<ObservableGenreIndex> = CopyOnWriteArraySet()
+        private val observableGenreIndexSet: ObservableSet<ObservableGenreIndex> = observableSet()
 
-        @get:JvmName("genreCatalogsProperty")
-        override val genreCatalogsProperty: ReadOnlySetProperty<ObservableGenreCatalog> =
-            SimpleSetProperty(this, "genre catalogs", observableGenreCatalogSet)
+        @get:JvmName("genreIndexesProperty")
+        override val genreIndexesProperty: ReadOnlySetProperty<ObservableGenreIndex> =
+            SimpleSetProperty(this, "genre indexes", observableGenreIndexSet)
 
         // Subscribe to repository events to populate audioItemsDelegate.
         private val internalSubscription =
@@ -162,28 +162,28 @@ internal class FXAudioLibrary
                 queueCatalogRefresh()
             }
 
-        private val albumCatalogSubscription =
-            albumCatalogPublisher.subscribe(CREATE, UPDATE, DELETE) { event ->
+        private val albumSubscription =
+            albumPublisher.subscribe(CREATE, UPDATE, DELETE) { event ->
                 if (event.isDelete()) {
-                    albumCatalogBacking.removeAll(event.entities.values.toSet())
+                    albumBacking.removeAll(event.entities.values.toSet())
                 } else if (event.isUpdate()) {
-                    albumCatalogBacking.removeAll(event.oldEntities.values.toSet())
-                    albumCatalogBacking.addAll(event.entities.values)
+                    albumBacking.removeAll(event.oldEntities.values.toSet())
+                    albumBacking.addAll(event.entities.values)
                 } else {
-                    albumCatalogBacking.addAll(event.entities.values)
+                    albumBacking.addAll(event.entities.values)
                 }
                 queueCatalogRefresh()
             }
 
-        private val genreCatalogSubscription =
-            genreCatalogPublisher.subscribe(CREATE, UPDATE, DELETE) { event ->
+        private val genreIndexSubscription =
+            genreIndexPublisher.subscribe(CREATE, UPDATE, DELETE) { event ->
                 if (event.isDelete()) {
-                    genreCatalogBacking.removeAll(event.entities.values.toSet())
+                    genreIndexBacking.removeAll(event.entities.values.toSet())
                 } else if (event.isUpdate()) {
-                    genreCatalogBacking.removeAll(event.oldEntities.values.toSet())
-                    genreCatalogBacking.addAll(event.entities.values)
+                    genreIndexBacking.removeAll(event.oldEntities.values.toSet())
+                    genreIndexBacking.addAll(event.entities.values)
                 } else {
-                    genreCatalogBacking.addAll(event.entities.values)
+                    genreIndexBacking.addAll(event.entities.values)
                 }
                 queueCatalogRefresh()
             }
@@ -213,8 +213,8 @@ internal class FXAudioLibrary
             // exist when it runs). Subsequent CRUD changes flow through the subscriptions as before.
             Platform.runLater {
                 observableArtistCatalogRegistry.forEach { artistCatalogBacking.add(it) }
-                observableAlbumCatalogRegistry.forEach { albumCatalogBacking.add(it) }
-                observableGenreCatalogRegistry.forEach { genreCatalogBacking.add(it) }
+                observableAlbumRegistry.forEach { albumBacking.add(it) }
+                observableGenreIndexRegistry.forEach { genreIndexBacking.add(it) }
                 refreshCatalogProperties()
             }
 
@@ -291,13 +291,13 @@ internal class FXAudioLibrary
                 clear()
                 addAll(artistCatalogBacking)
             }
-            observableAlbumCatalogSet.apply {
+            observableAlbumSet.apply {
                 clear()
-                addAll(albumCatalogBacking)
+                addAll(albumBacking)
             }
-            observableGenreCatalogSet.apply {
+            observableGenreIndexSet.apply {
                 clear()
-                addAll(genreCatalogBacking)
+                addAll(genreIndexBacking)
             }
         }
 
@@ -309,8 +309,8 @@ internal class FXAudioLibrary
             super.close()
             internalSubscription.cancel()
             artistCatalogSubscription.cancel()
-            albumCatalogSubscription.cancel()
-            genreCatalogSubscription.cancel()
+            albumSubscription.cancel()
+            genreIndexSubscription.cancel()
             RegistryBase.deregisterRepository(ObservableAudioItem::class.java)
         }
 
@@ -321,8 +321,8 @@ internal class FXAudioLibrary
             pendingDeletedAudioItemIds.clear()
             Platform.runLater { audioItems.clear() }
             artistCatalogBacking.clear()
-            albumCatalogBacking.clear()
-            genreCatalogBacking.clear()
+            albumBacking.clear()
+            genreIndexBacking.clear()
             queueCatalogRefresh()
         }
 

@@ -52,13 +52,17 @@ private fun compareTrackNumbers(track1: Short?, track2: Short?): Int =
     }
 
 /**
- * Creates a comparator for sorting audio items by primary artist, then album, then disc and track number.
+ * Creates a comparator for sorting audio items by primary artist name, then album name, then disc and
+ * track number.
  *
- * This ordering is suitable for flat cross-album catalogs (e.g. genre catalogs) where items span
+ * This ordering is suitable for flat cross-album indexes (e.g. genre indexes) where items span
  * multiple artists and albums and a predictable, musically meaningful traversal order is needed.
+ * Album ordering is by album name specifically — not the natural [AlbumDetails] ordering, which
+ * tie-breaks on label and year before name — so the traversal matches the name-based grouping that
+ * genre-index consumers expect.
  */
 fun <I : ReactiveAudioItem<I>> audioItemArtistAlbumTrackComparator(): Comparator<I> =
-    compareBy<I>({ it.artist }, { it.album }).thenComparing(audioItemTrackDiscNumberComparator())
+    compareBy<I>({ it.artist }, { it.album.name }).thenComparing(audioItemTrackDiscNumberComparator())
 
 /**
  * Creates an identity tie-break comparator that distinguishes between two distinct audio items

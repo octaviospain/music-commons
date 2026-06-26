@@ -1,14 +1,14 @@
 package net.transgressoft.commons.persistence.fx.music.audio
 
 import net.transgressoft.commons.fx.music.FXMusicLibrary
-import net.transgressoft.commons.fx.music.audio.ObservableAlbumCatalog
+import net.transgressoft.commons.fx.music.audio.ObservableAlbum
 import net.transgressoft.commons.fx.music.audio.ObservableArtistCatalog
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
-import net.transgressoft.commons.fx.music.audio.ObservableGenreCatalog
+import net.transgressoft.commons.fx.music.audio.ObservableGenreIndex
 import net.transgressoft.commons.fx.music.createItemsByArtist
 import net.transgressoft.commons.fx.music.createItemsWithMultipleAlbums
-import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist.Companion.of
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
@@ -157,8 +157,8 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
         eventually(2.seconds) {
             WaitForAsyncUtils.waitForFxEvents()
             repository.artistCatalogsProperty.map { catalog: ObservableArtistCatalog -> catalog.artist }.toSet() shouldContainOnly expectedArtists
-            repository.albumCatalogsProperty.map { catalog: ObservableAlbumCatalog -> catalog.album }.toSet() shouldContainOnly expectedAlbums
-            repository.genreCatalogsProperty.map { catalog: ObservableGenreCatalog -> catalog.genre }.toSet() shouldContainOnly expectedGenres
+            repository.albumsProperty.map { album: ObservableAlbum -> album.album }.toSet() shouldContainOnly expectedAlbums
+            repository.genreIndexesProperty.map { catalog: ObservableGenreIndex -> catalog.genre }.toSet() shouldContainOnly expectedGenres
         }
     }
 
@@ -217,9 +217,9 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
             repository.audioItemsProperty.size shouldBe expectedItems.size
             repository.audioItemsProperty.map { audioItem: ObservableAudioItem -> audioItem.id } shouldContainOnly expectedItems.toIds()
             repository.artistCatalogsProperty.map { catalog: ObservableArtistCatalog -> catalog.artist }.toSet() shouldContainOnly expectedArtists
-            val observedAlbums = repository.albumCatalogsProperty.map { catalog: ObservableAlbumCatalog -> catalog.album }.toSet()
+            val observedAlbums = repository.albumsProperty.map { album: ObservableAlbum -> album.album }.toSet()
             observedAlbums shouldContainOnly expectedAlbums
-            repository.albumCatalogsProperty.size shouldBe expectedAlbums.size
+            repository.albumsProperty.size shouldBe expectedAlbums.size
         }
 
         audioItemsChangeCount.get() shouldBe 1
@@ -252,8 +252,8 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
     "ObservableAudioLibrary catalogs reflect correct album data with multiple albums per artist" {
         val artistName = "Multi Album Artist"
         val artist = of(artistName)
-        val album1 = Album("First Album", artist)
-        val album2 = Album("Second Album", artist)
+        val album1 = AlbumDetails("First Album", artist)
+        val album2 = AlbumDetails("Second Album", artist)
 
         repository.createItemsWithMultipleAlbums(
             files,
@@ -333,12 +333,12 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
         }
     }
 
-    "ObservableAudioLibrary albumCatalogsProperty reflects aggregate albums across all catalogs" {
+    "ObservableAudioLibrary albumsProperty reflects aggregate albums across all catalogs" {
         val artist1 = of("Artist One")
         val artist2 = of("Artist Two")
-        val album1A = Album("Album 1A", artist1)
-        val album1B = Album("Album 1B", artist1)
-        val album2A = Album("Album 2A", artist2)
+        val album1A = AlbumDetails("Album 1A", artist1)
+        val album1B = AlbumDetails("Album 1B", artist1)
+        val album2A = AlbumDetails("Album 2A", artist2)
 
         repository.createItemsWithMultipleAlbums(files, "Artist One", mapOf("Album 1A" to 2, "Album 1B" to 1))
         repository.createItemsWithMultipleAlbums(files, "Artist Two", mapOf("Album 2A" to 2))
@@ -348,8 +348,8 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
 
         eventually(2.seconds) {
             WaitForAsyncUtils.waitForFxEvents()
-            repository.albumCatalogsProperty.size shouldBe 3
-            repository.albumCatalogsProperty.map { catalog: ObservableAlbumCatalog -> catalog.album }.toSet() shouldContainOnly setOf(album1A, album1B, album2A)
+            repository.albumsProperty.size shouldBe 3
+            repository.albumsProperty.map { album: ObservableAlbum -> album.album }.toSet() shouldContainOnly setOf(album1A, album1B, album2A)
         }
     }
 
@@ -386,8 +386,8 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
             repository.artistCatalogsProperty.get().first { it.artist.name == "Rapid A" }.sizeProperty.get() shouldBe 3
             repository.artistCatalogsProperty.get().first { it.artist.name == "Rapid C" }.sizeProperty.get() shouldBe 4
 
-            repository.albumCatalogsProperty.size shouldBeGreaterThanOrEqual 2
-            repository.albumCatalogsProperty.map { catalog: ObservableAlbumCatalog -> catalog.album }.toSet().size shouldBeGreaterThanOrEqual 1
+            repository.albumsProperty.size shouldBeGreaterThanOrEqual 2
+            repository.albumsProperty.map { album: ObservableAlbum -> album.album }.toSet().size shouldBeGreaterThanOrEqual 1
         }
     }
 

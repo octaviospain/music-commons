@@ -38,7 +38,7 @@ import java.time.Duration
 data class AudioItemMetadata(
     val title: String = "",
     val artist: Artist = Artist.UNKNOWN,
-    val album: Album = Album.UNKNOWN,
+    val album: AlbumDetails = AlbumDetails.UNKNOWN,
     val genres: Set<Genre> = emptySet(),
     val comments: String? = null,
     val trackNumber: Short? = null,

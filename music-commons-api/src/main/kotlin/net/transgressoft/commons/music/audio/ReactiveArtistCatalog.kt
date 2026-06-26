@@ -44,9 +44,9 @@ interface ReactiveArtistCatalog<AC : ReactiveArtistCatalog<AC, I>, I : ReactiveA
     val artistName: String get() = artist.name
 
     /**
-     * All albums in this artist's catalog, each containing its audio items.
+     * All albums in this artist's catalog, each containing its tracks.
      */
-    val albums: Set<AlbumSet<I>>
+    val albums: Set<ReactiveAlbum<*, I>>
 
     /**
      * The total number of audio items in this catalog across all albums.
@@ -56,10 +56,10 @@ interface ReactiveArtistCatalog<AC : ReactiveArtistCatalog<AC, I>, I : ReactiveA
     /**
      * Retrieves all audio items for the specified album.
      *
-     * @param album The album to retrieve items for
+     * @param album The album details to retrieve items for
      * @return Set of audio items belonging to the album, or empty set if album not found
      */
-    fun albumAudioItems(album: Album): Set<I> = albumAudioItems(album.name)
+    fun albumAudioItems(album: AlbumDetails): Set<I> = albumAudioItems(album.name)
 
     /**
      * Retrieves all audio items for the album with the specified name.

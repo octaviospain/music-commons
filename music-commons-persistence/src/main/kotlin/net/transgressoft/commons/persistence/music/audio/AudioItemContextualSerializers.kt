@@ -17,7 +17,7 @@
 
 package net.transgressoft.commons.persistence.music.audio
 
-import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItemMetadata
 import net.transgressoft.commons.music.audio.Genre
@@ -177,10 +177,10 @@ object LabelContextualSerializer : KSerializer<Label> {
     }
 }
 
-object AlbumContextualSerializer : KSerializer<Album> {
+object AlbumContextualSerializer : KSerializer<AlbumDetails> {
 
     override val descriptor: SerialDescriptor =
-        buildClassSerialDescriptor("Album") {
+        buildClassSerialDescriptor("AlbumDetails") {
             element<String>("name")
             element<JsonObject>("albumArtist")
             element<Boolean>("isCompilation")
@@ -188,8 +188,8 @@ object AlbumContextualSerializer : KSerializer<Album> {
             element<JsonObject>("label")
         }
 
-    override fun serialize(encoder: Encoder, value: Album) {
-        val jsonEncoder = encoder as? JsonEncoder ?: throw SerializationException("Album can be serialized only with Json")
+    override fun serialize(encoder: Encoder, value: AlbumDetails) {
+        val jsonEncoder = encoder as? JsonEncoder ?: throw SerializationException("AlbumDetails can be serialized only with Json")
         jsonEncoder.encodeJsonElement(
             buildJsonObject {
                 put("name", value.name)
@@ -207,13 +207,13 @@ object AlbumContextualSerializer : KSerializer<Album> {
         )
     }
 
-    override fun deserialize(decoder: Decoder): Album {
-        val jsonDecoder = decoder as? JsonDecoder ?: throw SerializationException("Album can be deserialized only with Json")
+    override fun deserialize(decoder: Decoder): AlbumDetails {
+        val jsonDecoder = decoder as? JsonDecoder ?: throw SerializationException("AlbumDetails can be deserialized only with Json")
         val obj = jsonDecoder.decodeJsonElement().jsonObject
         val albumArtistObj =
             obj["albumArtist"]?.jsonObject ?: throw SerializationException("Missing required field 'album.albumArtist'")
         val labelObj = obj["label"]?.jsonObject ?: throw SerializationException("Missing required field 'album.label'")
-        return Album(
+        return AlbumDetails(
             name = obj.requireString("name", "album.name"),
             albumArtist = albumArtistObj.toArtist(),
             isCompilation = (obj["isCompilation"] ?: throw SerializationException("Missing required field 'album.isCompilation'")).jsonPrimitive.boolean,
@@ -307,7 +307,7 @@ val audioItemSerializersModule: SerializersModule =
         contextual(Genre::class, GenreContextualSerializer)
         contextual(Artist::class, ArtistContextualSerializer)
         contextual(Label::class, LabelContextualSerializer)
-        contextual(Album::class, AlbumContextualSerializer)
+        contextual(AlbumDetails::class, AlbumContextualSerializer)
         contextual(AudioItemMetadata::class, AudioItemMetadataContextualSerializer)
     }
 

@@ -17,10 +17,7 @@
 
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.music.audio.Album
-import net.transgressoft.commons.music.audio.UNASSIGNED_ID
-import net.transgressoft.commons.music.audio.audioItemIdentityComparator
-import net.transgressoft.commons.music.audio.audioItemTrackDiscNumberComparator
+import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.firstCoverImageBytes
 import net.transgressoft.commons.music.audio.id
 import net.transgressoft.lirp.entity.ReactiveEntityBase
@@ -39,44 +36,42 @@ import mu.KotlinLogging
 import java.io.ByteArrayInputStream
 import java.lang.ref.SoftReference
 import java.util.Optional
-import java.util.TreeSet
 
 /**
- * JavaFX implementation of [ObservableAlbumCatalog] that is built once from a list snapshot.
+ * JavaFX implementation of [ObservableAlbum] that is built once from a list snapshot.
  *
- * Audio items are held in a flat sorted, de-duplicated [TreeSet] built at construction time.
- * The internal set is never mutated after construction, so reads need no synchronization.
- * JavaFX observable properties are populated during construction and kept stable for the
- * lifetime of the instance.
+ * Audio items are held in a flat list delivered by lirp's projection, which guarantees
+ * disc-then-track ordering and distinctness before this class is constructed. No internal
+ * sorting or de-duplication is performed. JavaFX observable properties are populated during
+ * construction and kept stable for the lifetime of the instance.
  *
  * This class must be constructed only on the JavaFX Application Thread because it initializes
  * JavaFX properties and calls [SimpleListProperty.setAll] inside its init block. The registry's
  * `fxFactory` parameter guarantees this thread contract.
  */
-internal class FXAlbumCatalog(
-    override val album: Album,
+internal class FXAlbum(
+    override val album: AlbumDetails,
     audioItems: List<ObservableAudioItem>
-) : ObservableAlbumCatalog,
-    Comparable<ObservableAlbumCatalog>,
-    ReactiveEntityBase<Album, ObservableAlbumCatalog>() {
+) : ObservableAlbum,
+    Comparable<ObservableAlbum>,
+    ReactiveEntityBase<AlbumDetails, ObservableAlbum>() {
 
     private val logger = KotlinLogging.logger {}
 
-    // Flat sorted, de-duplicated set — built once in constructor, never mutated after construction
-    private val audioItemsSet: TreeSet<ObservableAudioItem> = buildFlatSet(audioItems)
+    private val trackList: List<ObservableAudioItem> = audioItems
 
-    override val id: Album = album
+    override val id: AlbumDetails = album
 
-    override val uniqueId: String = album.name
+    override val uniqueId: String = album.id()
 
-    override val size: Int get() = audioItemsSet.size
+    override val size: Int get() = trackList.size
 
-    override val isEmpty: Boolean get() = audioItemsSet.isEmpty()
+    override val isEmpty: Boolean get() = trackList.isEmpty()
 
-    override val audioItems: Set<ObservableAudioItem> get() = audioItemsSet
+    override val tracks: List<ObservableAudioItem> get() = trackList
 
-    override val audioItemsProperty: ReadOnlyListProperty<ObservableAudioItem>
-        field = SimpleListProperty(this, "audioItems", FXCollections.observableArrayList())
+    override val tracksProperty: ReadOnlyListProperty<ObservableAudioItem>
+        field = SimpleListProperty(this, "tracks", FXCollections.observableArrayList())
 
     override val sizeProperty: ReadOnlyIntegerProperty
         field = SimpleIntegerProperty(this, "size", 0)
@@ -87,7 +82,7 @@ internal class FXAlbumCatalog(
         }
     override val emptyProperty: ReadOnlyBooleanProperty = _emptyProperty.readOnlyProperty
 
-    override val albumProperty: ReadOnlyObjectProperty<Album>
+    override val albumProperty: ReadOnlyObjectProperty<AlbumDetails>
         field = SimpleObjectProperty(this, "album", album)
 
     @Transient
@@ -105,7 +100,7 @@ internal class FXAlbumCatalog(
             synchronized(this) {
                 coverBytesRef?.get()?.let { return it }
                 if (noCover) return null
-                val bytes = firstCoverImageBytes(audioItemsSet)
+                val bytes = firstCoverImageBytes(trackList)
                 return if (bytes != null) {
                     coverBytesRef = SoftReference(bytes)
                     publishCoverImage(bytes)
@@ -121,25 +116,25 @@ internal class FXAlbumCatalog(
         field = SimpleObjectProperty(this, "cover", Optional.empty())
 
     init {
-        logger.debug { "FXAlbumCatalog created for ${album.name}" }
-        audioItemsProperty.setAll(audioItemsSet.toList())
+        logger.debug { "FXAlbum created for ${album.name}" }
+        tracksProperty.setAll(trackList)
         sizeProperty.set(size)
     }
 
-    override fun clone(): FXAlbumCatalog = FXAlbumCatalog(album, audioItemsSet.toList())
+    override fun clone(): FXAlbum = FXAlbum(album, trackList.toList())
 
-    override fun compareTo(other: ObservableAlbumCatalog): Int = this.album.compareTo(other.album)
+    override fun compareTo(other: ObservableAlbum): Int = this.album.compareTo(other.album)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is FXAlbumCatalog) return false
+        if (other !is FXAlbum) return false
         if (album != other.album) return false
-        return audioItemsSet == other.audioItemsSet
+        return trackList == other.trackList
     }
 
-    override fun hashCode(): Int = 31 * album.hashCode() + audioItemsSet.hashCode()
+    override fun hashCode(): Int = 31 * album.hashCode() + trackList.hashCode()
 
-    override fun toString() = "FXAlbumCatalog(album=$album, size=$size)"
+    override fun toString() = "FXAlbum(album=$album, size=$size)"
 
     // Builds the JavaFX Image from the resolved cover bytes and publishes it into coverProperty
     // on the FX thread. Called lazily on first resolution of coverImageBytes; the resolved Image
@@ -157,31 +152,5 @@ internal class FXAlbumCatalog(
         } catch (_: IllegalStateException) {
             action()
         }
-    }
-
-    companion object {
-
-        // Items sorted by disc/track number with identity tie-break so that two distinct
-        // items with the same disc/track are both retained in the flat TreeSet bucket.
-        private val audioItemComparator: Comparator<ObservableAudioItem> =
-            audioItemTrackDiscNumberComparator<ObservableAudioItem>()
-                .thenComparing(audioItemIdentityComparator())
-
-        private fun buildFlatSet(audioItems: List<ObservableAudioItem>): TreeSet<ObservableAudioItem> {
-            val result = TreeSet(audioItemComparator)
-            for (item in audioItems) {
-                if (result.none { isSameAudioItem(it, item) }) {
-                    result.add(item)
-                }
-            }
-            return result
-        }
-
-        private fun isSameAudioItem(left: ObservableAudioItem, right: ObservableAudioItem): Boolean =
-            if (left.id != UNASSIGNED_ID && right.id != UNASSIGNED_ID) {
-                left.id == right.id
-            } else {
-                left === right || left.uniqueId == right.uniqueId
-            }
     }
 }

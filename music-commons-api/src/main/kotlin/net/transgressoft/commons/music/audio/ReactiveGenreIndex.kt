@@ -20,39 +20,39 @@ package net.transgressoft.commons.music.audio
 import net.transgressoft.lirp.entity.ReactiveEntity
 
 /**
- * Represents a reactive flat catalog of all audio items for a specific genre.
+ * Represents a reactive index of all audio items for a specific genre.
  *
- * Each catalog instance holds all audio items associated with a single [Genre] key.
- * Because an audio item may belong to multiple genres simultaneously, a single item
- * can appear in multiple genre catalogs at the same time. This interface extends
- * [ReactiveEntity] to support reactive updates when the catalog contents change.
+ * Each instance holds all audio items associated with a single [Genre] key, ordered by
+ * artist name, album name, then track number. Because an audio item may belong to multiple
+ * genres simultaneously, a single item can appear in multiple genre indexes at the same time.
+ * This interface extends [ReactiveEntity] to support reactive updates when the contents change.
  *
- * Unlike the artist catalog, there is no sub-grouping within the bucket: every audio
- * item tagged with this genre is exposed directly via [audioItems]. Items whose
- * [ReactiveAudioItem.genres] set is empty will not appear in any genre catalog.
+ * Unlike the artist catalog, there is no sub-grouping within the index: every audio item tagged
+ * with this genre is exposed directly via [tracks]. Items whose [ReactiveAudioItem.genres] set
+ * is empty will not appear in any genre index.
  *
- * @param GC The concrete type of this genre catalog, for self-referential generics
- * @param I The type of audio items contained in this catalog
+ * @param RGI The concrete type of this reactive genre index, for self-referential generics
+ * @param I The type of audio items contained in this index
  */
-interface ReactiveGenreCatalog<GC : ReactiveGenreCatalog<GC, I>, I : ReactiveAudioItem<I>> : ReactiveEntity<Genre, GC> {
+interface ReactiveGenreIndex<RGI : ReactiveGenreIndex<RGI, I>, I : ReactiveAudioItem<I>> : ReactiveEntity<Genre, RGI> {
 
     /**
-     * The genre this catalog represents.
+     * The genre this index represents.
      */
     val genre: Genre
 
     /**
-     * All audio items in this catalog, in natural comparable order, de-duplicated.
+     * The ordered tracks in this genre index, sorted by artist name, album name, then track number.
      */
-    val audioItems: Set<I>
+    val tracks: List<I>
 
     /**
-     * The total number of audio items in this catalog.
+     * The total number of tracks in this genre index.
      */
     val size: Int
 
     /**
-     * Indicates whether this catalog contains any audio items.
+     * Indicates whether this genre index contains any tracks.
      */
     val isEmpty: Boolean
 }

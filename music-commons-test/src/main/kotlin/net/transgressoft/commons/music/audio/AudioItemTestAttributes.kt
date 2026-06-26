@@ -52,7 +52,7 @@ data class AudioItemTestAttributes(
             metadata = metadata.copy(artist = value)
         }
 
-    var album: Album
+    var album: AlbumDetails
         get() = metadata.album
         set(value) {
             metadata = metadata.copy(album = value)

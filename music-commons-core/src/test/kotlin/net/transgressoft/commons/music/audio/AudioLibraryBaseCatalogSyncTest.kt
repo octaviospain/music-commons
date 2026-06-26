@@ -3,7 +3,6 @@ package net.transgressoft.commons.music.audio
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
-import net.transgressoft.lirp.event.ReactiveMutationEvent
 import net.transgressoft.lirp.persistence.VolatileRepository
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.nondeterministic.eventually
@@ -23,7 +22,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
  * bridge would cause.
  *
  * Also covers the album and genre catalog projections exposed via [TestAudioLibrary]:
- * [AudioLibraryBase.getAlbumCatalog], [AudioLibraryBase.getGenreCatalog],
+ * [AudioLibraryBase.getAlbum], [AudioLibraryBase.getGenreIndex],
  * [AudioLibraryBase.containsAudioItemWithGenre], and [AudioLibraryBase.getRandomAudioItemsFromGenre].
  */
 @ExperimentalCoroutinesApi
@@ -50,14 +49,14 @@ internal class AudioLibraryBaseCatalogSyncTest : StringSpec({
             audioLibrary.createFromFile(
                 files.virtualAudioFile {
                     artist = oldArtist
-                    album = Album("Heroes", oldArtist)
+                    album = AlbumDetails("Heroes", oldArtist)
                     title = "Heroes"
                 }.next()
             )
         reactive.advance()
 
         audioItem.artist = newArtist
-        audioItem.album = Album("Transformer", newArtist)
+        audioItem.album = AlbumDetails("Transformer", newArtist)
         reactive.advance()
 
         audioLibrary.getArtistCatalog(newArtist) shouldBePresent { it.artist.name shouldBe newArtist.name }
@@ -73,14 +72,14 @@ internal class AudioLibraryBaseCatalogSyncTest : StringSpec({
             audioLibrary.createFromFile(
                 files.virtualAudioFile {
                     this.artist = artist
-                    album = Album("Pablo Honey", artist)
+                    album = AlbumDetails("Pablo Honey", artist)
                     title = "Creep"
                 }.next()
             )
         reactive.advance()
         updateEvents.clear()
 
-        audioItem.album = Album("OK Computer", artist)
+        audioItem.album = AlbumDetails("OK Computer", artist)
         reactive.advance()
 
         updateEvents.isEmpty() shouldBe false
@@ -94,7 +93,7 @@ internal class AudioLibraryBaseCatalogSyncTest : StringSpec({
             audioLibrary.createFromFile(
                 files.virtualAudioFile {
                     artist = Artist.of("Aphex Twin")
-                    album = Album("Selected Ambient Works", Artist.of("Aphex Twin"))
+                    album = AlbumDetails("Selected Ambient Works", Artist.of("Aphex Twin"))
                     title = "Xtal"
                     trackNumber = 1
                 }.next()
@@ -118,7 +117,7 @@ internal class AudioLibraryBaseCatalogSyncTest : StringSpec({
             audioLibrary.createFromFile(
                 files.virtualAudioFile {
                     artist = Artist.of("Burial")
-                    album = Album("Untrue", Artist.of("Burial"))
+                    album = AlbumDetails("Untrue", Artist.of("Burial"))
                     title = "Archangel"
                 }.next()
             )
@@ -126,12 +125,11 @@ internal class AudioLibraryBaseCatalogSyncTest : StringSpec({
         updateEvents.clear()
 
         val newArtist = Artist.of("Four Tet")
-        audioItem.withEventsDisabled {
-            audioItem.artist = newArtist
-            audioItem.album = Album("Rounds", newArtist)
-            audioItem.title = "She Moves She"
+        audioItem.mutate {
+            artist = newArtist
+            album = AlbumDetails("Rounds", newArtist)
+            title = "She Moves She"
         }
-        audioItem.emitAsync(ReactiveMutationEvent(audioItem))
         reactive.advance()
 
         updateEvents.isEmpty() shouldBe false
@@ -147,7 +145,7 @@ internal class AudioLibraryBaseCatalogSyncTest : StringSpec({
             audioLibrary.createFromFile(
                 files.virtualAudioFile {
                     this.artist = artist
-                    album = Album("Kid A", artist)
+                    album = AlbumDetails("Kid A", artist)
                     genres = setOf(Electronic)
                     title = "Everything in Its Right Place"
                     trackNumber = 1
@@ -164,13 +162,13 @@ internal class AudioLibraryBaseCatalogSyncTest : StringSpec({
         reactive.advance()
 
         updateEvents.isEmpty() shouldBe false
-        audioLibrary.getGenreCatalog(Alternative) shouldBePresent { it.genre shouldBe Alternative }
-        audioLibrary.getGenreCatalog(Electronic).shouldBeEmpty()
+        audioLibrary.getGenreIndex(Alternative) shouldBePresent { it.genre shouldBe Alternative }
+        audioLibrary.getGenreIndex(Electronic).shouldBeEmpty()
     }
 
-    "AudioLibraryBase getAlbumCatalog and getGenreCatalog return correct live values" {
+    "AudioLibraryBase getAlbum and getGenreIndex return correct live values" {
         val artist = Artist.of("Portishead", CountryCode.UK)
-        val album = Album("Dummy", artist)
+        val album = AlbumDetails("Dummy", artist)
         val audioItem =
             audioLibrary.createFromFile(
                 files.virtualAudioFile {
@@ -185,23 +183,23 @@ internal class AudioLibraryBaseCatalogSyncTest : StringSpec({
         reactive.advance()
 
         eventually(2.seconds) {
-            audioLibrary.getAlbumCatalog(album) shouldBePresent { catalog ->
+            audioLibrary.getAlbum(album) shouldBePresent { catalog ->
                 catalog.album.name shouldBe "Dummy"
-                catalog.audioItems.shouldContainOnly(audioItem)
+                catalog.tracks.shouldContainOnly(audioItem)
             }
-            audioLibrary.getAlbumCatalog("Dummy") shouldBePresent { it.album.name shouldBe "Dummy" }
+            audioLibrary.getAlbum("Dummy") shouldBePresent { it.album.name shouldBe "Dummy" }
 
-            audioLibrary.getGenreCatalog(Electronic) shouldBePresent { catalog ->
+            audioLibrary.getGenreIndex(Electronic) shouldBePresent { catalog ->
                 catalog.genre shouldBe Electronic
-                catalog.audioItems.shouldContainOnly(audioItem)
+                catalog.tracks.shouldContainOnly(audioItem)
             }
-            audioLibrary.getGenreCatalog("Electronic") shouldBePresent { it.genre shouldBe Electronic }
+            audioLibrary.getGenreIndex("Electronic") shouldBePresent { it.genre shouldBe Electronic }
         }
     }
 
     "AudioLibraryBase containsAudioItemWithGenre and getRandomAudioItemsFromGenre return correct results" {
         val artist = Artist.of("Burial", CountryCode.UK)
-        val album = Album("Untrue", artist)
+        val album = AlbumDetails("Untrue", artist)
         val audioItem =
             audioLibrary.createFromFile(
                 files.virtualAudioFile {

@@ -1,7 +1,7 @@
 package net.transgressoft.commons.fx.music
 
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
-import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItemMetadata
 import net.transgressoft.commons.music.audio.AudioItemTestAttributes
@@ -100,8 +100,8 @@ object FxAudioItemTestFactory {
             get() = artistProperty.get()
             set(value) = artistProperty.set(value)
 
-        override val albumProperty: ObjectProperty<Album> = SimpleObjectProperty(this, "album", metadata.album)
-        override var album: Album
+        override val albumProperty: ObjectProperty<AlbumDetails> = SimpleObjectProperty(this, "album", metadata.album)
+        override var album: AlbumDetails
             get() = albumProperty.get()
             set(value) = albumProperty.set(value)
 
@@ -150,6 +150,8 @@ object FxAudioItemTestFactory {
         override fun setPlayCount(count: Short) {
             // Immutable test fixture: play count changes are not needed by current consumers.
         }
+
+        override fun mutate(action: ObservableAudioItem.() -> Unit) = mutateAndPublish { action() }
 
         override fun compareTo(other: ObservableAudioItem): Int =
             audioItemTrackDiscNumberComparator<ObservableAudioItem>().compare(this, other)

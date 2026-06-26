@@ -46,7 +46,7 @@ object AudioItemTestFactory {
 
     @JvmStatic
     @JvmOverloads
-    fun createAlbumAudioItems(artist: Artist? = null, album: Album? = null, range: IntRange = 3..10): List<AudioItem> =
+    fun createAlbumAudioItems(artist: Artist? = null, album: AlbumDetails? = null, range: IntRange = 3..10): List<AudioItem> =
         Arb.albumAudioItems(artist, album, range).next()
 
     @JvmStatic
@@ -55,7 +55,13 @@ object AudioItemTestFactory {
 
     @JvmStatic
     @JvmOverloads
-    fun createAlbum(name: String? = null, albumArtist: Artist? = null, isCompilation: Boolean? = null, year: Short? = null, label: Label? = null): Album =
+    fun createAlbum(
+        name: String? = null,
+        albumArtist: Artist? = null,
+        isCompilation: Boolean? = null,
+        year: Short? = null,
+        label: Label? = null
+    ): AlbumDetails =
         Arb.album(name, albumArtist, isCompilation, year, label).next()
 
     @JvmStatic

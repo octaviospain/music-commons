@@ -53,7 +53,7 @@ internal class MutableAudioItemTest : FunSpec({
             bitRate = 320,
             artist = Artist.of("The Beatles", CountryCode.UK),
             album =
-                Album(
+                AlbumDetails(
                     "Help!",
                     Artist.of("The Beatles Band", CountryCode.UK), true, 1965, Label.of("EMI", CountryCode.US)
                 ),
@@ -96,7 +96,7 @@ internal class MutableAudioItemTest : FunSpec({
                             id = UNASSIGNED_ID
                             // the album artists' and label's country code is not saved in the ID3 tag
                             album =
-                                Album(
+                                AlbumDetails(
                                     "Help!",
                                     Artist.of("The Beatles Band", CountryCode.UNDEFINED), true, 1965, Label.of("EMI", CountryCode.UNDEFINED)
                                 )
@@ -107,7 +107,7 @@ internal class MutableAudioItemTest : FunSpec({
             audioItem.album.toString() shouldContain "Album"
             audioItem.album.toString() shouldContain "Help!"
             audioItem.artist.toString() shouldContain "The Beatles"
-            audioItem.album.compareTo(Album.UNKNOWN) shouldNotBe 0
+            audioItem.album.compareTo(AlbumDetails.UNKNOWN) shouldNotBe 0
             audioItem.artist.compareTo(Artist.UNKNOWN) shouldNotBe 0
             audioItem.album.label.compareTo(Label.UNKNOWN) shouldNotBe 0
 

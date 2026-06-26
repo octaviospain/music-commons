@@ -42,7 +42,7 @@ data class AudioItemChange(
 
     override val uniqueId: String = id.toString()
 
-    var album: Album? = null
+    var album: AlbumDetails? = null
         set(value) {
             field = value
             albumName = value?.name

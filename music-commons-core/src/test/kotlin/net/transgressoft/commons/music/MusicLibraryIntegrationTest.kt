@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music
 
 import net.transgressoft.commons.media.persistence.waveform.AudioWaveformMapSerializer
-import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioLibrary
@@ -69,7 +69,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     "Operations on audio items impact subscribed repositories" {
         // Deterministic artist and title so catalog lookups use Artist(name, UNDEFINED) consistently
         val itemArtist = Artist.of("Portishead")
-        val itemAlbum = Album("Dummy", itemArtist)
+        val itemAlbum = AlbumDetails("Dummy", itemArtist)
         val audioItem =
             audioLibrary.createFromFile(
                 files.virtualAudioFile {
@@ -132,9 +132,9 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     "Multi-item artist catalog sync — add items from multiple artists, remove one, verify partial catalog cleanup" {
         val artistA = Artist.of("Artist Alpha")
         val artistB = Artist.of("Artist Beta")
-        val albumA1 = Album("Album One", artistA)
-        val albumA2 = Album("Album Two", artistA)
-        val albumB = Album("Album Beta", artistB)
+        val albumA1 = AlbumDetails("Album One", artistA)
+        val albumA2 = AlbumDetails("Album Two", artistA)
+        val albumB = AlbumDetails("Album Beta", artistB)
 
         val itemA1 =
             audioLibrary.createFromFile(
@@ -210,7 +210,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     "Lifecycle close integration — subscribe, close library, verify no further events propagate" {
         // Deterministic artist so catalog lookup by Artist works predictably
         val itemArtist = Artist.of("Nick Cave")
-        val itemAlbum = Album("Murder Ballads", itemArtist)
+        val itemAlbum = AlbumDetails("Murder Ballads", itemArtist)
         val audioItem =
             audioLibrary.createFromFile(
                 files.virtualAudioFile {

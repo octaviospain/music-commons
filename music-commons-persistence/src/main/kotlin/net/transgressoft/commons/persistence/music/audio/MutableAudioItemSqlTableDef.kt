@@ -17,7 +17,7 @@
 
 package net.transgressoft.commons.persistence.music.audio
 
-import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioItemMetadata
@@ -144,7 +144,7 @@ object MutableAudioItemSqlTableDef : RawConstructibleTableDef<AudioItem> {
                 countryCode = CountryConverter.fromSql(row[column("artist_country_code")] as String)
             )
         entity.album =
-            Album(
+            AlbumDetails(
                 name = row[column("album_name")] as String,
                 albumArtist =
                     Artist.of(
@@ -192,7 +192,7 @@ object MutableAudioItemSqlTableDef : RawConstructibleTableDef<AudioItem> {
                         )
                     "genres" -> GenreConverter.decodeGenres(row[column("genres")] as String)
                     "album" ->
-                        Album(
+                        AlbumDetails(
                             name = row[column("album_name")] as String,
                             albumArtist =
                                 Artist.of(

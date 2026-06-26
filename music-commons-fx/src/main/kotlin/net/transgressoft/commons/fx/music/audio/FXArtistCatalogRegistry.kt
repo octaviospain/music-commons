@@ -19,6 +19,7 @@ package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.ArtistCatalogRegistryBase
+import net.transgressoft.commons.music.audio.audioItemTrackDiscNumberComparator
 import net.transgressoft.lirp.persistence.Repository
 import net.transgressoft.lirp.persistence.fx.projection.FxObservableProjection
 import net.transgressoft.lirp.persistence.fx.projection.registryFxMultiKeyProjection
@@ -49,7 +50,8 @@ internal class FXArtistCatalogRegistry(repository: Repository<Int, ObservableAud
             keyExtractor = ObservableAudioItem::artistsInvolved,
             dataTransform = { _, items -> items.toList() },
             fxFactory = { artist, data -> FXArtistCatalog(artist, data) },
-            dispatchToFxThread = true
+            dispatchToFxThread = true,
+            entryOrdering = audioItemTrackDiscNumberComparator()
         )
 
     init {

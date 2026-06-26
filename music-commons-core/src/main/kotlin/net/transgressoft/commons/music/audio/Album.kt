@@ -18,13 +18,13 @@
 package net.transgressoft.commons.music.audio
 
 /**
- * Concrete genre catalog type used internally by the audio library infrastructure.
+ * A populated album managed by the audio library: the [AlbumDetails] identity plus the ordered list
+ * of tracks that belong to it.
  *
- * Extends [ReactiveGenreCatalog] as a typed marker for catalog instances managed by
- * the registry. Because an audio item may belong to multiple genres simultaneously,
- * a single item can appear in multiple genre catalog instances. Mutation operations
- * are internal to the concrete implementations.
+ * This is the core-tier album type that [AudioLibrary] exposes and the registry projection produces,
+ * binding [ReactiveAlbum]'s self-referential type parameter to the concrete album type so albums are
+ * mutually comparable. Ordering of tracks within an album is owned by the concrete implementations.
  *
- * @param I The type of audio items contained in this catalog
+ * @param I The type of audio items contained in this album
  */
-interface GenreCatalog<I : ReactiveAudioItem<I>> : ReactiveGenreCatalog<GenreCatalog<I>, I>, Comparable<GenreCatalog<I>>
+interface Album<I : ReactiveAudioItem<I>> : ReactiveAlbum<Album<I>, I>, Comparable<Album<I>>

@@ -180,7 +180,7 @@ internal class MutableAudioItem
             )
 
         @Serializable
-        override var album: Album by reactiveProperty(metadata.album)
+        override var album: AlbumDetails by reactiveProperty(metadata.album)
 
         @Transient
         private var _coverImageBytes: ByteArray? = metadata.coverBytes
@@ -219,6 +219,8 @@ internal class MutableAudioItem
             require(count >= 0) { "Play count cannot be negative" }
             withEventsDisabled { _playCount = count }
         }
+
+        override fun mutate(action: AudioItem.() -> Unit) = mutateAndPublish { action() }
 
         override operator fun compareTo(other: AudioItem) = audioItemTrackDiscNumberComparator<AudioItem>().compare(this, other)
 

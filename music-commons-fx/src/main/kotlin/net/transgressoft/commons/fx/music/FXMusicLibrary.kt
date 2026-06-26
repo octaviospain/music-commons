@@ -18,11 +18,11 @@
 package net.transgressoft.commons.fx.music
 
 import net.transgressoft.commons.fx.music.audio.FXAudioLibrary
-import net.transgressoft.commons.fx.music.audio.ObservableAlbumCatalog
+import net.transgressoft.commons.fx.music.audio.ObservableAlbum
 import net.transgressoft.commons.fx.music.audio.ObservableArtistCatalog
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.fx.music.audio.ObservableAudioLibrary
-import net.transgressoft.commons.fx.music.audio.ObservableGenreCatalog
+import net.transgressoft.commons.fx.music.audio.ObservableGenreIndex
 import net.transgressoft.commons.fx.music.playlist.FXPlaylistHierarchy
 import net.transgressoft.commons.fx.music.playlist.ObservablePlaylist
 import net.transgressoft.commons.fx.music.playlist.ObservablePlaylistHierarchy
@@ -87,11 +87,11 @@ class FXMusicLibrary private constructor(
     /** Observable set of all artist catalogs, each grouping albums and items by artist. */
     val artistCatalogsProperty: ReadOnlySetProperty<ObservableArtistCatalog> get() = _audioLibrary.artistCatalogsProperty
 
-    /** Observable set of all album catalogs, each grouping items by album. */
-    val albumCatalogsProperty: ReadOnlySetProperty<ObservableAlbumCatalog> get() = _audioLibrary.albumCatalogsProperty
+    /** Observable set of all album buckets, each grouping items by album. */
+    val albumsProperty: ReadOnlySetProperty<ObservableAlbum> get() = _audioLibrary.albumsProperty
 
-    /** Observable set of all genre catalogs, each grouping items by genre. */
-    val genreCatalogsProperty: ReadOnlySetProperty<ObservableGenreCatalog> get() = _audioLibrary.genreCatalogsProperty
+    /** Observable set of all genre indexes, each grouping items by genre. */
+    val genreIndexesProperty: ReadOnlySetProperty<ObservableGenreIndex> get() = _audioLibrary.genreIndexesProperty
 
     /** Observable set of all playlists in the hierarchy. */
     val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist> get() = _playlistHierarchy.playlistsProperty

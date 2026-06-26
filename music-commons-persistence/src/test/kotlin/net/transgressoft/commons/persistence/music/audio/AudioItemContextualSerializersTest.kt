@@ -17,7 +17,7 @@
 
 package net.transgressoft.commons.persistence.music.audio
 
-import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.Label
@@ -30,7 +30,7 @@ import kotlinx.serialization.json.Json
 
 /**
  * Direct round-trip coverage for the standalone value-type contextual serializers. The audio-item
- * entity round-trip exercises [Album] (which nests label/artist inline), so these tests close the
+ * entity round-trip exercises [AlbumDetails] (which nests label/artist inline), so these tests close the
  * gap for the [Label], [Artist], and [Genre] serializers when used on their own.
  */
 @DisplayName("Audio-item contextual serializers")

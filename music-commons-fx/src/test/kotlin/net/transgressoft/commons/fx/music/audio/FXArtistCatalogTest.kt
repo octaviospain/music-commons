@@ -1,6 +1,6 @@
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.id
 import net.transgressoft.commons.music.audio.virtualFiles
@@ -25,13 +25,13 @@ internal class FXArtistCatalogTest : StringSpec({
     val files = virtualFiles()
 
     val artist = Artist.of("Test Artist")
-    val album = Album("Test Album", artist)
+    val album = AlbumDetails("Test Album", artist)
 
     beforeSpec {
         FxToolkit.registerPrimaryStage()
     }
 
-    "FXArtistCatalog returns false for equals when audioItemsByAlbumName differs" {
+    "FXArtistCatalog returns false for equals when audioItemsByAlbum differs" {
         val path =
             files.virtualAudioFile {
                 this.artist = artist
@@ -45,7 +45,7 @@ internal class FXArtistCatalogTest : StringSpec({
         catalog1 shouldNotBe catalog2
     }
 
-    "FXArtistCatalog returns true for equals when artist and audioItemsByAlbumName match" {
+    "FXArtistCatalog returns true for equals when artist and audioItemsByAlbum match" {
         val path =
             files.virtualAudioFile {
                 this.artist = artist
@@ -59,7 +59,7 @@ internal class FXArtistCatalogTest : StringSpec({
         catalog1 shouldBe catalog2
     }
 
-    "FXArtistCatalog produces different hashCode when audioItemsByAlbumName differs" {
+    "FXArtistCatalog produces different hashCode when audioItemsByAlbum differs" {
         val path =
             files.virtualAudioFile {
                 this.artist = artist
@@ -111,7 +111,7 @@ internal class FXArtistCatalogTest : StringSpec({
         val path =
             files.virtualAudioFile {
                 this.artist = firstArtist
-                this.album = Album("Shared Album", firstArtist)
+                this.album = AlbumDetails("Shared Album", firstArtist)
                 trackNumber = 1
                 discNumber = 1
             }.next()
@@ -119,7 +119,7 @@ internal class FXArtistCatalogTest : StringSpec({
         val secondAudioItem =
             FXAudioItemTestBridge.createFxAudioItem(path, 2, files.metadataIO).apply {
                 this.artist = secondArtist
-                this.album = Album("Shared Album", secondArtist)
+                this.album = AlbumDetails("Shared Album", secondArtist)
             }
         FXAudioLibrary(VolatileRepository("SameUniqueIdFxAudioLibrary")).use { audioLibrary ->
             audioLibrary.add(firstAudioItem)

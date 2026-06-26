@@ -18,7 +18,7 @@
 package net.transgressoft.commons.persistence.fx.music.audio
 
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
-import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItemMetadata
 import net.transgressoft.commons.music.audio.Label
@@ -150,7 +150,7 @@ object FXAudioItemSqlTableDef : RawConstructibleTableDef<ObservableAudioItem> {
                 countryCode = CountryConverter.fromSql(row[column("artist_country_code")] as String)
             )
         entity.album =
-            Album(
+            AlbumDetails(
                 name = row[column("album_name")] as String,
                 albumArtist =
                     Artist.of(
@@ -200,7 +200,7 @@ object FXAudioItemSqlTableDef : RawConstructibleTableDef<ObservableAudioItem> {
                         Json.decodeFromString<List<String>>(row[column("genres")] as String)
                             .map { GenreConverter.fromSql(it) }.toSet()
                     "album" ->
-                        Album(
+                        AlbumDetails(
                             name = row[column("album_name")] as String,
                             albumArtist =
                                 Artist.of(

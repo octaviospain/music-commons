@@ -28,97 +28,99 @@ import mu.KotlinLogging
 import java.util.Optional
 
 /**
- * Abstract base for genre catalog registries backed by a lirp [ObservableProjection].
+ * Abstract base for genre index registries backed by a lirp [ObservableProjection].
  *
- * Both the core and FX registries project the audio-item repository into one genre catalog per
+ * Both the core and FX registries project the audio-item repository into one [GenreIndex] per
  * genre; they differ only in the concrete projection they build. This base owns the shared
  * behavior: it subscribes to the projection's per-entry changes and republishes them as
- * [genreCatalogPublisher] CRUD events (a null old value is a Create, a null new value is a Delete,
- * and both-present is an Update), exposes catalog query methods over the live projection, and
- * releases the projection on [close]. Subclasses supply the projection via [observeCatalogChanges].
+ * [genreIndexPublisher] CRUD events (a null old value is a Create, a null new value is a Delete,
+ * and both-present is an Update), exposes index query methods over the live projection, and
+ * releases the projection on [close]. Subclasses supply the projection via [observeGenreIndexChanges].
  *
  * Because an audio item may belong to multiple genres simultaneously, the multi-key projection
  * places a single item into every genre bucket it belongs to. An item with an empty genres set
  * is placed in no genre bucket.
  *
- * @param I The type of audio items stored in catalogs
- * @param GC The concrete genre catalog type managed by this registry
+ * @param I The type of audio items stored in indexes
+ * @param GI The concrete genre index type managed by this registry
  * @param publisherName Name for the event publisher, used in logging
  */
-abstract class GenreCatalogRegistryBase<I, GC>(private val publisherName: String = "GenreCatalogRegistry")
-    where I : ReactiveAudioItem<I>, I : Comparable<I>, GC : ReactiveGenreCatalog<GC, I>, GC : Comparable<GC> {
+abstract class GenreIndexRegistryBase<I, GI>(private val publisherName: String = "GenreIndexRegistry")
+    where I : ReactiveAudioItem<I>, I : Comparable<I>, GI : ReactiveGenreIndex<GI, I>, GI : Comparable<GI> {
 
     private val log = KotlinLogging.logger {}
 
-    /** CRUD event publisher for genre catalog changes — exposed to [AudioLibraryBase] consumers. */
-    val genreCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Genre, GC>> =
-        FlowEventPublisher<CrudEvent.Type, CrudEvent<Genre, GC>>(publisherName).also {
+    /** CRUD event publisher for genre index changes — exposed to [AudioLibraryBase] consumers. */
+    val genreIndexPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Genre, GI>> =
+        FlowEventPublisher<CrudEvent.Type, CrudEvent<Genre, GI>>(publisherName).also {
             it.activateEvents(CrudEvent.Type.CREATE, CrudEvent.Type.UPDATE, CrudEvent.Type.DELETE)
         }
 
-    protected abstract val projection: ObservableProjection<Genre, GC>
+    protected abstract val projection: ObservableProjection<Genre, GI>
 
     private var entriesChangedHandle: AutoCloseable? = null
 
     /**
-     * Adopts [projection] as the live catalog lookup and republishes its per-entry changes as
-     * genre catalog CRUD events. Subclasses call this once from their constructor with the
-     * projection they build. Registration replays the current catalogs as Create events for items
-     * already present in the repository.
+     * Adopts [projection] as the live genre index lookup and republishes its per-entry changes as
+     * genre index CRUD events. Subclasses call this once from their constructor with the projection
+     * they build. Registration replays the current indexes as Create events for items already
+     * present in the repository.
      */
-    protected fun observeCatalogChanges(projection: ObservableProjection<Genre, GC>) {
+    protected fun observeGenreIndexChanges(projection: ObservableProjection<Genre, GI>) {
         entriesChangedHandle =
             projection.addOnEntriesChangedListener { changes ->
-                for ((genre, oldCatalog, newCatalog) in changes) {
+                for ((genre, oldIndex, newIndex) in changes) {
                     when {
-                        oldCatalog == null && newCatalog != null -> {
-                            genreCatalogPublisher.emitAsync(Create(newCatalog))
-                            log.debug { "Genre catalog created for ${genre.name}" }
+                        oldIndex == null && newIndex != null -> {
+                            genreIndexPublisher.emitAsync(Create(newIndex))
+                            log.debug { "Genre index created for ${genre.name}" }
                         }
-                        oldCatalog != null && newCatalog != null -> {
-                            genreCatalogPublisher.emitAsync(Update(newCatalog, oldCatalog))
-                            log.debug { "Genre catalog updated for ${genre.name}" }
+                        oldIndex != null && newIndex != null -> {
+                            genreIndexPublisher.emitAsync(Update(newIndex, oldIndex))
+                            log.debug { "Genre index updated for ${genre.name}" }
                         }
-                        oldCatalog != null && newCatalog == null -> {
-                            genreCatalogPublisher.emitAsync(Delete(oldCatalog))
-                            log.debug { "Genre catalog deleted for ${genre.name}" }
+                        oldIndex != null && newIndex == null -> {
+                            genreIndexPublisher.emitAsync(Delete(oldIndex))
+                            log.debug { "Genre index deleted for ${genre.name}" }
                         }
                     }
                 }
             }
     }
 
-    /** Returns the catalog for the given genre, or empty if none exists. */
-    fun findById(genre: Genre): Optional<GC> = Optional.ofNullable(projection[genre])
+    /** Returns the index for the given genre, or empty if none exists. */
+    fun findById(genre: Genre): Optional<GI> = Optional.ofNullable(projection[genre])
 
     /**
-     * Returns the first catalog whose genre name contains [genreName] (case-insensitive),
-     * or empty if none matches.
+     * Returns the first index whose genre name contains [genreName] (case-insensitive), or empty if
+     * none matches. A blank [genreName] returns empty rather than matching an arbitrary index.
      */
-    fun findFirst(genreName: String): Optional<GC> =
-        Optional.ofNullable(
+    fun findFirst(genreName: String): Optional<GI> {
+        if (genreName.isBlank()) return Optional.empty()
+        return Optional.ofNullable(
             projection.entries.firstOrNull {
                 it.key.name.lowercase().contains(genreName.lowercase())
             }?.value
         )
+    }
 
     /**
-     * Returns the first catalog matching [predicate], or empty if none matches.
+     * Returns the first index matching [predicate], or empty if none matches.
      */
-    fun findFirst(predicate: (GC) -> Boolean): Optional<GC> =
+    fun findFirst(predicate: (GI) -> Boolean): Optional<GI> =
         Optional.ofNullable(projection.values.firstOrNull(predicate))
 
-    /** Iterates all current catalog values. */
-    fun forEach(action: (GC) -> Unit) = projection.values.forEach(action)
+    /** Iterates all current index values. */
+    fun forEach(action: (GI) -> Unit) = projection.values.forEach(action)
 
-    /** Returns the number of genre catalogs. */
+    /** Returns the number of genre indexes. */
     fun size(): Int = projection.size
 
-    /** Returns `true` if there are no genre catalogs. */
+    /** Returns `true` if there are no genre indexes. */
     val isEmpty: Boolean get() = projection.isEmpty()
 
-    /** Returns `true` if any catalog satisfies [predicate]. */
-    fun contains(predicate: (GC) -> Boolean): Boolean = projection.values.any(predicate)
+    /** Returns `true` if any index satisfies [predicate]. */
+    fun contains(predicate: (GI) -> Boolean): Boolean = projection.values.any(predicate)
 
     /** Releases the projection subscription and the projection. Called when the owning library is closed. */
     open fun close() {

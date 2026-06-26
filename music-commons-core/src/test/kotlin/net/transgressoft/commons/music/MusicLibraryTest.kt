@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music
 
 import net.transgressoft.commons.media.persistence.waveform.AudioWaveformMapSerializer
-import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
@@ -66,7 +66,7 @@ internal class MusicLibraryTest : StringSpec({
 
         // Deterministic artist (no country code) so catalog key matches the name-derived Artist
         val artist = Artist.of("Portishead")
-        val album = Album("Dummy", artist)
+        val album = AlbumDetails("Dummy", artist)
         val audioItem =
             library.audioItemFromFile(
                 files.virtualAudioFile {
@@ -90,7 +90,7 @@ internal class MusicLibraryTest : StringSpec({
         val library = CoreMusicLibrary.builder().metadataIO(files.metadataIO).build()
 
         val artist = Artist.of("Massive Attack")
-        val album = Album("Mezzanine", artist)
+        val album = AlbumDetails("Mezzanine", artist)
         val audioItem =
             library.audioItemFromFile(
                 files.virtualAudioFile {

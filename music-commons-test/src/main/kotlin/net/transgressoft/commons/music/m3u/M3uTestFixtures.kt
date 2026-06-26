@@ -17,7 +17,7 @@
 
 package net.transgressoft.commons.music.m3u
 
-import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioFileTagType
 import net.transgressoft.commons.music.audio.AudioFileType
@@ -163,7 +163,7 @@ object M3uTestFixtures {
             val albumArtistEntity = Artist.of(albumArtist)
             return io.kotest.property.Arb.audioAttributes(
                 artist = artistEntity,
-                album = Album(album, albumArtistEntity),
+                album = AlbumDetails(album, albumArtistEntity),
                 title = title,
                 trackNumber = trackNumber
             ).next()

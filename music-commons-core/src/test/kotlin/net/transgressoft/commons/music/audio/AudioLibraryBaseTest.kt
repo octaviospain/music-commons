@@ -36,7 +36,7 @@ internal class AudioLibraryBaseTest : StringSpec({
     "AudioLibraryBase adds audio item and syncs artist catalog" {
         // Use a deterministic artist (no country code) so the catalog key matches the name-derived Artist
         val artist = Artist.of("The Cure")
-        val album = Album("Disintegration", artist)
+        val album = AlbumDetails("Disintegration", artist)
         val audioItem =
             audioLibrary.createFromFile(
                 files.virtualAudioFile {
@@ -57,7 +57,7 @@ internal class AudioLibraryBaseTest : StringSpec({
 
     "AudioLibraryBase removes audio item and cleans up artist catalog" {
         val artist = Artist.of("The Cure")
-        val album = Album("Disintegration", artist)
+        val album = AlbumDetails("Disintegration", artist)
         val audioItem =
             audioLibrary.createFromFile(
                 files.virtualAudioFile {
@@ -88,7 +88,7 @@ internal class AudioLibraryBaseTest : StringSpec({
 
     "AudioLibraryBase close() stops event delivery" {
         val artist = Artist.of("The Cure")
-        val album = Album("Disintegration", artist)
+        val album = AlbumDetails("Disintegration", artist)
         val audioItem =
             audioLibrary.createFromFile(
                 files.virtualAudioFile {
@@ -107,7 +107,7 @@ internal class AudioLibraryBaseTest : StringSpec({
         val virtualPath =
             files.virtualAudioFile {
                 this.artist = newArtist
-                this.album = Album("Selected Ambient Works", newArtist)
+                this.album = AlbumDetails("Selected Ambient Works", newArtist)
             }.next()
         val newItem = MutableAudioItem(virtualPath, Int.MAX_VALUE - 1, files.metadataIO.readMetadata(virtualPath))
         repository.add(newItem)
@@ -121,7 +121,7 @@ internal class AudioLibraryBaseTest : StringSpec({
 
     "AudioLibraryBase findAlbumAudioItems returns items by artist and album" {
         val theBeatles = Artist.of("The Beatles")
-        val abbeyRoad = Album("Abbey Road", theBeatles)
+        val abbeyRoad = AlbumDetails("Abbey Road", theBeatles)
 
         val file1 =
             files.virtualAudioFile {
@@ -153,7 +153,7 @@ internal class AudioLibraryBaseTest : StringSpec({
         val oldArtist = Artist.of("David Bowie")
         val newArtist = Artist.of("Lou Reed")
         // albumArtist matches track artist; change both together so oldArtist leaves artistsInvolved
-        val oldAlbum = Album("Heroes", oldArtist)
+        val oldAlbum = AlbumDetails("Heroes", oldArtist)
         val audioItem =
             audioLibrary.createFromFile(
                 files.virtualAudioFile {
@@ -166,7 +166,7 @@ internal class AudioLibraryBaseTest : StringSpec({
 
         audioItem.artist = newArtist
         // also update album so albumArtist no longer references oldArtist
-        audioItem.album = Album("Transformer", newArtist)
+        audioItem.album = AlbumDetails("Transformer", newArtist)
 
         reactive.advance()
 
@@ -181,7 +181,7 @@ internal class AudioLibraryBaseTest : StringSpec({
     "AudioLibraryBase re-sorts item in catalog when track number changes" {
         // Deterministic artist and title prevent random titles from injecting extra artist keys
         val artist = Artist.of("Boards Of Canada")
-        val album = Album("Music Has The Right To Children", artist)
+        val album = AlbumDetails("Music Has The Right To Children", artist)
         val item1 =
             audioLibrary.createFromFile(
                 files.virtualAudioFile {
@@ -215,7 +215,7 @@ internal class AudioLibraryBaseTest : StringSpec({
 
     "AudioLibraryBase removes catalog and emits Delete CrudEvent when last item is removed" {
         val artist = Artist.of("Nick Cave")
-        val album = Album("Murder Ballads", artist)
+        val album = AlbumDetails("Murder Ballads", artist)
         val audioItem =
             audioLibrary.createFromFile(
                 files.virtualAudioFile {
@@ -242,7 +242,7 @@ internal class AudioLibraryBaseTest : StringSpec({
     "AudioLibraryBase artistCatalogPublisher emits Create on first item and Update on second" {
         // Deterministic artist and title to prevent random titles from inflating the catalog count
         val artist = Artist.of("Massive Attack")
-        val album = Album("Mezzanine", artist)
+        val album = AlbumDetails("Mezzanine", artist)
 
         val createEvents = mutableListOf<net.transgressoft.lirp.event.CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
         val updateEvents = mutableListOf<net.transgressoft.lirp.event.CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
@@ -283,7 +283,7 @@ internal class AudioLibraryBaseTest : StringSpec({
         // getRandomAudioItemsFromArtist(B) must find the track even though B is not the primary artist.
         val primaryArtist = Artist.of("Massive Attack")
         val featuredArtist = Artist.of("Elizabeth Fraser")
-        val album = Album("Mezzanine", primaryArtist)
+        val album = AlbumDetails("Mezzanine", primaryArtist)
         val audioItem =
             audioLibrary.createFromFile(
                 files.virtualAudioFile {

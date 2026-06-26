@@ -18,18 +18,20 @@
 package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.music.event.PlayedEventSubscriber
+import net.transgressoft.lirp.event.BatchChanged
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.CrudEvent.Type.CONFLICT
 import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.READ
 import net.transgressoft.lirp.event.CrudEvent.Type.RECOVERY_FAILED
+import net.transgressoft.lirp.event.CrudEvent.Type.RESTORE
+import net.transgressoft.lirp.event.CrudEvent.Type.SOFT_DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
 import net.transgressoft.lirp.event.LirpEventPublisher
 import net.transgressoft.lirp.event.LirpEventSubscription
 import net.transgressoft.lirp.event.MutationEvent
 import net.transgressoft.lirp.event.PropertyChanged
-import net.transgressoft.lirp.event.ReactiveMutationEvent
 import net.transgressoft.lirp.event.StandardCrudEvent.Update
 import net.transgressoft.lirp.persistence.Repository
 import java.util.*
@@ -46,7 +48,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * A per-item subscription is maintained for each audio item in the library. It re-keys all catalogs
  * only when a catalog-relevant property changes — the item's artist, album, or genres — by emitting
  * a repository-level UPDATE event so each projection's reverse index re-keys the item to its current
- * bucket. Bulk mutations (a [ReactiveMutationEvent] emitted after a batch of changes) also trigger
+ * bucket. Bulk mutations (a [BatchChanged] emitted after a batch of changes) also trigger
  * the re-key. Non-key mutations such as title, bpm, or track number are deliberately ignored to
  * avoid catalog projection churn. The repository-level UPDATE is required because
  * [net.transgressoft.lirp.persistence.VolatileRepository] and
@@ -61,17 +63,17 @@ import java.util.concurrent.atomic.AtomicInteger
 abstract class AudioLibraryBase<I, AC, ALC, GC>(
     protected val repository: Repository<Int, I>,
     protected val observableArtistCatalogRegistry: ArtistCatalogRegistryBase<I, AC>,
-    protected val observableAlbumCatalogRegistry: AlbumCatalogRegistryBase<I, ALC>,
-    protected val observableGenreCatalogRegistry: GenreCatalogRegistryBase<I, GC>,
+    protected val observableAlbumRegistry: AlbumRegistryBase<I, ALC>,
+    protected val observableGenreIndexRegistry: GenreIndexRegistryBase<I, GC>,
     protected val metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO()
 ) : ReactiveAudioLibrary<I, AC, ALC, GC>, Repository<Int, I> by repository
     where I : ReactiveAudioItem<I>,
           I : Comparable<I>,
           AC : ReactiveArtistCatalog<AC, I>,
           AC : Comparable<AC>,
-          ALC : ReactiveAlbumCatalog<ALC, I>,
+          ALC : ReactiveAlbum<ALC, I>,
           ALC : Comparable<ALC>,
-          GC : ReactiveGenreCatalog<GC, I>,
+          GC : ReactiveGenreIndex<GC, I>,
           GC : Comparable<GC> {
 
     /**
@@ -83,13 +85,13 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
     override val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>> =
         observableArtistCatalogRegistry.artistCatalogPublisher
 
-    /** Publisher exposing the internal album catalog registry for reactive album catalog updates. */
-    override val albumCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Album, ALC>> =
-        observableAlbumCatalogRegistry.albumCatalogPublisher
+    /** Publisher exposing the internal album registry for reactive album updates. */
+    override val albumPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<AlbumDetails, ALC>> =
+        observableAlbumRegistry.albumPublisher
 
-    /** Publisher exposing the internal genre catalog registry for reactive genre catalog updates. */
-    override val genreCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Genre, GC>> =
-        observableGenreCatalogRegistry.genreCatalogPublisher
+    /** Publisher exposing the internal genre index registry for reactive genre index updates. */
+    override val genreIndexPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Genre, GC>> =
+        observableGenreIndexRegistry.genreIndexPublisher
 
     private val entitySubscriptions: MutableMap<Int, LirpEventSubscription<in I, MutationEvent.Type, MutationEvent<Int, I>>> =
         ConcurrentHashMap()
@@ -105,7 +107,7 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
     /**
      * Subscribes to an audio item's mutation events and emits a repository-level UPDATE only when a
      * catalog-relevant property (artist, album, or genres) changes, or when a bulk
-     * [ReactiveMutationEvent] is emitted after a batch of changes.
+     * [BatchChanged] is emitted after a batch of changes.
      *
      * Scoping the emission to catalog-key properties keeps all catalog projections from re-keying on
      * non-key mutations (title, bpm, track number, …), which would otherwise cause needless catalog
@@ -122,7 +124,7 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
                             event.property.name == ReactiveAudioItem<*>::artist.name ||
                                 event.property.name == ReactiveAudioItem<*>::album.name ||
                                 event.property.name == ReactiveAudioItem<*>::genres.name
-                        is ReactiveMutationEvent<*, *> -> true
+                        is BatchChanged<*, *> -> true
                         else -> false
                     }
                 if (isCatalogRelevant) {
@@ -142,7 +144,10 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
      * - CREATE: subscribe to artist/album/genres changes for new audio items so the catalogs and persistence stay in sync
      * - UPDATE: catalog updates are handled by the projections via the artist/album/genres subscription above
      * - DELETE: cancel per-entity subscriptions when items are removed
-     * - READ, CONFLICT, RECOVERY_FAILED: no action needed
+     * - READ, CONFLICT, RECOVERY_FAILED, SOFT_DELETE, RESTORE: no action needed
+     *
+     * SOFT_DELETE and RESTORE never fire here because audio items are not soft-deletable; the
+     * branches exist only to keep the dispatch exhaustive over the event-type enum.
      *
      * The projections themselves subscribe to the same repository (CREATE, UPDATE, DELETE) and
      * maintain the artist, album, and genre catalogs incrementally — no explicit catalog add/remove calls
@@ -158,7 +163,7 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
                 DELETE -> {
                     event.entities.values.forEach { entitySubscriptions.remove(it.id)?.cancel() }
                 }
-                READ, CONFLICT, RECOVERY_FAILED -> Unit
+                READ, CONFLICT, RECOVERY_FAILED, SOFT_DELETE, RESTORE -> Unit
             }
         }
 
@@ -192,19 +197,19 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
     override fun getRandomAudioItemsFromArtist(artist: Artist, size: Short): List<I> =
         repository.search(size.toInt()) { it.artistsInvolved.contains(artist) }.shuffled().toList()
 
-    override fun getAlbumCatalog(album: Album): Optional<out ALC> = observableAlbumCatalogRegistry.findById(album)
+    override fun getAlbum(album: AlbumDetails): Optional<out ALC> = observableAlbumRegistry.findById(album)
 
-    override fun getAlbumCatalog(albumName: String): Optional<out ALC> = observableAlbumCatalogRegistry.findFirst(albumName)
+    override fun getAlbum(albumName: String): Optional<out ALC> = observableAlbumRegistry.findFirst(albumName)
 
     override fun containsAudioItemWithAlbum(albumName: String): Boolean =
         repository.contains { it.album.name.contentEquals(albumName, true) }
 
-    override fun getRandomAudioItemsFromAlbum(album: Album, size: Short): List<I> =
+    override fun getRandomAudioItemsFromAlbum(album: AlbumDetails, size: Short): List<I> =
         repository.search(size.toInt()) { it.album == album }.shuffled().toList()
 
-    override fun getGenreCatalog(genre: Genre): Optional<out GC> = observableGenreCatalogRegistry.findById(genre)
+    override fun getGenreIndex(genre: Genre): Optional<out GC> = observableGenreIndexRegistry.findById(genre)
 
-    override fun getGenreCatalog(genreName: String): Optional<out GC> = observableGenreCatalogRegistry.findFirst(genreName)
+    override fun getGenreIndex(genreName: String): Optional<out GC> = observableGenreIndexRegistry.findFirst(genreName)
 
     override fun containsAudioItemWithGenre(genreName: String): Boolean =
         repository.contains { it.genres.any { g -> g.name.contentEquals(genreName, true) } }
@@ -224,8 +229,8 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
         entitySubscriptions.clear()
         playerSubscriber.cancelSubscription()
         observableArtistCatalogRegistry.close()
-        observableAlbumCatalogRegistry.close()
-        observableGenreCatalogRegistry.close()
+        observableAlbumRegistry.close()
+        observableGenreIndexRegistry.close()
     }
 
     override fun equals(other: Any?): Boolean {
@@ -234,10 +239,10 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
         val that = other as AudioLibraryBase<*, *, *, *>
         return repository == that.repository &&
             observableArtistCatalogRegistry == that.observableArtistCatalogRegistry &&
-            observableAlbumCatalogRegistry == that.observableAlbumCatalogRegistry &&
-            observableGenreCatalogRegistry == that.observableGenreCatalogRegistry
+            observableAlbumRegistry == that.observableAlbumRegistry &&
+            observableGenreIndexRegistry == that.observableGenreIndexRegistry
     }
 
     override fun hashCode() =
-        Objects.hash(repository, observableArtistCatalogRegistry, observableAlbumCatalogRegistry, observableGenreCatalogRegistry)
+        Objects.hash(repository, observableArtistCatalogRegistry, observableAlbumRegistry, observableGenreIndexRegistry)
 }

@@ -38,7 +38,7 @@ internal class ArtistCatalogRegistryTest : StringSpec({
     }
 
     "DefaultArtistCatalogRegistry creates catalog when item is added to repository" {
-        val expectedAlbum = Album("Play", Artist.of("Moby", CountryCode.US))
+        val expectedAlbum = AlbumDetails("Play", Artist.of("Moby", CountryCode.US))
         val audioFilePath =
             files.virtualAudioFile {
                 artist = Artist.of("Moby", CountryCode.US)
@@ -66,7 +66,7 @@ internal class ArtistCatalogRegistryTest : StringSpec({
 
     "DefaultArtistCatalogRegistry removes catalog when last item is removed from repository" {
         val expectedArtist = Artist.of("Moby", CountryCode.US)
-        val expectedAlbum = Album("Play", expectedArtist)
+        val expectedAlbum = AlbumDetails("Play", expectedArtist)
         val audioItem =
             createAudioItem(
                 files.virtualAudioFile {
@@ -93,7 +93,7 @@ internal class ArtistCatalogRegistryTest : StringSpec({
         val newArtist = Artist.of("Bjork", CountryCode.IS)
         // album albumArtist intentionally matches the track artist so oldArtist is fully dropped
         // when both artist and album.albumArtist are changed to newArtist
-        val oldAlbum = Album("Play", oldArtist)
+        val oldAlbum = AlbumDetails("Play", oldArtist)
         val audioItem =
             createAudioItem(
                 // deterministic title free of separator tokens to prevent spurious involved-artist entries
@@ -111,7 +111,7 @@ internal class ArtistCatalogRegistryTest : StringSpec({
         // Change both track artist and album artist so Moby leaves artistsInvolved entirely
         val mutableItem = audioItem as MutableAudioItem
         mutableItem.artist = newArtist
-        mutableItem.album = Album("Homogenic", newArtist)
+        mutableItem.album = AlbumDetails("Homogenic", newArtist)
         repository.emitAsync(StandardCrudEvent.Update(audioItem, audioItem))
         reactive.advance()
 
@@ -126,7 +126,7 @@ internal class ArtistCatalogRegistryTest : StringSpec({
         // mocked AudioItem objects from Arb.albumAudioItems — mocks return null for artistsInvolved
         // since the interface declares it without a default body, causing an NPE in the multi-key projection.
         val expectedArtist = Artist.of("Pixies")
-        val expectedAlbum = Album("Doolittle", expectedArtist)
+        val expectedAlbum = AlbumDetails("Doolittle", expectedArtist)
         val itemPaths =
             files.virtualAlbumAudioFiles(expectedArtist, expectedAlbum, size = 3..5).next()
         val items = itemPaths.mapIndexed { idx, path -> createAudioItem(path, idx + 1, files.metadataIO) }
@@ -151,7 +151,7 @@ internal class ArtistCatalogRegistryTest : StringSpec({
     "DefaultArtistCatalogRegistry finds artist album set" {
         // Use a deterministic title and matching albumArtist to ensure artistsInvolved == {Radiohead}
         val expectedArtist = Artist.of("Radiohead")
-        val expectedAlbum = Album("OK Computer", expectedArtist)
+        val expectedAlbum = AlbumDetails("OK Computer", expectedArtist)
         val itemPaths =
             files.virtualAlbumAudioFiles(expectedArtist, expectedAlbum, size = 3..5).next()
         val audioItems = itemPaths.mapIndexed { idx, path -> createAudioItem(path, idx + 1, files.metadataIO) }
@@ -166,7 +166,7 @@ internal class ArtistCatalogRegistryTest : StringSpec({
                 artistCatalog.albums.size shouldBe 1
                 artistCatalog.albums.forEach { albumSet ->
                     albumSet.albumName shouldBe expectedAlbum.name
-                    albumSet shouldContainExactly audioItems
+                    albumSet.tracks shouldContainExactly audioItems
                 }
             }
         }
@@ -177,7 +177,7 @@ internal class ArtistCatalogRegistryTest : StringSpec({
         registry.artistCatalogPublisher.subscribe(CREATE) { receivedEvents.add(it) }
 
         val expectedArtist = Artist.of("Moby", CountryCode.US)
-        val expectedAlbum = Album("Play", expectedArtist)
+        val expectedAlbum = AlbumDetails("Play", expectedArtist)
         val audioItem =
             createAudioItem(
                 // deterministic title and matching albumArtist keep artistsInvolved == {Moby}, so exactly one bucket
@@ -204,7 +204,7 @@ internal class ArtistCatalogRegistryTest : StringSpec({
 
     "DefaultArtistCatalogRegistry emits UPDATE event when second item for same artist is added" {
         val expectedArtist = Artist.of("Radiohead", CountryCode.UK)
-        val expectedAlbum = Album("OK Computer", expectedArtist)
+        val expectedAlbum = AlbumDetails("OK Computer", expectedArtist)
         // deterministic titles and matching albumArtist keep artistsInvolved == {Radiohead} for both items,
         // so the second add recomputes exactly one bucket and fires exactly one UPDATE
         val firstItem =
@@ -258,7 +258,7 @@ internal class ArtistCatalogRegistryTest : StringSpec({
         // Deterministic title and matching albumArtist ensure artistsInvolved == {Radiohead},
         // so a trackNumber change cannot cause a bucket re-key and no UPDATE fires.
         val expectedArtist = Artist.of("Radiohead")
-        val expectedAlbum = Album("OK Computer", expectedArtist)
+        val expectedAlbum = AlbumDetails("OK Computer", expectedArtist)
         val item1 =
             createAudioItem(
                 files.virtualAudioFile {
@@ -291,11 +291,11 @@ internal class ArtistCatalogRegistryTest : StringSpec({
         val updateEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
         registry.artistCatalogPublisher.subscribe(UPDATE) { updateEvents.add(it) }
 
-        (item1 as MutableAudioItem).trackNumber = 5
+        (item1 as MutableAudioItem).title = "Karma Police (alternate)"
         repository.emitAsync(StandardCrudEvent.Update(item1, item1))
         reactive.advance()
 
-        // No UPDATE event emitted for within-bucket (non-artist) mutations
+        // No UPDATE event emitted for within-bucket mutations that do not affect artist or sort order
         Thread.sleep(300)
         updateEvents.isEmpty() shouldBe true
         // Both items still in the catalog
@@ -306,7 +306,7 @@ internal class ArtistCatalogRegistryTest : StringSpec({
 
     "DefaultArtistCatalogRegistry emits DELETE event when last item of artist is removed" {
         val expectedArtist = Artist.of("Bjork", CountryCode.IS)
-        val expectedAlbum = Album("Homogenic", expectedArtist)
+        val expectedAlbum = AlbumDetails("Homogenic", expectedArtist)
         val audioItem =
             createAudioItem(
                 files.virtualAudioFile {
@@ -339,8 +339,8 @@ internal class ArtistCatalogRegistryTest : StringSpec({
 
         val artist1 = Artist.of("Pink Floyd", CountryCode.UK)
         val artist2 = Artist.of("Led Zeppelin", CountryCode.UK)
-        val album1 = Album("The Wall", artist1)
-        val album2 = Album("IV", artist2)
+        val album1 = AlbumDetails("The Wall", artist1)
+        val album2 = AlbumDetails("IV", artist2)
 
         val item1 =
             createAudioItem(
@@ -376,7 +376,7 @@ internal class ArtistCatalogRegistryTest : StringSpec({
         // Multi-membership: a track featuring artist B appears in A's AND B's catalog buckets.
         // The feat pattern requires a space after "feat" (not "feat."), matching hasFeat regex.
         val artistA = Artist.of("Moby")
-        val albumA = Album("Play", artistA)
+        val albumA = AlbumDetails("Play", artistA)
         val audioItem =
             createAudioItem(
                 files.virtualAudioFile {
@@ -405,7 +405,7 @@ internal class ArtistCatalogRegistryTest : StringSpec({
         // both Moby and Bjork must appear in their own catalog buckets
         val trackArtist = Artist.of("Bjork")
         val albumArtist = Artist.of("Moby")
-        val album = Album("Collaboration", albumArtist)
+        val album = AlbumDetails("Collaboration", albumArtist)
         val audioItem =
             createAudioItem(
                 files.virtualAudioFile {
@@ -429,7 +429,7 @@ internal class ArtistCatalogRegistryTest : StringSpec({
     "removing item removes it from all involved-artist catalogs" {
         val trackArtist = Artist.of("Bjork")
         val albumArtist = Artist.of("Moby")
-        val album = Album("Collaboration", albumArtist)
+        val album = AlbumDetails("Collaboration", albumArtist)
         val audioItem =
             createAudioItem(
                 files.virtualAudioFile {
