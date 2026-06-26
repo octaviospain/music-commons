@@ -20,43 +20,43 @@ package net.transgressoft.commons.music.audio
 import net.transgressoft.lirp.entity.ReactiveEntity
 
 /**
- * Represents a reactive flat catalog of all audio items for a specific album.
+ * Represents a reactive ordered collection of audio items for a specific album.
  *
- * Each catalog instance holds all audio items associated with a single [Album] key,
+ * Each instance holds all audio items associated with a single [AlbumDetails] key,
  * without sub-grouping by artist or any other axis. This interface extends [ReactiveEntity]
- * to support reactive updates when the catalog contents change, enabling consumers to
- * subscribe to changes in an album's item collection.
+ * to support reactive updates when the contents change, enabling consumers to subscribe
+ * to changes in an album's item collection.
  *
- * Unlike the artist catalog, there is no album-level sub-grouping: every audio item
- * belonging to this album is exposed directly via [audioItems].
+ * Unlike the artist catalog, there is no sub-grouping: every audio item belonging to this
+ * album is exposed directly via [tracks], ordered by disc number then track number.
  *
- * @param ALC The concrete type of this album catalog, for self-referential generics
- * @param I The type of audio items contained in this catalog
+ * @param RA The concrete type of this reactive album, for self-referential generics
+ * @param I The type of audio items contained in this album
  */
-interface ReactiveAlbumCatalog<ALC : ReactiveAlbumCatalog<ALC, I>, I : ReactiveAudioItem<I>> : ReactiveEntity<Album, ALC> {
+interface ReactiveAlbum<RA : ReactiveAlbum<RA, I>, I : ReactiveAudioItem<I>> : ReactiveEntity<AlbumDetails, RA> {
 
     /**
-     * The album this catalog represents.
+     * The album details this instance represents.
      */
-    val album: Album
+    val album: AlbumDetails
 
     /**
-     * All audio items in this catalog, in natural comparable order, de-duplicated.
+     * The ordered tracks in this album, sorted by disc number then track number.
      */
-    val audioItems: Set<I>
+    val tracks: List<I>
 
     /**
-     * The total number of audio items in this catalog.
+     * The total number of tracks in this album.
      */
     val size: Int
 
     /**
-     * Indicates whether this catalog contains any audio items.
+     * Indicates whether this album contains any tracks.
      */
     val isEmpty: Boolean
 
     /**
-     * The name of the album this catalog represents.
+     * The name of the album.
      */
     val albumName: String get() = album.name
 
@@ -81,12 +81,12 @@ interface ReactiveAlbumCatalog<ALC : ReactiveAlbumCatalog<ALC, I>, I : ReactiveA
     val label: Label get() = album.label
 
     /**
-     * Cover image bytes resolved lazily from the first audio item in this catalog that carries a cover.
+     * Cover image bytes resolved lazily from the first track in this album that carries a cover.
      *
      * The bytes are cached softly so they can be reclaimed under memory pressure and re-resolved on
-     * next access. Resolution reuses each item's own on-demand cover loader — no per-track cover
-     * data is retained beyond the one representative item. Returns `null` if no item in this catalog
-     * carries cover data.
+     * next access. Resolution reuses each track's own on-demand cover loader and stops at the first
+     * track that yields cover data — so every track probed up to and including that one may populate
+     * its own cover cache as a side effect. Returns `null` if no track in this album carries cover data.
      */
     val coverImageBytes: ByteArray?
         get() = null

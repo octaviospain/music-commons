@@ -29,11 +29,11 @@ import javafx.beans.property.ReadOnlySetProperty
  * JavaFX properties for direct binding to UI components, enabling reactive table views,
  * list views, and other JavaFX controls without manual synchronization.
  *
- * Flat artist, album, and genre sets are no longer exposed directly; derive them from the catalog
- * set properties (e.g. `albumCatalogsProperty.map { it.album }.toSet()`).
+ * Flat artist, album, and genre sets are derived from the catalog set properties
+ * (e.g. `albumsProperty.map { it.album }.toSet()`).
  */
 interface ObservableAudioLibrary :
-    ReactiveAudioLibrary<ObservableAudioItem, ObservableArtistCatalog, ObservableAlbumCatalog, ObservableGenreCatalog> {
+    ReactiveAudioLibrary<ObservableAudioItem, ObservableArtistCatalog, ObservableAlbum, ObservableGenreIndex> {
 
     /**
      * Observable list of all audio items in the library, suitable for direct JavaFX binding.
@@ -51,12 +51,12 @@ interface ObservableAudioLibrary :
     val artistCatalogsProperty: ReadOnlySetProperty<ObservableArtistCatalog>
 
     /**
-     * Observable set of all album catalogs, each grouping items by album.
+     * Observable set of all album buckets, each grouping items by album.
      */
-    val albumCatalogsProperty: ReadOnlySetProperty<ObservableAlbumCatalog>
+    val albumsProperty: ReadOnlySetProperty<ObservableAlbum>
 
     /**
-     * Observable set of all genre catalogs, each grouping items by genre.
+     * Observable set of all genre indexes, each grouping items by genre.
      */
-    val genreCatalogsProperty: ReadOnlySetProperty<ObservableGenreCatalog>
+    val genreIndexesProperty: ReadOnlySetProperty<ObservableGenreIndex>
 }

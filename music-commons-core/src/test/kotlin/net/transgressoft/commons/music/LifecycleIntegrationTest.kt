@@ -3,7 +3,7 @@ package net.transgressoft.commons.music
 import net.transgressoft.commons.media.persistence.waveform.AudioWaveformMapSerializer
 import net.transgressoft.commons.media.waveform.ScalableAudioWaveform
 import net.transgressoft.commons.media.waveform.audioWaveformRepository
-import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
@@ -74,7 +74,7 @@ internal class LifecycleIntegrationTest : StringSpec({
 
     "AudioLibrary close() stops reacting to repository events" {
         val artist = Artist.of("Joy Division")
-        val album = Album("Unknown Pleasures", artist)
+        val album = AlbumDetails("Unknown Pleasures", artist)
         val audioItem =
             audioLibrary.createFromFile(
                 files.virtualAudioFile {

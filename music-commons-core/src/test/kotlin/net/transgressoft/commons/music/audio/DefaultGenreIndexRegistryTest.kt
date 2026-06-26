@@ -34,26 +34,26 @@ import io.kotest.matchers.shouldBe
 import io.kotest.property.arbitrary.next
 import kotlin.time.Duration.Companion.seconds
 
-internal class DefaultGenreCatalogRegistryTest : StringSpec({
+internal class DefaultGenreIndexRegistryTest : StringSpec({
 
     val reactive = reactiveScope()
     val files = virtualFiles()
 
     lateinit var repository: VolatileRepository<Int, AudioItem>
-    lateinit var registry: DefaultGenreCatalogRegistry<AudioItem>
+    lateinit var registry: DefaultGenreIndexRegistry<AudioItem>
 
     beforeEach {
-        repository = VolatileRepository("DefaultGenreCatalogRegistryTest")
-        registry = DefaultGenreCatalogRegistry(repository)
+        repository = VolatileRepository("DefaultGenreIndexRegistryTest")
+        registry = DefaultGenreIndexRegistry(repository)
     }
 
     afterEach {
         registry.close()
     }
 
-    "DefaultGenreCatalogRegistry creates genre catalog when item is added to repository" {
+    "DefaultGenreIndexRegistry creates genre catalog when item is added to repository" {
         val artist = Artist.of("Radiohead", CountryCode.UK)
-        val album = Album("OK Computer", artist)
+        val album = AlbumDetails("OK Computer", artist)
         val audioItem =
             createAudioItem(
                 files.virtualAudioFile {
@@ -75,16 +75,16 @@ internal class DefaultGenreCatalogRegistryTest : StringSpec({
             registry.findById(Alternative) shouldBePresent { catalog ->
                 catalog.genre shouldBe Alternative
                 catalog.size shouldBe 1
-                catalog.audioItems.shouldContainOnly(audioItem)
+                catalog.tracks.shouldContainOnly(audioItem)
             }
         }
     }
 
-    "DefaultGenreCatalogRegistry item with two genres appears in both genre buckets simultaneously" {
+    "DefaultGenreIndexRegistry item with two genres appears in both genre buckets simultaneously" {
         // Multi-membership: a single item tagged with both Rock and Electronic must appear
         // in each of those buckets at the same time.
         val artist = Artist.of("Radiohead", CountryCode.UK)
-        val album = Album("Kid A", artist)
+        val album = AlbumDetails("Kid A", artist)
         val audioItem =
             createAudioItem(
                 files.virtualAudioFile {
@@ -106,18 +106,18 @@ internal class DefaultGenreCatalogRegistryTest : StringSpec({
             registry.size() shouldBe 2
             registry.findById(Rock) shouldBePresent { catalog ->
                 catalog.size shouldBe 1
-                catalog.audioItems.shouldContainOnly(audioItem)
+                catalog.tracks.shouldContainOnly(audioItem)
             }
             registry.findById(Electronic) shouldBePresent { catalog ->
                 catalog.size shouldBe 1
-                catalog.audioItems.shouldContainOnly(audioItem)
+                catalog.tracks.shouldContainOnly(audioItem)
             }
         }
     }
 
-    "DefaultGenreCatalogRegistry item with empty genres set appears in no genre bucket" {
+    "DefaultGenreIndexRegistry item with empty genres set appears in no genre bucket" {
         val artist = Artist.of("Aphex Twin")
-        val album = Album("Selected Ambient Works", artist)
+        val album = AlbumDetails("Selected Ambient Works", artist)
         val audioItem =
             createAudioItem(
                 files.virtualAudioFile {
@@ -140,9 +140,9 @@ internal class DefaultGenreCatalogRegistryTest : StringSpec({
         registry.size() shouldBe 0
     }
 
-    "DefaultGenreCatalogRegistry re-buckets item when genres change via repository UPDATE" {
+    "DefaultGenreIndexRegistry re-buckets item when genres change via repository UPDATE" {
         val artist = Artist.of("Bjork", CountryCode.IS)
-        val album = Album("Homogenic", artist)
+        val album = AlbumDetails("Homogenic", artist)
         val audioItem =
             createAudioItem(
                 files.virtualAudioFile {
@@ -169,9 +169,9 @@ internal class DefaultGenreCatalogRegistryTest : StringSpec({
         }
     }
 
-    "DefaultGenreCatalogRegistry removes genre catalog when last item is removed from repository" {
+    "DefaultGenreIndexRegistry removes genre catalog when last item is removed from repository" {
         val artist = Artist.of("Burial", CountryCode.UK)
-        val album = Album("Untrue", artist)
+        val album = AlbumDetails("Untrue", artist)
         val audioItem =
             createAudioItem(
                 files.virtualAudioFile {
@@ -197,9 +197,9 @@ internal class DefaultGenreCatalogRegistryTest : StringSpec({
         }
     }
 
-    "DefaultGenreCatalogRegistry removing multi-genre item removes it from all its genre buckets" {
+    "DefaultGenreIndexRegistry removing multi-genre item removes it from all its genre buckets" {
         val artist = Artist.of("Beck")
-        val album = Album("Odelay", artist)
+        val album = AlbumDetails("Odelay", artist)
         val audioItem =
             createAudioItem(
                 files.virtualAudioFile {
@@ -227,12 +227,12 @@ internal class DefaultGenreCatalogRegistryTest : StringSpec({
         }
     }
 
-    "DefaultGenreCatalogRegistry emits CREATE event when first item for genre is added" {
-        val receivedEvents = mutableListOf<CrudEvent<Genre, GenreCatalog<AudioItem>>>()
-        registry.genreCatalogPublisher.subscribe(CREATE) { receivedEvents.add(it) }
+    "DefaultGenreIndexRegistry emits CREATE event when first item for genre is added" {
+        val receivedEvents = mutableListOf<CrudEvent<Genre, GenreIndex<AudioItem>>>()
+        registry.genreIndexPublisher.subscribe(CREATE) { receivedEvents.add(it) }
 
         val artist = Artist.of("Miles Davis")
-        val album = Album("Kind of Blue", artist)
+        val album = AlbumDetails("Kind of Blue", artist)
         val audioItem =
             createAudioItem(
                 files.virtualAudioFile {
@@ -255,9 +255,9 @@ internal class DefaultGenreCatalogRegistryTest : StringSpec({
         }
     }
 
-    "DefaultGenreCatalogRegistry emits DELETE event when last item of genre is removed" {
+    "DefaultGenreIndexRegistry emits DELETE event when last item of genre is removed" {
         val artist = Artist.of("Coltrane")
-        val album = Album("Giant Steps", artist)
+        val album = AlbumDetails("Giant Steps", artist)
         val audioItem =
             createAudioItem(
                 files.virtualAudioFile {
@@ -274,8 +274,8 @@ internal class DefaultGenreCatalogRegistryTest : StringSpec({
         reactive.advance()
         eventually(2.seconds) { registry.findById(Jazz).isPresent shouldBe true }
 
-        val deleteEvents = mutableListOf<CrudEvent<Genre, GenreCatalog<AudioItem>>>()
-        registry.genreCatalogPublisher.subscribe(DELETE) { deleteEvents.add(it) }
+        val deleteEvents = mutableListOf<CrudEvent<Genre, GenreIndex<AudioItem>>>()
+        registry.genreIndexPublisher.subscribe(DELETE) { deleteEvents.add(it) }
 
         repository.remove(audioItem)
         reactive.advance()
@@ -286,9 +286,9 @@ internal class DefaultGenreCatalogRegistryTest : StringSpec({
         }
     }
 
-    "DefaultGenreCatalogRegistry builds catalog from items already in repository at construction" {
+    "DefaultGenreIndexRegistry builds catalog from items already in repository at construction" {
         val artist = Artist.of("Pixies")
-        val album = Album("Doolittle", artist)
+        val album = AlbumDetails("Doolittle", artist)
         val items =
             files.virtualAlbumAudioFiles(artist, album, size = 3..4).next()
                 .mapIndexed { idx, path -> createAudioItem(path, idx + 1, files.metadataIO) }
@@ -298,13 +298,13 @@ internal class DefaultGenreCatalogRegistryTest : StringSpec({
             repository.add(it)
         }
         registry.close()
-        registry = DefaultGenreCatalogRegistry(repository)
+        registry = DefaultGenreIndexRegistry(repository)
         reactive.advance()
 
         eventually(2.seconds) {
             registry.findById(Alternative) shouldBePresent { catalog ->
                 catalog.size shouldBe items.size
-                catalog.audioItems.shouldContainOnly(items)
+                catalog.tracks.shouldContainOnly(items)
             }
         }
     }

@@ -17,7 +17,7 @@
 
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.ReactiveArtistCatalog
 import javafx.beans.property.ReadOnlyBooleanProperty
@@ -39,11 +39,11 @@ interface ObservableArtistCatalog :
     ReactiveArtistCatalog<ObservableArtistCatalog, ObservableAudioItem>, Comparable<ObservableArtistCatalog> {
 
     /**
-     * Observable set of albums in this artist's catalog.
+     * Observable set of album details in this artist's catalog.
      *
-     * @return A read-only set property containing the albums
+     * @return A read-only set property containing the album details
      */
-    val albumsProperty: ReadOnlySetProperty<Album>
+    val albumsProperty: ReadOnlySetProperty<AlbumDetails>
 
     /**
      * Returns an observable list of audio items for the specified album.

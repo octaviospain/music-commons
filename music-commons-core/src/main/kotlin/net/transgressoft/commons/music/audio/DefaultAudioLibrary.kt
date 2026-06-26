@@ -42,11 +42,11 @@ internal class DefaultAudioLibrary
     constructor(
         repository: Repository<Int, AudioItem>,
         metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO()
-    ) : AudioLibraryBase<AudioItem, ArtistCatalog<AudioItem>, AlbumCatalog<AudioItem>, GenreCatalog<AudioItem>>(
+    ) : AudioLibraryBase<AudioItem, ArtistCatalog<AudioItem>, Album<AudioItem>, GenreIndex<AudioItem>>(
             repository,
             DefaultArtistCatalogRegistry(repository),
-            DefaultAlbumCatalogRegistry(repository),
-            DefaultGenreCatalogRegistry(repository),
+            DefaultAlbumRegistry(repository),
+            DefaultGenreIndexRegistry(repository),
             metadataIO
         ),
         AudioLibrary {

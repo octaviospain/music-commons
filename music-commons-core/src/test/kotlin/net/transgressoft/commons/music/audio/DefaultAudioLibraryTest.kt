@@ -72,7 +72,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
     "Creates an audio item and allow to query it on creation and after modification" {
         // Deterministic artist and title so the catalog-key Artist (name-only, no country code) is predictable
         val itemArtist = Artist.of("Portishead")
-        val itemAlbum = Album("Dummy", itemArtist)
+        val itemAlbum = AlbumDetails("Dummy", itemArtist)
         val audioFile =
             files.virtualAudioFile {
                 artist = itemArtist
@@ -132,7 +132,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
 
     "Creates audio items from the same album" {
         val theBeatles = Artist.of("The Beatles")
-        val abbeyRoad = Album("Abbey Road", theBeatles)
+        val abbeyRoad = AlbumDetails("Abbey Road", theBeatles)
         val albumAudioFiles = files.virtualAlbumAudioFiles(theBeatles, abbeyRoad).next()
 
         albumAudioFiles.forEach(audioRepository::createFromFile)
@@ -201,7 +201,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
     "Artist catalog registry should be populated when loading from existing repository" {
         // Create some audio items and save them to the JSON file
         val theBeatles = Artist.of("The Beatles")
-        val abbeyRoad = Album("Abbey Road", theBeatles)
+        val abbeyRoad = AlbumDetails("Abbey Road", theBeatles)
         val albumAudioFiles = files.virtualAlbumAudioFiles(theBeatles, abbeyRoad).next()
 
         albumAudioFiles.forEach(audioRepository::createFromFile)
@@ -250,7 +250,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         val audioFile =
             files.virtualAudioFile {
                 this.artist = artist
-                album = Album("Dummy", artist)
+                album = AlbumDetails("Dummy", artist)
                 title = "Sour Times"
             }.next()
         val audioItem = audioRepository.createFromFile(audioFile)
@@ -271,7 +271,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         val audioFile =
             files.virtualAudioFile {
                 this.artist = artist
-                album = Album("Dummy", artist)
+                album = AlbumDetails("Dummy", artist)
                 title = "Sour Times"
             }.next()
         val audioItem = audioRepository.createFromFile(audioFile)
@@ -294,7 +294,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         val receivedEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
 
         val theBeatles = Artist.of("The Beatles")
-        val abbeyRoad = Album("Abbey Road", theBeatles)
+        val abbeyRoad = AlbumDetails("Abbey Road", theBeatles)
 
         val audioFile1 =
             files.virtualAudioFile {
@@ -341,7 +341,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         val audioFile =
             files.virtualAudioFile {
                 this.artist = artist
-                album = Album("Dummy", artist)
+                album = AlbumDetails("Dummy", artist)
                 title = "Sour Times"
             }.next()
         val audioItem = audioRepository.createFromFile(audioFile)
@@ -374,7 +374,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         val audioFile =
             files.virtualAudioFile {
                 artist = originalArtistObj
-                album = Album("Dummy", originalArtistObj)
+                album = AlbumDetails("Dummy", originalArtistObj)
                 title = "Sour Times"
             }.next()
         val audioItem = audioRepository.createFromFile(audioFile)
@@ -386,7 +386,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         val newArtist = Artist.of("Massive Attack")
         audioRepository.findById(audioItem.id).ifPresent {
             it.artist = newArtist
-            it.album = Album("Blue Lines", newArtist)
+            it.album = AlbumDetails("Blue Lines", newArtist)
         }
         reactive.advance()
 
@@ -399,7 +399,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
 
     "Artist catalog publisher provides access to catalog albums and items" {
         val theBeatles = Artist.of("The Beatles")
-        val abbeyRoad = Album("Abbey Road", theBeatles)
+        val abbeyRoad = AlbumDetails("Abbey Road", theBeatles)
         val albumFiles = files.virtualAlbumAudioFiles(theBeatles, abbeyRoad).next()
 
         albumFiles.forEach { audioRepository.createFromFile(it) }

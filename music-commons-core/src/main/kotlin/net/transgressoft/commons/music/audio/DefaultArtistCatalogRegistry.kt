@@ -41,8 +41,8 @@ internal class DefaultArtistCatalogRegistry<I>(repository: Repository<Int, I>)
         registryMultiKeyProjection(
             registry = repository,
             keyExtractor = { it.artistsInvolved },
-            valueTransform = { artist, items -> ImmutableArtistCatalog(artist, items) }
-        )
+            entryOrdering = audioItemTrackDiscNumberComparator()
+        ) { artist, items -> ImmutableArtistCatalog(artist, items) }
 
     init {
         observeCatalogChanges(projection)

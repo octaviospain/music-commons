@@ -12,11 +12,11 @@ import java.nio.file.Path
 internal class TestAudioLibrary(
     repository: Repository<Int, AudioItem>,
     metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO()
-) : AudioLibraryBase<AudioItem, ArtistCatalog<AudioItem>, AlbumCatalog<AudioItem>, GenreCatalog<AudioItem>>(
+) : AudioLibrary, AudioLibraryBase<AudioItem, ArtistCatalog<AudioItem>, Album<AudioItem>, GenreIndex<AudioItem>>(
         repository,
         DefaultArtistCatalogRegistry(repository),
-        DefaultAlbumCatalogRegistry(repository),
-        DefaultGenreCatalogRegistry(repository),
+        DefaultAlbumRegistry(repository),
+        DefaultGenreIndexRegistry(repository),
         metadataIO
     ) {
 

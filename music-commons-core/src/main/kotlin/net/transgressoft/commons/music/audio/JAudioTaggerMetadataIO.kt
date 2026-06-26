@@ -171,10 +171,10 @@ class JAudioTaggerMetadataIO : AudioMetadataIO {
             Artist.of(beautifyArtistName(artistName), country)
         } ?: Artist.UNKNOWN
 
-    private fun parseAlbum(tag: Tag): Album =
+    private fun parseAlbum(tag: Tag): AlbumDetails =
         getFieldIfExisting(tag, FieldKey.ALBUM).let { albumName ->
             return if (albumName == null) {
-                Album.UNKNOWN
+                AlbumDetails.UNKNOWN
             } else {
                 val albumArtistName = getFieldIfExisting(tag, FieldKey.ALBUM_ARTIST) ?: ""
                 val isCompilation =
@@ -186,7 +186,7 @@ class JAudioTaggerMetadataIO : AudioMetadataIO {
                     } ?: false
                 val year = getFieldIfExisting(tag, FieldKey.YEAR)?.toShortOrNull()?.takeIf { it > 0 }
                 val label = getFieldIfExisting(tag, FieldKey.GROUPING)?.let { Label.of(it) } ?: Label.UNKNOWN
-                Album(albumName, Artist.of(beautifyArtistName(albumArtistName)), isCompilation, year, label)
+                AlbumDetails(albumName, Artist.of(beautifyArtistName(albumArtistName)), isCompilation, year, label)
             }
         }
 
@@ -198,7 +198,7 @@ class JAudioTaggerMetadataIO : AudioMetadataIO {
     private fun createTag(
         format: String,
         title: String,
-        album: Album,
+        album: AlbumDetails,
         artist: Artist,
         genres: Set<Genre>,
         comments: String?,
@@ -246,7 +246,7 @@ class JAudioTaggerMetadataIO : AudioMetadataIO {
     private fun setTrackFieldsToTag(
         tag: Tag,
         title: String,
-        album: Album,
+        album: AlbumDetails,
         artist: Artist,
         genres: Set<Genre>,
         comments: String?,

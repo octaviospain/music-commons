@@ -17,12 +17,25 @@
 
 package net.transgressoft.commons.music.audio
 
+import java.util.Optional
+
 /**
- * Narrowed audio library interface for [AudioItem], [ArtistCatalog], [AlbumCatalog], and [GenreCatalog] types.
+ * Narrowed audio library interface for [AudioItem], [ArtistCatalog], [Album], and [GenreIndex] types.
  *
  * Provides a clean, non-generic entry point for consumers that work with the core domain types.
  * Extends [ReactiveAudioLibrary] with concrete type parameters, removing the need to specify
  * generics at call sites.
  */
 interface AudioLibrary :
-    ReactiveAudioLibrary<AudioItem, ArtistCatalog<AudioItem>, AlbumCatalog<AudioItem>, GenreCatalog<AudioItem>>
+    ReactiveAudioLibrary<AudioItem, ArtistCatalog<AudioItem>, Album<AudioItem>, GenreIndex<AudioItem>>
+
+/**
+ * Resolves the album this item belongs to from the given library.
+ *
+ * Call-site sugar over `library.getAlbum(item.album)` — the item holds no library back-reference,
+ * so navigation to its populated album always requires passing the library explicitly.
+ *
+ * @param library The library to look up the album in
+ * @return An [Optional] containing the album if it is present in the library, or empty if not found
+ */
+fun AudioItem.albumIn(library: AudioLibrary): Optional<out ReactiveAlbum<*, AudioItem>> = library.getAlbum(this.album)

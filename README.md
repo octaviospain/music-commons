@@ -105,8 +105,8 @@ Unknown genre strings are preserved as `Genre.Custom(name)` instead of being dis
 
 - **Multi-format support**: MP3, M4A (AAC and ALAC), WAV, FLAC, and OGG (Vorbis and Opus) with automatic metadata extraction
 - **Artist catalog indexing**: Automatic organization by artist and album with aggregated views. An item is indexed under every artist it involves (primary, album, and featured artists), so a collaboration appears in each contributor's catalog. The catalog is backed by a lirp multi-key registry projection — artist buckets update incrementally as items are added, modified, or removed, with no manual CRUD dispatch
-- **Album catalog indexing**: Flat per-album bucket view backed by a lirp single-key value-transform registry projection. Each item lands in exactly one album bucket (the album it belongs to). Buckets update incrementally as items are added, moved to a different album, or removed — use `getAlbumCatalog(album)`, `containsAudioItemWithAlbum(albumName)`, `getRandomAudioItemsFromAlbum(album)`, and `albumCatalogPublisher` to query the catalog
-- **Genre catalog indexing**: Flat per-genre bucket view backed by a lirp multi-key registry projection. An item with multiple genres appears in every matching genre bucket simultaneously; an item with an empty genres set is in no genre bucket. Buckets update incrementally as items are added, their genres change, or items are removed — use `getGenreCatalog(genre)`, `containsAudioItemWithGenre(genreName)`, `getRandomAudioItemsFromGenre(genre)`, and `genreCatalogPublisher` to query the catalog
+- **Album indexing**: Flat per-album bucket view backed by a lirp single-key value-transform registry projection. Each item lands in exactly one album bucket (the album it belongs to). Buckets update incrementally as items are added, moved to a different album, or removed — use `getAlbum(album)`, `containsAudioItemWithAlbum(albumName)`, `getRandomAudioItemsFromAlbum(album)`, and `albumPublisher` to query the index
+- **Genre index indexing**: Flat per-genre bucket view backed by a lirp multi-key registry projection. An item with multiple genres appears in every matching genre bucket simultaneously; an item with an empty genres set is in no genre bucket. Buckets update incrementally as items are added, their genres change, or items are removed — use `getGenreIndex(genre)`, `containsAudioItemWithGenre(genreName)`, `getRandomAudioItemsFromGenre(genre)`, and `genreIndexPublisher` to query the index
 - **Batch operations**: Asynchronous batch creation via `CompletableFuture` API
 - **Reactive updates**: CRUD operations publish events through Java Flow API
 - **Lazy cover-art loading**: `coverImageBytes` on `ReactiveAudioItem` is loaded on first access and cached — a full-library import retains no cover bytes until they are explicitly read. The getter and setter return and store the internal array reference directly; callers must treat the returned array as immutable and must not modify its contents. All mutations must go through the setter so reactive change notifications are published. For JavaFX consumers, observing or binding `ObservableAudioItem.coverImageProperty` also triggers the lazy load on first observation — an `ImageView` bound to `coverImageProperty` therefore loads its cover on demand when the cell first displays the track, without any explicit call to `coverImageBytes`.
@@ -192,7 +192,7 @@ sensitive data in error paths.
 
 - **Observable properties**: Direct binding to JavaFX TableView, ListView, and other controls
 - **Thread safety**: JavaFX-facing library and catalog projections coalesce burst updates onto the JavaFX Application Thread. The FX artist, album, and genre catalogs use lirp 3.0.0's two-phase projection approach (`registryFxMultiKeyProjection` for artist/genre, `registryFxProjection` for album) — background data transformation followed by FX-thread `fxFactory` construction — keeping large imports responsive while converging to the correct observable state
-- **Enriched catalog fields**: `ObservableArtistCatalog` exposes `artistName` alongside the full `Artist` value object. `ObservableAlbumCatalog` delegates `albumName`, `albumArtist`, `isCompilation`, `year`, and `label` directly onto the catalog so binding code does not need to navigate into the `Album` object. `ReactiveAlbumCatalog` also exposes `coverImageBytes: ByteArray?` (lazily loaded from the first item in the bucket that carries cover data). `ObservableAlbumCatalog` adds `coverProperty: ReadOnlyObjectProperty<Optional<Image>>` — a softly cached JavaFX image property resolved on the FX Application Thread, safe to bind directly to an `ImageView`
+- **Enriched catalog fields**: `ObservableArtistCatalog` exposes `artistName` alongside the full `Artist` value object. `ObservableAlbum` delegates `albumName`, `albumArtist`, `isCompilation`, `year`, and `label` directly onto the bucket so binding code does not need to navigate into the `AlbumDetails` object. `ReactiveAlbum` also exposes `coverImageBytes: ByteArray?` (lazily loaded from the first item in the bucket that carries cover data). `ObservableAlbum` adds `coverProperty: ReadOnlyObjectProperty<Optional<Image>>` — a softly cached JavaFX image property resolved on the FX Application Thread, safe to bind directly to an `ImageView`
 - **Custom controls**: `WaveformPane` for static waveforms, `PlayableWaveformPane` for playback-aware visualization with seek
 
 ### Typed Path Validation Exceptions
@@ -291,7 +291,10 @@ Defines contracts and interfaces for the audio management domain.
 **Key Interfaces:**
 - `MusicLibrary<I, P>` -- Unified facade interface implemented by both `CoreMusicLibrary` and `FXMusicLibrary`, enabling library-agnostic consumers like `ItunesImportService`
 - `ReactiveAudioItem<I>` -- Audio file representation with metadata
-- `ReactiveAudioLibrary<I, AC, ALC, GC>` -- Generic CRUD repository with reactive event publishing and `createAudioItem(factory)` for ID-encapsulated construction; type parameters bind the artist-catalog (`AC`), album-catalog (`ALC`), and genre-catalog (`GC`) types
+- `ReactiveAudioLibrary<I, AC, RA, GI>` -- Generic CRUD repository with reactive event publishing and `createAudioItem(factory)` for ID-encapsulated construction; type parameters bind the artist-catalog (`AC`), album (`RA`), and genre-index (`GI`) types
+- `ReactiveAlbum<RA, I>` -- Per-album bucket with `tracks: List<I>` (ordered by disc then track number), `album: AlbumDetails`, and lazy `coverImageBytes`
+- `ReactiveGenreIndex<GI, I>` -- Per-genre bucket with `tracks: List<I>` (ordered by artist then album then track), `genre: Genre`
+- `AlbumDetails` -- Album value type (replaces the former `Album`); carries `name`, `artist`, `year`, `isCompilation`, and `label`
 - `ReactiveAudioPlaylist<I, P>` / `ReactivePlaylistHierarchy<I, P>` -- Generic playlist management with M3U export and ID-based `createPlaylist` overload
 - `AudioWaveform` / `AudioWaveformRepository` -- Waveform data and generation
 - `AudioItemPlayer` -- Playback controls with status monitoring, including `STALLED` for sustained streaming starvation
@@ -303,12 +306,12 @@ reactive/event model. Ships no JSON or SQL persistence code — persistence is s
 `music-commons-persistence` module.
 
 - `CoreMusicLibrary` -- Unified facade for headless audio management implementing `MusicLibrary<AudioItem, MutableAudioPlaylist>` (builder-based entry point)
-- `AudioLibrary` -- Narrowed `ReactiveAudioLibrary` for `AudioItem`, `ArtistCatalog`, `AlbumCatalog`, and `GenreCatalog` types
+- `AudioLibrary` -- Narrowed `ReactiveAudioLibrary` for `AudioItem`, `ArtistCatalog`, `Album`, and `GenreIndex` types
 - `PlaylistHierarchy` -- Narrowed `ReactivePlaylistHierarchy` for `AudioItem` and `MutableAudioPlaylist` types
 - Internal implementations: `DefaultAudioLibrary`, `DefaultPlaylistHierarchy`, `DefaultAudioWaveformRepository`
 - **Artist catalog** -- multi-key registry projection (`registryMultiKeyProjection`); each item is bucketed under every artist it involves; buckets update incrementally as audio items change. Query via `artistCatalogs()`, `getArtistCatalog(artist)`, `containsAudioItemWithArtist(name)`, `getRandomAudioItemsFromArtist(artist)`, `artistCatalogPublisher`
-- **Album catalog** -- single-key value-transform registry projection (`registryProjection`); each item lands in exactly one album bucket keyed by its `album` field. Query via `albumCatalogs()`, `getAlbumCatalog(album)`, `containsAudioItemWithAlbum(name)`, `getRandomAudioItemsFromAlbum(album)`, `albumCatalogPublisher`
-- **Genre catalog** -- multi-key registry projection (`registryMultiKeyProjection`); an item with multiple genres appears in each matching genre bucket; an item with an empty genres set is in no bucket. Query via `genreCatalogs()`, `getGenreCatalog(genre)`, `containsAudioItemWithGenre(name)`, `getRandomAudioItemsFromGenre(genre)`, `genreCatalogPublisher`
+- **Album index** -- single-key value-transform registry projection (`registryProjection`); each item lands in exactly one album bucket keyed by its `album` field. Query via `albums()`, `getAlbum(album)`, `containsAudioItemWithAlbum(name)`, `getRandomAudioItemsFromAlbum(album)`, `albumPublisher`; navigate from an item via `item.albumIn(library)`
+- **Genre index** -- multi-key registry projection (`registryMultiKeyProjection`); an item with multiple genres appears in each matching genre bucket; an item with an empty genres set is in no bucket. Query via `genreIndexes()`, `getGenreIndex(genre)`, `containsAudioItemWithGenre(name)`, `getRandomAudioItemsFromGenre(genre)`, `genreIndexPublisher`
 - Event subscribers for reactive synchronization between components
 
 ### music-commons-fx
@@ -316,7 +319,7 @@ reactive/event model. Ships no JSON or SQL persistence code — persistence is s
 Bridges core module with JavaFX's property binding system.
 
 - `FXMusicLibrary` -- Unified facade for JavaFX audio management implementing `MusicLibrary<ObservableAudioItem, ObservablePlaylist>` with observable properties (builder-based entry point)
-- `ObservableAudioLibrary` -- Narrowed `ReactiveAudioLibrary` with JavaFX observable properties for UI binding; exposes `audioItemsProperty`, `emptyLibraryProperty`, `artistCatalogsProperty`, `albumCatalogsProperty`, and `genreCatalogsProperty`; flat sets and counts are derived from these catalog properties (e.g. `albumCatalogsProperty.map { it.album }.toSet()`, `albumCatalogsProperty.sizeProperty()`)
+- `ObservableAudioLibrary` -- Narrowed `ReactiveAudioLibrary` with JavaFX observable properties for UI binding; exposes `audioItemsProperty`, `emptyLibraryProperty`, `artistCatalogsProperty`, `albumsProperty`, and `genreIndexesProperty`; flat sets and counts are derived from these properties (e.g. `albumsProperty.map { it.album }.toSet()`, `albumsProperty.sizeProperty()`)
 - `ObservablePlaylistHierarchy` -- Narrowed `ReactivePlaylistHierarchy` with a JavaFX observable playlists collection
 - `FXAudioItemPlayer` -- JavaFX wrapper around the bounded-streaming `CoreAudioItemPlayer`, exposing volume, status, and current-time as observable properties
 - `WaveformPane` -- Custom Canvas component for static waveform visualization
@@ -444,19 +447,19 @@ val fxLibrary = FXMusicLibrary.builder()
 // Bind directly to JavaFX UI components
 tableView.itemsProperty().bind(fxLibrary.audioItemsProperty)
 
-// Derive counts and flat sets from the catalog set properties
-val albumCount = fxLibrary.albumCatalogsProperty.sizeProperty()
+// Derive counts and flat sets from the album/genre index set properties
+val albumCount = fxLibrary.albumsProperty.sizeProperty()
 albumCountLabel.textProperty().bind(albumCount.asString())
-val genreCount = fxLibrary.genreCatalogsProperty.sizeProperty()
+val genreCount = fxLibrary.genreIndexesProperty.sizeProperty()
 genreCountLabel.textProperty().bind(genreCount.asString())
 
 // Flat sets (e.g. for filtering or display): derived on demand, not live-bound properties
-val allAlbums = fxLibrary.albumCatalogsProperty.map { it.album }.toSet()
-val allGenres = fxLibrary.genreCatalogsProperty.map { it.genre }.toSet()
+val allAlbums = fxLibrary.albumsProperty.map { it.album }.toSet()
+val allGenres = fxLibrary.genreIndexesProperty.map { it.genre }.toSet()
 
-// Album and genre catalogs are observable sets for list/grid binding
-fxLibrary.albumCatalogsProperty.addListener { _, _, _ -> /* refresh album browser */ }
-fxLibrary.genreCatalogsProperty.addListener { _, _, _ -> /* refresh genre browser */ }
+// Album and genre index sets are observable for list/grid binding
+fxLibrary.albumsProperty.addListener { _, _, _ -> /* refresh album browser */ }
+fxLibrary.genreIndexesProperty.addListener { _, _, _ -> /* refresh genre browser */ }
 
 // Large create bursts are coalesced before the FX-facing projections refresh,
 // so bound controls converge after import bursts instead of repainting per item.
@@ -566,6 +569,60 @@ gradle ktlintCheck
 
 # Generate documentation
 gradle dokkaHtml
+```
+
+## Migration Notes
+
+### Album API Breaking Changes
+
+The album and genre bucket types were renamed and simplified. If you are upgrading from an earlier version, update your source code according to the table below. **The JSON persistence format is unchanged** — existing library files remain readable without any data migration.
+
+#### Renamed Types
+
+| Old name | New name | Notes |
+|----------|----------|-------|
+| `Album` (value type) | `AlbumDetails` | The `album` property on `ReactiveAudioItem` still exists; only its type changed |
+| `ReactiveAlbumCatalog` | `ReactiveAlbum` | Album bucket interface |
+| `ReactiveGenreCatalog` | `ReactiveGenreIndex` | Genre bucket interface |
+| `ObservableAlbumCatalog` | `ObservableAlbum` | FX album bucket interface |
+| `ObservableGenreCatalog` | `ObservableGenreIndex` | FX genre bucket interface |
+| `AlbumSet` | removed | Was a helper; replaced by `tracks: List<I>` on the bucket |
+| `AlbumView` | removed | Was a helper; replaced by `tracks: List<I>` on the bucket |
+
+#### Renamed Accessors and Publishers
+
+| Old accessor / publisher | New accessor / publisher |
+|--------------------------|--------------------------|
+| `getAlbumCatalog(album)` | `getAlbum(album)` |
+| `getGenreCatalog(genre)` | `getGenreIndex(genre)` |
+| `albumCatalogPublisher` | `albumPublisher` |
+| `genreCatalogPublisher` | `genreIndexPublisher` |
+| `albumCatalogsProperty` (FX) | `albumsProperty` |
+| `genreCatalogsProperty` (FX) | `genreIndexesProperty` |
+
+> The **Artist axis intentionally keeps** its `*Catalog` naming (`ReactiveArtistCatalog`,
+> `getArtistCatalog`, `artistCatalogPublisher`, `ObservableArtistCatalog`, etc.). Only the
+> Album and Genre axes were renamed.
+
+#### Bucket Members: `Set` → `List`
+
+`ReactiveAlbum.tracks` and `ReactiveGenreIndex.tracks` return `List<I>` instead of the former `Set`-based container. The list is ordered and deduplicated by lirp before it reaches the bucket — callers no longer need to sort or deduplicate the members.
+
+- Album buckets: ordered by disc number, then track number
+- Genre index buckets: ordered by artist name, then album name, then track number
+
+#### Full-Value Album Identity
+
+`AlbumDetails` uses full structural equality (all fields). The former `Album` type used name-keyed equality within an artist, meaning two albums with the same name but different artists or years were considered equal. Under the new identity, each distinct combination of `(name, artist, year, isCompilation, label)` is a separate bucket.
+
+#### Navigation Helper
+
+A convenience extension function `item.albumIn(library)` is available to navigate from an audio item to its album bucket:
+
+```kotlin
+import net.transgressoft.commons.music.audio.albumIn
+
+val album: Optional<out ReactiveAlbum<*, AudioItem>> = item.albumIn(library)
 ```
 
 ## Supply Chain

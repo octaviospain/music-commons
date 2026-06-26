@@ -54,7 +54,7 @@ internal class ImmutableArtistCatalogTest : StringSpec({
         catalog.size shouldBe 1
         catalog.albums.size shouldBe 1
         catalog.albums.first().albumName shouldBe expectedAlbum.name
-        catalog.albums.first().shouldContainOnly(audioItem)
+        catalog.albums.first().tracks.shouldContainOnly(audioItem)
     }
 
     "ImmutableArtistCatalog within-album track ordering is maintained after construction" {
@@ -63,12 +63,12 @@ internal class ImmutableArtistCatalogTest : StringSpec({
 
         val catalog = ImmutableArtistCatalog(artist, albumAudioItems)
 
-        catalog.albums.first().shouldBeOrdered()
+        catalog.albums.first().tracks.shouldBeOrdered()
     }
 
     "ImmutableArtistCatalog deduplicates by id when both items have assigned ids" {
         val expectedArtist = Arb.artist().next()
-        val expectedAlbum = Album("Shared Album", expectedArtist)
+        val expectedAlbum = AlbumDetails("Shared Album", expectedArtist)
         val path =
             files.virtualAudioFile {
                 artist = expectedArtist
@@ -103,8 +103,9 @@ internal class ImmutableArtistCatalogTest : StringSpec({
 
     "ImmutableArtistCatalog albums returns one entry per distinct album" {
         val artist = Arb.artist().next()
-        val album1 = Album("First Album", artist)
-        val album2 = Album("Second Album", artist)
+        // Same name, differing year: only full-value album identity keeps these as two distinct buckets.
+        val album1 = AlbumDetails("Shared Name", artist, year = 1997)
+        val album2 = AlbumDetails("Shared Name", artist, year = 1998)
         val item1 =
             Arb.audioItem {
                 this.artist = artist

@@ -17,7 +17,7 @@
 
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItemMetadata
 import net.transgressoft.commons.music.audio.AudioMetadataIO
@@ -194,13 +194,13 @@ class FXAudioItem
 
         @Transient
         @Suppress("UNCHECKED_CAST")
-        override val albumProperty: ObjectProperty<Album> = fxObject(metadata.album) as ObjectProperty<Album>
+        override val albumProperty: ObjectProperty<AlbumDetails> = fxObject(metadata.album) as ObjectProperty<AlbumDetails>
 
         @Transient
-        private var _album: Album = metadata.album
+        private var _album: AlbumDetails = metadata.album
 
         // Delegated reactive backing (over _album), mirroring into albumProperty (see artist above).
-        override var album: Album by reactiveProperty(
+        override var album: AlbumDetails by reactiveProperty(
             getter = { _album },
             setter = { value ->
                 _album = value
@@ -463,6 +463,8 @@ class FXAudioItem
                 playCountProperty.set(playCountProperty.get() + 1)
             }
         }
+
+        override fun mutate(action: ObservableAudioItem.() -> Unit) = mutateAndPublish { action() }
 
         override operator fun compareTo(other: ObservableAudioItem) = audioItemTrackDiscNumberComparator<ObservableAudioItem>().compare(this, other)
 

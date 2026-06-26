@@ -18,11 +18,13 @@
 package net.transgressoft.commons.music.audio
 
 /**
- * Concrete album catalog type used internally by the audio library infrastructure.
+ * Concrete genre index type used internally by the audio library infrastructure.
  *
- * Extends [ReactiveAlbumCatalog] as a typed marker for catalog instances managed by
- * the registry. Mutation operations are internal to the concrete implementations.
+ * Extends [ReactiveGenreIndex] as a typed marker for genre index instances managed by the
+ * registry. Because an audio item may belong to multiple genres simultaneously, a single item
+ * can appear in multiple genre index instances. Mutation operations are internal to the
+ * concrete implementations.
  *
- * @param I The type of audio items contained in this catalog
+ * @param I The type of audio items contained in this index
  */
-interface AlbumCatalog<I : ReactiveAudioItem<I>> : ReactiveAlbumCatalog<AlbumCatalog<I>, I>, Comparable<AlbumCatalog<I>>
+interface GenreIndex<I : ReactiveAudioItem<I>> : ReactiveGenreIndex<GenreIndex<I>, I>, Comparable<GenreIndex<I>>

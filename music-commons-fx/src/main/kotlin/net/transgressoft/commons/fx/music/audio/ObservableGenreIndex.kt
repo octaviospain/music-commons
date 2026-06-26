@@ -18,50 +18,50 @@
 package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.Genre
-import net.transgressoft.commons.music.audio.ReactiveGenreCatalog
+import net.transgressoft.commons.music.audio.ReactiveGenreIndex
 import javafx.beans.property.ReadOnlyBooleanProperty
 import javafx.beans.property.ReadOnlyIntegerProperty
 import javafx.beans.property.ReadOnlyListProperty
 import javafx.beans.property.ReadOnlyObjectProperty
 
 /**
- * JavaFX-compatible genre catalog interface exposing catalog data as observable properties.
+ * JavaFX-compatible genre index interface exposing index data as observable properties.
  *
- * Extends [ReactiveGenreCatalog] with JavaFX property bindings, enabling automatic UI updates
- * when the catalog contents change. Each catalog covers a single flat bucket of audio items
+ * Extends [ReactiveGenreIndex] with JavaFX property bindings, enabling automatic UI updates
+ * when the index contents change. Each index covers a single flat collection of audio items
  * for one genre — because an audio item may belong to multiple genres, a single item can
- * appear in multiple genre catalogs simultaneously. All observable property updates are
+ * appear in multiple genre indexes simultaneously. All observable property updates are
  * dispatched on the JavaFX Application Thread via `Platform.runLater`, ensuring thread-safe
  * UI binding.
  *
- * @see ReactiveGenreCatalog
+ * @see ReactiveGenreIndex
  */
-interface ObservableGenreCatalog :
-    ReactiveGenreCatalog<ObservableGenreCatalog, ObservableAudioItem>, Comparable<ObservableGenreCatalog> {
+interface ObservableGenreIndex :
+    ReactiveGenreIndex<ObservableGenreIndex, ObservableAudioItem>, Comparable<ObservableGenreIndex> {
 
     /**
-     * Observable list of all audio items in this genre catalog, in natural comparable order.
+     * Observable list of all audio items in this genre index, in artist-then-album-then-track order.
      *
-     * @return A read-only list property containing the catalog's audio items
+     * @return A read-only list property containing the index's audio items
      */
-    val audioItemsProperty: ReadOnlyListProperty<ObservableAudioItem>
+    val tracksProperty: ReadOnlyListProperty<ObservableAudioItem>
 
     /**
-     * Observable count of audio items in this catalog.
+     * Observable count of audio items in this index.
      *
      * @return A read-only integer property with the total item count
      */
     val sizeProperty: ReadOnlyIntegerProperty
 
     /**
-     * Observable boolean indicating whether this catalog is empty.
+     * Observable boolean indicating whether this index is empty.
      *
-     * @return A read-only boolean property that is true when the catalog has no audio items
+     * @return A read-only boolean property that is true when the index has no audio items
      */
     val emptyProperty: ReadOnlyBooleanProperty
 
     /**
-     * Observable genre associated with this catalog.
+     * Observable genre associated with this index.
      *
      * @return A read-only object property containing the genre
      */

@@ -22,32 +22,33 @@ import net.transgressoft.lirp.persistence.projection.ObservableProjection
 import net.transgressoft.lirp.persistence.projection.registryMultiKeyProjection
 
 /**
- * Genre catalog registry backed by a lirp multi-key value-transform registry projection.
+ * Genre index registry backed by a lirp multi-key value-transform registry projection.
  *
- * Builds one [GenreCatalog] per genre using [registryMultiKeyProjection]: each audio item is
+ * Builds one [GenreIndex] per genre using [registryMultiKeyProjection]: each audio item is
  * placed into every genre bucket corresponding to its `genres` set. An item that belongs to
- * multiple genres appears in each of those genre catalogs simultaneously. An item with an empty
- * `genres` set is placed in no genre bucket. Shared CRUD-event republishing, catalog queries,
- * and lifecycle live in [GenreCatalogRegistryBase].
+ * multiple genres appears in each of those genre indexes simultaneously. An item with an empty
+ * `genres` set is placed in no genre bucket. The projection maintains each bucket's track list
+ * in artist-then-album-then-track order via [audioItemArtistAlbumTrackComparator]. Shared
+ * CRUD-event republishing, index queries, and lifecycle live in [GenreIndexRegistryBase].
  *
- * Unlike the album catalog (which uses single-key projection because items have exactly one album),
- * the multi-key projection is required here because items can belong to multiple genres.
+ * Unlike the album registry (which uses single-key projection because items have exactly one
+ * album), the multi-key projection is required here because items can belong to multiple genres.
  *
  * @param I The audio item type
  * @param repository The audio-item repository to project
  */
-internal class DefaultGenreCatalogRegistry<I>(repository: Repository<Int, I>)
-: GenreCatalogRegistryBase<I, GenreCatalog<I>>("GenreCatalogRegistry")
+internal class DefaultGenreIndexRegistry<I>(repository: Repository<Int, I>)
+: GenreIndexRegistryBase<I, GenreIndex<I>>("GenreIndexRegistry")
     where I : ReactiveAudioItem<I>, I : Comparable<I> {
 
-    override val projection: ObservableProjection<Genre, GenreCatalog<I>> =
+    override val projection: ObservableProjection<Genre, GenreIndex<I>> =
         registryMultiKeyProjection(
             registry = repository,
             keyExtractor = { it.genres },
-            valueTransform = { genre, items -> ImmutableGenreCatalog(genre, items) }
-        )
+            entryOrdering = audioItemArtistAlbumTrackComparator()
+        ) { genre, tracks -> ImmutableGenreIndex(genre, tracks) }
 
     init {
-        observeCatalogChanges(projection)
+        observeGenreIndexChanges(projection)
     }
 }

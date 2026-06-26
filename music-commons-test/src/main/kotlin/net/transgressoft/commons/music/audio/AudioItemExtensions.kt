@@ -21,7 +21,7 @@ fun <I : ReactiveAudioItem<I>> I.update(change: AudioItemChange) {
     change.title?.let { title = it }
     change.artist?.let { artist = it }
     album =
-        Album(
+        AlbumDetails(
             change.albumName ?: album.name,
             change.albumArtist ?: album.albumArtist,
             change.isCompilation ?: album.isCompilation,

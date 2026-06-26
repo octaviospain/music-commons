@@ -1,7 +1,7 @@
 package net.transgressoft.commons.music.itunes
 
 import net.transgressoft.commons.music.MusicLibrary
-import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioFileType
 import net.transgressoft.commons.music.audio.AudioMetadataIO
@@ -14,7 +14,6 @@ import net.transgressoft.commons.music.playlist.ReactiveAudioPlaylist
 import net.transgressoft.commons.util.WindowsPathException
 import net.transgressoft.commons.util.WindowsPathValidator
 import net.transgressoft.commons.util.WindowsViolation
-import net.transgressoft.lirp.event.ReactiveMutationEvent
 import mu.KotlinLogging
 import java.net.URI
 import java.nio.file.FileSystem
@@ -201,24 +200,23 @@ class ItunesImportService<I, P>
 
     private fun applyItunesMetadata(audioItem: I, track: ItunesTrack) {
         val (artist, album, genres) = resolveItunesMetadata(track)
-        audioItem.withEventsDisabled {
-            audioItem.title = track.title
-            audioItem.artist = artist
-            audioItem.album = album
-            audioItem.genres = genres
-            audioItem.comments = track.comments
-            audioItem.trackNumber = track.trackNumber
-            audioItem.discNumber = track.discNumber
-            audioItem.bpm = track.bpm
+        audioItem.mutate {
+            title = track.title
+            this.artist = artist
+            this.album = album
+            this.genres = genres
+            comments = track.comments
+            trackNumber = track.trackNumber
+            discNumber = track.discNumber
+            bpm = track.bpm
         }
-        audioItem.emitAsync(ReactiveMutationEvent(audioItem))
     }
 
     private fun resolveItunesMetadata(track: ItunesTrack): ItunesMetadata {
         val artist = Artist.of(track.artist)
         val albumArtist = Artist.of(track.albumArtist)
         val album =
-            Album(
+            AlbumDetails(
                 name = track.album,
                 albumArtist = albumArtist,
                 isCompilation = track.isCompilation,
@@ -349,7 +347,7 @@ class ItunesImportService<I, P>
             WindowsViolation.ExceedsMaxPath -> RejectionReason.ExceedsMaxPath
         }
 
-    private data class ItunesMetadata(val artist: Artist, val album: Album, val genres: Set<Genre>)
+    private data class ItunesMetadata(val artist: Artist, val album: AlbumDetails, val genres: Set<Genre>)
 
     private class TrackImportAccumulator(val totalItems: Int) {
         var itemsProcessed = 0

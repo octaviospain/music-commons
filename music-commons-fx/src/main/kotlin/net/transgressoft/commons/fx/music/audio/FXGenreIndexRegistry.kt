@@ -18,42 +18,45 @@
 package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.Genre
-import net.transgressoft.commons.music.audio.GenreCatalogRegistryBase
+import net.transgressoft.commons.music.audio.GenreIndexRegistryBase
+import net.transgressoft.commons.music.audio.audioItemArtistAlbumTrackComparator
 import net.transgressoft.lirp.persistence.Repository
 import net.transgressoft.lirp.persistence.fx.projection.FxObservableProjection
 import net.transgressoft.lirp.persistence.fx.projection.registryFxMultiKeyProjection
 
 /**
- * JavaFX genre catalog registry backed by a two-phase value-transform multi-key registry projection.
+ * JavaFX genre index registry backed by a two-phase value-transform multi-key registry projection.
  *
  * Groups audio items from [repository] by every genre they are tagged with, so a track with
- * multiple genres appears in each of the corresponding genre catalogs. Items with an empty genres
- * set appear in no genre catalog. The two-phase split keeps [FXGenreCatalog] construction
- * thread-safe:
+ * multiple genres appears in each of the corresponding genre indexes. Items with an empty genres
+ * set appear in no genre index. The two-phase split keeps [FXGenreIndex] construction thread-safe:
  *
  * - **dataTransform** (background thread): pure snapshot of the bucket as a `List<ObservableAudioItem>`;
  *   must not touch any JavaFX property or node.
- * - **fxFactory** (FX Application Thread): constructs the [FXGenreCatalog] from the snapshot, safe to
+ * - **fxFactory** (FX Application Thread): constructs the [FXGenreIndex] from the snapshot, safe to
  *   initialize JavaFX properties.
  *
- * Shared CRUD-event republishing, catalog queries, and lifecycle live in [GenreCatalogRegistryBase];
- * the projection's entries-changed callback fires on the FX Application Thread.
+ * The projection maintains each bucket's list in artist-then-album-then-track order via
+ * [audioItemArtistAlbumTrackComparator]. Shared CRUD-event republishing, index queries, and
+ * lifecycle live in [GenreIndexRegistryBase]; the projection's entries-changed callback fires on
+ * the FX Application Thread.
  *
  * @param repository The observable audio-item repository to project
  */
-internal class FXGenreCatalogRegistry(repository: Repository<Int, ObservableAudioItem>)
-: GenreCatalogRegistryBase<ObservableAudioItem, ObservableGenreCatalog>("FXGenreCatalogRegistry") {
+internal class FXGenreIndexRegistry(repository: Repository<Int, ObservableAudioItem>)
+: GenreIndexRegistryBase<ObservableAudioItem, ObservableGenreIndex>("FXGenreIndexRegistry") {
 
-    override val projection: FxObservableProjection<Genre, ObservableGenreCatalog> =
+    override val projection: FxObservableProjection<Genre, ObservableGenreIndex> =
         registryFxMultiKeyProjection(
             registry = repository,
             keyExtractor = ObservableAudioItem::genres,
             dataTransform = { _, items -> items.toList() },
-            fxFactory = { genre, data -> FXGenreCatalog(genre, data) },
-            dispatchToFxThread = true
+            fxFactory = { genre, data -> FXGenreIndex(genre, data) },
+            dispatchToFxThread = true,
+            entryOrdering = audioItemArtistAlbumTrackComparator()
         )
 
     init {
-        observeCatalogChanges(projection)
+        observeGenreIndexChanges(projection)
     }
 }

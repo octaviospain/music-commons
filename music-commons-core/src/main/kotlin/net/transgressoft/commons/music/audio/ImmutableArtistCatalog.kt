@@ -23,9 +23,10 @@ import mu.KotlinLogging
 /**
  * Immutable catalog of audio items for a single artist, built once from a list snapshot.
  *
- * Organizes audio items by album and maintains them sorted by disc and track number.
- * The album-grouped structure is built in the constructor and never mutated afterwards,
- * so all reads are lock-free.
+ * Organizes audio items by their full album identity ([AlbumDetails]) and maintains each album's
+ * items sorted by disc and track number. The album-grouped structure is built in the constructor and
+ * never mutated afterwards, so all reads are lock-free. Because albums are keyed by full value, two
+ * albums sharing a name but differing in label, year, or album artist are distinct buckets.
  *
  * Duplicate detection uses item identity: if both items have an assigned `id`, they are
  * considered the same when their `id` values match; otherwise `uniqueId` is used. Ordering
@@ -42,42 +43,39 @@ internal class ImmutableArtistCatalog<I>(override val artist: Artist, audioItems
 
     private val logger = KotlinLogging.logger {}
 
-    // Built once from the snapshot; insertion-sorted and de-duplicated, so reads need no lock.
-    private val audioItemsByAlbumName: Map<String, List<I>> = buildAlbumMap(audioItems)
+    // Built once from the snapshot; insertion-sorted and de-duplicated per full-value album, so reads need no lock.
+    private val audioItemsByAlbum: Map<AlbumDetails, List<I>> = buildAlbumMap(audioItems)
 
     override val id: Artist = artist
 
     override val uniqueId: String = artist.id()
 
-    override val albums: Set<AlbumSet<I>>
-        get() =
-            audioItemsByAlbumName.values
-                .asSequence()
-                .flatten()
-                .distinctBy(::audioItemIdentity)
-                .groupBy { it.album.name }
-                .mapNotNull { (albumName, items) ->
-                    if (items.isEmpty()) {
-                        null
-                    } else {
-                        runCatching { AlbumView(albumName, items) }.getOrNull()
-                    }
-                }.toSet()
+    // One bucket per full-value album, built once from the immutable snapshot. Consistent with the
+    // album-axis identity model: albums sharing a name but differing in label/year/album artist are distinct.
+    override val albums: Set<ReactiveAlbum<*, I>> =
+        audioItemsByAlbum
+            .mapNotNull { (albumDetails, items) ->
+                if (items.isEmpty()) null else ImmutableAlbum(albumDetails, items)
+            }.toSet()
 
+    /**
+     * Returns the union of items across every album whose name equals [albumName]. Because albums are
+     * keyed by full [AlbumDetails], a single name may span more than one distinct album; this is a
+     * name-level aggregate. To obtain a single album's items, iterate [albums] and read the bucket's
+     * own track list rather than calling this with the album name.
+     */
     override fun albumAudioItems(albumName: String): Set<I> =
-        audioItemsByAlbumName[albumName]?.toSet() ?: emptySet()
+        audioItemsByAlbum
+            .asSequence()
+            .filter { it.key.name == albumName }
+            .flatMap { it.value.asSequence() }
+            .toSet()
 
     override val isEmpty: Boolean
-        get() = audioItemsByAlbumName.isEmpty()
+        get() = audioItemsByAlbum.isEmpty()
 
     override val size: Int
-        get() = audioItemsByAlbumName.values.sumOf { it.size }
-
-    private fun audioItemIdentity(audioItem: I): Any =
-        if (audioItem.id != UNASSIGNED_ID)
-            audioItem.id
-        else
-            audioItem.uniqueId
+        get() = audioItemsByAlbum.values.sumOf { it.size }
 
     override fun compareTo(other: ArtistCatalog<I>): Int = this.artist.compareTo(other.artist)
 
@@ -88,10 +86,10 @@ internal class ImmutableArtistCatalog<I>(override val artist: Artist, audioItems
         if (javaClass != other?.javaClass) return false
         other as ImmutableArtistCatalog<*>
         if (artist != other.artist) return false
-        return audioItemsByAlbumName == other.audioItemsByAlbumName
+        return audioItemsByAlbum == other.audioItemsByAlbum
     }
 
-    override fun hashCode(): Int = 31 * artist.hashCode() + audioItemsByAlbumName.hashCode()
+    override fun hashCode(): Int = 31 * artist.hashCode() + audioItemsByAlbum.hashCode()
 
     override fun toString() = "ImmutableArtistCatalog(artist=$artist, size=$size)"
 
@@ -101,12 +99,12 @@ internal class ImmutableArtistCatalog<I>(override val artist: Artist, audioItems
 
     companion object {
 
-        private fun <I> buildAlbumMap(audioItems: List<I>): Map<String, List<I>> where I : ReactiveAudioItem<I> {
-            // Build sorted, de-duplicated per-album lists in one pass.
+        private fun <I> buildAlbumMap(audioItems: List<I>): Map<AlbumDetails, List<I>> where I : ReactiveAudioItem<I> {
+            // Build sorted, de-duplicated per-album lists in one pass, keyed by full album identity.
             // Insertion sort preserves the natural compareTo order; isSameAudioItem guards against duplicates.
-            val map = sortedMapOf<String, MutableList<I>>()
+            val map = sortedMapOf<AlbumDetails, MutableList<I>>()
             for (audioItem in audioItems) {
-                val bucket = map.getOrPut(audioItem.album.name) { mutableListOf() }
+                val bucket = map.getOrPut(audioItem.album) { mutableListOf() }
                 if (bucket.none { isSameAudioItem(it, audioItem) }) {
                     val insertionPoint =
                         bucket

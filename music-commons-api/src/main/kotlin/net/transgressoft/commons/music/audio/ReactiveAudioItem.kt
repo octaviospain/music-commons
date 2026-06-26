@@ -45,7 +45,7 @@ interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I>, Co
     val bitRate: Int
     var artist: Artist
     val artistsInvolved: Set<Artist>
-    var album: Album
+    var album: AlbumDetails
     var genres: Set<Genre>
     var comments: String?
     var trackNumber: Short?
@@ -78,6 +78,17 @@ interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I>, Co
      * @param count The play count value to set.
      */
     fun setPlayCount(count: Short)
+
+    /**
+     * Applies multiple field mutations atomically, emitting a single [net.transgressoft.lirp.event.BatchChanged]
+     * event at the end of the block instead of one [net.transgressoft.lirp.event.PropertyChanged] per field.
+     *
+     * Use when updating two or more catalog-relevant properties (artist, album, genres) together,
+     * e.g. during import operations, so downstream projections re-key once rather than once per field.
+     *
+     * @param action The mutation block receiving this item as receiver.
+     */
+    fun mutate(action: I.() -> Unit)
 
     fun asJsonKeyValue() =
         buildJsonObject {

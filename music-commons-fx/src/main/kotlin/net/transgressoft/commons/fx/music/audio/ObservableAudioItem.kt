@@ -17,7 +17,7 @@
 
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
@@ -46,7 +46,7 @@ interface ObservableAudioItem : ReactiveAudioItem<ObservableAudioItem> {
 
     val artistProperty: ObjectProperty<Artist>
 
-    val albumProperty: ObjectProperty<Album>
+    val albumProperty: ObjectProperty<AlbumDetails>
 
     val genresProperty: ObjectProperty<Set<Genre>>
 

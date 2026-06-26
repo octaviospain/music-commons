@@ -44,7 +44,7 @@ import kotlin.time.toJavaDuration
 
 fun Arb.Companion.albumAudioItems(
     artist: Artist? = null,
-    album: Album? = null,
+    album: AlbumDetails? = null,
     size: IntRange = 3..10
 ): Arb<List<AudioItem>> =
     arbitrary {
@@ -88,7 +88,7 @@ fun Arb.Companion.audioItem(audioItem: AudioItem, changeAction: AudioItemChange.
             every { title } returns (change.title ?: audioItem.title)
             every { artist } returns (change.artist ?: audioItem.artist)
             every { album } returns
-                Album(
+                AlbumDetails(
                     change.albumName ?: audioItem.album.name,
                     change.albumArtist ?: audioItem.album.albumArtist,
                     change.isCompilation ?: audioItem.album.isCompilation,
@@ -175,9 +175,9 @@ fun Arb.Companion.album(
     isCompilation: Boolean? = null,
     year: Short? = null,
     label: Label? = null
-): Arb<Album> =
+): Arb<AlbumDetails> =
     arbitrary {
-        Album(
+        AlbumDetails(
             name ?: Arb.string(1..100).bind(),
             albumArtist ?: artist().bind(),
             isCompilation ?: Arb.boolean().bind(),
@@ -254,7 +254,7 @@ fun Arb.Companion.audioAttributes(
     duration: Duration? = null,
     bitRate: Int? = null,
     artist: Artist? = null,
-    album: Album? = null,
+    album: AlbumDetails? = null,
     genres: Set<Genre>? = null,
     comments: String? = null,
     trackNumber: Short? = null,

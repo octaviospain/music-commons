@@ -18,7 +18,7 @@
 package net.transgressoft.commons.persistence.fx.music.audio
 
 import net.transgressoft.commons.fx.music.FXMusicLibrary
-import net.transgressoft.commons.music.audio.Album
+import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioFileTagType.ID3_V_24
@@ -65,7 +65,7 @@ internal class ObservableAudioItemSerializerRoundTripTest : StringSpec({
                 title = "Round Trip",
                 duration = Duration.ofSeconds(225),
                 artist = Artist.of("Boards of Canada", CountryCode.GB),
-                album = Album("Geogaddi", Artist.of("Boards of Canada", CountryCode.GB), false, 2002, Label.of("Warp", CountryCode.GB)),
+                album = AlbumDetails("Geogaddi", Artist.of("Boards of Canada", CountryCode.GB), false, 2002, Label.of("Warp", CountryCode.GB)),
                 genres = setOf(parseGenre("Electronic").first(), Genre.Custom("IDM")),
                 trackNumber = 4,
                 discNumber = 1

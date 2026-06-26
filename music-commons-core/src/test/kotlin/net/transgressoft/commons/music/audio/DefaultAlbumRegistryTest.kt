@@ -35,26 +35,26 @@ import io.kotest.matchers.shouldBe
 import io.kotest.property.arbitrary.next
 import kotlin.time.Duration.Companion.seconds
 
-internal class DefaultAlbumCatalogRegistryTest : StringSpec({
+internal class DefaultAlbumRegistryTest : StringSpec({
 
     val reactive = reactiveScope()
     val files = virtualFiles()
 
     lateinit var repository: VolatileRepository<Int, AudioItem>
-    lateinit var registry: DefaultAlbumCatalogRegistry<AudioItem>
+    lateinit var registry: DefaultAlbumRegistry<AudioItem>
 
     beforeEach {
-        repository = VolatileRepository("DefaultAlbumCatalogRegistryTest")
-        registry = DefaultAlbumCatalogRegistry(repository)
+        repository = VolatileRepository("DefaultAlbumRegistryTest")
+        registry = DefaultAlbumRegistry(repository)
     }
 
     afterEach {
         registry.close()
     }
 
-    "DefaultAlbumCatalogRegistry creates album catalog when item is added to repository" {
+    "DefaultAlbumRegistry creates album catalog when item is added to repository" {
         val artist = Artist.of("Portishead", CountryCode.UK)
-        val album = Album("Dummy", artist)
+        val album = AlbumDetails("Dummy", artist)
         val audioItem =
             createAudioItem(
                 files.virtualAudioFile {
@@ -75,14 +75,14 @@ internal class DefaultAlbumCatalogRegistryTest : StringSpec({
             registry.findFirst("Dummy") shouldBePresent { catalog ->
                 catalog.album.name shouldBe "Dummy"
                 catalog.size shouldBe 1
-                catalog.audioItems.shouldContainOnly(audioItem)
+                catalog.tracks.shouldContainOnly(audioItem)
             }
         }
     }
 
-    "DefaultAlbumCatalogRegistry removes album catalog when last item is removed from repository" {
+    "DefaultAlbumRegistry removes album catalog when last item is removed from repository" {
         val artist = Artist.of("Portishead", CountryCode.UK)
-        val album = Album("Dummy", artist)
+        val album = AlbumDetails("Dummy", artist)
         val audioItem =
             createAudioItem(
                 files.virtualAudioFile {
@@ -107,10 +107,10 @@ internal class DefaultAlbumCatalogRegistryTest : StringSpec({
         }
     }
 
-    "DefaultAlbumCatalogRegistry re-keys item to new album bucket when album changes via repository UPDATE" {
+    "DefaultAlbumRegistry re-keys item to new album bucket when album changes via repository UPDATE" {
         val artist = Artist.of("Radiohead", CountryCode.UK)
-        val oldAlbum = Album("Pablo Honey", artist)
-        val newAlbum = Album("OK Computer", artist)
+        val oldAlbum = AlbumDetails("Pablo Honey", artist)
+        val newAlbum = AlbumDetails("OK Computer", artist)
         val audioItem =
             createAudioItem(
                 files.virtualAudioFile {
@@ -136,32 +136,32 @@ internal class DefaultAlbumCatalogRegistryTest : StringSpec({
         }
     }
 
-    "DefaultAlbumCatalogRegistry builds catalog from items already in repository at construction" {
+    "DefaultAlbumRegistry builds catalog from items already in repository at construction" {
         val artist = Artist.of("Massive Attack")
-        val album = Album("Mezzanine", artist)
+        val album = AlbumDetails("Mezzanine", artist)
         val paths = files.virtualAlbumAudioFiles(artist, album, size = 3..5).next()
         val items = paths.mapIndexed { idx, path -> createAudioItem(path, idx + 1, files.metadataIO) }
 
         items.forEach { repository.add(it) }
         registry.close()
-        registry = DefaultAlbumCatalogRegistry(repository)
+        registry = DefaultAlbumRegistry(repository)
         reactive.advance()
 
         eventually(2.seconds) {
             registry.findFirst("Mezzanine") shouldBePresent { catalog ->
                 catalog.album.name shouldBe "Mezzanine"
                 catalog.size shouldBe items.size
-                catalog.audioItems.shouldContainOnly(items)
+                catalog.tracks.shouldContainOnly(items)
             }
         }
     }
 
-    "DefaultAlbumCatalogRegistry emits CREATE event when first item for album is added" {
-        val receivedEvents = mutableListOf<CrudEvent<Album, AlbumCatalog<AudioItem>>>()
-        registry.albumCatalogPublisher.subscribe(CREATE) { receivedEvents.add(it) }
+    "DefaultAlbumRegistry emits CREATE event when first item for album is added" {
+        val receivedEvents = mutableListOf<CrudEvent<AlbumDetails, Album<AudioItem>>>()
+        registry.albumPublisher.subscribe(CREATE) { receivedEvents.add(it) }
 
         val artist = Artist.of("Bjork", CountryCode.IS)
-        val album = Album("Homogenic", artist)
+        val album = AlbumDetails("Homogenic", artist)
         val audioItem =
             createAudioItem(
                 files.virtualAudioFile {
@@ -183,9 +183,9 @@ internal class DefaultAlbumCatalogRegistryTest : StringSpec({
         }
     }
 
-    "DefaultAlbumCatalogRegistry emits UPDATE event when second item for same album is added" {
+    "DefaultAlbumRegistry emits UPDATE event when second item for same album is added" {
         val artist = Artist.of("Daft Punk", CountryCode.FR)
-        val album = Album("Random Access Memories", artist)
+        val album = AlbumDetails("Random Access Memories", artist)
         val firstItem =
             createAudioItem(
                 files.virtualAudioFile {
@@ -201,8 +201,8 @@ internal class DefaultAlbumCatalogRegistryTest : StringSpec({
         reactive.advance()
         eventually(2.seconds) { registry.findFirst("Random Access Memories").isPresent shouldBe true }
 
-        val updateEvents = mutableListOf<CrudEvent<Album, AlbumCatalog<AudioItem>>>()
-        registry.albumCatalogPublisher.subscribe(UPDATE) { updateEvents.add(it) }
+        val updateEvents = mutableListOf<CrudEvent<AlbumDetails, Album<AudioItem>>>()
+        registry.albumPublisher.subscribe(UPDATE) { updateEvents.add(it) }
 
         val secondItem =
             createAudioItem(
@@ -224,9 +224,9 @@ internal class DefaultAlbumCatalogRegistryTest : StringSpec({
         }
     }
 
-    "DefaultAlbumCatalogRegistry emits DELETE event when last item of album is removed" {
+    "DefaultAlbumRegistry emits DELETE event when last item of album is removed" {
         val artist = Artist.of("Boards of Canada", CountryCode.UK)
-        val album = Album("Music Has the Right to Children", artist)
+        val album = AlbumDetails("Music Has the Right to Children", artist)
         val audioItem =
             createAudioItem(
                 files.virtualAudioFile {
@@ -242,8 +242,8 @@ internal class DefaultAlbumCatalogRegistryTest : StringSpec({
         reactive.advance()
         eventually(2.seconds) { registry.findFirst("Music Has the Right to Children").isPresent shouldBe true }
 
-        val deleteEvents = mutableListOf<CrudEvent<Album, AlbumCatalog<AudioItem>>>()
-        registry.albumCatalogPublisher.subscribe(DELETE) { deleteEvents.add(it) }
+        val deleteEvents = mutableListOf<CrudEvent<AlbumDetails, Album<AudioItem>>>()
+        registry.albumPublisher.subscribe(DELETE) { deleteEvents.add(it) }
 
         repository.remove(audioItem)
         reactive.advance()

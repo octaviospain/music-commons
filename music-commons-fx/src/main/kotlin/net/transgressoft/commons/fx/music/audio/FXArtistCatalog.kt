@@ -17,10 +17,9 @@
 
 package net.transgressoft.commons.fx.music.audio
 
-import net.transgressoft.commons.music.audio.Album
-import net.transgressoft.commons.music.audio.AlbumSet
-import net.transgressoft.commons.music.audio.AlbumView
+import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
+import net.transgressoft.commons.music.audio.ReactiveAlbum
 import net.transgressoft.commons.music.audio.UNASSIGNED_ID
 import net.transgressoft.commons.music.audio.id
 import net.transgressoft.lirp.entity.ReactiveEntityBase
@@ -54,8 +53,10 @@ import java.util.concurrent.ConcurrentHashMap
  */
 internal class FXArtistCatalog private constructor(
     override val artist: Artist,
-    // Built once; sorted and de-duplicated. Never mutated after construction, so reads need no lock.
-    private val audioItemsByAlbumName: Map<String, List<ObservableAudioItem>>
+    // Built once, keyed by full album identity; sorted and de-duplicated. Never mutated after
+    // construction, so reads need no lock. Albums sharing a name but differing in label, year, or
+    // album artist are distinct buckets, consistent with the album-axis full-value identity model.
+    private val audioItemsByAlbum: Map<AlbumDetails, List<ObservableAudioItem>>
 ) : ObservableArtistCatalog,
     Comparable<ObservableArtistCatalog>,
     ReactiveEntityBase<Artist, ObservableArtistCatalog>() {
@@ -68,8 +69,8 @@ internal class FXArtistCatalog private constructor(
      */
     internal constructor(artist: Artist, audioItems: List<ObservableAudioItem>) : this(artist, buildAlbumMap(audioItems))
 
-    override val albumsProperty: ReadOnlySetProperty<Album>
-        field = SimpleSetProperty<Album>(this, "albums", observableSet())
+    override val albumsProperty: ReadOnlySetProperty<AlbumDetails>
+        field = SimpleSetProperty<AlbumDetails>(this, "albums", observableSet())
 
     private val albumItemProperties = ConcurrentHashMap<String, SimpleListProperty<ObservableAudioItem>>()
 
@@ -98,20 +99,25 @@ internal class FXArtistCatalog private constructor(
     }
 
     private fun populateFxProperties() {
-        val currentAlbums = albums
-        val currentAlbumNames = currentAlbums.map { it.albumName }.toSet()
-
         albumsProperty.clear()
-        currentAlbums.forEach { albumSet ->
-            albumsProperty.add(albumSet.first().album)
-            val prop = getOrCreateAlbumItemsProperty(albumSet.albumName)
-            prop.setAll(albumSet.toList())
+
+        // The albumAudioItemsProperty contract is name-based, so distinct full-value albums sharing a
+        // name aggregate into a single observable list, matching albumAudioItems(name).
+        val itemsByName = linkedMapOf<String, MutableList<ObservableAudioItem>>()
+        audioItemsByAlbum.forEach { (albumDetails, items) ->
+            if (items.isNotEmpty()) {
+                albumsProperty.add(albumDetails)
+                itemsByName.getOrPut(albumDetails.name) { mutableListOf() }.addAll(items)
+            }
         }
 
-        albumItemProperties.keys.retainAll(currentAlbumNames)
+        itemsByName.forEach { (albumName, items) ->
+            getOrCreateAlbumItemsProperty(albumName).setAll(items)
+        }
+        albumItemProperties.keys.retainAll(itemsByName.keys)
 
         sizeProperty.set(size)
-        albumCountProperty.set(currentAlbums.size)
+        albumCountProperty.set(albumsProperty.size)
     }
 
     /**
@@ -120,29 +126,29 @@ internal class FXArtistCatalog private constructor(
      */
     internal constructor(other: FXArtistCatalog) : this(
         other.artist,
-        other.audioItemsByAlbumName.mapValues { (_, items) -> items.toList() }
+        other.audioItemsByAlbum.mapValues { (_, items) -> items.toList() }
     )
 
-    override val albums: Set<AlbumSet<ObservableAudioItem>>
+    override val albums: Set<ReactiveAlbum<*, ObservableAudioItem>>
         get() =
-            audioItemsByAlbumName.entries
+            audioItemsByAlbum
                 .asSequence()
-                .mapNotNull { (albumName, audioItems) ->
-                    if (audioItems.isEmpty()) {
-                        null
-                    } else {
-                        runCatching { AlbumView(albumName, audioItems) }.getOrNull()
-                    }
-                }.toSet()
+                .filter { it.value.isNotEmpty() }
+                .map { (albumDetails, items) -> FXAlbum(albumDetails, items) }
+                .toSet()
 
     override fun albumAudioItems(albumName: String): Set<ObservableAudioItem> =
-        audioItemsByAlbumName[albumName]?.toSet() ?: emptySet()
+        audioItemsByAlbum
+            .asSequence()
+            .filter { it.key.name == albumName }
+            .flatMap { it.value.asSequence() }
+            .toSet()
 
     override val isEmpty: Boolean
-        get() = audioItemsByAlbumName.isEmpty()
+        get() = audioItemsByAlbum.isEmpty()
 
     override val size: Int
-        get() = audioItemsByAlbumName.values.sumOf { it.size }
+        get() = audioItemsByAlbum.values.sumOf { it.size }
 
     override fun albumAudioItemsProperty(albumName: String): ReadOnlyListProperty<ObservableAudioItem> =
         getOrCreateAlbumItemsProperty(albumName)
@@ -160,19 +166,19 @@ internal class FXArtistCatalog private constructor(
         if (this === other) return true
         if (other !is FXArtistCatalog) return false
         if (artist != other.artist) return false
-        return audioItemsByAlbumName == other.audioItemsByAlbumName
+        return audioItemsByAlbum == other.audioItemsByAlbum
     }
 
-    override fun hashCode(): Int = 31 * artist.hashCode() + audioItemsByAlbumName.hashCode()
+    override fun hashCode(): Int = 31 * artist.hashCode() + audioItemsByAlbum.hashCode()
 
     override fun toString() = "FXArtistCatalog(artist=$artist, size=$size)"
 
     companion object {
 
-        private fun buildAlbumMap(audioItems: List<ObservableAudioItem>): Map<String, List<ObservableAudioItem>> {
-            val map = TreeMap<String, MutableList<ObservableAudioItem>>()
+        private fun buildAlbumMap(audioItems: List<ObservableAudioItem>): Map<AlbumDetails, List<ObservableAudioItem>> {
+            val map = TreeMap<AlbumDetails, MutableList<ObservableAudioItem>>()
             for (audioItem in audioItems) {
-                val bucket = map.getOrPut(audioItem.album.name) { mutableListOf() }
+                val bucket = map.getOrPut(audioItem.album) { mutableListOf() }
                 if (bucket.none { isSameAudioItem(it, audioItem) }) {
                     val insertionPoint =
                         bucket

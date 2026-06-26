@@ -39,20 +39,20 @@ import kotlinx.coroutines.future.future
  *
  * This interface extends [Repository] for CRUD operations and [Flow.Publisher] to publish
  * events when audio items are created, updated, or deleted. It also provides artist-, album-,
- * and genre-centric views through catalogs that organize items by their respective key.
+ * and genre-centric views that organize items by their respective key.
  *
  * Narrowed versions for concrete item types are available in the core and FX modules.
  *
  * @param I The type of audio items stored in this library
  * @param AC The type of artist catalog exposed by this library
- * @param ALC The type of album catalog exposed by this library
- * @param GC The type of genre catalog exposed by this library
+ * @param ALC The type of reactive album exposed by this library
+ * @param GC The type of reactive genre index exposed by this library
  */
 interface ReactiveAudioLibrary<
     I : ReactiveAudioItem<I>,
     AC : ReactiveArtistCatalog<AC, I>,
-    ALC : ReactiveAlbumCatalog<ALC, I>,
-    GC : ReactiveGenreCatalog<GC, I>
+    ALC : ReactiveAlbum<ALC, I>,
+    GC : ReactiveGenreIndex<GC, I>
 > : Repository<Int, I>, Flow.Publisher<CrudEvent<Int, I>> {
 
     /**
@@ -137,31 +137,36 @@ interface ReactiveAudioLibrary<
     fun getRandomAudioItemsFromArtist(artist: Artist, size: Short = 100): List<I>
 
     /**
-     * Publisher for album catalog events, enabling consumers to subscribe to changes
-     * in album catalogs (creation, updates, deletion).
+     * Publisher for album events, enabling consumers to subscribe to changes
+     * in albums (creation, updates, deletion).
      *
      * Consumers can subscribe to be notified when:
-     * - A new album catalog is created (a new album is encountered in the library)
-     * - An album catalog is updated (audio items added or removed for an album)
-     * - An album catalog is deleted (all items for an album removed from the library)
+     * - A new album is created (a new album is encountered in the library)
+     * - An album is updated (audio items added or removed for an album)
+     * - An album is deleted (all items for an album removed from the library)
      */
-    val albumCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Album, ALC>>
+    val albumPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<AlbumDetails, ALC>>
 
     /**
-     * Retrieves the album catalog for the specified album.
+     * Retrieves the album for the specified album details.
      *
-     * @param album The album to get the catalog for
-     * @return Optional containing the album catalog if found, or empty if the album is not in the library
+     * @param album The album details to look up
+     * @return Optional containing the album if found, or empty if the album is not in the library
      */
-    fun getAlbumCatalog(album: Album): Optional<out ALC>
+    fun getAlbum(album: AlbumDetails): Optional<out ALC>
 
     /**
-     * Retrieves the first album catalog matching the specified name.
+     * Retrieves the first album whose name contains the specified value (case-insensitive).
+     *
+     * Albums are identified by their full [AlbumDetails] value, so several distinct albums may share
+     * a name (differing in label, year, or album artist). When more than one matches, which album is
+     * returned is not deterministic. Use [getAlbum] with the exact [AlbumDetails] to address a
+     * specific album unambiguously. A blank name returns empty.
      *
      * @param albumName The album name to search for (case-insensitive substring match)
-     * @return Optional containing the first matching album catalog, or empty if not found
+     * @return Optional containing the first matching album, or empty if not found or the name is blank
      */
-    fun getAlbumCatalog(albumName: String): Optional<out ALC>
+    fun getAlbum(albumName: String): Optional<out ALC>
 
     /**
      * Checks whether the library contains any audio item with the specified album name.
@@ -174,38 +179,38 @@ interface ReactiveAudioLibrary<
     /**
      * Retrieves a random selection of audio items from the specified album.
      *
-     * @param album The album to get items from
+     * @param album The album details to get items from
      * @param size Maximum number of random items to return (default: 100)
      * @return List of randomly selected audio items from the album
      */
-    fun getRandomAudioItemsFromAlbum(album: Album, size: Short = 100): List<I>
+    fun getRandomAudioItemsFromAlbum(album: AlbumDetails, size: Short = 100): List<I>
 
     /**
-     * Publisher for genre catalog events, enabling consumers to subscribe to changes
-     * in genre catalogs (creation, updates, deletion).
+     * Publisher for genre index events, enabling consumers to subscribe to changes
+     * in genre indexes (creation, updates, deletion).
      *
      * Consumers can subscribe to be notified when:
-     * - A new genre catalog is created (a new genre is encountered in the library)
-     * - A genre catalog is updated (audio items added or removed for a genre)
-     * - A genre catalog is deleted (all items for a genre removed from the library)
+     * - A new genre index is created (a new genre is encountered in the library)
+     * - A genre index is updated (audio items added or removed for a genre)
+     * - A genre index is deleted (all items for a genre removed from the library)
      */
-    val genreCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Genre, GC>>
+    val genreIndexPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Genre, GC>>
 
     /**
-     * Retrieves the genre catalog for the specified genre.
+     * Retrieves the genre index for the specified genre.
      *
-     * @param genre The genre to get the catalog for
-     * @return Optional containing the genre catalog if found, or empty if the genre is not in the library
+     * @param genre The genre to get the index for
+     * @return Optional containing the genre index if found, or empty if the genre is not in the library
      */
-    fun getGenreCatalog(genre: Genre): Optional<out GC>
+    fun getGenreIndex(genre: Genre): Optional<out GC>
 
     /**
-     * Retrieves the first genre catalog matching the specified name.
+     * Retrieves the first genre index matching the specified name.
      *
      * @param genreName The genre name to search for (case-insensitive substring match)
-     * @return Optional containing the first matching genre catalog, or empty if not found
+     * @return Optional containing the first matching genre index, or empty if not found
      */
-    fun getGenreCatalog(genreName: String): Optional<out GC>
+    fun getGenreIndex(genreName: String): Optional<out GC>
 
     /**
      * Checks whether the library contains any audio item with the specified genre name.
