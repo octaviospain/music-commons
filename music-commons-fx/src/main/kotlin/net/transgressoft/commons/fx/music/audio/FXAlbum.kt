@@ -18,6 +18,7 @@
 package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.AlbumDetails
+import net.transgressoft.commons.music.audio.canonicalKey
 import net.transgressoft.commons.music.audio.firstCoverImageBytes
 import net.transgressoft.commons.music.audio.id
 import net.transgressoft.lirp.entity.ReactiveEntityBase
@@ -45,6 +46,11 @@ import java.util.Optional
  * sorting or de-duplication is performed. JavaFX observable properties are populated during
  * construction and kept stable for the lifetime of the instance.
  *
+ * The [album] field holds the derived representative [AlbumDetails] (most-frequent non-empty
+ * value per field across the bucket's tracks), not the canonical bucket key. The [uniqueId]
+ * is derived from the canonical key (`album.canonicalKey().id()`) so it remains stable when
+ * the representative's year or casing changes across bucket recomputes.
+ *
  * This class must be constructed only on the JavaFX Application Thread because it initializes
  * JavaFX properties and calls [SimpleListProperty.setAll] inside its init block. The registry's
  * `fxFactory` parameter guarantees this thread contract.
@@ -62,7 +68,7 @@ internal class FXAlbum(
 
     override val id: AlbumDetails = album
 
-    override val uniqueId: String = album.id()
+    override val uniqueId: String = album.canonicalKey().id()
 
     override val size: Int get() = trackList.size
 

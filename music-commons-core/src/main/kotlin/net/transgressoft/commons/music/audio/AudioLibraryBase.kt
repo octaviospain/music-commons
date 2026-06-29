@@ -205,7 +205,7 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
         repository.contains { it.album.name.contentEquals(albumName, true) }
 
     override fun getRandomAudioItemsFromAlbum(album: AlbumDetails, size: Short): List<I> =
-        repository.search(size.toInt()) { it.album == album }.shuffled().toList()
+        repository.search(size.toInt()) { it.album.canonicalKey() == album.canonicalKey() }.shuffled().toList()
 
     override fun getGenreIndex(genre: Genre): Optional<out GC> = observableGenreIndexRegistry.findById(genre)
 

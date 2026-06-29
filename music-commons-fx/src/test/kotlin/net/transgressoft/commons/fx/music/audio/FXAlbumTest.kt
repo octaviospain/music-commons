@@ -3,11 +3,17 @@ package net.transgressoft.commons.fx.music.audio
 import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItemMetadata
+import net.transgressoft.commons.music.audio.canonicalKey
 import net.transgressoft.commons.music.audio.id
 import net.transgressoft.commons.music.audio.testCoverBytes
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
+import net.transgressoft.lirp.event.CrudEvent
+import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
+import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
+import net.transgressoft.lirp.event.StandardCrudEvent
 import net.transgressoft.lirp.persistence.VolatileRepository
+import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.optional.shouldBePresent
@@ -16,6 +22,7 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.property.arbitrary.next
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 /**
@@ -187,7 +194,7 @@ internal class FXAlbumTest : StringSpec({
 
         fxAlbum.emptyProperty.get() shouldBe true
         fxAlbum.albumProperty.get() shouldBe album
-        fxAlbum.uniqueId shouldBe album.id()
+        fxAlbum.uniqueId shouldBe album.canonicalKey().id()
         fxAlbum.compareTo(FXAlbum(album, emptyList())) shouldBe 0
     }
 
@@ -240,5 +247,79 @@ internal class FXAlbumTest : StringSpec({
 
         fxAlbum.coverImageBytes shouldBe null
         fxAlbum.coverProperty.get().isPresent shouldBe false
+    }
+
+    "FXAudioLibrary merges compilation tracks with varying albumArtist into single album bucket" {
+        val compilationAlbumName = "Cherry Moon 9"
+        FXAudioLibrary(VolatileRepository("MergeCompilationFxTest")).use { audioLibrary ->
+            val blankArtistAlbum = AlbumDetails(compilationAlbumName, Artist.UNKNOWN, isCompilation = true)
+            val variousArtistAlbum = AlbumDetails(compilationAlbumName, Artist.of("Various Artists"), isCompilation = false)
+
+            (1..11).forEach { trackNum ->
+                val path =
+                    files.virtualAudioFile {
+                        this.album = blankArtistAlbum
+                        trackNumber = trackNum.toShort()
+                        discNumber = 1
+                    }.next()
+                audioLibrary.add(FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO))
+            }
+
+            val variousPath =
+                files.virtualAudioFile {
+                    this.album = variousArtistAlbum
+                    trackNumber = 12
+                    discNumber = 1
+                }.next()
+            audioLibrary.add(FXAudioItemTestBridge.createFxAudioItem(variousPath, files.metadataIO))
+
+            reactive.advance()
+
+            eventually(2.seconds) {
+                WaitForAsyncUtils.waitForFxEvents()
+                audioLibrary.albumsProperty.size shouldBe 1
+            }
+        }
+    }
+
+    "FXAudioLibrary emits UPDATE event for album when track year changes" {
+        val yearAlbum = AlbumDetails("Hardcore Devil", Artist.of("Test Artist"), year = 2011)
+        val repository = VolatileRepository<Int, ObservableAudioItem>("YearUpdateFxTest")
+        FXAudioLibrary(repository).use { audioLibrary ->
+            val path =
+                files.virtualAudioFile {
+                    this.album = yearAlbum
+                    trackNumber = 1
+                    discNumber = 1
+                }.next()
+            val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
+            audioLibrary.add(audioItem)
+            reactive.advance()
+
+            eventually(2.seconds) {
+                WaitForAsyncUtils.waitForFxEvents()
+                audioLibrary.getAlbum(yearAlbum).isPresent shouldBe true
+            }
+
+            val updateEvents = mutableListOf<CrudEvent<AlbumDetails, ObservableAlbum>>()
+            val deleteEvents = mutableListOf<CrudEvent<AlbumDetails, ObservableAlbum>>()
+            audioLibrary.albumPublisher.subscribe(UPDATE) { updateEvents.add(it) }
+            audioLibrary.albumPublisher.subscribe(DELETE) { deleteEvents.add(it) }
+
+            // Emit a corrected clone so the projection detects a reference change and re-runs the
+            // value-transform. The canonical key (name + artist, year zeroed) is unchanged, so the
+            // bucket survives and emits Update, not Delete+Create; an in-place mutation on the same
+            // reference would be skipped by the projection's position-and-reference no-op guard.
+            val correctedItem = audioItem.clone().also { it.album = yearAlbum.copy(year = null) }
+            repository.emitAsync(StandardCrudEvent.Update(correctedItem, audioItem))
+
+            eventually(2.seconds) {
+                reactive.advance()
+                WaitForAsyncUtils.waitForFxEvents()
+                updateEvents.size shouldBe 1
+                deleteEvents.size shouldBe 0
+                audioLibrary.getAlbum(yearAlbum).get().album.year shouldBe null
+            }
+        }
     }
 })

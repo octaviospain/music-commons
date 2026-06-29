@@ -28,6 +28,12 @@ import java.lang.ref.SoftReference
  * number). The list is stored verbatim — no re-sorting or deduplication happens here because the
  * lirp projection guarantees both ordering and distinctness via its internal reverse index.
  *
+ * The [album] field is the derived representative for this bucket (most-frequent field values
+ * across all tracks), which preserves original name casing and carries the majority year/label.
+ * [uniqueId] is derived from the canonical key (not the representative) so that it remains stable
+ * when the representative's year or casing changes — e.g., correcting a single mistag does not
+ * change the album's identity in event routing.
+ *
  * Cover bytes are resolved lazily from the first track that carries cover data, cached behind a
  * [SoftReference] so that memory pressure can evict the bytes and re-resolution happens
  * transparently on the next access.
@@ -48,7 +54,7 @@ internal class ImmutableAlbum<I>(override val album: AlbumDetails, tracks: List<
 
     override val id: AlbumDetails = album
 
-    override val uniqueId: String = album.id()
+    override val uniqueId: String = album.canonicalKey().id()
 
     override val isEmpty: Boolean
         get() = tracks.isEmpty()
