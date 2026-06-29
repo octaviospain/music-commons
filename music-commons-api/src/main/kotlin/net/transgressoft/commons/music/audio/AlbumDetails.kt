@@ -100,8 +100,11 @@ fun AlbumDetails.isCompilationAlbum(): Boolean =
  * Identity is [name] (lowercase, trimmed, whitespace-collapsed) plus a compilation-aware album
  * artist: when the album is a compilation (see [isCompilationAlbum]), the artist component
  * collapses to [Artist.UNKNOWN] so all tracks that belong to the same compilation merge into one
- * bucket regardless of their per-track [albumArtist] value. [year], [label], and [isCompilation]
- * are zeroed so per-track variance in those fields does not fragment the bucket.
+ * bucket regardless of their per-track [albumArtist] value. For a non-compilation album the artist
+ * name is normalized the same way as [name] (lowercase, trimmed, whitespace-collapsed) so that
+ * per-track casing/whitespace variance in the album artist does not fragment the bucket, while
+ * genuinely different artist names stay distinct. [year], [label], and [isCompilation] are zeroed
+ * so per-track variance in those fields does not fragment the bucket.
  * This function is idempotent: calling it on its own result produces an equal value.
  *
  * The canonical key is NOT equal to the bucket's representative [AlbumDetails] (which preserves
@@ -111,7 +114,12 @@ fun AlbumDetails.isCompilationAlbum(): Boolean =
 fun AlbumDetails.canonicalKey(): AlbumDetails =
     AlbumDetails(
         name = name.trim().replace(Regex("\\s+"), " ").lowercase(),
-        albumArtist = if (isCompilationAlbum()) Artist.UNKNOWN else albumArtist,
+        albumArtist =
+            if (isCompilationAlbum()) {
+                Artist.UNKNOWN
+            } else {
+                Artist.of(albumArtist.name.trim().replace(Regex("\\s+"), " ").lowercase(), albumArtist.countryCode)
+            },
         isCompilation = false,
         year = null,
         label = Label.UNKNOWN

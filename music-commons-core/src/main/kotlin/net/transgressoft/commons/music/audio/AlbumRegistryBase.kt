@@ -101,8 +101,8 @@ abstract class AlbumRegistryBase<I, AE>(private val publisherName: String = "Alb
      * Returns the first album whose name contains [albumName] (case-insensitive), or empty if none
      * matches. A blank [albumName] returns empty rather than matching an arbitrary album.
      *
-     * Each album name maps to exactly one bucket (canonical identity = normalized name +
-     * compilation-aware album artist). When more than one bucket matches [albumName], the bucket
+     * A normalized album name can map to multiple buckets because canonical identity also includes
+     * the compilation-aware album artist. When more than one bucket matches [albumName], the bucket
      * returned is not deterministic; use [findById] with the exact [AlbumDetails] to address a
      * specific album unambiguously.
      */

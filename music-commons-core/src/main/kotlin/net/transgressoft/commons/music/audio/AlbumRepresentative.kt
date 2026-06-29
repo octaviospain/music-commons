@@ -24,13 +24,20 @@ package net.transgressoft.commons.music.audio
  * correctly-tagged tracks outweigh a single mistag). Tie-breaking rules:
  * - `year` → earliest
  * - `label` / `albumArtist` (non-compilation) → lexicographically smallest of equal-frequency values
- * - display name casing → most-frequent, then first-seen casing
+ * - display name casing → most-frequent, then first-seen casing (after trimming and collapsing
+ *   internal whitespace so the exposed name carries no stray spacing)
+ *
+ * `isCompilation` is `true` when any track is compilation-like (see [AlbumDetails.isCompilationAlbum]);
+ * in that case `albumArtist` collapses to [Artist.UNKNOWN], mirroring the canonical bucket key.
  *
  * This is a pure function of [tracks]: it reads no external state and has no side effects.
  * Both the core and FX registries call it from their value-transform lambda.
  */
 fun <I : ReactiveAudioItem<I>> deriveRepresentativeAlbumDetails(tracks: List<I>): AlbumDetails {
-    val name = mostFrequent(tracks.map { it.album.name }.filter { it.isNotBlank() }) ?: ""
+    val name =
+        mostFrequent(
+            tracks.map { it.album.name.trim().replace(Regex("\\s+"), " ") }.filter { it.isNotBlank() }
+        ) ?: ""
     val isCompilation = tracks.any { it.album.isCompilationAlbum() }
     val albumArtist =
         if (isCompilation) Artist.UNKNOWN
@@ -50,7 +57,7 @@ fun <I : ReactiveAudioItem<I>> deriveRepresentativeAlbumDetails(tracks: List<I>)
                 if (labels.isEmpty()) Label.UNKNOWN
                 else mostFrequentBy(labels) { it.name } ?: Label.UNKNOWN
             }
-    return AlbumDetails(name, albumArtist, false, year, label)
+    return AlbumDetails(name, albumArtist, isCompilation, year, label)
 }
 
 // Returns the most-frequent string value from [values]; when frequencies tie, returns

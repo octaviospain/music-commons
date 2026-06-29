@@ -89,6 +89,12 @@ internal class AlbumDetailsExtensionsTest : StringSpec({
         radioheadAlbum.canonicalKey() shouldNotBe portisheadAlbum.canonicalKey()
     }
 
+    "AlbumDetailsExtensions canonicalKey merges named-artist casing and whitespace variants" {
+        val album1 = AlbumDetails("Discovery", Artist.of("Daft Punk"))
+        val album2 = AlbumDetails("Discovery", Artist.of("  daft   punk "))
+        album1.canonicalKey() shouldBe album2.canonicalKey()
+    }
+
     "AlbumDetailsExtensions canonicalKey produces usable key for blank album name" {
         val blankAlbum = AlbumDetails("", namedArtist)
         val nonBlankAlbum = AlbumDetails("OK Computer", namedArtist)
