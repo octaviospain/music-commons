@@ -65,7 +65,11 @@ data class AlbumDetails(
  * used as [net.transgressoft.lirp.entity.ReactiveEntityBase.uniqueId] in album implementations.
  *
  * Each component is length-prefixed so that a delimiter character occurring inside a field value
- * cannot produce the same id as a different field decomposition.
+ * cannot produce the same id as a different field decomposition. When a stable entity identifier
+ * that is resilient to year/label variance is needed, use [canonicalKey] first: [canonicalKey].id()
+ * encodes only the identity components (normalized name + compilation-aware artist).
+ *
+ * @see canonicalKey
  */
 fun AlbumDetails.id(): String =
     listOf(
@@ -75,3 +79,40 @@ fun AlbumDetails.id(): String =
         year?.toString().orEmpty(),
         isCompilation.toString()
     ).joinToString("|") { "${it.length}:$it" }
+
+/**
+ * Returns whether this album is a compilation for identity purposes.
+ *
+ * Treats blank [albumArtist], [Artist.UNKNOWN], and "Various Artists" (case-insensitive)
+ * as equivalent to [isCompilation] == true. Tracks with these album-artist values
+ * share a compilation bucket regardless of their [isCompilation] flag. This intentional
+ * overlap means "no album artist" tracks merge with compilations of the same normalized name.
+ */
+fun AlbumDetails.isCompilationAlbum(): Boolean =
+    isCompilation ||
+        albumArtist == Artist.UNKNOWN ||
+        albumArtist.name.isBlank() ||
+        albumArtist.name.trim().equals("Various Artists", ignoreCase = true)
+
+/**
+ * Returns a canonical [AlbumDetails] used as the projection bucket key.
+ *
+ * Identity is [name] (lowercase, trimmed, whitespace-collapsed) plus a compilation-aware album
+ * artist: when the album is a compilation (see [isCompilationAlbum]), the artist component
+ * collapses to [Artist.UNKNOWN] so all tracks that belong to the same compilation merge into one
+ * bucket regardless of their per-track [albumArtist] value. [year], [label], and [isCompilation]
+ * are zeroed so per-track variance in those fields does not fragment the bucket.
+ * This function is idempotent: calling it on its own result produces an equal value.
+ *
+ * The canonical key is NOT equal to the bucket's representative [AlbumDetails] (which preserves
+ * original casing and carries the most-frequent year/label values). Use [canonicalKey] only for
+ * projection indexing and lookup; expose the representative to consumers.
+ */
+fun AlbumDetails.canonicalKey(): AlbumDetails =
+    AlbumDetails(
+        name = name.trim().replace(Regex("\\s+"), " ").lowercase(),
+        albumArtist = if (isCompilationAlbum()) Artist.UNKNOWN else albumArtist,
+        isCompilation = false,
+        year = null,
+        label = Label.UNKNOWN
+    )

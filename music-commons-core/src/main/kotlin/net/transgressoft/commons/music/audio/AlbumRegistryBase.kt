@@ -72,7 +72,10 @@ abstract class AlbumRegistryBase<I, AE>(private val publisherName: String = "Alb
                             log.debug { "Album created for ${album.name}" }
                         }
                         oldAlbum != null && newAlbum != null -> {
-                            albumPublisher.emitAsync(Update(newAlbum, oldAlbum))
+                            // Use the canonical bucket key (not the representative album.id) as the shared
+                            // map key so the Update consistency check passes even when the representative's
+                            // year, label, or casing differs between old and new values.
+                            albumPublisher.emitAsync(Update(mapOf(album to newAlbum), mapOf(album to oldAlbum)))
                             log.debug { "Album updated for ${album.name}" }
                         }
                         oldAlbum != null && newAlbum == null -> {
@@ -84,15 +87,22 @@ abstract class AlbumRegistryBase<I, AE>(private val publisherName: String = "Alb
             }
     }
 
-    /** Returns the album for the given album details, or empty if none exists. */
-    fun findById(album: AlbumDetails): Optional<AE> = Optional.ofNullable(projection[album])
+    /**
+     * Returns the album for the given album details, or empty if none exists.
+     *
+     * The lookup canonicalizes [album] before indexing the projection so that any per-track
+     * [AlbumDetails] value (including one with a non-null year or specific albumArtist) resolves
+     * to the same bucket as a fully canonical key. This is the correct way to look up a bucket
+     * when only a raw track's album metadata is available.
+     */
+    fun findById(album: AlbumDetails): Optional<AE> = Optional.ofNullable(projection[album.canonicalKey()])
 
     /**
      * Returns the first album whose name contains [albumName] (case-insensitive), or empty if none
      * matches. A blank [albumName] returns empty rather than matching an arbitrary album.
      *
-     * Album buckets are keyed by full [AlbumDetails] value, so several distinct albums may share a
-     * name (differing in label, year, or album artist). When more than one matches, the bucket
+     * Each album name maps to exactly one bucket (canonical identity = normalized name +
+     * compilation-aware album artist). When more than one bucket matches [albumName], the bucket
      * returned is not deterministic; use [findById] with the exact [AlbumDetails] to address a
      * specific album unambiguously.
      */

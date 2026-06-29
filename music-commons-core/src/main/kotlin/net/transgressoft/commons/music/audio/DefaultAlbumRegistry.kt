@@ -25,7 +25,11 @@ import net.transgressoft.lirp.persistence.projection.registryProjection
  * Album registry backed by a lirp single-key value-transform registry projection.
  *
  * Builds one [Album] per album using the single-key form of [registryProjection]:
- * each audio item is placed into exactly one album bucket determined by its `album` property.
+ * each audio item is placed into exactly one album bucket determined by its canonical album
+ * identity (normalized name + compilation-aware album artist). Tracks that share the same
+ * canonical identity merge into one bucket regardless of per-track variance in year, label,
+ * albumArtist, or isCompilation. The bucket's exposed [AlbumDetails] is the derived
+ * representative (most-frequent field values), which is NOT equal to the canonical bucket key.
  * When an item's album changes, lirp re-keys the item from the old bucket to the new one
  * automatically. The projection maintains each bucket's track list in disc-then-track order via
  * [audioItemTrackDiscNumberComparator]. Shared CRUD-event republishing, album queries, and
@@ -44,9 +48,11 @@ internal class DefaultAlbumRegistry<I>(repository: Repository<Int, I>)
     override val projection: ObservableProjection<AlbumDetails, Album<I>> =
         registryProjection(
             registry = repository,
-            keyExtractor = { it.album },
+            keyExtractor = { it.album.canonicalKey() },
+            // entryOrdering triggers repositionInBucket on any album-field change, which fires
+            // onBucketsChanged and causes the value-transform to recompute the representative.
             entryOrdering = audioItemTrackDiscNumberComparator()
-        ) { albumDetails, tracks -> ImmutableAlbum(albumDetails, tracks) }
+        ) { _, tracks -> ImmutableAlbum(deriveRepresentativeAlbumDetails(tracks), tracks) }
 
     init {
         observeAlbumChanges(projection)

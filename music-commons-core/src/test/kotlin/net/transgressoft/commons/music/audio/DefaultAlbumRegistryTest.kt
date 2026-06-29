@@ -29,6 +29,7 @@ import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainOnly
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.optional.shouldBeEmpty
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
@@ -252,5 +253,301 @@ internal class DefaultAlbumRegistryTest : StringSpec({
             deleteEvents.size shouldBe 1
             registry.isEmpty shouldBe true
         }
+    }
+
+    "DefaultAlbumRegistry merges tracks with same album name but varying year into single bucket" {
+        val artist = Artist.of("Aphex Twin", CountryCode.UK)
+        val albumName = "Selected Ambient Works"
+        val item1 =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = AlbumDetails(albumName, artist, year = 2011)
+                    title = "Xtal"
+                    trackNumber = 1
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+        val item2 =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = AlbumDetails(albumName, artist, year = null)
+                    title = "Tha"
+                    trackNumber = 2
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+        val item3 =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = AlbumDetails(albumName, artist, year = 2012)
+                    title = "Pulsewidth"
+                    trackNumber = 3
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+
+        repository.add(item1)
+        repository.add(item2)
+        repository.add(item3)
+        reactive.advance()
+
+        eventually(2.seconds) {
+            registry.size() shouldBe 1
+        }
+    }
+
+    "DefaultAlbumRegistry merges compilation tracks with varying albumArtist into single bucket" {
+        val albumName = "Cherry Moon 9"
+        // 11 tracks with blank albumArtist and isCompilation = true
+        val compilationItems =
+            (1..11).map { idx ->
+                createAudioItem(
+                    files.virtualAudioFile {
+                        this.album = AlbumDetails(albumName, Artist.UNKNOWN, isCompilation = true)
+                        title = "Track $idx"
+                        trackNumber = idx.toShort()
+                        discNumber = 1
+                    }.next(),
+                    files.metadataIO
+                )
+            }
+        // 1 track with albumArtist = "Various Artists" and isCompilation = false
+        val variousArtistsItem =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.album = AlbumDetails(albumName, Artist.of("Various Artists"), isCompilation = false)
+                    title = "Bonus Track"
+                    trackNumber = 12
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+
+        compilationItems.forEach { repository.add(it) }
+        repository.add(variousArtistsItem)
+        reactive.advance()
+
+        eventually(2.seconds) {
+            registry.size() shouldBe 1
+        }
+    }
+
+    "DefaultAlbumRegistry derives representative year as most-frequent non-null value" {
+        val artist = Artist.of("Burial", CountryCode.UK)
+        val albumName = "Untrue"
+        // 8 tracks with year = 2007 (majority), 1 track with null year, 1 track with year = 2008
+        val majorityItems =
+            (1..8).map { idx ->
+                createAudioItem(
+                    files.virtualAudioFile {
+                        this.artist = artist
+                        this.album = AlbumDetails(albumName, artist, year = 2007)
+                        title = "Track $idx"
+                        trackNumber = idx.toShort()
+                        discNumber = 1
+                    }.next(),
+                    files.metadataIO
+                )
+            }
+        val nullYearItem =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = AlbumDetails(albumName, artist, year = null)
+                    title = "Archangel"
+                    trackNumber = 9
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+        val mistagggedItem =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = AlbumDetails(albumName, artist, year = 2008)
+                    title = "Ghost Hardware"
+                    trackNumber = 10
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+
+        majorityItems.forEach { repository.add(it) }
+        repository.add(nullYearItem)
+        repository.add(mistagggedItem)
+        reactive.advance()
+
+        eventually(2.seconds) {
+            registry.size() shouldBe 1
+            registry.findFirst(albumName) shouldBePresent { bucket ->
+                bucket.album.year shouldBe 2007
+            }
+        }
+    }
+
+    "DefaultAlbumRegistry emits UPDATE (not DELETE then CREATE) when year field changes on a track" {
+        val artist = Artist.of("Actress", CountryCode.UK)
+        val albumName = "Splazsh"
+        val initialAlbum = AlbumDetails(albumName, artist, year = 2010)
+        val audioItem =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = initialAlbum
+                    title = "Hubble"
+                    trackNumber = 1
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+        repository.add(audioItem)
+        reactive.advance()
+        eventually(2.seconds) { registry.findFirst(albumName).isPresent shouldBe true }
+
+        val updateEvents = mutableListOf<CrudEvent<AlbumDetails, Album<AudioItem>>>()
+        val deleteEvents = mutableListOf<CrudEvent<AlbumDetails, Album<AudioItem>>>()
+        registry.albumPublisher.subscribe(UPDATE) { updateEvents.add(it) }
+        registry.albumPublisher.subscribe(DELETE) { deleteEvents.add(it) }
+
+        // Emit a corrected clone so the projection detects a reference change and re-runs the
+        // value-transform. A clone with a new reference triggers repositionInBucket to rebuild
+        // the bucket and notify listeners; an in-place mutation on the same reference would be
+        // silently skipped by the projection's position-and-reference no-op guard.
+        val correctedAlbum = AlbumDetails(albumName, artist, year = null)
+        val correctedItem = (audioItem as MutableAudioItem).clone().also { it.album = correctedAlbum }
+        repository.emitAsync(StandardCrudEvent.Update(correctedItem, audioItem))
+
+        eventually(2.seconds) {
+            reactive.advance()
+            updateEvents.size shouldBe 1
+            deleteEvents.size shouldBe 0
+            registry.findFirst(albumName) shouldBePresent { bucket ->
+                bucket.album.year shouldBe null
+            }
+        }
+    }
+
+    "DefaultAlbumRegistry findById resolves bucket when called with non-canonical AlbumDetails" {
+        val artist = Artist.of("Gas", CountryCode.DE)
+        val albumName = "Nah und Fern"
+        val canonicalAlbum = AlbumDetails(albumName, artist)
+        val audioItem =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = canonicalAlbum
+                    title = "Pop 1"
+                    trackNumber = 1
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+        repository.add(audioItem)
+        reactive.advance()
+        eventually(2.seconds) { registry.findFirst(albumName).isPresent shouldBe true }
+
+        // Non-canonical: same name + artist but with year populated
+        val nonCanonicalAlbum = AlbumDetails(albumName, artist, year = 2000)
+
+        eventually(2.seconds) {
+            registry.findById(nonCanonicalAlbum) shouldBePresent { bucket ->
+                bucket.album.name shouldBe albumName
+            }
+        }
+    }
+
+    "DefaultAlbumRegistry merges album names differing only in case and surrounding whitespace" {
+        val artist = Artist.of("Autechre", CountryCode.UK)
+        val item1 =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = AlbumDetails("Tri Repetae", artist)
+                    title = "Dael"
+                    trackNumber = 1
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+        val item2 =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = AlbumDetails("tri repetae", artist)
+                    title = "Clipper"
+                    trackNumber = 2
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+        val item3 =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = AlbumDetails("  Tri Repetae ", artist)
+                    title = "Leterel"
+                    trackNumber = 3
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+
+        repository.add(item1)
+        repository.add(item2)
+        repository.add(item3)
+        reactive.advance()
+
+        eventually(2.seconds) {
+            registry.size() shouldBe 1
+        }
+    }
+
+    "DefaultAlbumRegistry getRandomAudioItemsFromAlbum returns items when called with a non-canonical AlbumDetails" {
+        val artist = Artist.of("Andy Stott", CountryCode.UK)
+        val albumName = "Luxury Problems"
+        // Two tracks of the same canonical album: one with year populated, one without
+        val itemWithYear =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = AlbumDetails(albumName, artist, year = 2012)
+                    title = "Numb"
+                    trackNumber = 1
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+        val itemWithoutYear =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = AlbumDetails(albumName, artist, year = null)
+                    title = "Lost and Found"
+                    trackNumber = 2
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+        repository.add(itemWithYear)
+        repository.add(itemWithoutYear)
+        reactive.advance()
+        eventually(2.seconds) { registry.size() shouldBe 1 }
+
+        // Access getRandomAudioItemsFromAlbum via a TestAudioLibrary backed by the same repository
+        val library = TestAudioLibrary(repository, files.metadataIO)
+
+        // Call with a populated-year AlbumDetails (non-canonical) — must resolve from the merged bucket
+        val nonCanonicalAlbum = AlbumDetails(albumName, artist, year = 2012)
+        eventually(2.seconds) {
+            library.getRandomAudioItemsFromAlbum(nonCanonicalAlbum, 10).shouldNotBeEmpty()
+        }
+
+        library.close()
     }
 })
