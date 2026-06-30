@@ -39,7 +39,7 @@ import java.util.Optional
  *
  * Because an audio item may belong to multiple genres simultaneously, the multi-key projection
  * places a single item into every genre bucket it belongs to. An item with an empty genres set
- * is placed in no genre bucket.
+ * is placed in a dedicated no-genre bucket keyed by [Genre.None].
  *
  * @param I The type of audio items stored in indexes
  * @param GI The concrete genre index type managed by this registry
@@ -93,10 +93,11 @@ abstract class GenreIndexRegistryBase<I, GI>(private val publisherName: String =
 
     /**
      * Returns the first index whose genre name contains [genreName] (case-insensitive), or empty if
-     * none matches. A blank [genreName] returns empty rather than matching an arbitrary index.
+     * none matches. A blank [genreName] resolves to the no-genre bucket ([Genre.None]) if present,
+     * or empty if no untagged items exist.
      */
     fun findFirst(genreName: String): Optional<GI> {
-        if (genreName.isBlank()) return Optional.empty()
+        if (genreName.isBlank()) return Optional.ofNullable(projection[Genre.None])
         return Optional.ofNullable(
             projection.entries.firstOrNull {
                 it.key.name.lowercase().contains(genreName.lowercase())

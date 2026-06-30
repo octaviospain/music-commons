@@ -17,6 +17,7 @@
 
 package net.transgressoft.commons.music.audio
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -60,5 +61,20 @@ internal class GenreExtensionsTest : StringSpec({
     "parseGenre and joinGenres round-trip a set of known genres" {
         val genres = setOf(Rock, Alternative, Jazz)
         parseGenre(joinGenres(genres)) shouldBe genres
+    }
+
+    "parseGenre never yields Genre.None or Genre.Custom with empty name for blank or whitespace-only input" {
+        // Genre.None is a projection-only sentinel unreachable from the parse path; an empty or
+        // comma-only string must produce an empty set, not a Custom("") that would collide with it.
+        parseGenre("") shouldBe emptySet()
+        parseGenre(", ,") shouldBe emptySet()
+    }
+
+    "Genre.Custom rejects a blank name reserved for the Genre.None sentinel" {
+        // A blank name belongs to Genre.None: an empty name is compareTo-equal to it and a
+        // whitespace-only name is unreachable via the blank-name query helpers, so either would be a
+        // lossy, unqueryable custom genre.
+        shouldThrow<IllegalArgumentException> { Genre.Custom("") }
+        shouldThrow<IllegalArgumentException> { Genre.Custom("   ") }
     }
 })

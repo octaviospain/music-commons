@@ -29,7 +29,9 @@ import net.transgressoft.lirp.persistence.fx.projection.registryFxMultiKeyProjec
  *
  * Groups audio items from [repository] by every genre they are tagged with, so a track with
  * multiple genres appears in each of the corresponding genre indexes. Items with an empty genres
- * set appear in no genre index. The two-phase split keeps [FXGenreIndex] construction thread-safe:
+ * set are placed in a dedicated no-genre bucket keyed by [Genre.None], so they appear in the
+ * genre index rather than being silently omitted. The two-phase split keeps [FXGenreIndex]
+ * construction thread-safe:
  *
  * - **dataTransform** (background thread): pure snapshot of the bucket as a `List<ObservableAudioItem>`;
  *   must not touch any JavaFX property or node.
@@ -49,7 +51,7 @@ internal class FXGenreIndexRegistry(repository: Repository<Int, ObservableAudioI
     override val projection: FxObservableProjection<Genre, ObservableGenreIndex> =
         registryFxMultiKeyProjection(
             registry = repository,
-            keyExtractor = ObservableAudioItem::genres,
+            keyExtractor = { it.genres.ifEmpty { setOf(Genre.None) } },
             dataTransform = { _, items -> items.toList() },
             fxFactory = { genre, data -> FXGenreIndex(genre, data) },
             dispatchToFxThread = true,

@@ -34,8 +34,22 @@ sealed class Genre(open val name: String) : Comparable<Genre> {
 
     override fun compareTo(other: Genre): Int = name.compareTo(other.name)
 
+    /**
+     * Projection-only sentinel that buckets tracks with no genre tags into a dedicated no-genre
+     * index. Its empty name mirrors the [Artist.UNKNOWN] empty-named unknown-entity convention
+     * and sorts first by natural name order as a consequence.
+     *
+     * [None] is never parsed, never persisted, and never assigned to an item's `genres` set;
+     * it exists solely so the genre index can surface untagged tracks rather than dropping them.
+     */
+    data object None : Genre("")
+
     data class Custom(override val name: String) : Genre(name) {
         init {
+            // A blank name is reserved for the [None] sentinel: an empty name is compareTo-equal to None
+            // and a whitespace-only name is unreachable via the blank-name query helpers (which route to
+            // None), so either would be a lossy, unqueryable custom genre.
+            require(name.isNotBlank()) { "Custom genre name must not be blank" }
             require("," !in name) { "Custom genre name must not contain commas: '$name'" }
         }
     }

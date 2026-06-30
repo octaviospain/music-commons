@@ -10,6 +10,7 @@ import net.transgressoft.commons.fx.music.createItemsByArtist
 import net.transgressoft.commons.fx.music.createItemsWithMultipleAlbums
 import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist.Companion.of
+import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.commons.util.InvalidAudioFilePathException
@@ -137,7 +138,8 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
         val expectedArtists = itemsByArtist.keys
         val allItems = itemsByArtist.values.flatten()
         val expectedAlbums = allItems.map { it.album }.toSet()
-        val expectedGenres = allItems.flatMap { it.genres }.toSet()
+        // Mirror the genre-index key extractor: untagged items surface in the dedicated Genre.None bucket.
+        val expectedGenres = allItems.flatMap { it.genres.ifEmpty { setOf(Genre.None) } }.toSet()
 
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()

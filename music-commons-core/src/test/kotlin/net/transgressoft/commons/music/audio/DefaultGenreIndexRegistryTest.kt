@@ -115,7 +115,7 @@ internal class DefaultGenreIndexRegistryTest : StringSpec({
         }
     }
 
-    "DefaultGenreIndexRegistry item with empty genres set appears in no genre bucket" {
+    "DefaultGenreIndexRegistry untagged item lands in the Genre.None bucket" {
         val artist = Artist.of("Aphex Twin")
         val album = AlbumDetails("Selected Ambient Works", artist)
         val audioItem =
@@ -134,10 +134,84 @@ internal class DefaultGenreIndexRegistryTest : StringSpec({
         repository.add(audioItem)
         reactive.advance()
 
-        // No genre bucket should exist for an item with no genres — advance() drains the
-        // test scheduler to idle, so no async work can create a bucket after this point.
-        registry.isEmpty shouldBe true
-        registry.size() shouldBe 0
+        eventually(2.seconds) {
+            registry.size() shouldBe 1
+            registry.findById(Genre.None) shouldBePresent { bucket ->
+                bucket.genre shouldBe Genre.None
+                bucket.size shouldBe 1
+                bucket.tracks.shouldContainOnly(audioItem)
+            }
+        }
+    }
+
+    "DefaultGenreIndexRegistry untagged item moves out of and back into Genre.None bucket as genres change" {
+        val artist = Artist.of("Aphex Twin")
+        val album = AlbumDetails("Selected Ambient Works", artist)
+        val audioItem =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = album
+                    genres = emptySet()
+                    title = "Xtal"
+                    trackNumber = 1
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+
+        repository.add(audioItem)
+        reactive.advance()
+        eventually(2.seconds) { registry.findById(Genre.None).isPresent shouldBe true }
+
+        // Item gains a genre — leaves the no-genre bucket and enters the real genre bucket
+        (audioItem as MutableAudioItem).genres = setOf(Alternative)
+        repository.emitAsync(StandardCrudEvent.Update(audioItem, audioItem))
+        reactive.advance()
+
+        eventually(2.seconds) {
+            registry.findById(Genre.None).shouldBeEmpty()
+            registry.findById(Alternative).isPresent shouldBe true
+        }
+
+        // Item loses all genres — returns to the no-genre bucket
+        audioItem.genres = emptySet()
+        repository.emitAsync(StandardCrudEvent.Update(audioItem, audioItem))
+        reactive.advance()
+
+        eventually(2.seconds) {
+            registry.findById(Genre.None).isPresent shouldBe true
+            registry.findById(Alternative).shouldBeEmpty()
+        }
+    }
+
+    "DefaultGenreIndexRegistry Genre.None bucket disappears when last untagged item is removed" {
+        val artist = Artist.of("Aphex Twin")
+        val album = AlbumDetails("Selected Ambient Works", artist)
+        val audioItem =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = album
+                    genres = emptySet()
+                    title = "Xtal"
+                    trackNumber = 1
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+
+        repository.add(audioItem)
+        reactive.advance()
+        eventually(2.seconds) { registry.findById(Genre.None).isPresent shouldBe true }
+
+        repository.remove(audioItem)
+        reactive.advance()
+
+        eventually(2.seconds) {
+            registry.isEmpty shouldBe true
+            registry.findById(Genre.None).shouldBeEmpty()
+        }
     }
 
     "DefaultGenreIndexRegistry re-buckets item when genres change via repository UPDATE" {

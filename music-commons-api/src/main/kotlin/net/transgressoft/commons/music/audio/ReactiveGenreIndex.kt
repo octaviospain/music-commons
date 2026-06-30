@@ -29,7 +29,7 @@ import net.transgressoft.lirp.entity.ReactiveEntity
  *
  * Unlike the artist catalog, there is no sub-grouping within the index: every audio item tagged
  * with this genre is exposed directly via [tracks]. Items whose [ReactiveAudioItem.genres] set
- * is empty will not appear in any genre index.
+ * is empty surface in the dedicated [Genre.None] index rather than being dropped.
  *
  * @param RGI The concrete type of this reactive genre index, for self-referential generics
  * @param I The type of audio items contained in this index

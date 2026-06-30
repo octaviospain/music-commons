@@ -8,13 +8,16 @@ import net.transgressoft.commons.music.audio.Rock
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.persistence.VolatileRepository
+import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.optional.shouldBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.property.arbitrary.next
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 /**
@@ -195,5 +198,94 @@ internal class FXGenreIndexTest : StringSpec({
         index.genreProperty.get() shouldBe genre
         index.uniqueId shouldBe genre.name
         index.compareTo(FXGenreIndex(genre, emptyList())) shouldBe 0
+    }
+
+    "FXAudioLibrary places untagged item in Genre.None bucket" {
+        FXAudioLibrary(VolatileRepository("GenreNoneFxAudioLibrary")).use { audioLibrary ->
+            val path =
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = album
+                    title = "Untagged Track"
+                    this.genres = emptySet()
+                }.next()
+            val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
+            audioLibrary.add(audioItem)
+            reactive.advance()
+
+            eventually(2.seconds) {
+                WaitForAsyncUtils.waitForFxEvents()
+                audioLibrary.getGenreIndex(Genre.None).isPresent shouldBe true
+                audioLibrary.getGenreIndex(Genre.None).get().size shouldBe 1
+            }
+        }
+    }
+
+    "FXAudioLibrary moves item out of and back into Genre.None bucket as genres change" {
+        FXAudioLibrary(VolatileRepository("GenreNoneTransitionFxAudioLibrary")).use { audioLibrary ->
+            val path =
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = album
+                    title = "Transition Track"
+                    this.genres = emptySet()
+                }.next()
+            val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
+            audioLibrary.add(audioItem)
+            reactive.advance()
+
+            eventually(2.seconds) {
+                WaitForAsyncUtils.waitForFxEvents()
+                audioLibrary.getGenreIndex(Genre.None).isPresent shouldBe true
+            }
+
+            // Item gains a genre — leaves the no-genre bucket and enters the real genre bucket
+            audioItem.genres = setOf(Rock)
+            reactive.advance()
+
+            eventually(2.seconds) {
+                WaitForAsyncUtils.waitForFxEvents()
+                audioLibrary.getGenreIndex(Genre.None).shouldBeEmpty()
+                audioLibrary.getGenreIndex(Rock).isPresent shouldBe true
+            }
+
+            // Item loses all genres — returns to the no-genre bucket
+            audioItem.genres = emptySet()
+            reactive.advance()
+
+            eventually(2.seconds) {
+                WaitForAsyncUtils.waitForFxEvents()
+                audioLibrary.getGenreIndex(Genre.None).isPresent shouldBe true
+                audioLibrary.getGenreIndex(Rock).shouldBeEmpty()
+            }
+        }
+    }
+
+    "FXAudioLibrary Genre.None bucket disappears when last untagged item is removed" {
+        FXAudioLibrary(VolatileRepository("GenreNoneRemovalFxAudioLibrary")).use { audioLibrary ->
+            val path =
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = album
+                    title = "Removable Untagged Track"
+                    this.genres = emptySet()
+                }.next()
+            val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
+            audioLibrary.add(audioItem)
+            reactive.advance()
+
+            eventually(2.seconds) {
+                WaitForAsyncUtils.waitForFxEvents()
+                audioLibrary.getGenreIndex(Genre.None).isPresent shouldBe true
+            }
+
+            audioLibrary.remove(audioItem)
+            reactive.advance()
+
+            eventually(2.seconds) {
+                WaitForAsyncUtils.waitForFxEvents()
+                audioLibrary.getGenreIndex(Genre.None).shouldBeEmpty()
+            }
+        }
     }
 })
