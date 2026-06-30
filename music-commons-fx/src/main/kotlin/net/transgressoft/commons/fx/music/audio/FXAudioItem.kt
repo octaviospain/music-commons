@@ -17,6 +17,8 @@
 
 package net.transgressoft.commons.fx.music.audio
 
+import net.transgressoft.commons.fx.util.CoverLoadExecutor
+import net.transgressoft.commons.fx.util.LazyObservationObjectProperty
 import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItemMetadata
@@ -32,7 +34,6 @@ import net.transgressoft.lirp.persistence.fx.fxInteger
 import net.transgressoft.lirp.persistence.fx.fxObject
 import net.transgressoft.lirp.persistence.fx.fxString
 import javafx.application.Platform
-import javafx.beans.InvalidationListener
 import javafx.beans.property.FloatProperty
 import javafx.beans.property.IntegerProperty
 import javafx.beans.property.ObjectProperty
@@ -43,7 +44,6 @@ import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleSetProperty
 import javafx.beans.property.StringProperty
-import javafx.beans.value.ChangeListener
 import javafx.collections.FXCollections
 import javafx.scene.image.Image
 import java.io.ByteArrayInputStream
@@ -53,6 +53,7 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.util.Objects
 import java.util.Optional
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.io.path.extension
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -321,8 +322,12 @@ class FXAudioItem
                         coverLoaded = true
                         val bytes = _coverImageBytes
                         if (bytes != null) {
+                            // Decode on the calling thread (the cover-load worker for the observe
+                            // path) so only the property update — not the image decode — runs on the
+                            // JavaFX thread.
+                            val image = Image(ByteArrayInputStream(bytes))
                             runOnFxThread {
-                                coverImageProperty.set(Optional.of(Image(ByteArrayInputStream(bytes))))
+                                coverImageProperty.set(Optional.of(image))
                             }
                         }
                     }
@@ -339,53 +344,44 @@ class FXAudioItem
 
         // UI code binds to coverImageProperty and never calls coverImageBytes directly, so the lazy
         // load would never fire through a plain SimpleObjectProperty. This subclass intercepts the
-        // first observation (listener attach or value read) and delegates to coverImageBytes, which
-        // performs the synchronized fetch+cache and dispatches the property update via runOnFxThread.
+        // first observation (listener attach or value read) and delegates to coverImageBytes off the
+        // observing thread, so binding the property on the JavaFX thread never blocks on disk I/O;
+        // the resolved image is then published back onto the JavaFX thread.
         @Transient
-        @Volatile
-        private var coverObservationTriggered: Boolean = coverLoaded
+        private val coverObservationTriggered = AtomicBoolean(coverLoaded)
 
         @Transient
         override val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>>
             field =
-            object : SimpleObjectProperty<Optional<Image>>(
+            LazyObservationObjectProperty(
                 this@FXAudioItem,
                 "cover image",
                 Optional.ofNullable(_coverImageBytes)
-                    .map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) }
-            ) {
-                override fun addListener(listener: InvalidationListener) {
-                    super.addListener(listener)
-                    triggerLazyCoverLoad()
-                }
-
-                override fun addListener(listener: ChangeListener<in Optional<Image>>) {
-                    super.addListener(listener)
-                    triggerLazyCoverLoad()
-                }
-
-                override fun get(): Optional<Image> {
-                    triggerLazyCoverLoad()
-                    return super.get()
-                }
-            }
+                    .map { bytes: ByteArray -> Image(ByteArrayInputStream(bytes)) },
+                ::triggerLazyCoverLoad
+            )
 
         private fun triggerLazyCoverLoad() {
-            if (coverObservationTriggered) return
+            if (coverObservationTriggered.get()) return
             // Nothing can be loaded until metadataIO is wired (orphan item observed before the
             // library attaches the back-ref). Do not consume the trigger here, or a later
             // observation after wiring would be a permanent no-op and the cover would stay empty.
             if (!coverLoaded && metadataIO == null) return
 
-            // Guard re-entrance only for the duration of the load: the getter dispatches
-            // coverImageProperty.set(...), which can recurse back through the addListener/get
-            // override. Reset to coverLoaded afterwards so a coverless-yet-unwired item retries
-            // once metadataIO arrives, while a loaded (or known-coverless) item stays settled.
-            coverObservationTriggered = true
-            try {
-                coverImageBytes
-            } finally {
-                coverObservationTriggered = coverLoaded
+            // Claim the trigger atomically so concurrent observations cannot both submit a load; a
+            // non-atomic check-then-set would let more than one win and enqueue duplicate work.
+            if (!coverObservationTriggered.compareAndSet(false, true)) return
+
+            // Resolve off the JavaFX thread: the disk read and image decode run on the cover-load
+            // worker, and the getter publishes coverImageProperty.set(...) back on the JavaFX thread.
+            // Reset to coverLoaded once the load settles so a coverless-yet-unwired item retries after
+            // metadataIO arrives, while a loaded (or known-coverless) item stays settled.
+            CoverLoadExecutor.execute {
+                try {
+                    coverImageBytes
+                } finally {
+                    coverObservationTriggered.set(coverLoaded)
+                }
             }
         }
 

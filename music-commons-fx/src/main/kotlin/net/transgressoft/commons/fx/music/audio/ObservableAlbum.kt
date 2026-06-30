@@ -71,11 +71,16 @@ interface ObservableAlbum :
     /**
      * Lazily resolved album cover [Image] for this album.
      *
-     * Resolves the cover from the first audio item in the bucket that carries cover data and
-     * caches it softly. No work is done at construction: the property holds an empty [Optional]
-     * until cover data is first resolved through [coverImageBytes], and stays empty when no item
-     * in the bucket carries a cover. Property updates are dispatched on the JavaFX Application
-     * Thread so it is safe to bind directly to JavaFX UI components.
+     * Observing this property — binding a listener or reading its value — triggers cover resolution
+     * on first access. The owning [FXAlbum] searches the bucket's track list for the first item
+     * carrying cover data, caches the bytes softly, and dispatches the decoded [Image] via
+     * [coverProperty].set on the JavaFX Application Thread. Subsequent observations hit the latch
+     * and return immediately without re-probing the track list.
+     *
+     * The property holds an empty [Optional] until the resolved [Image] arrives on the FX thread,
+     * so the first [get] returns empty and bound listeners receive the [Image] on the next pulse.
+     * When no item in the bucket carries a cover the property stays empty and the latch suppresses
+     * all further probing.
      *
      * @return A read-only object property containing an [Optional] wrapping the resolved [Image],
      * or an empty [Optional] when there is no cover
