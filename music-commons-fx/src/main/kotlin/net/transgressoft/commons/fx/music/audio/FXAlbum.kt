@@ -17,6 +17,8 @@
 
 package net.transgressoft.commons.fx.music.audio
 
+import net.transgressoft.commons.fx.util.CoverLoadExecutor
+import net.transgressoft.commons.fx.util.LazyObservationObjectProperty
 import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.canonicalKey
 import net.transgressoft.commons.music.audio.firstCoverImageBytes
@@ -37,6 +39,7 @@ import mu.KotlinLogging
 import java.io.ByteArrayInputStream
 import java.lang.ref.SoftReference
 import java.util.Optional
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * JavaFX implementation of [ObservableAlbum] that is built once from a list snapshot.
@@ -118,8 +121,25 @@ internal class FXAlbum(
             }
         }
 
+    @Transient
+    private val coverObservationTriggered = AtomicBoolean(false)
+
+    // UI code binds to coverProperty and never calls coverImageBytes directly, so the lazy
+    // load would never fire through a plain SimpleObjectProperty. This subclass intercepts the
+    // first observation (listener attach or value read) and delegates to coverImageBytes off the
+    // observing thread, so binding the property on the JavaFX thread never blocks on disk I/O;
+    // the resolved image is then published back onto the JavaFX thread.
     override val coverProperty: ReadOnlyObjectProperty<Optional<Image>>
-        field = SimpleObjectProperty(this, "cover", Optional.empty())
+        field = LazyObservationObjectProperty(this@FXAlbum, "cover", Optional.empty<Image>(), ::triggerLazyCoverLoad)
+
+    private fun triggerLazyCoverLoad() {
+        // Claim the one-shot trigger atomically: concurrent first observations race here, and a
+        // non-atomic check-then-set would let more than one win and submit duplicate loads.
+        if (!coverObservationTriggered.compareAndSet(false, true)) return
+        // Resolve off the JavaFX thread: coverImageBytes reads the first track's art and decodes the
+        // image on the cover-load worker, publishing coverProperty.set(...) back on the JavaFX thread.
+        CoverLoadExecutor.execute { coverImageBytes }
+    }
 
     init {
         logger.debug { "FXAlbum created for ${album.name}" }

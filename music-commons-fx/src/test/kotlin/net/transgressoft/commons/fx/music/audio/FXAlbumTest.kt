@@ -1,5 +1,6 @@
 package net.transgressoft.commons.fx.music.audio
 
+import net.transgressoft.commons.fx.util.CoverLoadExecutor
 import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItemMetadata
@@ -222,15 +223,97 @@ internal class FXAlbumTest : StringSpec({
 
         WaitForAsyncUtils.waitForFxEvents()
 
-        // Lazy contract: no cover work is done at construction, so the property is still empty.
-        fxAlbum.coverProperty.get().isPresent shouldBe false
-
-        // Accessing coverImageBytes triggers resolution and the deferred FX-thread property publish.
+        // Accessing coverImageBytes directly triggers resolution and the deferred FX-thread property publish.
         fxAlbum.coverImageBytes shouldBe testCoverBytes
 
-        WaitForAsyncUtils.waitForFxEvents()
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
+            fxAlbum.coverProperty.get() shouldBePresent { }
+        }
+    }
 
-        fxAlbum.coverProperty.get() shouldBePresent { }
+    "FXAlbum coverProperty triggers cover resolution exactly once when a listener is attached" {
+        val noCoverPath =
+            files.virtualAudioFile {
+                this.artist = artist
+                this.album = album
+                trackNumber = 1
+                discNumber = 1
+            }.next()
+        val coverPath =
+            files.virtualAudioFile {
+                this.artist = artist
+                this.album = album
+                trackNumber = 2
+                discNumber = 1
+            }.next()
+
+        val noCoverItem = FXAudioItemTestBridge.createFxAudioItemFromMetadata(noCoverPath, 1, AudioItemMetadata())
+        val coverItem =
+            FXAudioItemTestBridge.createFxAudioItemFromMetadata(coverPath, 2, AudioItemMetadata(coverBytes = testCoverBytes))
+
+        val fxAlbum = FXAlbum(album, listOf(noCoverItem, coverItem))
+
+        // Count cover-load dispatches, not just the final value: a racy latch would submit the load
+        // more than once even though every submission resolves to the same bytes.
+        CoverLoadExecutor.resetSubmittedTaskCount()
+
+        var changeCount = 0
+        fxAlbum.coverProperty.addListener { _, _, newValue ->
+            if (newValue.isPresent) changeCount++
+        }
+
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
+            fxAlbum.coverProperty.get() shouldBePresent { }
+            changeCount shouldBe 1
+        }
+
+        // A second listener attach must not re-trigger resolution; exactly one load was dispatched.
+        fxAlbum.coverProperty.addListener { _, _, _ -> }
+        WaitForAsyncUtils.waitForFxEvents()
+        changeCount shouldBe 1
+        CoverLoadExecutor.submittedTaskCount shouldBe 1
+    }
+
+    "FXAlbum coverProperty triggers cover resolution exactly once when get() is called" {
+        val noCoverPath =
+            files.virtualAudioFile {
+                this.artist = artist
+                this.album = album
+                trackNumber = 1
+                discNumber = 1
+            }.next()
+        val coverPath =
+            files.virtualAudioFile {
+                this.artist = artist
+                this.album = album
+                trackNumber = 2
+                discNumber = 1
+            }.next()
+
+        val noCoverItem = FXAudioItemTestBridge.createFxAudioItemFromMetadata(noCoverPath, 1, AudioItemMetadata())
+        val coverItem =
+            FXAudioItemTestBridge.createFxAudioItemFromMetadata(coverPath, 2, AudioItemMetadata(coverBytes = testCoverBytes))
+
+        val fxAlbum = FXAlbum(album, listOf(noCoverItem, coverItem))
+
+        CoverLoadExecutor.resetSubmittedTaskCount()
+
+        // First get() triggers resolution; result is empty until the FX pulse delivers the Image.
+        fxAlbum.coverProperty.get()
+
+        eventually(2.seconds) {
+            WaitForAsyncUtils.waitForFxEvents()
+            fxAlbum.coverProperty.get() shouldBePresent { }
+        }
+
+        // Repeated get() calls must not re-resolve: the load was dispatched exactly once and
+        // coverImageBytes stays cached.
+        val bytesAfterFirstGet = fxAlbum.coverImageBytes
+        repeat(3) { fxAlbum.coverProperty.get() }
+        fxAlbum.coverImageBytes shouldBe bytesAfterFirstGet
+        CoverLoadExecutor.submittedTaskCount shouldBe 1
     }
 
     "FXAlbum coverProperty is empty Optional and coverImageBytes is null when no item has cover" {
@@ -247,6 +330,31 @@ internal class FXAlbumTest : StringSpec({
 
         fxAlbum.coverImageBytes shouldBe null
         fxAlbum.coverProperty.get().isPresent shouldBe false
+    }
+
+    "FXAlbum coverProperty stays empty and does not re-probe on repeated observation when no item has cover" {
+        val path =
+            files.virtualAudioFile {
+                this.artist = artist
+                this.album = album
+            }.next()
+        val noCoverItem = FXAudioItemTestBridge.createFxAudioItemFromMetadata(path, 1, AudioItemMetadata())
+
+        val fxAlbum = FXAlbum(album, listOf(noCoverItem))
+
+        CoverLoadExecutor.resetSubmittedTaskCount()
+
+        // Multiple addListener calls and repeated get() must never make coverImageBytes non-null.
+        fxAlbum.coverProperty.addListener { _, _, _ -> }
+        fxAlbum.coverProperty.addListener { _, _, _ -> }
+        repeat(3) { fxAlbum.coverProperty.get() }
+
+        WaitForAsyncUtils.waitForFxEvents()
+
+        fxAlbum.coverImageBytes shouldBe null
+        fxAlbum.coverProperty.get().isPresent shouldBe false
+        // The no-cover probe is dispatched once and then latched: repeated observation never re-probes.
+        CoverLoadExecutor.submittedTaskCount shouldBe 1
     }
 
     "FXAudioLibrary merges compilation tracks with varying albumArtist into single album bucket" {
