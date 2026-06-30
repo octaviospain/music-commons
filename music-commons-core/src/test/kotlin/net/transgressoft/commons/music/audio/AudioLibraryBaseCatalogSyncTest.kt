@@ -221,4 +221,57 @@ internal class AudioLibraryBaseCatalogSyncTest : StringSpec({
             randomItems.shouldContainOnly(audioItem)
         }
     }
+
+    "AudioLibraryBase getGenreIndex and containsAudioItemWithGenre resolve blank name to the no-genre bucket" {
+        val artist = Artist.of("Aphex Twin")
+        val album = AlbumDetails("Selected Ambient Works", artist)
+
+        // No items yet — blank-name queries return absent/false
+        audioLibrary.containsAudioItemWithGenre("") shouldBe false
+
+        // Add an untagged item
+        val untaggedItem =
+            audioLibrary.createFromFile(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = album
+                    genres = emptySet()
+                    title = "Xtal"
+                    trackNumber = 1
+                    discNumber = 1
+                }.next()
+            )
+        reactive.advance()
+
+        eventually(2.seconds) {
+            audioLibrary.getGenreIndex("") shouldBePresent { it.genre shouldBe Genre.None }
+            audioLibrary.containsAudioItemWithGenre("") shouldBe true
+        }
+
+        // Add a tagged item and verify that only tagged presence changes
+        audioLibrary.createFromFile(
+            files.virtualAudioFile {
+                this.artist = artist
+                this.album = album
+                genres = setOf(Electronic)
+                title = "Tha"
+                trackNumber = 2
+                discNumber = 1
+            }.next()
+        )
+        reactive.advance()
+
+        eventually(2.seconds) {
+            // Untagged item still exists, so blank-name query still resolves
+            audioLibrary.containsAudioItemWithGenre("") shouldBe true
+        }
+
+        // Remove the untagged item — blank-name query must return false when only tagged items remain
+        audioLibrary.remove(untaggedItem)
+        reactive.advance()
+
+        eventually(2.seconds) {
+            audioLibrary.containsAudioItemWithGenre("") shouldBe false
+        }
+    }
 })

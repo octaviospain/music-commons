@@ -211,8 +211,11 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
 
     override fun getGenreIndex(genreName: String): Optional<out GC> = observableGenreIndexRegistry.findFirst(genreName)
 
-    override fun containsAudioItemWithGenre(genreName: String): Boolean =
-        repository.contains { it.genres.any { g -> g.name.contentEquals(genreName, true) } }
+    override fun containsAudioItemWithGenre(genreName: String): Boolean {
+        // A blank name targets the no-genre bucket: true iff at least one untagged item exists.
+        if (genreName.isBlank()) return repository.contains { it.genres.isEmpty() }
+        return repository.contains { it.genres.any { g -> g.name.contentEquals(genreName, true) } }
+    }
 
     override fun getRandomAudioItemsFromGenre(genre: Genre, size: Short): List<I> =
         repository.search(size.toInt()) { it.genres.contains(genre) }.shuffled().toList()

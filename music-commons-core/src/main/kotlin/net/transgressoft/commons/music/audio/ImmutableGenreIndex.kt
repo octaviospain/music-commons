@@ -29,8 +29,8 @@ import mu.KotlinLogging
  * index.
  *
  * Because an audio item may belong to multiple genres simultaneously, the same item can appear in
- * multiple genre index instances. Items whose [ReactiveAudioItem.genres] set is empty will not
- * appear in any genre index.
+ * multiple genre index instances. Items whose [ReactiveAudioItem.genres] set is empty surface in the
+ * dedicated [Genre.None] index rather than being dropped.
  *
  * @param I The type of audio items contained in this index
  */
