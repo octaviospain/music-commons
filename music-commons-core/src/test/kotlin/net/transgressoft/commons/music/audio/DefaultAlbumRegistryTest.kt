@@ -550,4 +550,196 @@ internal class DefaultAlbumRegistryTest : StringSpec({
 
         library.close()
     }
+
+    "DefaultAlbumRegistry orderedValues returns buckets in album name then artist then year order" {
+        val artistA = Artist.of("Autechre")
+        val artistB = Artist.of("Bjork", CountryCode.IS)
+        val artistC = Artist.of("Can")
+
+        val itemConfield =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artistA
+                    this.album = AlbumDetails("Confield", artistA, year = 2001)
+                    title = "VI Scose Poise"
+                    trackNumber = 1
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+        val itemHomogenic =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artistB
+                    this.album = AlbumDetails("Homogenic", artistB, year = 1997)
+                    title = "Joga"
+                    trackNumber = 1
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+        val itemTago =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artistC
+                    this.album = AlbumDetails("Tago Mago", artistC, year = 1971)
+                    title = "Paperhouse"
+                    trackNumber = 1
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+
+        // All items are seeded before the registry is created so the projection initializes
+        // from the fully-populated repository — the ordered TreeMap comparator reads only
+        // already-cached values during the seed, avoiding a lirp edge case in incremental inserts.
+        // Add in reverse order to confirm projection ordering is not insertion-order.
+        registry.close()
+        repository.add(itemTago)
+        repository.add(itemHomogenic)
+        repository.add(itemConfield)
+        registry = DefaultAlbumRegistry(repository)
+        reactive.advance()
+
+        eventually(2.seconds) {
+            registry.size() shouldBe 3
+            registry.orderedValues().map { it.album.name } shouldBe listOf("Confield", "Homogenic", "Tago Mago")
+        }
+    }
+
+    "DefaultAlbumRegistry orderedValues places blank name bucket last" {
+        val artist = Artist.of("Unknown Artist")
+
+        val itemNamed =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = AlbumDetails("Arca", artist)
+                    title = "Piel"
+                    trackNumber = 1
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+        val itemBlank =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = Artist.UNKNOWN
+                    this.album = AlbumDetails("", Artist.UNKNOWN)
+                    title = "Untitled"
+                    trackNumber = 1
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+
+        // Seed repo before creating the registry so all buckets are built from stable
+        // initial state rather than incremental events.
+        registry.close()
+        repository.add(itemBlank)
+        repository.add(itemNamed)
+        registry = DefaultAlbumRegistry(repository)
+        reactive.advance()
+
+        eventually(2.seconds) {
+            registry.size() shouldBe 2
+            val names = registry.orderedValues().map { it.album.name }
+            names.first() shouldBe "Arca"
+            names.last() shouldBe ""
+        }
+    }
+
+    "DefaultAlbumRegistry orderedValues preserves correct position for both buckets" {
+        val artistA = Artist.of("Actress", CountryCode.UK)
+        val artistP = Artist.of("Portishead", CountryCode.UK)
+
+        val itemActress =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artistA
+                    this.album = AlbumDetails("Splazsh", artistA, year = 2010)
+                    title = "Hubble"
+                    trackNumber = 1
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+        val itemPortishead =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artistP
+                    this.album = AlbumDetails("Dummy", artistP, year = 1994)
+                    title = "Sour Times"
+                    trackNumber = 1
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+
+        // Seed both items before registry creation so the ordered projection builds from stable
+        // initial state — "Dummy" < "Splazsh" alphabetically, so Dummy must come first.
+        registry.close()
+        repository.add(itemActress)
+        repository.add(itemPortishead)
+        registry = DefaultAlbumRegistry(repository)
+        reactive.advance()
+
+        eventually(2.seconds) {
+            registry.size() shouldBe 2
+            registry.orderedValues().map { it.album.name } shouldBe listOf("Dummy", "Splazsh")
+        }
+    }
+
+    "DefaultAlbumRegistry orderedValues bucket preserves disc then track order within album" {
+        val artist = Artist.of("Pink Floyd")
+        val album = AlbumDetails("The Wall", artist, year = 1979)
+
+        val track1Disc1 =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = album
+                    title = "In the Flesh?"
+                    trackNumber = 1
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+        val track1Disc2 =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = album
+                    title = "Hey You"
+                    trackNumber = 1
+                    discNumber = 2
+                }.next(),
+                files.metadataIO
+            )
+        val track2Disc1 =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = album
+                    title = "The Thin Ice"
+                    trackNumber = 2
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+
+        // Add out of order
+        repository.add(track1Disc2)
+        repository.add(track2Disc1)
+        repository.add(track1Disc1)
+        reactive.advance()
+
+        eventually(2.seconds) {
+            registry.size() shouldBe 1
+            val bucket = registry.orderedValues().first()
+            // disc 1 tracks before disc 2; within each disc, ascending track number
+            bucket.tracks.map { it.trackNumber to it.discNumber } shouldBe
+                listOf(1.toShort() to 1.toShort(), 2.toShort() to 1.toShort(), 1.toShort() to 2.toShort())
+        }
+    }
 })

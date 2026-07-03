@@ -2,6 +2,7 @@ package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
+import net.transgressoft.commons.music.audio.Blues
 import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.Jazz
 import net.transgressoft.commons.music.audio.Rock
@@ -257,6 +258,45 @@ internal class FXGenreIndexTest : StringSpec({
                 WaitForAsyncUtils.waitForFxEvents()
                 audioLibrary.getGenreIndex(Genre.None).isPresent shouldBe true
                 audioLibrary.getGenreIndex(Rock).shouldBeEmpty()
+            }
+        }
+    }
+
+    "FXAudioLibrary genreIndexesProperty iterates genre indexes in natural order with Genre.None first" {
+        FXAudioLibrary(VolatileRepository("GenreOrderFxAudioLibrary")).use { audioLibrary ->
+            // Add items tagged with Blues and Rock, plus one untagged (goes to Genre.None)
+            val bluesPath =
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = album
+                    this.genres = setOf(Blues)
+                }.next()
+            val rockPath =
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = album
+                    this.genres = setOf(Rock)
+                }.next()
+            val untaggedPath =
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = album
+                    this.genres = emptySet()
+                }.next()
+
+            audioLibrary.add(FXAudioItemTestBridge.createFxAudioItem(bluesPath, files.metadataIO))
+            audioLibrary.add(FXAudioItemTestBridge.createFxAudioItem(rockPath, files.metadataIO))
+            audioLibrary.add(FXAudioItemTestBridge.createFxAudioItem(untaggedPath, files.metadataIO))
+
+            reactive.advance()
+
+            eventually(2.seconds) {
+                WaitForAsyncUtils.waitForFxEvents()
+                audioLibrary.genreIndexesProperty.size shouldBe 3
+                // Genre.None (name = "") sorts first, then Blues ("Blues"), then Rock ("Rock")
+                audioLibrary.genreIndexesProperty.map { gi: ObservableGenreIndex -> gi.genre.name } shouldBe listOf("", "Blues", "Rock")
+                // Index-addressable: proves the property is a List, not a Set
+                audioLibrary.genreIndexesProperty[0].genre shouldBe Genre.None
             }
         }
     }

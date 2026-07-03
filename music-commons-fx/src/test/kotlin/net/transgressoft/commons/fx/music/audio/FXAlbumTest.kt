@@ -390,6 +390,69 @@ internal class FXAlbumTest : StringSpec({
         }
     }
 
+    "FXAudioLibrary albumsProperty iterates album buckets in name-then-artist order with blank name last" {
+        FXAudioLibrary(VolatileRepository("AlbumOrderFxAudioLibrary")).use { audioLibrary ->
+            val artistA = Artist.of("Artist A")
+            val alphaAlbum = AlbumDetails("Alpha Album", artistA)
+            val betaAlbum = AlbumDetails("Beta Album", artistA)
+            // blank-name album: AlbumDetails.UNKNOWN sorts last by the blank-last rule
+            val unknownAlbum = AlbumDetails.UNKNOWN
+
+            listOf(
+                betaAlbum to 1,
+                alphaAlbum to 2,
+                unknownAlbum to 3
+            ).forEach { (albumDet, id) ->
+                val path = files.virtualAudioFile { this.album = albumDet }.next()
+                audioLibrary.add(FXAudioItemTestBridge.createFxAudioItem(path, id, files.metadataIO))
+            }
+
+            reactive.advance()
+
+            eventually(2.seconds) {
+                WaitForAsyncUtils.waitForFxEvents()
+                audioLibrary.albumsProperty.size shouldBe 3
+                audioLibrary.albumsProperty.map { obs: ObservableAlbum -> obs.album.name } shouldBe listOf("Alpha Album", "Beta Album", "")
+                // Index-addressable: proves the property is a List, not a Set
+                audioLibrary.albumsProperty[0].album.name shouldBe "Alpha Album"
+            }
+        }
+    }
+
+    "FXAudioLibrary albumsProperty preserves disc-then-track order within a bucket" {
+        FXAudioLibrary(VolatileRepository("AlbumInBucketOrderFxAudioLibrary")).use { audioLibrary ->
+            val targetAlbum = AlbumDetails("In-Bucket Order Album", artist)
+
+            // Add in a scrambled order: disc 2 track 1, disc 1 track 3, disc 1 track 1, disc 1 track 2
+            val trackSpecs =
+                listOf(
+                    Triple(2.toShort(), 1.toShort(), 1),
+                    Triple(1.toShort(), 3.toShort(), 2),
+                    Triple(1.toShort(), 1.toShort(), 3),
+                    Triple(1.toShort(), 2.toShort(), 4)
+                )
+            trackSpecs.forEach { (disc, track, id) ->
+                val path =
+                    files.virtualAudioFile {
+                        this.album = targetAlbum
+                        discNumber = disc
+                        trackNumber = track
+                    }.next()
+                audioLibrary.add(FXAudioItemTestBridge.createFxAudioItem(path, id, files.metadataIO))
+            }
+
+            reactive.advance()
+
+            eventually(2.seconds) {
+                WaitForAsyncUtils.waitForFxEvents()
+                audioLibrary.albumsProperty.size shouldBe 1
+                val tracks = audioLibrary.albumsProperty[0].tracks
+                tracks.map { it.discNumber to it.trackNumber } shouldBe
+                    listOf(1.toShort() to 1.toShort(), 1.toShort() to 2.toShort(), 1.toShort() to 3.toShort(), 2.toShort() to 1.toShort())
+            }
+        }
+    }
+
     "FXAudioLibrary emits UPDATE event for album when track year changes" {
         val yearAlbum = AlbumDetails("Hardcore Devil", Artist.of("Test Artist"), year = 2011)
         val repository = VolatileRepository<Int, ObservableAudioItem>("YearUpdateFxTest")

@@ -32,8 +32,9 @@ import net.transgressoft.lirp.persistence.projection.registryProjection
  * representative (most-frequent field values), which is NOT equal to the canonical bucket key.
  * When an item's album changes, lirp re-keys the item from the old bucket to the new one
  * automatically. The projection maintains each bucket's track list in disc-then-track order via
- * [audioItemTrackDiscNumberComparator]. Shared CRUD-event republishing, album queries, and
- * lifecycle live in [AlbumRegistryBase].
+ * [audioItemTrackDiscNumberComparator] and orders buckets by album title then album artist
+ * (blank name last) via [albumCanonicalKeyComparator]. Shared CRUD-event republishing,
+ * album queries, and lifecycle live in [AlbumRegistryBase].
  *
  * Unlike the genre index (which uses a multi-key projection because items can belong to
  * multiple genres), an item always belongs to exactly one album, making single-key sufficient.
@@ -51,7 +52,8 @@ internal class DefaultAlbumRegistry<I>(repository: Repository<Int, I>)
             keyExtractor = { it.album.canonicalKey() },
             // entryOrdering triggers repositionInBucket on any album-field change, which fires
             // onBucketsChanged and causes the value-transform to recompute the representative.
-            entryOrdering = audioItemTrackDiscNumberComparator()
+            entryOrdering = audioItemTrackDiscNumberComparator(),
+            bucketKeyOrdering = albumCanonicalKeyComparator()
         ) { _, tracks -> ImmutableAlbum(deriveRepresentativeAlbumDetails(tracks), tracks) }
 
     init {

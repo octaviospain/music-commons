@@ -19,6 +19,7 @@ package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.AlbumRegistryBase
+import net.transgressoft.commons.music.audio.albumBucketComparator
 import net.transgressoft.commons.music.audio.audioItemTrackDiscNumberComparator
 import net.transgressoft.commons.music.audio.canonicalKey
 import net.transgressoft.commons.music.audio.deriveRepresentativeAlbumDetails
@@ -45,9 +46,10 @@ import net.transgressoft.lirp.persistence.fx.projection.registryFxProjection
  *   initialize JavaFX properties.
  *
  * The projection maintains each bucket's list in disc-then-track order via
- * [audioItemTrackDiscNumberComparator]. Shared CRUD-event republishing, album queries, and
- * lifecycle live in [AlbumRegistryBase]; the projection's entries-changed callback fires on
- * the FX Application Thread.
+ * [audioItemTrackDiscNumberComparator] and orders buckets by album name then artist (blank last)
+ * via [albumBucketComparator], applied before the FX-thread pulse. Shared CRUD-event republishing,
+ * album queries, and lifecycle live in [AlbumRegistryBase]; the projection's entries-changed
+ * callback fires on the FX Application Thread.
  *
  * @param repository The observable audio-item repository to project
  */
@@ -63,7 +65,8 @@ internal class FXAlbumRegistry(repository: Repository<Int, ObservableAudioItem>)
             dataTransform = { _, items -> Pair(deriveRepresentativeAlbumDetails(items), items.toList()) },
             fxFactory = { _, (representative, data) -> FXAlbum(representative, data) },
             dispatchToFxThread = true,
-            entryOrdering = audioItemTrackDiscNumberComparator()
+            entryOrdering = audioItemTrackDiscNumberComparator(),
+            bucketValueOrdering = albumBucketComparator<ObservableAlbum>()
         )
 
     init {

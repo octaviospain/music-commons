@@ -39,9 +39,10 @@ import net.transgressoft.lirp.persistence.fx.projection.registryFxMultiKeyProjec
  *   initialize JavaFX properties.
  *
  * The projection maintains each bucket's list in artist-then-album-then-track order via
- * [audioItemArtistAlbumTrackComparator]. Shared CRUD-event republishing, index queries, and
- * lifecycle live in [GenreIndexRegistryBase]; the projection's entries-changed callback fires on
- * the FX Application Thread.
+ * [audioItemArtistAlbumTrackComparator] and orders genre buckets by [Genre] natural order
+ * ([Genre.None] first) via `naturalOrder<Genre>()`, applied before the FX-thread pulse. Shared
+ * CRUD-event republishing, index queries, and lifecycle live in [GenreIndexRegistryBase]; the
+ * projection's entries-changed callback fires on the FX Application Thread.
  *
  * @param repository The observable audio-item repository to project
  */
@@ -55,7 +56,8 @@ internal class FXGenreIndexRegistry(repository: Repository<Int, ObservableAudioI
             dataTransform = { _, items -> items.toList() },
             fxFactory = { genre, data -> FXGenreIndex(genre, data) },
             dispatchToFxThread = true,
-            entryOrdering = audioItemArtistAlbumTrackComparator()
+            entryOrdering = audioItemArtistAlbumTrackComparator(),
+            bucketKeyOrdering = naturalOrder<Genre>()
         )
 
     init {

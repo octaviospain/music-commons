@@ -352,6 +352,11 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
             WaitForAsyncUtils.waitForFxEvents()
             repository.albumsProperty.size shouldBe 3
             repository.albumsProperty.map { album: ObservableAlbum -> album.album }.toSet() shouldContainOnly setOf(album1A, album1B, album2A)
+            // Ordered list: albums sorted by name ascending (Album 1A < Album 1B < Album 2A)
+            repository.albumsProperty.map { album: ObservableAlbum -> album.album.name } shouldBe
+                listOf("Album 1A", "Album 1B", "Album 2A")
+            // Index-addressable: proves the property is a List
+            repository.albumsProperty[0].album.name shouldBe "Album 1A"
         }
     }
 

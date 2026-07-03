@@ -25,8 +25,9 @@ package net.transgressoft.commons.music.audio
  * Unrecognized genre strings are preserved via [Custom] instead of being
  * mapped to a lossy fallback.
  *
- * The natural ordering is case-sensitive and based on [name], matching the convention
- * established by [Album]. All subtypes inherit [compareTo] from this sealed base.
+ * The natural ordering is case-sensitive and based on [name]: [None] (empty name) sorts first,
+ * then the remaining genres in case-sensitive name order. All subtypes inherit [compareTo] from
+ * this sealed base. Note this differs from album ordering, which compares names case-insensitively.
  *
  * @property name display-friendly genre name (e.g. "Hip Hop", "Drum And Bass")
  */

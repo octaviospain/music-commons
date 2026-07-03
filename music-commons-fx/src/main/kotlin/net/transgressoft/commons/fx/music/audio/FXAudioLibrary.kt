@@ -36,7 +36,9 @@ import javafx.beans.property.ReadOnlyListProperty
 import javafx.beans.property.ReadOnlySetProperty
 import javafx.beans.property.SimpleListProperty
 import javafx.beans.property.SimpleSetProperty
+import javafx.collections.FXCollections.observableArrayList
 import javafx.collections.FXCollections.observableSet
+import javafx.collections.ObservableList
 import javafx.collections.ObservableSet
 import mu.KotlinLogging
 import java.nio.file.Files
@@ -109,21 +111,19 @@ internal class FXAudioLibrary
         override val artistCatalogsProperty: ReadOnlySetProperty<ObservableArtistCatalog> =
             SimpleSetProperty(this, "artist catalogs", observableArtistCatalogSet)
 
-        // Thread-safe backing for album buckets -- updated directly from album subscription
-        private val albumBacking: CopyOnWriteArraySet<ObservableAlbum> = CopyOnWriteArraySet()
-        private val observableAlbumSet: ObservableSet<ObservableAlbum> = observableSet()
+        // Ordered observable list for album buckets -- populated from the ordered projection on each refresh
+        private val observableAlbumList: ObservableList<ObservableAlbum> = observableArrayList()
 
         @get:JvmName("albumsProperty")
-        override val albumsProperty: ReadOnlySetProperty<ObservableAlbum> =
-            SimpleSetProperty(this, "albums", observableAlbumSet)
+        override val albumsProperty: ReadOnlyListProperty<ObservableAlbum> =
+            SimpleListProperty(this, "albums", observableAlbumList)
 
-        // Thread-safe backing for genre indexes -- updated directly from genre index subscription
-        private val genreIndexBacking: CopyOnWriteArraySet<ObservableGenreIndex> = CopyOnWriteArraySet()
-        private val observableGenreIndexSet: ObservableSet<ObservableGenreIndex> = observableSet()
+        // Ordered observable list for genre indexes -- populated from the ordered projection on each refresh
+        private val observableGenreIndexList: ObservableList<ObservableGenreIndex> = observableArrayList()
 
         @get:JvmName("genreIndexesProperty")
-        override val genreIndexesProperty: ReadOnlySetProperty<ObservableGenreIndex> =
-            SimpleSetProperty(this, "genre indexes", observableGenreIndexSet)
+        override val genreIndexesProperty: ReadOnlyListProperty<ObservableGenreIndex> =
+            SimpleListProperty(this, "genre indexes", observableGenreIndexList)
 
         // Subscribe to repository events to populate audioItemsDelegate.
         private val internalSubscription =
@@ -163,30 +163,10 @@ internal class FXAudioLibrary
             }
 
         private val albumSubscription =
-            albumPublisher.subscribe(CREATE, UPDATE, DELETE) { event ->
-                if (event.isDelete()) {
-                    albumBacking.removeAll(event.entities.values.toSet())
-                } else if (event.isUpdate()) {
-                    albumBacking.removeAll(event.oldEntities.values.toSet())
-                    albumBacking.addAll(event.entities.values)
-                } else {
-                    albumBacking.addAll(event.entities.values)
-                }
-                queueCatalogRefresh()
-            }
+            albumPublisher.subscribe(CREATE, UPDATE, DELETE) { queueCatalogRefresh() }
 
         private val genreIndexSubscription =
-            genreIndexPublisher.subscribe(CREATE, UPDATE, DELETE) { event ->
-                if (event.isDelete()) {
-                    genreIndexBacking.removeAll(event.entities.values.toSet())
-                } else if (event.isUpdate()) {
-                    genreIndexBacking.removeAll(event.oldEntities.values.toSet())
-                    genreIndexBacking.addAll(event.entities.values)
-                } else {
-                    genreIndexBacking.addAll(event.entities.values)
-                }
-                queueCatalogRefresh()
-            }
+            genreIndexPublisher.subscribe(CREATE, UPDATE, DELETE) { queueCatalogRefresh() }
 
         init {
             RegistryBase.deregisterRepository(ObservableAudioItem::class.java)
@@ -213,8 +193,6 @@ internal class FXAudioLibrary
             // exist when it runs). Subsequent CRUD changes flow through the subscriptions as before.
             Platform.runLater {
                 observableArtistCatalogRegistry.forEach { artistCatalogBacking.add(it) }
-                observableAlbumRegistry.forEach { albumBacking.add(it) }
-                observableGenreIndexRegistry.forEach { genreIndexBacking.add(it) }
                 refreshCatalogProperties()
             }
 
@@ -291,14 +269,8 @@ internal class FXAudioLibrary
                 clear()
                 addAll(artistCatalogBacking)
             }
-            observableAlbumSet.apply {
-                clear()
-                addAll(albumBacking)
-            }
-            observableGenreIndexSet.apply {
-                clear()
-                addAll(genreIndexBacking)
-            }
+            observableAlbumList.setAll(observableAlbumRegistry.orderedValues())
+            observableGenreIndexList.setAll(observableGenreIndexRegistry.orderedValues())
         }
 
         /**
@@ -319,10 +291,15 @@ internal class FXAudioLibrary
             audioItemIds.clear()
             pendingCreatedAudioItems.clear()
             pendingDeletedAudioItemIds.clear()
-            Platform.runLater { audioItems.clear() }
             artistCatalogBacking.clear()
-            albumBacking.clear()
-            genreIndexBacking.clear()
+            // Empty the observable collections up front so bindings do not show stale items or
+            // catalog buckets during the debounce window before the queued refresh runs.
+            Platform.runLater {
+                audioItems.clear()
+                observableArtistCatalogSet.clear()
+                observableAlbumList.clear()
+                observableGenreIndexList.clear()
+            }
             queueCatalogRefresh()
         }
 

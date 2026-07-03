@@ -111,6 +111,11 @@ abstract class GenreIndexRegistryBase<I, GI>(private val publisherName: String =
     fun findFirst(predicate: (GI) -> Boolean): Optional<GI> =
         Optional.ofNullable(projection.values.firstOrNull(predicate))
 
+    /**
+     * Returns all current genre index values in bucket order (Genre natural order, Genre.None first).
+     */
+    fun orderedValues(): List<GI> = projection.values.toList()
+
     /** Iterates all current index values. */
     fun forEach(action: (GI) -> Unit) = projection.values.forEach(action)
 

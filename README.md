@@ -312,8 +312,8 @@ reactive/event model. Ships no JSON or SQL persistence code — persistence is s
 - `PlaylistHierarchy` -- Narrowed `ReactivePlaylistHierarchy` for `AudioItem` and `MutableAudioPlaylist` types
 - Internal implementations: `DefaultAudioLibrary`, `DefaultPlaylistHierarchy`, `DefaultAudioWaveformRepository`
 - **Artist catalog** -- multi-key registry projection (`registryMultiKeyProjection`); each item is bucketed under every artist it involves; buckets update incrementally as audio items change. Query via `artistCatalogs()`, `getArtistCatalog(artist)`, `containsAudioItemWithArtist(name)`, `getRandomAudioItemsFromArtist(artist)`, `artistCatalogPublisher`
-- **Album index** -- single-key value-transform registry projection (`registryProjection`); each item lands in exactly one album bucket keyed by its canonical album identity (normalized name + compilation-aware album artist), with the bucket's exposed `AlbumDetails` derived as the most-frequent representative across the grouped tracks. Query via `albums()`, `getAlbum(album)`, `containsAudioItemWithAlbum(name)`, `getRandomAudioItemsFromAlbum(album)`, `albumPublisher`; navigate from an item via `item.albumIn(library)`
-- **Genre index** -- multi-key registry projection (`registryMultiKeyProjection`); an item with multiple genres appears in each matching genre bucket; an item with an empty genres set surfaces in the dedicated `Genre.None` bucket (`genres.ifEmpty { setOf(Genre.None) }`) instead of being dropped. Query via `genreIndexes()`, `getGenreIndex(genre)`, `containsAudioItemWithGenre(name)`, `getRandomAudioItemsFromGenre(genre)`, `genreIndexPublisher`; the no-genre bucket is reachable via `getGenreIndex(Genre.None)` or a blank-name lookup
+- **Album index** -- single-key value-transform registry projection (`registryProjection`); each item lands in exactly one album bucket keyed by its canonical album identity (normalized name + compilation-aware album artist), with the bucket's exposed `AlbumDetails` derived as the most-frequent representative across the grouped tracks. Album buckets are ordered by album name (case-insensitive, trimmed) → album artist → year, with blank or unknown-name albums sorted last. Query via `getAlbum(album)`, `containsAudioItemWithAlbum(name)`, `getRandomAudioItemsFromAlbum(album)`, `albumPublisher`; iterate ordered buckets via `forEach` on the projection; navigate from an item via `item.albumIn(library)`; in JavaFX consumers, `albumsProperty` exposes the ordered buckets as a `ReadOnlyListProperty<ObservableAlbum>` that is index-addressable
+- **Genre index** -- multi-key registry projection (`registryMultiKeyProjection`); an item with multiple genres appears in each matching genre bucket; an item with an empty genres set surfaces in the dedicated `Genre.None` bucket (`genres.ifEmpty { setOf(Genre.None) }`) instead of being dropped. Genre buckets are ordered by `Genre` natural order (ordinal), with `Genre.None` always first. Query via `getGenreIndex(genre)`, `containsAudioItemWithGenre(name)`, `getRandomAudioItemsFromGenre(genre)`, `genreIndexPublisher`; the no-genre bucket is reachable via `getGenreIndex(Genre.None)` or a blank-name lookup; in JavaFX consumers, `genreIndexesProperty` exposes the ordered buckets as a `ReadOnlyListProperty<ObservableGenreIndex>`
 - Event subscribers for reactive synchronization between components
 
 ### music-commons-fx
@@ -321,7 +321,7 @@ reactive/event model. Ships no JSON or SQL persistence code — persistence is s
 Bridges core module with JavaFX's property binding system.
 
 - `FXMusicLibrary` -- Unified facade for JavaFX audio management implementing `MusicLibrary<ObservableAudioItem, ObservablePlaylist>` with observable properties (builder-based entry point)
-- `ObservableAudioLibrary` -- Narrowed `ReactiveAudioLibrary` with JavaFX observable properties for UI binding; exposes `audioItemsProperty`, `emptyLibraryProperty`, `artistCatalogsProperty`, `albumsProperty`, and `genreIndexesProperty`; flat sets and counts are derived from these properties (e.g. `albumsProperty.map { it.album }.toSet()`, `albumsProperty.sizeProperty()`)
+- `ObservableAudioLibrary` -- Narrowed `ReactiveAudioLibrary` with JavaFX observable properties for UI binding; exposes `audioItemsProperty`, `emptyLibraryProperty`, `artistCatalogsProperty` (`ReadOnlySetProperty`), `albumsProperty` (`ReadOnlyListProperty`, ordered by album name → artist → year), and `genreIndexesProperty` (`ReadOnlyListProperty`, ordered by `Genre` natural order with `Genre.None` first); the list properties are index-addressable and still support set-style derivations (e.g. `albumsProperty.map { it.album }.toSet()`, `albumsProperty.sizeProperty()`)
 - `ObservablePlaylistHierarchy` -- Narrowed `ReactivePlaylistHierarchy` with a JavaFX observable playlists collection
 - `FXAudioItemPlayer` -- JavaFX wrapper around the bounded-streaming `CoreAudioItemPlayer`, exposing volume, status, and current-time as observable properties
 - `WaveformPane` -- Custom Canvas component for static waveform visualization
@@ -449,17 +449,22 @@ val fxLibrary = FXMusicLibrary.builder()
 // Bind directly to JavaFX UI components
 tableView.itemsProperty().bind(fxLibrary.audioItemsProperty)
 
-// Derive counts and flat sets from the album/genre index set properties
+// Derive counts from the ordered album/genre list properties
 val albumCount = fxLibrary.albumsProperty.sizeProperty()
 albumCountLabel.textProperty().bind(albumCount.asString())
 val genreCount = fxLibrary.genreIndexesProperty.sizeProperty()
 genreCountLabel.textProperty().bind(genreCount.asString())
 
-// Flat sets (e.g. for filtering or display): derived on demand, not live-bound properties
+// albumsProperty and genreIndexesProperty are ReadOnlyListProperty — ordered and index-addressable
+// Buckets are ordered: albums by name → artist → year (blank/unknown last); genres by Genre natural order (Genre.None first)
+val firstAlbum = fxLibrary.albumsProperty[0]       // index access on the ordered list
+val firstGenre = fxLibrary.genreIndexesProperty[0] // Genre.None bucket when untagged tracks exist
+
+// Flat sets (e.g. for filtering or display): derived on demand from the list, not live-bound properties
 val allAlbums = fxLibrary.albumsProperty.map { it.album }.toSet()
 val allGenres = fxLibrary.genreIndexesProperty.map { it.genre }.toSet()
 
-// Album and genre index sets are observable for list/grid binding
+// Album and genre index lists are observable for list/grid binding
 fxLibrary.albumsProperty.addListener { _, _, _ -> /* refresh album browser */ }
 fxLibrary.genreIndexesProperty.addListener { _, _, _ -> /* refresh genre browser */ }
 
@@ -612,6 +617,20 @@ The album and genre bucket types were renamed and simplified. If you are upgradi
 
 - Album buckets: ordered by disc number, then track number
 - Genre index buckets: ordered by artist name, then album name, then track number
+
+#### Ordered Album and Genre Buckets (FX: `ReadOnlySetProperty` → `ReadOnlyListProperty`)
+
+Album and genre buckets are now ordered. In the FX module this required changing the property types:
+
+| Property | Old type | New type | Order |
+|----------|----------|----------|-------|
+| `albumsProperty` | `ReadOnlySetProperty<ObservableAlbum>` | `ReadOnlyListProperty<ObservableAlbum>` | album name (case-insensitive) → album artist → year; blank/unknown-name albums last |
+| `genreIndexesProperty` | `ReadOnlySetProperty<ObservableGenreIndex>` | `ReadOnlyListProperty<ObservableGenreIndex>` | `Genre` natural order (ordinal); `Genre.None` first |
+| `artistCatalogsProperty` | `ReadOnlySetProperty<ObservableArtistCatalog>` | `ReadOnlySetProperty<ObservableArtistCatalog>` | unchanged — artist catalogs remain a set |
+
+The list properties are index-addressable (`albumsProperty[0]`, `genreIndexesProperty[0]`). Existing code that iterates or maps the properties continues to work as-is on a `List`. `toSet()` derivations are still valid. The **JSON persistence format is unchanged** — no data migration is required.
+
+**Migration:** change any declared type from `ReadOnlySetProperty<ObservableAlbum>` / `ReadOnlySetProperty<ObservableGenreIndex>` to `ReadOnlyListProperty<ObservableAlbum>` / `ReadOnlyListProperty<ObservableGenreIndex>`. `ListChangeListener` replaces `SetChangeListener` if you were wiring change listeners directly against the property type.
 
 #### Full-Value Album Identity
 

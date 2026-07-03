@@ -29,8 +29,9 @@ import net.transgressoft.lirp.persistence.projection.registryMultiKeyProjection
  * multiple genres appears in each of those genre indexes simultaneously. An item with an empty
  * `genres` set is placed in a dedicated no-genre bucket keyed by [Genre.None]. The projection
  * maintains each bucket's track list in artist-then-album-then-track order via
- * [audioItemArtistAlbumTrackComparator]. Shared CRUD-event republishing, index queries, and
- * lifecycle live in [GenreIndexRegistryBase].
+ * [audioItemArtistAlbumTrackComparator] and orders genre buckets by [Genre] natural order
+ * ([Genre.None], whose name is empty, sorts first). Shared CRUD-event republishing, index queries,
+ * and lifecycle live in [GenreIndexRegistryBase].
  *
  * Unlike the album registry (which uses single-key projection because items have exactly one
  * album), the multi-key projection is required here because items can belong to multiple genres.
@@ -46,7 +47,8 @@ internal class DefaultGenreIndexRegistry<I>(repository: Repository<Int, I>)
         registryMultiKeyProjection(
             registry = repository,
             keyExtractor = { it.genres.ifEmpty { setOf(Genre.None) } },
-            entryOrdering = audioItemArtistAlbumTrackComparator()
+            entryOrdering = audioItemArtistAlbumTrackComparator(),
+            bucketKeyOrdering = naturalOrder<Genre>()
         ) { genre, tracks -> ImmutableGenreIndex(genre, tracks) }
 
     init {
