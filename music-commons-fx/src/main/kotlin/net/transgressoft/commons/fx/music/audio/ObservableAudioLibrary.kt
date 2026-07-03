@@ -51,12 +51,19 @@ interface ObservableAudioLibrary :
     val artistCatalogsProperty: ReadOnlySetProperty<ObservableArtistCatalog>
 
     /**
-     * Observable set of all album buckets, each grouping items by album.
+     * Observable ordered list of all album buckets, each grouping items by album.
+     *
+     * Albums are ordered by name (blank last), then artist, then year, matching the
+     * bucket ordering of the underlying projection. The list is index-addressable.
      */
-    val albumsProperty: ReadOnlySetProperty<ObservableAlbum>
+    val albumsProperty: ReadOnlyListProperty<ObservableAlbum>
 
     /**
-     * Observable set of all genre indexes, each grouping items by genre.
+     * Observable ordered list of all genre indexes, each grouping items by genre.
+     *
+     * Genre indexes are ordered by [net.transgressoft.commons.music.audio.Genre] natural
+     * order, with [net.transgressoft.commons.music.audio.Genre.None] first. The list is
+     * index-addressable.
      */
-    val genreIndexesProperty: ReadOnlySetProperty<ObservableGenreIndex>
+    val genreIndexesProperty: ReadOnlyListProperty<ObservableGenreIndex>
 }

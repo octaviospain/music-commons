@@ -382,4 +382,121 @@ internal class DefaultGenreIndexRegistryTest : StringSpec({
             }
         }
     }
+
+    "DefaultGenreIndexRegistry orderedValues returns Genre.None bucket first then named genres in natural order" {
+        val artist = Artist.of("Radiohead", CountryCode.UK)
+        val album = AlbumDetails("Kid A", artist)
+
+        val untaggedItem =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = album
+                    genres = emptySet()
+                    title = "How to Disappear Completely"
+                    trackNumber = 3
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+        val customGenreItem =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = album
+                    genres = setOf(Genre.Custom("Experimental"))
+                    title = "Idioteque"
+                    trackNumber = 8
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+        val electronicItem =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artist
+                    this.album = album
+                    genres = setOf(Electronic)
+                    title = "Everything in Its Right Place"
+                    trackNumber = 1
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+
+        // Add out of natural order to verify projection orders by key
+        repository.add(customGenreItem)
+        repository.add(electronicItem)
+        repository.add(untaggedItem)
+        reactive.advance()
+
+        eventually(2.seconds) {
+            registry.size() shouldBe 3
+            val orderedGenres = registry.orderedValues().map { it.genre }
+            // Genre.None (name = "") sorts first; "Electronic" < "Experimental" alphabetically
+            orderedGenres shouldBe listOf(Genre.None, Electronic, Genre.Custom("Experimental"))
+        }
+    }
+
+    "DefaultGenreIndexRegistry orderedValues preserves artist then album then track order within a genre bucket" {
+        val artistA = Artist.of("Aphex Twin")
+        val artistB = Artist.of("Bjork", CountryCode.IS)
+        val albumA = AlbumDetails("Selected Ambient Works", artistA)
+        val albumB = AlbumDetails("Homogenic", artistB)
+
+        val itemArtistATrack1 =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artistA
+                    this.album = albumA
+                    genres = setOf(Electronic)
+                    title = "Xtal"
+                    trackNumber = 1
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+        val itemArtistBTrack1 =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artistB
+                    this.album = albumB
+                    genres = setOf(Electronic)
+                    title = "Joga"
+                    trackNumber = 1
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+        val itemArtistATrack2 =
+            createAudioItem(
+                files.virtualAudioFile {
+                    this.artist = artistA
+                    this.album = albumA
+                    genres = setOf(Electronic)
+                    title = "Tha"
+                    trackNumber = 2
+                    discNumber = 1
+                }.next(),
+                files.metadataIO
+            )
+
+        // Add in mixed order
+        repository.add(itemArtistBTrack1)
+        repository.add(itemArtistATrack2)
+        repository.add(itemArtistATrack1)
+        reactive.advance()
+
+        eventually(2.seconds) {
+            registry.size() shouldBe 1
+            val bucket = registry.orderedValues().first()
+            bucket.genre shouldBe Electronic
+            // Sorted by artist then album then track: Aphex Twin tracks first, Bjork tracks after
+            bucket.tracks.map { it.artist.name } shouldBe
+                listOf("Aphex Twin", "Aphex Twin", "Bjork")
+            // Within Aphex Twin, track 1 before track 2
+            bucket.tracks.filter { it.artist.name == "Aphex Twin" }
+                .map { it.trackNumber } shouldBe listOf(1.toShort(), 2.toShort())
+        }
+    }
 })

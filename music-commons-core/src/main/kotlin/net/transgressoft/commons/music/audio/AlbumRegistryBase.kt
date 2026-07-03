@@ -121,6 +121,11 @@ abstract class AlbumRegistryBase<I, AE>(private val publisherName: String = "Alb
     fun findFirst(predicate: (AE) -> Boolean): Optional<AE> =
         Optional.ofNullable(projection.values.firstOrNull(predicate))
 
+    /**
+     * Returns all current album values in bucket order (name, then artist, then year).
+     */
+    fun orderedValues(): List<AE> = projection.values.toList()
+
     /** Iterates all current album values. */
     fun forEach(action: (AE) -> Unit) = projection.values.forEach(action)
 

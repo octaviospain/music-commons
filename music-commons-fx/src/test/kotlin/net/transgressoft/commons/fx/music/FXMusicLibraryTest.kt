@@ -18,6 +18,7 @@ import io.kotest.property.arbitrary.next
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 /**
@@ -144,6 +145,24 @@ internal class FXMusicLibraryTest : StringSpec({
         WaitForAsyncUtils.waitForFxEvents()
 
         library.audioItemsProperty.size shouldBe sizeBeforeClose
+    }
+
+    "FXMusicLibrary albumsProperty and genreIndexesProperty are index-addressable ordered lists" {
+        val library = FXMusicLibrary.builder().metadataIO(files.metadataIO).build()
+        library.use {
+            val audioPath = files.virtualAudioFile().next()
+            library.audioItemFromFile(audioPath)
+
+            eventually(2.seconds) {
+                reactive.advance()
+                WaitForAsyncUtils.waitForFxEvents()
+                library.albumsProperty.isEmpty() shouldBe false
+                // Index 0 access proves it is a List, not a Set
+                library.albumsProperty[0].shouldNotBeNull()
+                library.genreIndexesProperty.isEmpty() shouldBe false
+                library.genreIndexesProperty[0].shouldNotBeNull()
+            }
+        }
     }
 
     "FXMusicLibrary.audioItemFromFile throws WindowsPathException before delegating when isWindows=true" {

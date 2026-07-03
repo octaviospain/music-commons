@@ -65,6 +65,92 @@ fun <I : ReactiveAudioItem<I>> audioItemArtistAlbumTrackComparator(): Comparator
     compareBy<I>({ it.artist }, { it.album.name }).thenComparing(audioItemTrackDiscNumberComparator())
 
 /**
+ * Creates a comparator for ordering album buckets by album title, then album artist, then release year.
+ *
+ * This is a **bucket-level** comparator that operates on [ReactiveAlbum] values, comparing the
+ * representative [AlbumDetails] exposed by each bucket. It is distinct from the within-bucket
+ * comparators ([audioItemTrackDiscNumberComparator]) that order tracks inside a single album.
+ *
+ * Ordering rules:
+ * - Primary key: album name, trimmed and case-insensitive ascending. Buckets whose name is blank
+ *   (including [AlbumDetails.UNKNOWN]) sort **last** so that untagged albums appear at the end.
+ * - Secondary key: album artist name, trimmed and case-insensitive ascending.
+ * - Tertiary key: release year ascending (earliest first); a null year sorts after a non-null year.
+ *
+ * The comparator reads sort fields from the bucket's representative value ([ReactiveAlbum.album])
+ * and does not add a final identity tie-break — the projection framework appends its own
+ * natural-order key tiebreak to guarantee that equal-comparing distinct buckets are both retained.
+ *
+ * The generic bound `RA : ReactiveAlbum<RA, *>` means one definition serves both the core
+ * [Album] type and the FX `ObservableAlbum` type without duplication.
+ */
+fun <RA : ReactiveAlbum<RA, *>> albumBucketComparator(): Comparator<RA> =
+    Comparator { a, b ->
+        val nameA = a.album.name
+        val nameB = b.album.name
+        val blankA = nameA.isBlank()
+        val blankB = nameB.isBlank()
+
+        // Both blank — treat as equal; lirp appends its own key tiebreak
+        if (blankA && blankB) return@Comparator 0
+        // One blank sorts last
+        if (blankA) return@Comparator 1
+        if (blankB) return@Comparator -1
+
+        val nameComparison = nameA.trim().compareTo(nameB.trim(), ignoreCase = true)
+        if (nameComparison != 0) return@Comparator nameComparison
+
+        val artistComparison = compareAlbumArtistNames(a.album.albumArtist.name, b.album.albumArtist.name)
+        if (artistComparison != 0) return@Comparator artistComparison
+
+        compareAlbumYears(a.album.year, b.album.year)
+    }
+
+private fun compareAlbumArtistNames(name1: String, name2: String): Int =
+    name1.trim().compareTo(name2.trim(), ignoreCase = true)
+
+private fun compareAlbumYears(year1: Short?, year2: Short?): Int =
+    when {
+        year1 == null && year2 == null -> 0
+        year1 == null -> 1
+        year2 == null -> -1
+        else -> year1 - year2
+    }
+
+/**
+ * Creates a comparator for ordering album projection buckets by their canonical [AlbumDetails] key.
+ *
+ * This is a **key-level** comparator that operates on [AlbumDetails] canonical bucket keys
+ * (as produced by [AlbumDetails.canonicalKey]). It applies the same name-first, artist-second
+ * ordering as [albumBucketComparator] but on the already-normalized canonical key rather than
+ * on the representative value — making it suitable as `bucketKeyOrdering` in [registryProjection].
+ *
+ * Ordering rules:
+ * - Primary key: album name ascending, blank last.
+ * - Secondary key: album artist name ascending.
+ *
+ * The canonical key always has `year = null` and `label = UNKNOWN`, so year is not a
+ * meaningful tiebreak at this level; the projection framework's mandatory natural-order final
+ * tiebreak handles any remaining collisions.
+ */
+fun albumCanonicalKeyComparator(): Comparator<AlbumDetails> =
+    Comparator { a, b ->
+        val nameA = a.name
+        val nameB = b.name
+        val blankA = nameA.isBlank()
+        val blankB = nameB.isBlank()
+
+        if (blankA && blankB) return@Comparator 0
+        if (blankA) return@Comparator 1
+        if (blankB) return@Comparator -1
+
+        val nameComparison = nameA.compareTo(nameB, ignoreCase = true)
+        if (nameComparison != 0) return@Comparator nameComparison
+
+        compareAlbumArtistNames(a.albumArtist.name, b.albumArtist.name)
+    }
+
+/**
  * Creates an identity tie-break comparator that distinguishes between two distinct audio items
  * whose primary comparator returns 0.
  *

@@ -87,11 +87,11 @@ class FXMusicLibrary private constructor(
     /** Observable set of all artist catalogs, each grouping albums and items by artist. */
     val artistCatalogsProperty: ReadOnlySetProperty<ObservableArtistCatalog> get() = _audioLibrary.artistCatalogsProperty
 
-    /** Observable set of all album buckets, each grouping items by album. */
-    val albumsProperty: ReadOnlySetProperty<ObservableAlbum> get() = _audioLibrary.albumsProperty
+    /** Observable ordered list of all album buckets, each grouping items by album. */
+    val albumsProperty: ReadOnlyListProperty<ObservableAlbum> get() = _audioLibrary.albumsProperty
 
-    /** Observable set of all genre indexes, each grouping items by genre. */
-    val genreIndexesProperty: ReadOnlySetProperty<ObservableGenreIndex> get() = _audioLibrary.genreIndexesProperty
+    /** Observable ordered list of all genre indexes, each grouping items by genre. */
+    val genreIndexesProperty: ReadOnlyListProperty<ObservableGenreIndex> get() = _audioLibrary.genreIndexesProperty
 
     /** Observable set of all playlists in the hierarchy. */
     val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist> get() = _playlistHierarchy.playlistsProperty
