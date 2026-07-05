@@ -22,8 +22,8 @@ import io.kotest.matchers.shouldBe
 import javax.sound.sampled.AudioFormat
 
 /**
- * Isolated unit tests for [FakeAudioLine] that prove the virtual-clock formula (D-01) and
- * the start/stop/flush gating semantics (D-03) without real audio hardware.
+ * Isolated unit tests for [FakeAudioLine] that prove the virtual-clock formula and
+ * the start/stop/flush gating semantics without real audio hardware.
  */
 class FakeAudioLineTest : StringSpec({
 
@@ -34,13 +34,13 @@ class FakeAudioLineTest : StringSpec({
         line.getMicrosecondPosition() shouldBe 0L
     }
 
-    "FakeAudioLine getMicrosecondPosition advances by D-01 formula after open and start" {
+    "FakeAudioLine getMicrosecondPosition advances by the virtual-clock formula after open and start" {
         val line = FakeAudioLine()
         line.open(format44100Hz16Bit2Ch)
         line.start()
         val buffer = ByteArray(4400)
         line.write(buffer, 0, 4400)
-        // D-01: (4400 * 1_000_000) / frameSize(4) / frameRate(44100) = 4400 * 1_000_000 / 4 / 44100 = 24943
+        // (4400 * 1_000_000) / frameSize(4) / frameRate(44100) = 4400 * 1_000_000 / 4 / 44100 = 24943
         val expectedMicros = 4400L * 1_000_000L / 4L / 44100L
         line.getMicrosecondPosition() shouldBe expectedMicros
     }
@@ -55,7 +55,7 @@ class FakeAudioLineTest : StringSpec({
         line.getLongFramePosition() shouldBe 1100L
     }
 
-    "FakeAudioLine flush resets getMicrosecondPosition to 0 (D-03)" {
+    "FakeAudioLine flush resets getMicrosecondPosition to 0" {
         val line = FakeAudioLine()
         line.open(format44100Hz16Bit2Ch)
         line.start()
@@ -65,7 +65,7 @@ class FakeAudioLineTest : StringSpec({
         line.getMicrosecondPosition() shouldBe 0L
     }
 
-    "FakeAudioLine stop halts the clock — write after stop does not advance position (D-03)" {
+    "FakeAudioLine stop halts the clock — write after stop does not advance position" {
         val line = FakeAudioLine()
         line.open(format44100Hz16Bit2Ch)
         line.start()
@@ -78,7 +78,7 @@ class FakeAudioLineTest : StringSpec({
         line.getMicrosecondPosition() shouldBe positionAfterStart
     }
 
-    "FakeAudioLine start resumes the clock after stop (D-03)" {
+    "FakeAudioLine start resumes the clock after stop" {
         val line = FakeAudioLine()
         line.open(format44100Hz16Bit2Ch)
         line.start()
@@ -109,7 +109,7 @@ class FakeAudioLineTest : StringSpec({
         line.write(buffer, 0, 100) shouldBe 0
     }
 
-    "FakeAudioLine available and getBufferSize return Int.MAX_VALUE (D-04)" {
+    "FakeAudioLine available and getBufferSize return Int.MAX_VALUE" {
         val line = FakeAudioLine()
         line.available() shouldBe Int.MAX_VALUE
         line.getBufferSize() shouldBe Int.MAX_VALUE
@@ -128,7 +128,7 @@ class FakeAudioLineTest : StringSpec({
         line.isRunning shouldBe false
     }
 
-    "FakeAudioLine drain returns immediately without blocking (D-03)" {
+    "FakeAudioLine drain returns immediately without blocking" {
         val line = FakeAudioLine()
         line.open(format44100Hz16Bit2Ch)
         line.start()

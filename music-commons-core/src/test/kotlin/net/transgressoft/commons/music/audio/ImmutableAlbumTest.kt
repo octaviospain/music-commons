@@ -17,8 +17,12 @@
 
 package net.transgressoft.commons.music.audio
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainOnly
+import io.kotest.matchers.comparables.shouldBeEqualComparingTo
+import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.property.Arb
@@ -107,9 +111,9 @@ internal class ImmutableAlbumTest : StringSpec({
         val albumA = ImmutableAlbum(albumDetailsA, listOf(itemA))
         val albumZ = ImmutableAlbum(albumDetailsZ, listOf(itemZ))
 
-        (albumA.compareTo(albumZ) < 0) shouldBe true
-        (albumZ.compareTo(albumA) > 0) shouldBe true
-        (albumA.compareTo(albumA) == 0) shouldBe true
+        albumA shouldBeLessThan albumZ
+        albumZ shouldBeGreaterThan albumA
+        albumA shouldBeEqualComparingTo albumA
     }
 
     "ImmutableAlbum equals is true for same album and same items" {
@@ -123,7 +127,7 @@ internal class ImmutableAlbumTest : StringSpec({
         album1.hashCode() shouldBe album2.hashCode()
     }
 
-    "ImmutableAlbum equals is false for different albums" {
+    "ImmutableAlbum with different albums is unequal in both equals and hashCode" {
         val artist = Arb.artist().next()
         val albumDetails1 = AlbumDetails("First Album", artist)
         val albumDetails2 = AlbumDetails("Second Album", artist)
@@ -133,7 +137,10 @@ internal class ImmutableAlbumTest : StringSpec({
         val album1 = ImmutableAlbum(albumDetails1, listOf(item1))
         val album2 = ImmutableAlbum(albumDetails2, listOf(item2))
 
-        (album1 == album2) shouldBe false
+        assertSoftly {
+            (album1 == album2) shouldBe false
+            album1.hashCode() shouldNotBe album2.hashCode()
+        }
     }
 
     "ImmutableAlbum equals returns false for null and non-album types" {
@@ -142,19 +149,6 @@ internal class ImmutableAlbumTest : StringSpec({
 
         album.equals(null) shouldBe false
         album.equals("not an album") shouldBe false
-    }
-
-    "ImmutableAlbum hashCode differs when albums differ" {
-        val artist = Arb.artist().next()
-        val albumDetails1 = AlbumDetails("Hash Album 1", artist)
-        val albumDetails2 = AlbumDetails("Hash Album 2", artist)
-        val item1 = Arb.audioItem { album = albumDetails1 }.next()
-        val item2 = Arb.audioItem { album = albumDetails2 }.next()
-
-        val album1 = ImmutableAlbum(albumDetails1, listOf(item1))
-        val album2 = ImmutableAlbum(albumDetails2, listOf(item2))
-
-        album1.hashCode() shouldNotBe album2.hashCode()
     }
 
     "ImmutableAlbum toString includes album and size" {

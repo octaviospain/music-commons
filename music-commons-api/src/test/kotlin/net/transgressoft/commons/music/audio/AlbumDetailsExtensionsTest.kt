@@ -19,6 +19,7 @@ package net.transgressoft.commons.music.audio
 
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 
@@ -54,27 +55,15 @@ internal class AlbumDetailsExtensionsTest : StringSpec({
         key.isCompilation shouldBe false
     }
 
-    "AlbumDetailsExtensions canonicalKey collapses albumArtist to UNKNOWN for explicit compilation" {
-        val compilationAlbum = AlbumDetails("Cherry Moon 9", namedArtist, isCompilation = true)
-        compilationAlbum.canonicalKey().albumArtist shouldBe Artist.UNKNOWN
-    }
-
-    "AlbumDetailsExtensions canonicalKey collapses albumArtist to UNKNOWN for UNKNOWN artist" {
-        val unknownArtistAlbum = AlbumDetails("Cherry Moon 9", Artist.UNKNOWN)
-        unknownArtistAlbum.canonicalKey().albumArtist shouldBe Artist.UNKNOWN
-    }
-
-    "AlbumDetailsExtensions canonicalKey collapses albumArtist to UNKNOWN for blank artist name" {
-        val blankArtistAlbum = AlbumDetails("Cherry Moon 9", Artist.of(""))
-        blankArtistAlbum.canonicalKey().albumArtist shouldBe Artist.UNKNOWN
-    }
-
-    "AlbumDetailsExtensions canonicalKey collapses Various Artists to UNKNOWN (case-insensitive)" {
-        val variousArtistsAlbum = AlbumDetails("Cherry Moon 9", Artist.of("Various Artists"))
-        variousArtistsAlbum.canonicalKey().albumArtist shouldBe Artist.UNKNOWN
-
-        val variousArtistsMixed = AlbumDetails("Cherry Moon 9", Artist.of("various artists"))
-        variousArtistsMixed.canonicalKey().albumArtist shouldBe Artist.UNKNOWN
+    withData(
+        nameFn = { (_, reason) -> "AlbumDetailsExtensions canonicalKey collapses albumArtist to UNKNOWN $reason" },
+        AlbumDetails("Cherry Moon 9", namedArtist, isCompilation = true) to "for explicit compilation",
+        AlbumDetails("Cherry Moon 9", Artist.UNKNOWN) to "for UNKNOWN artist",
+        AlbumDetails("Cherry Moon 9", Artist.of("")) to "for blank artist name",
+        AlbumDetails("Cherry Moon 9", Artist.of("Various Artists")) to "for Various Artists",
+        AlbumDetails("Cherry Moon 9", Artist.of("various artists")) to "for various artists (case-insensitive)"
+    ) { (album, _) ->
+        album.canonicalKey().albumArtist shouldBe Artist.UNKNOWN
     }
 
     "AlbumDetailsExtensions canonicalKey merges compilation and Various Artists tracks with same name" {
@@ -101,25 +90,16 @@ internal class AlbumDetailsExtensionsTest : StringSpec({
         blankAlbum.canonicalKey() shouldNotBe nonBlankAlbum.canonicalKey()
     }
 
-    "AlbumDetailsExtensions isCompilationAlbum returns true for isCompilation flag" {
-        val album = AlbumDetails("Cherry Moon 9", namedArtist, isCompilation = true)
+    withData(
+        nameFn = { (_, reason) -> "AlbumDetailsExtensions isCompilationAlbum returns true $reason" },
+        AlbumDetails("Cherry Moon 9", namedArtist, isCompilation = true) to "for isCompilation flag",
+        AlbumDetails("Cherry Moon 9", Artist.UNKNOWN) to "for Artist.UNKNOWN",
+        AlbumDetails("Cherry Moon 9", Artist.of("")) to "for blank albumArtist",
+        AlbumDetails("Cherry Moon 9", Artist.of("Various Artists")) to "for Various Artists",
+        AlbumDetails("Cherry Moon 9", Artist.of("various artists")) to "for various artists (lowercase)",
+        AlbumDetails("Cherry Moon 9", Artist.of("VARIOUS ARTISTS")) to "for VARIOUS ARTISTS (uppercase)"
+    ) { (album, _) ->
         album.isCompilationAlbum() shouldBe true
-    }
-
-    "AlbumDetailsExtensions isCompilationAlbum returns true for Artist.UNKNOWN" {
-        val album = AlbumDetails("Cherry Moon 9", Artist.UNKNOWN)
-        album.isCompilationAlbum() shouldBe true
-    }
-
-    "AlbumDetailsExtensions isCompilationAlbum returns true for blank albumArtist" {
-        val album = AlbumDetails("Cherry Moon 9", Artist.of(""))
-        album.isCompilationAlbum() shouldBe true
-    }
-
-    "AlbumDetailsExtensions isCompilationAlbum returns true for Various Artists (case-insensitive)" {
-        AlbumDetails("Cherry Moon 9", Artist.of("Various Artists")).isCompilationAlbum() shouldBe true
-        AlbumDetails("Cherry Moon 9", Artist.of("various artists")).isCompilationAlbum() shouldBe true
-        AlbumDetails("Cherry Moon 9", Artist.of("VARIOUS ARTISTS")).isCompilationAlbum() shouldBe true
     }
 
     "AlbumDetailsExtensions isCompilationAlbum returns false for normal named artist" {

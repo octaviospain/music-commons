@@ -18,8 +18,10 @@
 package net.transgressoft.commons.media.player
 
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile
+import io.kotest.assertions.withClue
 import io.kotest.core.annotation.DisplayName
-import io.kotest.core.spec.style.StringSpec
+import io.kotest.core.spec.style.FunSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -30,27 +32,23 @@ import java.io.File
  * edge cases (non-mp3 extension, non-positive offset), and graceful handling of malformed input.
  */
 @DisplayName("Mp3PcmStreamSeeker")
-internal class Mp3PcmStreamSeekerTest : StringSpec({
+internal class Mp3PcmStreamSeekerTest : FunSpec({
 
-    "Mp3PcmStreamSeeker returns null for non-mp3 extension" {
-        val flacFile = ArbitraryAudioFile.getResourceAsFile("/testfiles/testeable.flac")
-        val result = Mp3PcmStreamSeeker.open(flacFile, 100_000L)
-        result.shouldBeNull()
+    data class GuardCase(val fixture: String, val offset: Long)
+
+    context("Mp3PcmStreamSeeker returns null for guarded inputs") {
+        withData(
+            nameFn = { "${it.fixture.substringAfterLast('/')} at offset ${it.offset}" },
+            GuardCase("/testfiles/testeable.flac", 100_000L),
+            GuardCase("/testfiles/testeable.mp3", 0L),
+            GuardCase("/testfiles/testeable.mp3", -1L)
+        ) { (fixture, offset) ->
+            val file = ArbitraryAudioFile.getResourceAsFile(fixture)
+            Mp3PcmStreamSeeker.open(file, offset).shouldBeNull()
+        }
     }
 
-    "Mp3PcmStreamSeeker returns null for zero requested offset" {
-        val mp3File = ArbitraryAudioFile.getResourceAsFile("/testfiles/testeable.mp3")
-        val result = Mp3PcmStreamSeeker.open(mp3File, 0L)
-        result.shouldBeNull()
-    }
-
-    "Mp3PcmStreamSeeker returns null for negative requested offset" {
-        val mp3File = ArbitraryAudioFile.getResourceAsFile("/testfiles/testeable.mp3")
-        val result = Mp3PcmStreamSeeker.open(mp3File, -1L)
-        result.shouldBeNull()
-    }
-
-    "Mp3PcmStreamSeeker Xing TOC seek returns a positive startByteOffset that increases with the requested offset" {
+    test("Mp3PcmStreamSeeker Xing TOC seek returns a positive startByteOffset that increases with the requested offset") {
         // testeable.mp3 has a Xing header at byte 613740 — verifies the TOC path
         val mp3File = ArbitraryAudioFile.getResourceAsFile("/testfiles/testeable.mp3")
 
@@ -70,22 +68,23 @@ internal class Mp3PcmStreamSeekerTest : StringSpec({
         largeResult.stream.use { }
     }
 
-    "Mp3PcmStreamSeeker Xing TOC seek yields a fully specified PCM format at every probed offset" {
+    test("Mp3PcmStreamSeeker Xing TOC seek yields a fully specified PCM format at every probed offset") {
         // Regression: a TOC offset that lands mid-frame previously let the AAC provider win the
         // sync-word collision and produced a 0-channel / 0-frame-size format, which crashes
         // SourceDataLine.open. The resync + prioritized MPEG decoder must yield a usable format.
         val mp3File = ArbitraryAudioFile.getResourceAsFile("/testfiles/testeable.mp3")
 
-        for (offset in listOf(50_000L, 250_000L, 500_000L, 750_000L, 1_000_000L)) {
-            val result = Mp3PcmStreamSeeker.open(mp3File, offset)
-            result.shouldNotBeNull()
-            result.stream.format.frameSize shouldBeGreaterThan 0
-            result.stream.format.channels shouldBeGreaterThan 0
-            result.stream.use { }
+        listOf(50_000L, 250_000L, 500_000L, 750_000L, 1_000_000L).forEach { offset ->
+            withClue("offset=$offset") {
+                val result = Mp3PcmStreamSeeker.open(mp3File, offset).shouldNotBeNull()
+                result.stream.format.frameSize shouldBeGreaterThan 0
+                result.stream.format.channels shouldBeGreaterThan 0
+                result.stream.use { }
+            }
         }
     }
 
-    "Mp3PcmStreamSeeker frame-scan fallback returns a non-null result for the CBR fixture" {
+    test("Mp3PcmStreamSeeker frame-scan fallback returns a non-null result for the CBR fixture") {
         // testeable_cbr.mp3 has no Xing/Info header — exercises the frame-scan path
         val cbrFile = ArbitraryAudioFile.getResourceAsFile("/testfiles/testeable_cbr.mp3")
 
@@ -95,7 +94,7 @@ internal class Mp3PcmStreamSeekerTest : StringSpec({
         result.stream.use { }
     }
 
-    "Mp3PcmStreamSeeker returns null without hanging for a truncated or garbage file" {
+    test("Mp3PcmStreamSeeker returns null without hanging for a truncated or garbage file") {
         // Create a temp file with random bytes (no valid MPEG frames)
         val garbageFile =
             File.createTempFile("garbage-mp3-test", ".mp3").apply {
@@ -109,7 +108,7 @@ internal class Mp3PcmStreamSeekerTest : StringSpec({
         result.shouldBeNull()
     }
 
-    "Mp3PcmStreamSeeker CBR frame-scan startByteOffset is less than requested offset" {
+    test("Mp3PcmStreamSeeker CBR frame-scan startByteOffset is less than requested offset") {
         // The frame scan returns the frame that would contain the requested position;
         // the pcm offset at that frame start is <= requestedByteOffset
         val cbrFile = ArbitraryAudioFile.getResourceAsFile("/testfiles/testeable_cbr.mp3")
@@ -125,7 +124,7 @@ internal class Mp3PcmStreamSeekerTest : StringSpec({
         result.stream.use { }
     }
 
-    "Mp3PcmStreamSeeker registered in CoreAudioItemPlayer seeker chain after FlacPcmStreamSeeker" {
+    test("Mp3PcmStreamSeeker registered in CoreAudioItemPlayer seeker chain after FlacPcmStreamSeeker") {
         val seekersField =
             CoreAudioItemPlayer::class.java.getDeclaredField("seekers").apply {
                 isAccessible = true

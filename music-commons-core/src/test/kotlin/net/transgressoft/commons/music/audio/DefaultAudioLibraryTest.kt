@@ -13,7 +13,10 @@ import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.common.ExperimentalKotest
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
+import io.kotest.engine.names.WithDataTestName
 import io.kotest.engine.spec.tempfile
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.optional.shouldBePresent
@@ -143,7 +146,7 @@ internal class DefaultAudioLibraryTest: StringSpec({
         audioRepository.findAlbumAudioItems(theBeatles, abbeyRoad.name) shouldContainExactlyInAnyOrder audioItems
     }
 
-    "Creates a batch of audio items asynchronously" {
+    "Creates a batch of audio items asynchronously with tag-derived encoding and persistence" {
         val filePaths = Arb.list(files.virtualAudioFile(), 50..100).next()
 
         val result: List<AudioItem> = audioRepository.createFromFileBatchAsync(filePaths, reactive.dispatcher.asExecutor()).get()
@@ -168,25 +171,27 @@ internal class DefaultAudioLibraryTest: StringSpec({
         persisted.keys shouldContainExactlyInAnyOrder result.map { it.id }
     }
 
-    "Creates a batch of audio items asynchronously with custom batch size" {
+    // Every accepted batch size must create the full set of items: the default (no explicit size),
+    // an oversized value larger than the input, and a value below the 500 floor that is coerced up.
+    withData(
+        nameFn = { "batch async creates all items with batch size ${it ?: "default"}" },
+        null,
+        1000,
+        100
+    ) { batchSize ->
         val filePaths = Arb.list(files.virtualAudioFile(), 10..20).next()
 
-        val result: List<AudioItem> = audioRepository.createFromFileBatchAsync(filePaths, reactive.dispatcher.asExecutor(), batchSize = 1000).get()
+        val result: List<AudioItem> =
+            if (batchSize == null) {
+                audioRepository.createFromFileBatchAsync(filePaths, reactive.dispatcher.asExecutor()).get()
+            } else {
+                audioRepository.createFromFileBatchAsync(filePaths, reactive.dispatcher.asExecutor(), batchSize = batchSize).get()
+            }
 
         reactive.advance()
 
         result.size shouldBe filePaths.size
         audioRepository.size() shouldBe filePaths.size
-    }
-
-    "Batch async coerces batch size below 500 to 500" {
-        val filePaths = Arb.list(files.virtualAudioFile(), 10..20).next()
-
-        val result: List<AudioItem> = audioRepository.createFromFileBatchAsync(filePaths, reactive.dispatcher.asExecutor(), batchSize = 100).get()
-
-        reactive.advance()
-
-        result.size shouldBe filePaths.size
     }
 
     "Batch async rejects non-positive batch size" {
@@ -263,73 +268,81 @@ internal class DefaultAudioLibraryTest: StringSpec({
         }
     }
 
-    "Artist catalog publisher does NOT emit UPDATE events when single audio item ordering is modified" {
-        val receivedEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
-
-        // Deterministic title prevents random separator tokens from inflating artistsInvolved
-        val artist = Artist.of("Portishead")
-        val audioFile =
-            files.virtualAudioFile {
-                this.artist = artist
-                album = AlbumDetails("Dummy", artist)
-                title = "Sour Times"
-            }.next()
-        val audioItem = audioRepository.createFromFile(audioFile)
-        reactive.advance()
-
-        audioRepository.artistCatalogPublisher.subscribe(UPDATE) { receivedEvents.add(it) }
-
-        // Modify track number on single item - should NOT trigger catalog UPDATE (no reordering possible)
-        audioRepository.findById(audioItem.id).ifPresent { it.trackNumber = 5 }
-        reactive.advance()
-
-        Thread.sleep(300)
-        receivedEvents.size shouldBe 0
+    // Within-bucket property changes (e.g. trackNumber) do not change the projection key (artist),
+    // so no bucket-change notification fires and no catalog UPDATE event is emitted — whether one
+    // item is edited or one of several in the same bucket is reordered. Deterministic titles prevent
+    // random separator tokens from inflating artistsInvolved. Each row seeds its items, subscribes
+    // UPDATE, mutates a track number, and asserts no event surfaced (advance() drains the test
+    // dispatcher to idle, so any catalog UPDATE would already have been delivered — a deterministic
+    // negative). The follow-up verifies the catalog still holds every seeded item.
+    data class NoUpdateCase(
+        val scenarioName: String,
+        val seed: (VirtualFiles, AudioLibrary) -> AudioItem,
+        val verifyCatalog: (AudioLibrary) -> Unit
+    ) : WithDataTestName {
+        override fun dataTestName() = scenarioName
     }
 
-    "Artist catalog publisher does NOT emit UPDATE events when multiple audio items track numbers are reordered" {
-        // Within-bucket property changes (e.g., trackNumber) do not change the projection key (artist),
-        // so no bucket-change notification fires and no catalog UPDATE event is emitted.
-        // Deterministic titles prevent random separator tokens from inflating artistsInvolved.
-        val receivedEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
-
-        val theBeatles = Artist.of("The Beatles")
-        val abbeyRoad = AlbumDetails("Abbey Road", theBeatles)
-
-        val audioFile1 =
-            files.virtualAudioFile {
-                artist = theBeatles
-                album = abbeyRoad
-                title = "Come Together"
-                trackNumber = 1
-                discNumber = 1
-            }.next()
-        val audioItem1 = audioRepository.createFromFile(audioFile1)
-
-        val audioFile2 =
-            files.virtualAudioFile {
-                artist = theBeatles
-                album = abbeyRoad
-                title = "Something"
-                trackNumber = 2
-                discNumber = 1
-            }.next()
-        audioRepository.createFromFile(audioFile2)
+    withData(
+        NoUpdateCase(
+            "single audio item ordering is modified",
+            seed = { files, library ->
+                val artist = Artist.of("Portishead")
+                library.createFromFile(
+                    files.virtualAudioFile {
+                        this.artist = artist
+                        album = AlbumDetails("Dummy", artist)
+                        title = "Sour Times"
+                    }.next()
+                )
+            },
+            verifyCatalog = {}
+        ),
+        NoUpdateCase(
+            "one of multiple audio items in a bucket is reordered",
+            seed = { files, library ->
+                val theBeatles = Artist.of("The Beatles")
+                val abbeyRoad = AlbumDetails("Abbey Road", theBeatles)
+                val first =
+                    library.createFromFile(
+                        files.virtualAudioFile {
+                            artist = theBeatles
+                            album = abbeyRoad
+                            title = "Come Together"
+                            trackNumber = 1
+                            discNumber = 1
+                        }.next()
+                    )
+                library.createFromFile(
+                    files.virtualAudioFile {
+                        artist = theBeatles
+                        album = abbeyRoad
+                        title = "Something"
+                        trackNumber = 2
+                        discNumber = 1
+                    }.next()
+                )
+                first
+            },
+            verifyCatalog = { library ->
+                // Both items still accessible in the catalog
+                library.getArtistCatalog(Artist.of("The Beatles")) shouldBePresent { catalog ->
+                    catalog.size shouldBe 2
+                }
+            }
+        )
+    ) { case ->
+        val target = case.seed(files, audioRepository)
         reactive.advance()
 
-        audioRepository.artistCatalogPublisher.subscribe(UPDATE) { receivedEvents.add(it) }
+        val receivedEvents = audioRepository.artistCatalogPublisher.collect(UPDATE)
 
-        // Modify track number on first item - does NOT trigger catalog UPDATE for within-bucket changes
-        audioRepository.findById(audioItem1.id).ifPresent { it.trackNumber = 5 }
+        // Modify track number - does NOT trigger a catalog UPDATE for within-bucket changes
+        audioRepository.findById(target.id).ifPresent { it.trackNumber = 5 }
         reactive.advance()
 
-        // No UPDATE emitted for within-bucket (non-artist) mutations
-        Thread.sleep(300)
-        receivedEvents.isEmpty() shouldBe true
-        // Both items still accessible in the catalog
-        audioRepository.getArtistCatalog(theBeatles) shouldBePresent { catalog ->
-            catalog.size shouldBe 2
-        }
+        receivedEvents.shouldBeEmpty()
+        case.verifyCatalog(audioRepository)
     }
 
     "Artist catalog publisher emits DELETE events when all artist items are removed" {

@@ -20,6 +20,7 @@ package net.transgressoft.commons.music.audio
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
 
 @DisplayName("GenreExtensions")
@@ -30,13 +31,13 @@ internal class GenreExtensionsTest : StringSpec({
         parseGenre("   ") shouldBe emptySet()
     }
 
-    "parseGenre resolves known genre by exact name" {
-        parseGenre("Rock") shouldBe setOf(Rock)
-    }
-
-    "parseGenre resolves known genre case-insensitively" {
-        parseGenre("rock") shouldBe setOf(Rock)
-        parseGenre("ROCK") shouldBe setOf(Rock)
+    withData(
+        nameFn = { "parseGenre resolves known genre from '$it'" },
+        "Rock",
+        "rock",
+        "ROCK"
+    ) { literal ->
+        parseGenre(literal) shouldBe setOf(Rock)
     }
 
     "parseGenre wraps unknown segment in Custom" {

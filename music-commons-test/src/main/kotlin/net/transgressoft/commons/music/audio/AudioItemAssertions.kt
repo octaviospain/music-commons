@@ -17,23 +17,11 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.util.toJsonUri
 import io.kotest.assertions.assertSoftly
-import io.kotest.assertions.fail
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import java.io.File
-import java.time.ZoneOffset
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.boolean
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.floatOrNull
-import kotlinx.serialization.json.int
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 
 infix fun AudioItem.shouldMatch(attributes: AudioItemTestAttributes) {
     val metadata = attributes.metadata
@@ -67,47 +55,6 @@ infix fun AudioItem.shouldMatch(attributes: AudioItemTestAttributes) {
                 title, artist.name, album.albumArtist.name
             ).map { Artist.of(it) }.toSet()
     }
-}
-
-infix fun JsonObject.shouldContainAudioItem(audioItem: AudioItem) {
-    val id = audioItem.id.toString()
-
-    (id in this) shouldBe true
-
-    val itemJson = this[id]?.jsonObject ?: fail("No JSON object found for ID: $id")
-
-    itemJson["path"]?.jsonPrimitive?.content shouldBe audioItem.path.toJsonUri()
-    itemJson["id"]?.jsonPrimitive?.int shouldBe audioItem.id
-    itemJson["title"]?.jsonPrimitive?.content shouldBe audioItem.title
-    itemJson["duration"]?.jsonPrimitive?.int shouldBe audioItem.duration.toSeconds().toInt()
-    itemJson["bitRate"]?.jsonPrimitive?.int shouldBe audioItem.bitRate
-    itemJson["trackNumber"]?.jsonPrimitive?.intOrNull shouldBe audioItem.trackNumber?.toInt()
-    itemJson["discNumber"]?.jsonPrimitive?.intOrNull shouldBe audioItem.discNumber?.toInt()
-    itemJson["bpm"]?.jsonPrimitive?.floatOrNull shouldBe audioItem.bpm
-    itemJson["encoder"]?.jsonPrimitive?.contentOrNull shouldBe audioItem.encoder
-    itemJson["encoding"]?.jsonPrimitive?.contentOrNull shouldBe audioItem.encoding
-    val genreNames = itemJson["genres"]?.jsonArray?.map { it.jsonPrimitive.content }?.toSet()
-    genreNames shouldBe audioItem.genres.map { it.name }.toSet()
-    itemJson["comments"]?.jsonPrimitive?.contentOrNull shouldBe audioItem.comments
-    itemJson["playCount"]?.jsonPrimitive?.int shouldBe audioItem.playCount.toInt()
-
-    val artistJson = itemJson["artist"]?.jsonObject
-    artistJson?.get("name")?.jsonPrimitive?.content shouldBe audioItem.artist.name
-    artistJson?.get("countryCode")?.jsonPrimitive?.content shouldBe audioItem.artist.countryCode.name
-
-    val albumJson = itemJson["album"]?.jsonObject
-    albumJson?.get("name")?.jsonPrimitive?.content shouldBe audioItem.album.name
-    albumJson?.get("isCompilation")?.jsonPrimitive?.boolean shouldBe audioItem.album.isCompilation
-    albumJson?.get("year")?.jsonPrimitive?.intOrNull shouldBe audioItem.album.year?.toInt()
-
-    val albumArtistJson = albumJson?.get("albumArtist")?.jsonObject
-    albumArtistJson?.get("name")?.jsonPrimitive?.content shouldBe audioItem.album.albumArtist.name
-
-    val labelJson = albumJson?.get("label")?.jsonObject
-    labelJson?.get("name")?.jsonPrimitive?.content shouldBe audioItem.album.label.name
-
-    itemJson["dateOfCreation"]?.jsonPrimitive?.int shouldBe audioItem.dateOfCreation.toEpochSecond(ZoneOffset.UTC).toInt()
-    itemJson["lastDateModified"]?.jsonPrimitive?.int shouldBe audioItem.lastDateModified.toEpochSecond(ZoneOffset.UTC).toInt()
 }
 
 infix fun File.shouldEqual(audioItemJson: String) {

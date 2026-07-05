@@ -17,7 +17,6 @@
 
 package net.transgressoft.commons.music.audio
 
-import net.transgressoft.commons.music.audio.MutableAudioItemTestBridge.createAudioItem
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.persistence.VolatileRepository
 import io.kotest.assertions.nondeterministic.eventually
@@ -70,18 +69,7 @@ internal class AudioLibraryProjectionConservationTest : StringSpec({
         itemGenres: Set<Genre>,
         trackTitle: String,
         track: Short
-    ): AudioItem =
-        createAudioItem(
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = albumDetails
-                genres = itemGenres
-                title = trackTitle
-                trackNumber = track
-                discNumber = 1
-            }.next(),
-            files.metadataIO
-        )
+    ): AudioItem = files.catalogItem(artist, albumDetails, trackTitle, itemGenres, track)
 
     // Seeds every item into the repository, then builds the three projection registries from that
     // fully-populated repository. Returns them registered for teardown.

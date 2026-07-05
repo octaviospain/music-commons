@@ -1,9 +1,11 @@
 package net.transgressoft.commons.fx.music.audio
 
+import net.transgressoft.commons.fx.music.drainFxEventsIfToolkitRunning
 import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Alternative
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.Artist
+import net.transgressoft.commons.music.audio.AudioItemChange
 import net.transgressoft.commons.music.audio.AudioItemMetadata
 import net.transgressoft.commons.music.audio.Blues
 import net.transgressoft.commons.music.audio.Classical
@@ -19,7 +21,6 @@ import net.transgressoft.commons.music.audio.Pop
 import net.transgressoft.commons.music.audio.Punk
 import net.transgressoft.commons.music.audio.Reggae
 import net.transgressoft.commons.music.audio.Rock
-import net.transgressoft.commons.music.audio.audioItemChange
 import net.transgressoft.commons.music.audio.testCoverBytes
 import net.transgressoft.commons.music.audio.update
 import net.transgressoft.commons.music.audio.virtualFiles
@@ -34,6 +35,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.date.shouldNotBeBefore
 import io.kotest.matchers.optional.shouldBePresent
@@ -43,7 +45,6 @@ import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import javafx.scene.image.Image
-import org.testfx.util.WaitForAsyncUtils
 import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -75,90 +76,69 @@ internal class FXAudioItemTest : StringSpec({
             fxAudioItem.dateOfCreationProperty.value shouldBeSameInstanceAs fxAudioItem.dateOfCreation
         }
 
-        var lastDateUpdated = fxAudioItem.lastDateModified
-        fxAudioItem.titleProperty.set("new title")
-        eventually(100.milliseconds) {
-            fxAudioItem.title shouldBe "new title"
-            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
+        // Each mutation must bump lastDateModified; the monotonicity chain relies on these running
+        // sequentially against the shared fxAudioItem, so the helper captures the prior timestamp
+        // before every mutation rather than parametrizing the cases.
+        suspend fun assertMutationBumpsModified(
+            window: kotlin.time.Duration = 100.milliseconds,
+            mutate: () -> Unit,
+            assertValue: () -> Unit
+        ) {
+            val lastDateUpdated = fxAudioItem.lastDateModified
+            mutate()
+            eventually(window) {
+                assertValue()
+                fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
+                fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
+            }
         }
 
-        lastDateUpdated = fxAudioItem.lastDateModified
-        fxAudioItem.artistProperty.set(Artist.of("Bon Jovi"))
-        eventually(100.milliseconds) {
+        assertMutationBumpsModified(mutate = { fxAudioItem.titleProperty.set("new title") }) {
+            fxAudioItem.title shouldBe "new title"
+        }
+
+        assertMutationBumpsModified(mutate = { fxAudioItem.artistProperty.set(Artist.of("Bon Jovi")) }) {
             fxAudioItem.artist.name shouldBe "Bon Jovi"
             fxAudioItem.artistsInvolved shouldContain Artist.of("Bon Jovi")
-            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
         }
 
-        lastDateUpdated = fxAudioItem.lastDateModified
-        fxAudioItem.albumProperty.set(AlbumDetails("New Album", Artist.of("Bon Jovi"), false, 2021.toShort(), Label.UNKNOWN))
-        eventually(100.milliseconds) {
+        assertMutationBumpsModified(
+            mutate = { fxAudioItem.albumProperty.set(AlbumDetails("New Album", Artist.of("Bon Jovi"), false, 2021.toShort(), Label.UNKNOWN)) }
+        ) {
             fxAudioItem.album.name shouldBe "New Album"
             fxAudioItem.album.albumArtist.name shouldBe "Bon Jovi"
-            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
         }
 
-        lastDateUpdated = fxAudioItem.lastDateModified
         val newGenres = fxAudioItem.genres.randomDifferent()
-        fxAudioItem.genresProperty.set(newGenres)
-        eventually(100.milliseconds) {
+        assertMutationBumpsModified(mutate = { fxAudioItem.genresProperty.set(newGenres) }) {
             fxAudioItem.genres shouldBe newGenres
             fxAudioItem.genresProperty.value shouldBe newGenres
-            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
         }
 
-        lastDateUpdated = fxAudioItem.lastDateModified
-        fxAudioItem.comments = "New comments"
-        eventually(100.milliseconds) {
+        assertMutationBumpsModified(mutate = { fxAudioItem.comments = "New comments" }) {
             fxAudioItem.commentsProperty.value shouldBe "New comments"
-            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
         }
 
-        lastDateUpdated = fxAudioItem.lastDateModified
-        fxAudioItem.trackNumber = 5
-        eventually(100.milliseconds) {
+        assertMutationBumpsModified(mutate = { fxAudioItem.trackNumber = 5 }) {
             fxAudioItem.trackNumberProperty.value shouldBe 5
-            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
         }
 
-        lastDateUpdated = fxAudioItem.lastDateModified
-        fxAudioItem.discNumber = 2
-        eventually(100.milliseconds) {
+        assertMutationBumpsModified(mutate = { fxAudioItem.discNumber = 2 }) {
             fxAudioItem.discNumberProperty.value shouldBe 2
-            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
         }
 
-        lastDateUpdated = fxAudioItem.lastDateModified
-        fxAudioItem.bpm = 130f
-        eventually(100.milliseconds) {
+        assertMutationBumpsModified(mutate = { fxAudioItem.bpm = 130f }) {
             fxAudioItem.bpmProperty.value shouldBe 130f
-            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
         }
 
-        lastDateUpdated = fxAudioItem.lastDateModified
-        fxAudioItem.coverImageBytes = null
-        eventually(100.milliseconds) {
+        assertMutationBumpsModified(mutate = { fxAudioItem.coverImageBytes = null }) {
             fxAudioItem.coverImageBytes shouldBe null
             fxAudioItem.coverImageProperty.value shouldBe Optional.empty()
-            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
         }
 
-        lastDateUpdated = fxAudioItem.lastDateModified
-        fxAudioItem.incrementPlayCount()
-        eventually(500.milliseconds) {
+        assertMutationBumpsModified(window = 500.milliseconds, mutate = { fxAudioItem.incrementPlayCount() }) {
             fxAudioItem.playCount shouldBe 1
             fxAudioItem.playCountProperty.value shouldBe 1
-            fxAudioItem.lastDateModified shouldNotBeBefore lastDateUpdated
-            fxAudioItem.lastDateModifiedProperty.value shouldNotBeBefore lastDateUpdated
         }
     }
 
@@ -166,7 +146,22 @@ internal class FXAudioItemTest : StringSpec({
         val testAudioFile = Arb.realAudioFile().next()
         val fxAudioItem = FXAudioItemTestBridge.createFxAudioItem(testAudioFile)
 
-        val audioItemChanges = Arb.audioItemChange().next()
+        // Deterministic, round-trip-safe values. The write→read path normalizes some fields
+        // (e.g. artist names are title-cased on read, custom genres are reformatted), so fuzzed
+        // random text does not survive faithfully; realistic canonical values verify the
+        // persistence contract without depending on tag-library normalization quirks.
+        val audioItemChanges =
+            AudioItemChange(fxAudioItem.id).apply {
+                title = "Paint It Black"
+                artist = Artist.of("The Rolling Stones", CountryCode.UK)
+                album = AlbumDetails("Aftermath", Artist.of("The Rolling Stones", CountryCode.UK), false, 1966, Label.of("Decca", CountryCode.UK))
+                genres = setOf(Rock)
+                comments = "Remastered stereo mix"
+                trackNumber = 5
+                discNumber = 1
+                bpm = 160f
+                playCount = 12
+            }
         fxAudioItem.update(audioItemChanges)
 
         JAudioTaggerMetadataIO().writeMetadata(fxAudioItem)
@@ -237,14 +232,7 @@ internal class FXAudioItemTest : StringSpec({
         // Construct an orphan item via the deserialization constructor (metadataIO starts null,
         // cover unseeded). Manually wire the metadataIO back-ref to verify the lazy-load path.
         val path = Arb.realAudioFile().next()
-        val item =
-            FXAudioItem(
-                path,
-                1, AudioItemMetadata(),
-                java.time.LocalDateTime.now(),
-                java.time.LocalDateTime.now(),
-                0
-            )
+        val item = orphanFxItem(path, 1)
 
         // Without metadataIO wired, coverImageBytes returns null even when the file has artwork.
         item.coverImageBytes shouldBe null
@@ -252,14 +240,7 @@ internal class FXAudioItemTest : StringSpec({
         val metadataIO = JAudioTaggerMetadataIO()
         val expected = metadataIO.loadCover(item)
         // Reconstruct a fresh item to model the rehydration path cleanly.
-        val freshItem =
-            FXAudioItem(
-                path,
-                2, AudioItemMetadata(),
-                java.time.LocalDateTime.now(),
-                java.time.LocalDateTime.now(),
-                0
-            )
+        val freshItem = orphanFxItem(path, 2)
         freshItem.metadataIO = metadataIO
 
         val firstRead = freshItem.coverImageBytes
@@ -275,15 +256,7 @@ internal class FXAudioItemTest : StringSpec({
         // populate through the property path alone.
         // Seed the real audio file with embedded cover art so the lazy load has artwork to decode.
         val path = Arb.realAudioFile { coverImageBytes = testCoverBytes }.next()
-        val freshItem =
-            FXAudioItem(
-                path,
-                2,
-                AudioItemMetadata(),
-                java.time.LocalDateTime.now(),
-                java.time.LocalDateTime.now(),
-                0
-            )
+        val freshItem = orphanFxItem(path, 2)
         freshItem.metadataIO = JAudioTaggerMetadataIO()
 
         // Simulate a UI binding: attach a listener to trigger the first observation.
@@ -297,11 +270,7 @@ internal class FXAudioItemTest : StringSpec({
         // When a toolkit IS running (e.g. in an FX-enabled test container), waitForFxEvents()
         // drains the FX queue before asserting.
         eventually(2.seconds) {
-            try {
-                WaitForAsyncUtils.waitForFxEvents()
-            } catch (_: Exception) {
-                // Toolkit not initialized — the inline fallback already populated the property.
-            }
+            drainFxEventsIfToolkitRunning()
             freshItem.coverImageProperty.value shouldBePresent {
                 (it.height > 0.0) shouldBe true
                 (it.width > 0.0) shouldBe true
@@ -318,15 +287,7 @@ internal class FXAudioItemTest : StringSpec({
         // before rehydration completes). The first observation must not permanently consume the
         // lazy-load trigger, or the cover would stay empty forever after wiring.
         val path = Arb.realAudioFile { coverImageBytes = testCoverBytes }.next()
-        val orphanItem =
-            FXAudioItem(
-                path,
-                3,
-                AudioItemMetadata(),
-                java.time.LocalDateTime.now(),
-                java.time.LocalDateTime.now(),
-                0
-            )
+        val orphanItem = orphanFxItem(path, 3)
 
         // Observe while metadataIO is still null: nothing can load yet, and the property stays empty.
         orphanItem.coverImageProperty.addListener { _, _, _ -> }
@@ -337,11 +298,7 @@ internal class FXAudioItemTest : StringSpec({
         orphanItem.coverImageProperty.addListener { _, _, _ -> }
 
         eventually(2.seconds) {
-            try {
-                WaitForAsyncUtils.waitForFxEvents()
-            } catch (_: Exception) {
-                // Toolkit not initialized — the inline fallback already populated the property.
-            }
+            drainFxEventsIfToolkitRunning()
             orphanItem.coverImageProperty.value shouldBePresent {
                 (it.height > 0.0) shouldBe true
                 (it.width > 0.0) shouldBe true
@@ -349,30 +306,45 @@ internal class FXAudioItemTest : StringSpec({
         }
     }
 
-    "FXAudioLibrary.createFromFile throws InvalidAudioFilePathException when file does not exist" {
-        val nonExistent = Paths.get("/tmp/fx-nonexistent-${System.nanoTime()}.mp3")
-        FXAudioLibrary(VolatileRepository("FXAudioLibrary"), files.metadataIO).use { library ->
-            val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(nonExistent) }
-            ex.message!! shouldContain "does not exist"
-        }
-    }
-
-    "FXAudioLibrary.createFromFile throws InvalidAudioFilePathException when path is a directory" {
-        val dir = Files.createTempDirectory("fx-dir-test")
-        try {
-            FXAudioLibrary(VolatileRepository("FXAudioLibrary"), files.metadataIO).use { library ->
-                val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(dir) }
-                ex.message!! shouldContain "is not a regular file"
+    withData(
+        nameFn = { it.name },
+        // Missing file, wrong file type, and an OS-forbidden character on a non-Windows host all
+        // surface as InvalidAudioFilePathException from createFromFile. The per-row `withPath`
+        // owns setup and teardown so the directory and Jimfs cases clean up their resources.
+        InvalidPathCase(
+            "throws InvalidAudioFilePathException when file does not exist",
+            expectedMessage = "does not exist",
+            withPath = { block -> block(Paths.get("/tmp/fx-nonexistent-${System.nanoTime()}.mp3")) }
+        ),
+        InvalidPathCase(
+            "throws InvalidAudioFilePathException when path is a directory",
+            expectedMessage = "is not a regular file",
+            withPath = { block ->
+                val dir = Files.createTempDirectory("fx-dir-test")
+                try {
+                    block(dir)
+                } finally {
+                    Files.deleteIfExists(dir)
+                }
             }
-        } finally {
-            Files.deleteIfExists(dir)
-        }
-    }
-
-    "FXAudioLibrary.createFromFile InvalidAudioFilePathException is catchable" {
-        val nonExistent = Paths.get("/tmp/fx-nonexistent-${System.nanoTime()}.mp3")
-        FXAudioLibrary(VolatileRepository("FXAudioLibrary"), files.metadataIO).use { library ->
-            shouldThrow<InvalidAudioFilePathException> { library.createFromFile(nonExistent) }
+        ),
+        InvalidPathCase(
+            "passes through when isWindows=false for a path with Windows-forbidden chars",
+            expectedMessage = "does not exist",
+            withPath = { block ->
+                OsDetector.withOverriddenIsWindows(false) {
+                    Jimfs.newFileSystem(Configuration.unix()).use { fs ->
+                        block(fs.getPath("/tmp/fx-nonexistent-bad|name-${System.nanoTime()}.mp3"))
+                    }
+                }
+            }
+        )
+    ) { case ->
+        case.withPath { path ->
+            FXAudioLibrary(VolatileRepository("FXAudioLibrary"), files.metadataIO).use { library ->
+                val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(path) }
+                ex.message!! shouldContain case.expectedMessage
+            }
         }
     }
 
@@ -389,20 +361,13 @@ internal class FXAudioItemTest : StringSpec({
             }
         }
     }
-
-    "FXAudioLibrary.createFromFile pass-through when isWindows=false for a path with Windows-forbidden chars" {
-        OsDetector.withOverriddenIsWindows(false) {
-            val fs = Jimfs.newFileSystem(Configuration.unix())
-            fs.use { fs ->
-                val forbidden = fs.getPath("/tmp/fx-nonexistent-bad|name-${System.nanoTime()}.mp3")
-                FXAudioLibrary(VolatileRepository("FXAudioLibrary"), files.metadataIO).use { library ->
-                    val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(forbidden) }
-                    ex.message!! shouldContain "does not exist"
-                }
-            }
-        }
-    }
 })
+
+private class InvalidPathCase(
+    val name: String,
+    val expectedMessage: String,
+    val withPath: (block: (java.nio.file.Path) -> Unit) -> Unit
+)
 
 fun Set<Genre>.randomDifferent(): Set<Genre> {
     val knownGenres =

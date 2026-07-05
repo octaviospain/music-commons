@@ -91,15 +91,15 @@ public final class SyntheticItunesLibraryGenerator {
         String comments = "Generated from " + relative;
 
         if (id == 1) {
-            title = "Phase18 Title Sentinel";
+            title = "Synthetic Title Sentinel";
         } else if (id == 2) {
-            artist = "Phase18 Primary Artist";
+            artist = "Synthetic Primary Artist";
         } else if (id == 3) {
-            title = "Phase18 Neutral Track featuring Phase18 Guest Artist";
+            title = "Synthetic Neutral Track featuring Synthetic Guest Artist";
         } else if (id == 4) {
-            album = "Phase18 Album Sentinel";
+            album = "Synthetic Album Sentinel";
         } else if (id == 5) {
-            comments = "Phase18 Related Metadata Sentinel";
+            comments = "Synthetic Related Metadata Sentinel";
         }
 
         return new TrackEntry(
@@ -228,18 +228,18 @@ public final class SyntheticItunesLibraryGenerator {
                   "trackCount": %d,
                   "playlistCount": %d,
                   "allTracksFilters": [
-                    { "name": "title", "query": "Phase18 Title Sentinel", "expectedCount": 1 },
-                    { "name": "artist", "query": "Phase18 Primary Artist", "expectedCount": 1 },
-                    { "name": "artistInvolved", "query": "Phase18 Guest Artist", "expectedCount": 1 },
-                    { "name": "album", "query": "Phase18 Album Sentinel", "expectedCount": 1 },
-                    { "name": "relatedMetadata", "query": "Phase18 Related Metadata Sentinel", "expectedCount": 1 }
+                    { "name": "title", "query": "Synthetic Title Sentinel", "expectedCount": 1 },
+                    { "name": "artist", "query": "Synthetic Primary Artist", "expectedCount": 1 },
+                    { "name": "artistInvolved", "query": "Synthetic Guest Artist", "expectedCount": 1 },
+                    { "name": "album", "query": "Synthetic Album Sentinel", "expectedCount": 1 },
+                    { "name": "relatedMetadata", "query": "Synthetic Related Metadata Sentinel", "expectedCount": 1 }
                   ],
                   "artistsFilters": [
-                    { "name": "artist", "query": "Phase18 Primary Artist", "expectedCount": 1 },
-                    { "name": "title", "query": "Phase18 Title Sentinel", "expectedCount": 1 },
-                    { "name": "artistInvolved", "query": "Phase18 Guest Artist", "expectedCount": 2 },
-                    { "name": "album", "query": "Phase18 Album Sentinel", "expectedCount": 1 },
-                    { "name": "relatedMetadata", "query": "Phase18 Related Metadata Sentinel", "expectedCount": 1 }
+                    { "name": "artist", "query": "Synthetic Primary Artist", "expectedCount": 1 },
+                    { "name": "title", "query": "Synthetic Title Sentinel", "expectedCount": 1 },
+                    { "name": "artistInvolved", "query": "Synthetic Guest Artist", "expectedCount": 2 },
+                    { "name": "album", "query": "Synthetic Album Sentinel", "expectedCount": 1 },
+                    { "name": "relatedMetadata", "query": "Synthetic Related Metadata Sentinel", "expectedCount": 1 }
                   ]
                 }
                 """.formatted(tracks.size(), playlists.size());

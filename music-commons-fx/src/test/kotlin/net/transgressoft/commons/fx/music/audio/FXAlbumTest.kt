@@ -14,12 +14,12 @@ import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
 import net.transgressoft.lirp.event.StandardCrudEvent
 import net.transgressoft.lirp.persistence.VolatileRepository
+import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import io.kotest.property.arbitrary.next
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
@@ -47,80 +47,30 @@ internal class FXAlbumTest : StringSpec({
         FxToolkit.cleanupStages()
     }
 
-    "FXAlbum returns false for equals when track list differs" {
-        val path =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-            }.next()
-        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
-
-        val fxAlbum1 = FXAlbum(album, listOf(audioItem))
-        val fxAlbum2 = FXAlbum(album, emptyList())
-
-        fxAlbum1 shouldNotBe fxAlbum2
-    }
-
-    "FXAlbum returns true for equals when album and track list match" {
-        val path =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-            }.next()
-        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
-
-        val fxAlbum1 = FXAlbum(album, listOf(audioItem))
-        val fxAlbum2 = FXAlbum(album, listOf(audioItem))
-
-        fxAlbum1 shouldBe fxAlbum2
-    }
-
-    "FXAlbum produces different hashCode when track list differs" {
-        val path =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-            }.next()
-        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
-
-        val fxAlbum1 = FXAlbum(album, listOf(audioItem))
-        val fxAlbum2 = FXAlbum(album, emptyList())
-
-        fxAlbum1.hashCode() shouldNotBe fxAlbum2.hashCode()
-    }
-
-    "FXAlbum clone produces an equal but distinct instance" {
-        val path =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-            }.next()
-        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
-        val fxAlbum = FXAlbum(album, listOf(audioItem))
-
-        val cloned = fxAlbum.clone()
-
-        cloned shouldBe fxAlbum
-        (cloned === fxAlbum) shouldBe false
-    }
+    flatBucketEqualitySemantics(
+        label = "FXAlbum",
+        buildFromItems = { FXAlbum(album, it) },
+        buildItem = {
+            files.makeItem(artist, album)
+        },
+        clone = { it.clone() }
+    )
 
     "FXAlbum preserves all items from the input list verbatim" {
-        val path1 =
-            files.virtualAudioFile {
+        val firstAudioItem =
+            files.makeItem(id = 1) {
                 this.artist = artist
                 this.album = album
                 trackNumber = 1
                 discNumber = 1
-            }.next()
-        val path2 =
-            files.virtualAudioFile {
+            }
+        val secondAudioItem =
+            files.makeItem(id = 2) {
                 this.artist = artist
                 this.album = album
                 trackNumber = 2
                 discNumber = 1
-            }.next()
-        val firstAudioItem = FXAudioItemTestBridge.createFxAudioItem(path1, 1, files.metadataIO)
-        val secondAudioItem = FXAudioItemTestBridge.createFxAudioItem(path2, 2, files.metadataIO)
+            }
 
         val fxAlbum = FXAlbum(album, listOf(firstAudioItem, secondAudioItem))
 
@@ -130,16 +80,15 @@ internal class FXAlbumTest : StringSpec({
 
     "FXAlbum preserves construction order of tracks" {
         // lirp delivers an ordered list; FXAlbum stores it verbatim without reordering
-        val paths =
+        val items =
             (1..4).map { trackNum ->
-                files.virtualAudioFile {
+                files.makeItem(id = trackNum) {
                     this.artist = artist
                     this.album = album
                     trackNumber = trackNum.toShort()
                     discNumber = 1
-                }.next()
+                }
             }
-        val items = paths.mapIndexed { idx, path -> FXAudioItemTestBridge.createFxAudioItem(path, idx + 1, files.metadataIO) }
 
         val fxAlbum = FXAlbum(album, items)
 
@@ -164,39 +113,38 @@ internal class FXAlbumTest : StringSpec({
     }
 
     "FXAlbum observable properties are populated at construction with correct values" {
-        val paths =
-            (1..10).map {
-                files.virtualAudioFile {
-                    this.artist = artist
-                    this.album = album
-                }.next()
-            }
-        val items = paths.map { FXAudioItemTestBridge.createFxAudioItem(it, files.metadataIO) }
+        val items = (1..10).map { files.makeItem(artist, album) }
 
         val fxAlbum = FXAlbum(album, items)
 
         WaitForAsyncUtils.waitForFxEvents()
 
-        fxAlbum.sizeProperty.get() shouldBe items.size
-        fxAlbum.emptyProperty.get() shouldBe false
-        fxAlbum.albumProperty.get() shouldBe album
-        fxAlbum.tracksProperty shouldHaveSize items.size
+        assertSoftly {
+            fxAlbum.sizeProperty.get() shouldBe items.size
+            fxAlbum.emptyProperty.get() shouldBe false
+            fxAlbum.albumProperty.get() shouldBe album
+            fxAlbum.tracksProperty shouldHaveSize items.size
+        }
     }
 
     "FXAlbum returns false for equals with different types or null" {
         val fxAlbum = FXAlbum(album, emptyList())
 
-        (fxAlbum.equals(null)) shouldBe false
-        (fxAlbum.equals("not an album")) shouldBe false
+        assertSoftly {
+            (fxAlbum.equals(null)) shouldBe false
+            (fxAlbum.equals("not an album")) shouldBe false
+        }
     }
 
     "FXAlbum exposes empty and album properties consistent with an empty state" {
         val fxAlbum = FXAlbum(album, emptyList())
 
-        fxAlbum.emptyProperty.get() shouldBe true
-        fxAlbum.albumProperty.get() shouldBe album
-        fxAlbum.uniqueId shouldBe album.canonicalKey().id()
-        fxAlbum.compareTo(FXAlbum(album, emptyList())) shouldBe 0
+        assertSoftly {
+            fxAlbum.emptyProperty.get() shouldBe true
+            fxAlbum.albumProperty.get() shouldBe album
+            fxAlbum.uniqueId shouldBe album.canonicalKey().id()
+            fxAlbum.compareTo(FXAlbum(album, emptyList())) shouldBe 0
+        }
     }
 
     "FXAlbum coverProperty resolves from the first cover-bearing item when earlier items have no cover" {

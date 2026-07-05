@@ -35,7 +35,7 @@ internal class ArtistNamesInvolvedTest : FunSpec({
                             AudioItemFields(
                                 artistField = "   Adam Beyer    ", expectedArtists = setOf("Adam Beyer")
                             ),
-                        "trivial name with leading and trailing spaces" to
+                        "trivial name with leading, trailing and in-between spaces" to
                             AudioItemFields(
                                 artistField = "   Adam    Beyer    ", expectedArtists = setOf("Adam Beyer")
                             )
@@ -291,7 +291,7 @@ internal class ArtistNamesInvolvedTest : FunSpec({
                         AudioItemFields(
                             titleField = "Song Title (with Adam Beyer)", expectedArtists = setOf("Adam Beyer")
                         ),
-                    "that has 'featuring' outside parenthesis" to
+                    "that has 'featuring' outside parenthesis with trailing paren" to
                         AudioItemFields(
                             titleField = "Song Title featuring Adam Beyer)", expectedArtists = setOf("Adam Beyer")
                         ),

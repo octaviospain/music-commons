@@ -19,6 +19,7 @@ import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
@@ -509,17 +510,19 @@ internal class ObservableAudioLibraryRoundTripTest : StringSpec({
         }
     }
 
-    "FXAudioLibrary.createFromFile throws InvalidAudioFilePathException when file does not exist" {
-        val missingPath = files.fileSystem.getPath("/no", "such", "file.mp3")
-        val ex = shouldThrow<InvalidAudioFilePathException> { repository.createFromFile(missingPath) }
-        ex.message shouldContain "does not exist"
-    }
+    data class InvalidPathCase(val caseName: String, val path: () -> java.nio.file.Path, val expectedMessageFragment: String)
 
-    "FXAudioLibrary.createFromFile throws InvalidAudioFilePathException when path is a directory" {
-        val directoryPath = files.fileSystem.getPath("/").resolve("fx-some-directory")
-        Files.createDirectories(directoryPath)
-        val ex = shouldThrow<InvalidAudioFilePathException> { repository.createFromFile(directoryPath) }
-        ex.message shouldContain "is not a regular file"
+    withData(
+        nameFn = { "FXAudioLibrary.createFromFile throws InvalidAudioFilePathException ${it.caseName}" },
+        InvalidPathCase("when file does not exist", { files.fileSystem.getPath("/no", "such", "file.mp3") }, "does not exist"),
+        InvalidPathCase(
+            "when path is a directory",
+            { files.fileSystem.getPath("/").resolve("fx-some-directory").also { Files.createDirectories(it) } },
+            "is not a regular file"
+        )
+    ) { (_, path, expectedMessageFragment) ->
+        val ex = shouldThrow<InvalidAudioFilePathException> { repository.createFromFile(path()) }
+        ex.message shouldContain expectedMessageFragment
     }
 
     "FXAudioLibrary.createFromFile returns audio item seeded with metadataIO readTag result" {

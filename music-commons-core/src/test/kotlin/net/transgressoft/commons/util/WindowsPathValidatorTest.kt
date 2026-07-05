@@ -5,6 +5,7 @@ import com.google.common.jimfs.Jimfs
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 
@@ -26,58 +27,42 @@ internal class WindowsPathValidatorTest : StringSpec({
         }
     }
 
-    listOf('<', '>', ':', '"', '/', '\\', '|', '?', '*').forEach { ch ->
-        "WindowsPathValidator.validateName rejects forbidden character '$ch' on Windows" {
-            OsDetector.withOverriddenIsWindows(true) {
-                val ex =
-                    shouldThrow<WindowsPathException> {
-                        WindowsPathValidator.validateName("bad${ch}name.mp3")
-                    }
-                ex.violation.shouldBeInstanceOf<WindowsViolation.ForbiddenChar>()
-                (ex.violation as WindowsViolation.ForbiddenChar).char shouldBe ch
-            }
+    withData(
+        nameFn = { "WindowsPathValidator.validateName rejects forbidden character '$it' on Windows" },
+        '<', '>', ':', '"', '/', '\\', '|', '?', '*'
+    ) { ch ->
+        OsDetector.withOverriddenIsWindows(true) {
+            val ex =
+                shouldThrow<WindowsPathException> {
+                    WindowsPathValidator.validateName("bad${ch}name.mp3")
+                }
+            ex.violation.shouldBeInstanceOf<WindowsViolation.ForbiddenChar>()
+            (ex.violation as WindowsViolation.ForbiddenChar).char shouldBe ch
         }
     }
 
-    listOf(
+    withData(
+        nameFn = { "WindowsPathValidator.validateName rejects reserved name '$it' on Windows (case-insensitive, lowercase, with extensions)" },
         "CON", "PRN", "AUX", "NUL",
         "COM0", "COM1", "COM9",
         "LPT0", "LPT1", "LPT9"
-    ).forEach { reserved ->
-        "WindowsPathValidator.validateName rejects reserved name '$reserved' on Windows (case-insensitive)" {
-            OsDetector.withOverriddenIsWindows(true) {
-                val ex =
-                    shouldThrow<WindowsPathException> {
-                        WindowsPathValidator.validateName(reserved)
-                    }
-                ex.violation.shouldBeInstanceOf<WindowsViolation.ReservedName>()
-            }
-        }
+    ) { reserved ->
+        OsDetector.withOverriddenIsWindows(true) {
+            shouldThrow<WindowsPathException> {
+                WindowsPathValidator.validateName(reserved)
+            }.violation.shouldBeInstanceOf<WindowsViolation.ReservedName>()
 
-        "WindowsPathValidator.validateName rejects lowercase '$reserved' on Windows" {
-            OsDetector.withOverriddenIsWindows(true) {
-                shouldThrow<WindowsPathException> {
-                    WindowsPathValidator.validateName(reserved.lowercase())
-                }
-            }
-        }
+            shouldThrow<WindowsPathException> {
+                WindowsPathValidator.validateName(reserved.lowercase())
+            }.violation.shouldBeInstanceOf<WindowsViolation.ReservedName>()
 
-        "WindowsPathValidator.validateName rejects '$reserved.txt' on Windows (reserved with extension)" {
-            OsDetector.withOverriddenIsWindows(true) {
-                shouldThrow<WindowsPathException> {
-                    WindowsPathValidator.validateName("$reserved.txt")
-                }
-            }
-        }
+            shouldThrow<WindowsPathException> {
+                WindowsPathValidator.validateName("$reserved.txt")
+            }.violation.shouldBeInstanceOf<WindowsViolation.ReservedName>()
 
-        "WindowsPathValidator.validateName rejects '$reserved.tar.gz' on Windows (reserved with multi-extension)" {
-            OsDetector.withOverriddenIsWindows(true) {
-                val ex =
-                    shouldThrow<WindowsPathException> {
-                        WindowsPathValidator.validateName("$reserved.tar.gz")
-                    }
-                ex.violation.shouldBeInstanceOf<WindowsViolation.ReservedName>()
-            }
+            shouldThrow<WindowsPathException> {
+                WindowsPathValidator.validateName("$reserved.tar.gz")
+            }.violation.shouldBeInstanceOf<WindowsViolation.ReservedName>()
         }
     }
 

@@ -7,6 +7,7 @@ import net.transgressoft.commons.util.OsDetector
 import net.transgressoft.commons.util.WindowsPathException
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
+import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
@@ -38,21 +39,16 @@ internal class FXMusicLibraryTest : StringSpec({
         FxToolkit.cleanupStages()
     }
 
-    suspend fun eventuallyAfterFxEvents(assertion: () -> Unit) {
-        eventually(500.milliseconds) {
-            WaitForAsyncUtils.waitForFxEvents()
-            assertion()
-        }
-    }
-
     "FXMusicLibrary builder creates volatile library by default" {
         val library = FXMusicLibrary.builder().build()
 
-        library.audioLibrary().shouldNotBeNull()
-        library.playlistHierarchy().shouldNotBeNull()
-        library.waveformRepository().shouldNotBeNull()
-        library.audioItemsProperty.shouldNotBeNull()
-        library.playlistsProperty.shouldNotBeNull()
+        assertSoftly {
+            library.audioLibrary().shouldNotBeNull()
+            library.playlistHierarchy().shouldNotBeNull()
+            library.waveformRepository().shouldNotBeNull()
+            library.audioItemsProperty.shouldNotBeNull()
+            library.playlistsProperty.shouldNotBeNull()
+        }
 
         library.close()
     }
@@ -60,16 +56,18 @@ internal class FXMusicLibraryTest : StringSpec({
     "FXMusicLibrary exposes JavaFX properties" {
         val library = FXMusicLibrary.builder().build()
 
-        library.audioItemsProperty.shouldNotBeNull()
-        library.emptyLibraryProperty.shouldNotBeNull()
-        library.artistCatalogsProperty.shouldNotBeNull()
-        library.albumsProperty.shouldNotBeNull()
-        library.genreIndexesProperty.shouldNotBeNull()
-        library.playlistsProperty.shouldNotBeNull()
+        assertSoftly {
+            library.audioItemsProperty.shouldNotBeNull()
+            library.emptyLibraryProperty.shouldNotBeNull()
+            library.artistCatalogsProperty.shouldNotBeNull()
+            library.albumsProperty.shouldNotBeNull()
+            library.genreIndexesProperty.shouldNotBeNull()
+            library.playlistsProperty.shouldNotBeNull()
 
-        library.emptyLibraryProperty.get() shouldBe true
-        library.audioItemsProperty.isEmpty() shouldBe true
-        library.playlistsProperty.isEmpty() shouldBe true
+            library.emptyLibraryProperty.get() shouldBe true
+            library.audioItemsProperty.isEmpty() shouldBe true
+            library.playlistsProperty.isEmpty() shouldBe true
+        }
 
         library.close()
     }
@@ -87,7 +85,7 @@ internal class FXMusicLibraryTest : StringSpec({
         audioItem.id shouldNotBe 0
         library.audioLibrary().size() shouldBe 1
 
-        eventuallyAfterFxEvents {
+        eventuallyAfterFxEvents(500.milliseconds) {
             library.audioItemsProperty.isEmpty() shouldBe false
         }
 
@@ -118,7 +116,7 @@ internal class FXMusicLibraryTest : StringSpec({
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
 
-        eventuallyAfterFxEvents {
+        eventuallyAfterFxEvents(500.milliseconds) {
             playlist.coverImageProperty.get().isPresent shouldBe true
         }
 

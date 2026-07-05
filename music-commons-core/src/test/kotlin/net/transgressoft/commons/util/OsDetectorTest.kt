@@ -17,8 +17,10 @@
 
 package net.transgressoft.commons.util
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
 
 /******************************************************************************
@@ -45,15 +47,13 @@ internal class OsDetectorTest : StringSpec({
         OsDetector.isWindows shouldBe expected
     }
 
-    "OsDetector.withOverriddenIsWindows flips isWindows to true inside block" {
-        OsDetector.withOverriddenIsWindows(true) {
-            OsDetector.isWindows shouldBe true
-        }
-    }
-
-    "OsDetector.withOverriddenIsWindows flips isWindows to false inside block" {
-        OsDetector.withOverriddenIsWindows(false) {
-            OsDetector.isWindows shouldBe false
+    withData(
+        nameFn = { "OsDetector.withOverriddenIsWindows flips isWindows to $it inside block" },
+        first = true,
+        second = false
+    ) { override ->
+        OsDetector.withOverriddenIsWindows(override) {
+            OsDetector.isWindows shouldBe override
         }
     }
 
@@ -68,12 +68,12 @@ internal class OsDetectorTest : StringSpec({
     "OsDetector.withOverriddenIsWindows restores state after block throws" {
         val before = OsDetector.isWindows
         val ex =
-            runCatching {
+            shouldThrow<RuntimeException> {
                 OsDetector.withOverriddenIsWindows(!before) {
                     throw RuntimeException("test")
                 }
-            }.exceptionOrNull()
-        ex?.message shouldBe "test"
+            }
+        ex.message shouldBe "test"
         OsDetector.isWindows shouldBe before
     }
 })

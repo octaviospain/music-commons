@@ -6,6 +6,7 @@ import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.event.CrudEvent
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -27,35 +28,29 @@ internal class AudioPlaylistEventSubscriberTest : StringSpec({
         hierarchy.close()
     }
 
-    "AudioPlaylistEventSubscriber reacts to CREATE event" {
-        var createEventReceived = false
+    withData(
+        nameFn = { "AudioPlaylistEventSubscriber reacts to ${it.eventType} event" },
+        PlaylistEventReactionCase(CrudEvent.Type.CREATE) {
+            hierarchy.createPlaylist("My Playlist")
+            reactive.advance()
+        },
+        PlaylistEventReactionCase(CrudEvent.Type.DELETE) {
+            val playlist = hierarchy.createPlaylist("My Playlist")
+            reactive.advance()
+            hierarchy.remove(playlist)
+            reactive.advance()
+        }
+    ) { case ->
+        var eventReceived = false
         val subscriber = AudioPlaylistEventSubscriber<MutableAudioPlaylist, AudioItem>("TestPlaylistSubscriber")
-        subscriber.addOnNextEventAction(CrudEvent.Type.CREATE) {
-            createEventReceived = true
+        subscriber.addOnNextEventAction(case.eventType) {
+            eventReceived = true
         }
         hierarchy.subscribe(subscriber)
 
-        hierarchy.createPlaylist("My Playlist")
-        reactive.advance()
+        case.trigger()
 
-        createEventReceived shouldBe true
-    }
-
-    "AudioPlaylistEventSubscriber reacts to DELETE event" {
-        var deleteEventReceived = false
-        val subscriber = AudioPlaylistEventSubscriber<MutableAudioPlaylist, AudioItem>("TestPlaylistSubscriber")
-        subscriber.addOnNextEventAction(CrudEvent.Type.DELETE) {
-            deleteEventReceived = true
-        }
-        hierarchy.subscribe(subscriber)
-
-        val playlist = hierarchy.createPlaylist("My Playlist")
-        reactive.advance()
-
-        hierarchy.remove(playlist)
-        reactive.advance()
-
-        deleteEventReceived shouldBe true
+        eventReceived shouldBe true
     }
 
     "AudioPlaylistEventSubscriber cancelSubscription stops event delivery" {
@@ -85,3 +80,8 @@ internal class AudioPlaylistEventSubscriberTest : StringSpec({
         subscriber.toString() shouldContain "TestPlaylistSubscriber"
     }
 })
+
+private class PlaylistEventReactionCase(
+    val eventType: CrudEvent.Type,
+    val trigger: () -> Unit
+)

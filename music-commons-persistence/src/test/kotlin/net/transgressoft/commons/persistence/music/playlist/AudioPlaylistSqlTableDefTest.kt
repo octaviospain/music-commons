@@ -25,9 +25,11 @@ import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.commons.persistence.music.audio.AudioItemMapSerializer
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.sql.SqliteRepository
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -77,20 +79,26 @@ internal class AudioPlaylistSqlTableDefTest : StringSpec({
 
         val restoredRock = reloaded.findPlaylistByName("Rock").orElse(null)
         restoredRock.shouldNotBeNull()
-        restoredRock.id shouldBe rockId
-        restoredRock.isDirectory shouldBe false
-        restoredRock.audioItems.map { it.id } shouldContainExactlyInAnyOrder listOf(item1.id, item2.id)
+        assertSoftly {
+            restoredRock.id shouldBe rockId
+            restoredRock.isDirectory shouldBe false
+            restoredRock.audioItems.map { it.id } shouldContainExactlyInAnyOrder listOf(item1.id, item2.id)
+        }
 
         val restoredJazz = reloaded.findPlaylistByName("Jazz").orElse(null)
         restoredJazz.shouldNotBeNull()
-        restoredJazz.id shouldBe jazzId
-        restoredJazz.audioItems.map { it.id } shouldContainExactlyInAnyOrder listOf(item3.id)
+        assertSoftly {
+            restoredJazz.id shouldBe jazzId
+            restoredJazz.audioItems.map { it.id } shouldContainExactlyInAnyOrder listOf(item3.id)
+        }
 
         val restoredFolder = reloaded.findPlaylistByName("Folders").orElse(null)
         restoredFolder.shouldNotBeNull()
-        restoredFolder.id shouldBe folderId
-        restoredFolder.isDirectory shouldBe true
-        restoredFolder.audioItems.shouldBeEmpty()
+        assertSoftly {
+            restoredFolder.id shouldBe folderId
+            restoredFolder.isDirectory shouldBe true
+            restoredFolder.audioItems.shouldBeEmpty()
+        }
 
         reloaded.close()
     }
@@ -133,8 +141,8 @@ internal class AudioPlaylistSqlTableDefTest : StringSpec({
     }
 
     "AudioPlaylistSqlTableDef declares the constructor-param columns the in-base raw constructor expects" {
-        val columnNames = AudioPlaylistSqlTableDef.columns.map { it.name }.toSet()
-        columnNames.containsAll(listOf("id", "name", "is_directory", "audio_item_ids", "playlist_ids")) shouldBe true
+        val columnNames = AudioPlaylistSqlTableDef.columns.map { it.name }
+        columnNames shouldContainAll listOf("id", "name", "is_directory", "audio_item_ids", "playlist_ids")
         AudioPlaylistSqlTableDef.entityClassName shouldBe "net.transgressoft.commons.music.playlist.MutablePlaylist"
     }
 })

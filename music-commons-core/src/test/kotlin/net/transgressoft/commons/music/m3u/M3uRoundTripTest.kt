@@ -2,6 +2,8 @@ package net.transgressoft.commons.music.m3u
 
 import net.transgressoft.commons.music.CoreMusicLibrary
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile
+import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.playlist.AudioPlaylist
 import net.transgressoft.commons.music.testing.reactiveScope
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
@@ -39,6 +41,33 @@ internal class M3uRoundTripTest : StringSpec({
         return path
     }
 
+    /**
+     * Imports [source] into a fresh library, exports the resulting playlist to the path
+     * [exportedPathFor] derives from it, then re-imports the exported file into a second fresh
+     * library \u2014 the canonical import\u2192export\u2192import parity cycle. Both libraries stay open for the
+     * duration of [verify], which receives the originally-imported playlist and its re-imported
+     * counterpart.
+     */
+    fun roundTrip(
+        source: Path,
+        exportedPathFor: (AudioPlaylist<AudioItem>) -> Path,
+        verify: (first: AudioPlaylist<AudioItem>, second: AudioPlaylist<AudioItem>) -> Unit
+    ) {
+        CoreMusicLibrary.builder().build().use { lib1 ->
+            M3uImportService(lib1).use { svc ->
+                val first = svc.import(source)
+                val exportedPath = exportedPathFor(first)
+                first.exportToM3uFile(exportedPath)
+
+                CoreMusicLibrary.builder().build().use { lib2 ->
+                    M3uImportService(lib2).use { svc2 ->
+                        verify(first, svc2.import(exportedPath))
+                    }
+                }
+            }
+        }
+    }
+
     "flat playlist round-trip preserves track order and titles" {
         val tmpDir = tempdir().toPath()
         val mp3File = tmpDir.resolve("testeable.mp3")
@@ -57,24 +86,12 @@ internal class M3uRoundTripTest : StringSpec({
                 ${flacFile.toAbsolutePath()}
                 """.trimIndent()
             )
+        val exportDir = tmpDir.resolve("export").also { Files.createDirectory(it) }
 
-        CoreMusicLibrary.builder().build().use { lib1 ->
-            M3uImportService(lib1).use { svc ->
-                val first = svc.import(sourcePlaylist)
-                val exportDir = tmpDir.resolve("export").also { Files.createDirectory(it) }
-                val exportedPath = exportDir.resolve("${first.name}.m3u")
-                first.exportToM3uFile(exportedPath)
-
-                CoreMusicLibrary.builder().build().use { lib2 ->
-                    M3uImportService(lib2).use { svc2 ->
-                        val second = svc2.import(exportedPath)
-
-                        first.name shouldBe second.name
-                        first.audioItems.map { it.title } shouldBe second.audioItems.map { it.title }
-                        first.audioItems.map { it.duration.seconds } shouldBe second.audioItems.map { it.duration.seconds }
-                    }
-                }
-            }
+        roundTrip(sourcePlaylist, { exportDir.resolve("${it.name}.m3u") }) { first, second ->
+            first.name shouldBe second.name
+            first.audioItems.map { it.title } shouldBe second.audioItems.map { it.title }
+            first.audioItems.map { it.duration.seconds } shouldBe second.audioItems.map { it.duration.seconds }
         }
     }
 
@@ -108,26 +125,14 @@ internal class M3uRoundTripTest : StringSpec({
                 child2.m3u
                 """.trimIndent()
             )
+        val exportDir = tmpDir.resolve("export").also { Files.createDirectory(it) }
 
-        CoreMusicLibrary.builder().build().use { lib1 ->
-            M3uImportService(lib1).use { svc ->
-                val first = svc.import(parent)
-                first.isDirectory.shouldBeTrue()
-                first.playlists shouldHaveSize 2
-
-                val exportDir = tmpDir.resolve("export").also { Files.createDirectory(it) }
-                val exportedPath = exportDir.resolve("${first.name}.m3u")
-                first.exportToM3uFile(exportedPath)
-
-                CoreMusicLibrary.builder().build().use { lib2 ->
-                    M3uImportService(lib2).use { svc2 ->
-                        val second = svc2.import(exportedPath)
-                        second.isDirectory.shouldBeTrue()
-                        second.playlists shouldHaveSize 2
-                        first.audioItemsRecursive.size shouldBe second.audioItemsRecursive.size
-                    }
-                }
-            }
+        roundTrip(parent, { exportDir.resolve("${it.name}.m3u") }) { first, second ->
+            first.isDirectory.shouldBeTrue()
+            first.playlists shouldHaveSize 2
+            second.isDirectory.shouldBeTrue()
+            second.playlists shouldHaveSize 2
+            first.audioItemsRecursive.size shouldBe second.audioItemsRecursive.size
         }
     }
 
@@ -142,21 +147,10 @@ internal class M3uRoundTripTest : StringSpec({
             "\uFEFF#EXTM3U\r\n#EXTINF:$mp3Duration,$mp3Title\r\n${mp3File.toAbsolutePath()}\r\n"
         )
 
-        CoreMusicLibrary.builder().build().use { lib1 ->
-            M3uImportService(lib1).use { svc ->
-                val first = svc.import(playlistPath)
-                val exportedPath = tmpDir.resolve("exported.m3u")
-                first.exportToM3uFile(exportedPath)
-
-                CoreMusicLibrary.builder().build().use { lib2 ->
-                    M3uImportService(lib2).use { svc2 ->
-                        val second = svc2.import(exportedPath)
-                        first.audioItems shouldHaveSize 1
-                        second.audioItems shouldHaveSize 1
-                        first.audioItems.first().title shouldBe second.audioItems.first().title
-                    }
-                }
-            }
+        roundTrip(playlistPath, { tmpDir.resolve("exported.m3u") }) { first, second ->
+            first.audioItems shouldHaveSize 1
+            second.audioItems shouldHaveSize 1
+            first.audioItems.first().title shouldBe second.audioItems.first().title
         }
     }
 })

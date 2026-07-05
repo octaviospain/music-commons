@@ -5,10 +5,12 @@ import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.m3u.M3uTestFixtures.PlaylistFixture
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
+import net.transgressoft.commons.music.shouldHaveMessageContaining
 import net.transgressoft.commons.music.testing.reactiveScope
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
@@ -18,6 +20,7 @@ import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import java.nio.file.FileSystem
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -94,77 +97,105 @@ internal class M3uImportServiceTest : StringSpec({
             ).rootPath
 
         val ex = shouldThrow<M3uImportException> { service.import(duplicateRoot) }
-        ex.message!! shouldContain "already exists"
+        ex shouldHaveMessageContaining "already exists"
 
         // Pre-collision detection must NOT have created any additional playlists.
         library.audioLibrary().size() shouldBe sizeAfterFirstImport
         firstFixture.tracks // referenced to keep linter happy in case of future churn
     }
 
-    "rejects nested playlist name collision up-front without leaking the deep child or its siblings" {
-        // First import populates the library with "Raver", "Core", "CoreTunel".
-        importFromResource("Raver.m3u")
-        val before = library.audioLibrary().size()
+    withData<Triple<String, () -> Path, Pair<String, () -> Unit>>>(
+        nameFn = { (label, _, _) -> label },
+        Triple(
+            "rejects nested playlist name collision up-front without leaking the deep child or its siblings",
+            {
+                // First import populates the library with "Raver", "Core", "CoreTunel".
+                importFromResource("Raver.m3u")
+                // Construct a second tree whose root name is unique but contains a child colliding with "Core".
+                val secondRoot = fs.getPath("/music/Playlists/Other.m3u")
+                val secondDir = secondRoot.parent.resolve("Other")
+                Files.createDirectories(secondDir)
+                Files.writeString(secondRoot, "#EXTM3U\nOther/Unique.m3u\nOther/Core.m3u\n")
+                Files.writeString(secondDir.resolve("Unique.m3u"), "#EXTM3U\n")
+                Files.writeString(secondDir.resolve("Core.m3u"), "#EXTM3U\n")
+                secondRoot
+            },
+            "Playlist with name 'Core' already exists" to {
+                // None of "Other", "Unique" or the colliding "Core" should have been materialized.
+                library.findPlaylistByName("Other").isPresent shouldBe false
+                library.findPlaylistByName("Unique").isPresent shouldBe false
+            }
+        ),
+        Triple(
+            "rejects duplicate playlist names within the import tree itself",
+            {
+                // Two nested children whose filenames yield the same derived playlist name "Mix".
+                val baseDir = fs.getPath("/music/Playlists")
+                Files.createDirectories(baseDir.resolve("a"))
+                Files.createDirectories(baseDir.resolve("b"))
+                Files.writeString(baseDir.resolve("a/Mix.m3u"), "#EXTM3U\n")
+                Files.writeString(baseDir.resolve("b/Mix.m3u"), "#EXTM3U\n")
+                val root = baseDir.resolve("Root.m3u")
+                Files.writeString(root, "#EXTM3U\na/Mix.m3u\nb/Mix.m3u\n")
+                root
+            },
+            "duplicate playlist name 'Mix'" to {
+                // Nothing in the conflicting tree should have been materialized.
+                library.findPlaylistByName("Root").isPresent shouldBe false
+                library.findPlaylistByName("Mix").isPresent shouldBe false
+            }
+        )
+    ) { (_, buildTree, expectations) ->
+        val (expectedMessage, assertNoLeak) = expectations
+        // Capture library state after any preseeding done inside the tree builder so the
+        // "nothing new materialized" invariant is measured against the pre-collision baseline.
+        val root = buildTree()
+        val sizeBefore = library.audioLibrary().size()
         val playlistCountBefore = library.playlistHierarchy().numberOfPlaylists()
 
-        // Construct a second tree whose root name is unique but contains a child colliding with "Core".
-        val secondRoot = fs.getPath("/music/Playlists/Other.m3u")
-        val secondDir = secondRoot.parent.resolve("Other")
-        Files.createDirectories(secondDir)
-        Files.writeString(secondRoot, "#EXTM3U\nOther/Unique.m3u\nOther/Core.m3u\n")
-        Files.writeString(secondDir.resolve("Unique.m3u"), "#EXTM3U\n")
-        Files.writeString(secondDir.resolve("Core.m3u"), "#EXTM3U\n")
+        val ex = shouldThrow<M3uImportException> { service.import(root) }
+        ex shouldHaveMessageContaining expectedMessage
 
-        val ex = shouldThrow<M3uImportException> { service.import(secondRoot) }
-        ex.message!! shouldContain "Core"
-
-        // None of "Other", "Unique" or the colliding "Core" should have been materialized.
-        library.findPlaylistByName("Other").isPresent shouldBe false
-        library.findPlaylistByName("Unique").isPresent shouldBe false
-        library.audioLibrary().size() shouldBe before
+        assertNoLeak()
+        library.audioLibrary().size() shouldBe sizeBefore
         library.playlistHierarchy().numberOfPlaylists() shouldBe playlistCountBefore
     }
 
-    "rejects duplicate playlist names within the import tree itself" {
-        // Two nested children whose filenames yield the same derived playlist name "Mix".
-        val baseDir = fs.getPath("/music/Playlists")
-        Files.createDirectories(baseDir.resolve("a"))
-        Files.createDirectories(baseDir.resolve("b"))
-        Files.writeString(baseDir.resolve("a/Mix.m3u"), "#EXTM3U\n")
-        Files.writeString(baseDir.resolve("b/Mix.m3u"), "#EXTM3U\n")
-        val root = baseDir.resolve("Root.m3u")
-        Files.writeString(root, "#EXTM3U\na/Mix.m3u\nb/Mix.m3u\n")
-
-        val ex = shouldThrow<M3uImportException> { service.import(root) }
-        ex.message!! shouldContain "duplicate playlist name 'Mix'"
-
-        // Nothing in the conflicting tree should have been materialized.
-        library.findPlaylistByName("Root").isPresent shouldBe false
-        library.findPlaylistByName("Mix").isPresent shouldBe false
-    }
-
-    "throws M3uCycleException on direct self-reference" {
-        val selfPath = fs.getPath("/music/Playlists/self.m3u")
-        Files.createDirectories(selfPath.parent)
-        Files.writeString(selfPath, "#EXTM3U\nself.m3u\n")
-
-        val ex = shouldThrow<M3uCycleException> { service.import(selfPath) }
-        ex.message!! shouldContain "Cycle detected:"
-        ex.message!! shouldContain selfPath.toRealPath().toString()
-    }
-
-    "throws M3uCycleException on mutual A to B to A cycle" {
-        val baseDir = fs.getPath("/music/Playlists")
-        Files.createDirectories(baseDir)
-        val a = baseDir.resolve("a.m3u")
-        val b = baseDir.resolve("b.m3u")
-        Files.writeString(a, "#EXTM3U\nb.m3u\n")
-        Files.writeString(b, "#EXTM3U\na.m3u\n")
-
-        val ex = shouldThrow<M3uCycleException> { service.import(a) }
-        ex.message!! shouldContain "Cycle detected:"
-        ex.message!! shouldContain "a.m3u"
-        ex.message!! shouldContain "b.m3u"
+    withData<Triple<String, () -> Path, (String) -> Unit>>(
+        nameFn = { (label, _, _) -> label },
+        Triple(
+            "throws M3uCycleException on direct self-reference",
+            {
+                val selfPath = fs.getPath("/music/Playlists/self.m3u")
+                Files.createDirectories(selfPath.parent)
+                Files.writeString(selfPath, "#EXTM3U\nself.m3u\n")
+                selfPath
+            },
+            { message ->
+                message shouldContain "Cycle detected:"
+                message shouldContain fs.getPath("/music/Playlists/self.m3u").toRealPath().toString()
+            }
+        ),
+        Triple(
+            "throws M3uCycleException on mutual A to B to A cycle",
+            {
+                val baseDir = fs.getPath("/music/Playlists")
+                Files.createDirectories(baseDir)
+                val a = baseDir.resolve("a.m3u")
+                Files.writeString(a, "#EXTM3U\nb.m3u\n")
+                Files.writeString(baseDir.resolve("b.m3u"), "#EXTM3U\na.m3u\n")
+                a
+            },
+            { message ->
+                message shouldContain "Cycle detected:"
+                message shouldContain "a.m3u"
+                message shouldContain "b.m3u"
+            }
+        )
+    ) { (_, buildTree, assertMessage) ->
+        val root = buildTree()
+        val ex = shouldThrow<M3uCycleException> { service.import(root) }
+        assertMessage(ex.message!!)
     }
 
     "throws M3uImportException when nested depth exceeds maxDepth" {
@@ -178,7 +209,7 @@ internal class M3uImportServiceTest : StringSpec({
             Files.writeString(child, "#EXTM3U\n")
 
             val ex = shouldThrow<M3uImportException> { depthLimited.import(parent) }
-            ex.message!! shouldContain "exceeded maximum depth 0"
+            ex shouldHaveMessageContaining "exceeded maximum depth 0"
         }
     }
 
@@ -187,7 +218,7 @@ internal class M3uImportServiceTest : StringSpec({
         Files.createDirectories(missing.parent)
 
         val ex = shouldThrow<M3uParseException> { service.import(missing) }
-        ex.message!! shouldContain "missing.m3u"
+        ex shouldHaveMessageContaining "missing.m3u"
     }
 
     "skips missing nested playlist references and continues importing siblings" {

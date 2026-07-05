@@ -19,15 +19,13 @@ package net.transgressoft.commons.media.player
 
 import net.transgressoft.commons.media.util.decodeToPcmStream
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
-import net.transgressoft.commons.music.audio.AudioFileTagType.FLAC
-import net.transgressoft.commons.music.audio.AudioFileTagType.ID3_V_24
-import net.transgressoft.commons.music.audio.AudioFileTagType.MP4_INFO
-import net.transgressoft.commons.music.audio.AudioFileTagType.VORBIS_COMMENT
 import net.transgressoft.commons.music.audio.AudioFileTagType.WAV
 import net.transgressoft.commons.music.audio.FakeAudioLine
 import net.transgressoft.commons.music.audio.audioItem
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status
+import net.transgressoft.commons.music.player.UnsupportedAudioPlaybackException
 import io.kotest.assertions.nondeterministic.eventually
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
@@ -35,13 +33,11 @@ import io.kotest.matchers.longs.shouldBeGreaterThan as shouldBeGreaterThanLong
 import io.kotest.matchers.longs.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import java.io.InputStream
 import java.nio.file.Files.createTempFile
 import java.time.Duration
-import java.util.concurrent.atomic.AtomicReference
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioInputStream
 import javax.sound.sampled.AudioSystem
@@ -87,22 +83,8 @@ private fun neverEndingPcmStream(): AudioInputStream {
 internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
 
     context("PCM decoding across all supported formats") {
-        withData(
-            mapOf(
-                "mp3" to ID3_V_24,
-                "m4a" to MP4_INFO,
-                "wav" to WAV,
-                "flac" to FLAC,
-                "ogg" to VORBIS_COMMENT
-            )
-        ) { tagType ->
-            val player =
-                CoreAudioItemPlayer(
-                    pcmStreamFactory = ::decodeToPcmStream,
-                    lineFactory = { FakeAudioLine() },
-                    nanoTime = { 0L },
-                    stallThresholdNanos = Long.MAX_VALUE
-                )
+        withData(SUPPORTED_FORMATS) { tagType ->
+            val player = testPlayer(::decodeToPcmStream) { FakeAudioLine() }
             val realAudioPath = Arb.realAudioFile(tagType).next()
             val audioItem = Arb.audioItem { path = realAudioPath }.next()
             player.setVolume(0.0)
@@ -112,16 +94,15 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
 
                 // Wait for streaming setup and verify format state is available.
                 eventually(5.seconds) {
-                    val pcmFormatField = CoreAudioItemPlayer::class.java.getDeclaredField("pcmFormat")
-                    pcmFormatField.isAccessible = true
-                    val pcmFormat = pcmFormatField.get(player) as AtomicReference<*>
-                    pcmFormat.get() shouldNotBe null
+                    player.pcmFormat.get() shouldNotBe null
                 }
 
                 // Guards a deliberate architectural decision: the player streams PCM through a
                 // bounded transfer buffer and must never hold the whole decoded track in memory.
                 // A reintroduced `pcmData` field would signal a regression back to full buffering.
-                runCatching { CoreAudioItemPlayer::class.java.getDeclaredField("pcmData") }.exceptionOrNull().shouldBeInstanceOf<NoSuchFieldException>()
+                shouldThrow<NoSuchFieldException> {
+                    CoreAudioItemPlayer::class.java.getDeclaredField("pcmData")
+                }
             } finally {
                 player.dispose()
             }
@@ -129,22 +110,8 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
     }
 
     context("Status transitions across all supported formats") {
-        withData(
-            mapOf(
-                "mp3" to ID3_V_24,
-                "m4a" to MP4_INFO,
-                "wav" to WAV,
-                "flac" to FLAC,
-                "ogg" to VORBIS_COMMENT
-            )
-        ) { tagType ->
-            val player =
-                CoreAudioItemPlayer(
-                    pcmStreamFactory = ::decodeToPcmStream,
-                    lineFactory = { FakeAudioLine() },
-                    nanoTime = { 0L },
-                    stallThresholdNanos = Long.MAX_VALUE
-                )
+        withData(SUPPORTED_FORMATS) { tagType ->
+            val player = testPlayer(::decodeToPcmStream) { FakeAudioLine() }
             val realAudioPath = Arb.realAudioFile(tagType).next()
             val audioItem = Arb.audioItem { path = realAudioPath }.next()
             player.setVolume(0.0)
@@ -172,13 +139,7 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
         // the pump; the play() -> PLAYING contract is covered deterministically by the
         // "Status transitions across all supported formats" context. This test only verifies that
         // a drained source completes and transitions to READY.
-        val player =
-            CoreAudioItemPlayer(
-                pcmStreamFactory = { streamOf(ByteArray(8_820)) },
-                lineFactory = { FakeAudioLine() },
-                nanoTime = { 0L },
-                stallThresholdNanos = Long.MAX_VALUE
-            )
+        val player = testPlayer({ streamOf(ByteArray(8_820)) }) { FakeAudioLine() }
         val realAudioPath = Arb.realAudioFile(WAV).next()
         val audioItem = Arb.audioItem { path = realAudioPath }.next()
         player.setVolume(0.0)
@@ -197,14 +158,8 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
     test("forward and backward seek change current time deterministically") {
         // FakeAudioLine drains instantly, so this test holds the pump with a never-ending stream,
         // waits for pcmFormat resolution (confirming the pump entered the PLAYING streaming loop),
-        // then pauses before seeking so seekPreviewMillis is set and read back synchronously (D-04).
-        val player =
-            CoreAudioItemPlayer(
-                pcmStreamFactory = { neverEndingPcmStream() },
-                lineFactory = { FakeAudioLine() },
-                nanoTime = { 0L },
-                stallThresholdNanos = Long.MAX_VALUE
-            )
+        // then pauses before seeking so seekPreviewMillis is set and read back synchronously.
+        val player = testPlayer({ neverEndingPcmStream() }) { FakeAudioLine() }
         val realAudioPath = Arb.realAudioFile(WAV).next()
         val audioItem = Arb.audioItem { path = realAudioPath }.next()
         player.setVolume(0.0)
@@ -215,14 +170,12 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
             // entered the PLAYING streaming loop, so pause() deterministically reaches PAUSED
             // regardless of scheduler timing. The never-ending stream keeps it from completing.
             eventually(3.seconds) {
-                val pcmFormatField = CoreAudioItemPlayer::class.java.getDeclaredField("pcmFormat")
-                pcmFormatField.isAccessible = true
-                (pcmFormatField.get(player) as AtomicReference<*>).get() shouldNotBe null
+                player.pcmFormat.get() shouldNotBe null
             }
 
             // Pause before seeking to hold the pump — FakeAudioLine drains near-instantly so
             // we must be in PAUSED state for seek() to set seekPreviewMillis synchronously
-            // and for getCurrentTime() to read it back (D-04 clock-jump discipline).
+            // and for getCurrentTime() to read it back (clock-jump discipline).
             player.pause()
             player.status() shouldBe Status.PAUSED
 
@@ -239,13 +192,9 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
     }
 
     test("dispose transitions to DISPOSED and is idempotent") {
-        val player =
-            CoreAudioItemPlayer(
-                pcmStreamFactory = { streamOf(ByteArray(8_820)) },
-                lineFactory = { FakeAudioLine() },
-                nanoTime = { 0L },
-                stallThresholdNanos = Long.MAX_VALUE
-            )
+        // A never-ending PCM stream keeps the pump in PLAYING deterministically; a short finite
+        // stream can drain and transition away from PLAYING before the assertion runs.
+        val player = testPlayer({ neverEndingPcmStream() }) { FakeAudioLine() }
         val realAudioPath = Arb.realAudioFile(WAV).next()
         val audioItem = Arb.audioItem { path = realAudioPath }.next()
         player.setVolume(0.0)
@@ -262,13 +211,7 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
     }
 
     test("play after dispose is ignored") {
-        val player =
-            CoreAudioItemPlayer(
-                pcmStreamFactory = { streamOf(ByteArray(8_820)) },
-                lineFactory = { FakeAudioLine() },
-                nanoTime = { 0L },
-                stallThresholdNanos = Long.MAX_VALUE
-            )
+        val player = testPlayer({ streamOf(ByteArray(8_820)) }) { FakeAudioLine() }
         val realAudioPath = Arb.realAudioFile(WAV).next()
         val audioItem = Arb.audioItem { path = realAudioPath }.next()
         player.setVolume(0.0)
@@ -282,20 +225,14 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
     }
 
     test("play throws UnsupportedAudioPlaybackException for non-existent file") {
-        val player =
-            CoreAudioItemPlayer(
-                pcmStreamFactory = ::decodeToPcmStream,
-                lineFactory = { FakeAudioLine() },
-                nanoTime = { 0L },
-                stallThresholdNanos = Long.MAX_VALUE
-            )
+        val player = testPlayer(::decodeToPcmStream) { FakeAudioLine() }
         val audioItem =
             Arb.audioItem {
                 path = createTempFile("nonexistent", ".mp3").also { it.toFile().delete() }
             }.next()
 
         try {
-            runCatching { player.play(audioItem) }.exceptionOrNull() shouldNotBe null
+            shouldThrow<UnsupportedAudioPlaybackException> { player.play(audioItem) }
         } finally {
             player.dispose()
         }

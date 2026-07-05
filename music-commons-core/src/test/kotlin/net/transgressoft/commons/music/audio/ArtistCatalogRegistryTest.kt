@@ -2,7 +2,6 @@ package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.music.audio.MutableAudioItemTestBridge.createAudioItem
 import net.transgressoft.commons.music.testing.reactiveScope
-import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
@@ -11,6 +10,9 @@ import net.transgressoft.lirp.persistence.VolatileRepository
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
+import io.kotest.engine.names.WithDataTestName
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.optional.shouldBeEmpty
@@ -38,16 +40,9 @@ internal class ArtistCatalogRegistryTest : StringSpec({
     }
 
     "DefaultArtistCatalogRegistry creates catalog when item is added to repository" {
-        val expectedAlbum = AlbumDetails("Play", Artist.of("Moby", CountryCode.US))
-        val audioFilePath =
-            files.virtualAudioFile {
-                artist = Artist.of("Moby", CountryCode.US)
-                album = expectedAlbum
-                title = "Porcelain"
-                trackNumber = 1
-                discNumber = 1
-            }.next()
-        val audioItem = createAudioItem(audioFilePath, files.metadataIO)
+        val moby = Artist.of("Moby", CountryCode.US)
+        val expectedAlbum = AlbumDetails("Play", moby)
+        val audioItem = files.catalogItem(moby, expectedAlbum, "Porcelain")
 
         repository.add(audioItem)
         reactive.advance()
@@ -67,14 +62,7 @@ internal class ArtistCatalogRegistryTest : StringSpec({
     "DefaultArtistCatalogRegistry removes catalog when last item is removed from repository" {
         val expectedArtist = Artist.of("Moby", CountryCode.US)
         val expectedAlbum = AlbumDetails("Play", expectedArtist)
-        val audioItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    artist = expectedArtist
-                    album = expectedAlbum
-                }.next(),
-                files.metadataIO
-            )
+        val audioItem = files.catalogItem(expectedArtist, expectedAlbum, "Porcelain")
         repository.add(audioItem)
         reactive.advance()
         eventually(2.seconds) { registry.findFirst("Moby").isPresent shouldBe true }
@@ -94,16 +82,8 @@ internal class ArtistCatalogRegistryTest : StringSpec({
         // album albumArtist intentionally matches the track artist so oldArtist is fully dropped
         // when both artist and album.albumArtist are changed to newArtist
         val oldAlbum = AlbumDetails("Play", oldArtist)
-        val audioItem =
-            createAudioItem(
-                // deterministic title free of separator tokens to prevent spurious involved-artist entries
-                files.virtualAudioFile {
-                    artist = oldArtist
-                    album = oldAlbum
-                    title = "Natural Blues"
-                }.next(),
-                files.metadataIO
-            )
+        // deterministic title free of separator tokens to prevent spurious involved-artist entries
+        val audioItem = files.catalogItem(oldArtist, oldAlbum, "Natural Blues")
         repository.add(audioItem)
         reactive.advance()
         eventually(2.seconds) { registry.findFirst("Moby").isPresent shouldBe true }
@@ -173,21 +153,12 @@ internal class ArtistCatalogRegistryTest : StringSpec({
     }
 
     "DefaultArtistCatalogRegistry emits CREATE event when first item for artist is added" {
-        val receivedEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
-        registry.artistCatalogPublisher.subscribe(CREATE) { receivedEvents.add(it) }
+        val receivedEvents = registry.artistCatalogPublisher.collect(CREATE)
 
         val expectedArtist = Artist.of("Moby", CountryCode.US)
         val expectedAlbum = AlbumDetails("Play", expectedArtist)
-        val audioItem =
-            createAudioItem(
-                // deterministic title and matching albumArtist keep artistsInvolved == {Moby}, so exactly one bucket
-                files.virtualAudioFile {
-                    artist = expectedArtist
-                    album = expectedAlbum
-                    title = "Porcelain"
-                }.next(),
-                files.metadataIO
-            )
+        // deterministic title and matching albumArtist keep artistsInvolved == {Moby}, so exactly one bucket
+        val audioItem = files.catalogItem(expectedArtist, expectedAlbum, "Porcelain")
         repository.add(audioItem)
         reactive.advance()
 
@@ -207,35 +178,14 @@ internal class ArtistCatalogRegistryTest : StringSpec({
         val expectedAlbum = AlbumDetails("OK Computer", expectedArtist)
         // deterministic titles and matching albumArtist keep artistsInvolved == {Radiohead} for both items,
         // so the second add recomputes exactly one bucket and fires exactly one UPDATE
-        val firstItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    artist = expectedArtist
-                    album = expectedAlbum
-                    title = "Airbag"
-                    trackNumber = 1
-                    discNumber = 1
-                }.next(),
-                files.metadataIO
-            )
+        val firstItem = files.catalogItem(expectedArtist, expectedAlbum, "Airbag")
         repository.add(firstItem)
         reactive.advance()
         eventually(2.seconds) { registry.findFirst("Radiohead").isPresent shouldBe true }
 
-        val updateEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
-        registry.artistCatalogPublisher.subscribe(UPDATE) { updateEvents.add(it) }
+        val updateEvents = registry.artistCatalogPublisher.collect(UPDATE)
 
-        val secondItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    artist = expectedArtist
-                    album = expectedAlbum
-                    title = "Paranoid Android"
-                    trackNumber = 2
-                    discNumber = 1
-                }.next(),
-                files.metadataIO
-            )
+        val secondItem = files.catalogItem(expectedArtist, expectedAlbum, "Paranoid Android", track = 2)
         repository.add(secondItem)
         reactive.advance()
 
@@ -259,45 +209,25 @@ internal class ArtistCatalogRegistryTest : StringSpec({
         // so a trackNumber change cannot cause a bucket re-key and no UPDATE fires.
         val expectedArtist = Artist.of("Radiohead")
         val expectedAlbum = AlbumDetails("OK Computer", expectedArtist)
-        val item1 =
-            createAudioItem(
-                files.virtualAudioFile {
-                    artist = Artist.of("Radiohead", CountryCode.UK)
-                    album = expectedAlbum
-                    title = "Karma Police"
-                    trackNumber = 1
-                    discNumber = 1
-                    genres = emptySet()
-                }.next(),
-                files.metadataIO
-            )
-        val item2 =
-            createAudioItem(
-                files.virtualAudioFile {
-                    artist = Artist.of("Radiohead", CountryCode.UK)
-                    album = expectedAlbum
-                    title = "No Surprises"
-                    trackNumber = 2
-                    discNumber = 1
-                }.next(),
-                files.metadataIO
-            )
+        val ukRadiohead = Artist.of("Radiohead", CountryCode.UK)
+        val item1 = files.catalogItem(ukRadiohead, expectedAlbum, "Karma Police")
+        val item2 = files.catalogItem(ukRadiohead, expectedAlbum, "No Surprises", track = 2)
         repository.add(item1)
         repository.add(item2)
         reactive.advance()
         // Wait for catalog to be populated
         eventually(2.seconds) { registry.findFirst("Radiohead").isPresent shouldBe true }
 
-        val updateEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
-        registry.artistCatalogPublisher.subscribe(UPDATE) { updateEvents.add(it) }
+        val updateEvents = registry.artistCatalogPublisher.collect(UPDATE)
 
         (item1 as MutableAudioItem).title = "Karma Police (alternate)"
         repository.emitAsync(StandardCrudEvent.Update(item1, item1))
         reactive.advance()
 
-        // No UPDATE event emitted for within-bucket mutations that do not affect artist or sort order
-        Thread.sleep(300)
-        updateEvents.isEmpty() shouldBe true
+        // No UPDATE event emitted for within-bucket mutations that do not affect artist or sort order.
+        // advance() drains the test dispatcher to idle, so any bucket-change notification would already
+        // have been delivered — the list staying empty is a deterministic negative.
+        updateEvents.shouldBeEmpty()
         // Both items still in the catalog
         registry.findFirst("Radiohead") shouldBePresent { catalog ->
             catalog.size shouldBe 2
@@ -307,21 +237,12 @@ internal class ArtistCatalogRegistryTest : StringSpec({
     "DefaultArtistCatalogRegistry emits DELETE event when last item of artist is removed" {
         val expectedArtist = Artist.of("Bjork", CountryCode.IS)
         val expectedAlbum = AlbumDetails("Homogenic", expectedArtist)
-        val audioItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    artist = expectedArtist
-                    album = expectedAlbum
-                    title = "Joga"
-                }.next(),
-                files.metadataIO
-            )
+        val audioItem = files.catalogItem(expectedArtist, expectedAlbum, "Joga")
         repository.add(audioItem)
         reactive.advance()
         eventually(2.seconds) { registry.findFirst("Bjork").isPresent shouldBe true }
 
-        val deleteEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
-        registry.artistCatalogPublisher.subscribe(DELETE) { deleteEvents.add(it) }
+        val deleteEvents = registry.artistCatalogPublisher.collect(DELETE)
 
         repository.remove(audioItem)
         reactive.advance()
@@ -334,32 +255,15 @@ internal class ArtistCatalogRegistryTest : StringSpec({
     }
 
     "DefaultArtistCatalogRegistry emits CREATE events for multiple artists added at once" {
-        val receivedEvents = mutableListOf<CrudEvent<Artist, ArtistCatalog<AudioItem>>>()
-        registry.artistCatalogPublisher.subscribe(CREATE) { receivedEvents.add(it) }
+        val receivedEvents = registry.artistCatalogPublisher.collect(CREATE)
 
         val artist1 = Artist.of("Pink Floyd", CountryCode.UK)
         val artist2 = Artist.of("Led Zeppelin", CountryCode.UK)
         val album1 = AlbumDetails("The Wall", artist1)
         val album2 = AlbumDetails("IV", artist2)
 
-        val item1 =
-            createAudioItem(
-                files.virtualAudioFile {
-                    artist = artist1
-                    album = album1
-                    title = "Comfortably Numb"
-                }.next(),
-                files.metadataIO
-            )
-        val item2 =
-            createAudioItem(
-                files.virtualAudioFile {
-                    artist = artist2
-                    album = album2
-                    title = "Black Dog"
-                }.next(),
-                files.metadataIO
-            )
+        val item1 = files.catalogItem(artist1, album1, "Comfortably Numb")
+        val item2 = files.catalogItem(artist2, album2, "Black Dog")
 
         repository.add(item1)
         repository.add(item2)
@@ -372,56 +276,41 @@ internal class ArtistCatalogRegistryTest : StringSpec({
         }
     }
 
-    "item with featured artist in title appears in both primary and featured artist catalogs" {
-        // Multi-membership: a track featuring artist B appears in A's AND B's catalog buckets.
-        // The feat pattern requires a space after "feat" (not "feat."), matching hasFeat regex.
-        val artistA = Artist.of("Moby")
-        val albumA = AlbumDetails("Play", artistA)
-        val audioItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    artist = artistA
-                    album = albumA
-                    title = "Natural Blues feat Vera Hall"
-                }.next(),
-                files.metadataIO
-            )
-
-        repository.add(audioItem)
-        reactive.advance()
-
-        eventually(2.seconds) {
-            // primary artist catalog exists
-            registry.findFirst("Moby") shouldBePresent { it.size shouldBe 1 }
-            // featured artist catalog exists because "Vera Hall" is parsed from the title
-            registry.findFirst("Vera Hall") shouldBePresent { it.size shouldBe 1 }
-            // two distinct buckets total (one per involved artist)
-            registry.size() shouldBe 2
-        }
+    // Multi-membership: a single track surfaces in a catalog bucket for every involved artist. Both
+    // rows add one item and assert two distinct buckets form, one per involved artist name.
+    data class MultiMembershipCase(
+        val scenarioName: String,
+        val buildItem: (VirtualFiles) -> AudioItem,
+        val expectedBuckets: Pair<String, String>
+    ) : WithDataTestName {
+        override fun dataTestName() = scenarioName
     }
 
-    "item with differing track artist and album artist appears in both catalogs" {
-        // Multi-membership: album.albumArtist = Moby, track artist = Bjork →
-        // both Moby and Bjork must appear in their own catalog buckets
-        val trackArtist = Artist.of("Bjork")
-        val albumArtist = Artist.of("Moby")
-        val album = AlbumDetails("Collaboration", albumArtist)
-        val audioItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    artist = trackArtist
-                    this.album = album
-                    title = "Joint Track"
-                }.next(),
-                files.metadataIO
-            )
-
-        repository.add(audioItem)
+    withData(
+        // The feat pattern requires a space after "feat" (not "feat."), matching the hasFeat regex,
+        // so "Vera Hall" is parsed from the title into its own involved-artist bucket.
+        MultiMembershipCase(
+            "featured artist in title appears in both primary and featured catalogs",
+            buildItem = { files ->
+                val artistA = Artist.of("Moby")
+                files.catalogItem(artistA, AlbumDetails("Play", artistA), "Natural Blues feat Vera Hall")
+            },
+            expectedBuckets = "Moby" to "Vera Hall"
+        ),
+        // album.albumArtist = Moby, track artist = Bjork → both must appear in their own buckets.
+        MultiMembershipCase(
+            "differing track artist and album artist appear in both catalogs",
+            buildItem = { files -> files.catalogItem(Artist.of("Bjork"), AlbumDetails("Collaboration", Artist.of("Moby")), "Joint Track") },
+            expectedBuckets = "Bjork" to "Moby"
+        )
+    ) { case ->
+        repository.add(case.buildItem(files))
         reactive.advance()
 
         eventually(2.seconds) {
-            registry.findFirst("Bjork") shouldBePresent { it.size shouldBe 1 }
-            registry.findFirst("Moby") shouldBePresent { it.size shouldBe 1 }
+            registry.findFirst(case.expectedBuckets.first) shouldBePresent { it.size shouldBe 1 }
+            registry.findFirst(case.expectedBuckets.second) shouldBePresent { it.size shouldBe 1 }
+            // two distinct buckets total (one per involved artist)
             registry.size() shouldBe 2
         }
     }
@@ -430,15 +319,7 @@ internal class ArtistCatalogRegistryTest : StringSpec({
         val trackArtist = Artist.of("Bjork")
         val albumArtist = Artist.of("Moby")
         val album = AlbumDetails("Collaboration", albumArtist)
-        val audioItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    artist = trackArtist
-                    this.album = album
-                    title = "Joint Track"
-                }.next(),
-                files.metadataIO
-            )
+        val audioItem = files.catalogItem(trackArtist, album, "Joint Track")
 
         repository.add(audioItem)
         reactive.advance()

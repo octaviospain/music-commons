@@ -43,43 +43,43 @@ internal class AudioWaveformSerializerRoundTripTest : StringSpec({
 
     val json = Json { prettyPrint = false }
 
-    "AudioWaveformMapSerializer round-trips amplitudes and cached width" {
-        val realAudioPath = Arb.realAudioFile(WAV).next()
-        val waveform = ScalableAudioWaveform(10, realAudioPath)
-        waveform.amplitudes(780, 335)
-
-        val encoded = json.encodeToString(AudioWaveformMapSerializer, mapOf(10 to waveform as AudioWaveform))
-        encoded shouldContain "\"cachedWidth\":780"
-        encoded shouldContain "\"normalizedAmplitudes\":"
+    /**
+     * Asserts the encode → decode → re-encode invariant for [waveform] under [id]: the decoded
+     * instance keeps its id and audio-file path, and re-encoding it reproduces the original JSON
+     * byte-for-byte (proving cached width and the normalized-amplitudes FloatArray survived).
+     * Returns the original encoded JSON so callers can layer additional structural assertions.
+     */
+    fun assertRoundTrips(id: Int, waveform: ScalableAudioWaveform): String {
+        val encoded = json.encodeToString(AudioWaveformMapSerializer, mapOf(id to waveform as AudioWaveform))
 
         val decoded = json.decodeFromString(AudioWaveformMapSerializer, encoded)
-        val decodedWaveform = decoded.getValue(10)
+        val decodedWaveform = decoded.getValue(id)
 
-        decodedWaveform.id shouldBe 10
+        decodedWaveform.id shouldBe id
         decodedWaveform.audioFilePath shouldBe waveform.audioFilePath
 
-        // Re-encoding the decoded instance must reproduce the original JSON byte-for-byte, proving the
-        // cached width and the full normalized-amplitudes FloatArray survived the round trip.
-        val reEncoded = json.encodeToString(AudioWaveformMapSerializer, mapOf(10 to decodedWaveform))
+        val reEncoded = json.encodeToString(AudioWaveformMapSerializer, mapOf(id to decodedWaveform))
         reEncoded shouldBe encoded
+        return encoded
+    }
+
+    "AudioWaveformMapSerializer round-trips amplitudes and cached width" {
+        val waveform = ScalableAudioWaveform(10, Arb.realAudioFile(WAV).next())
+        waveform.amplitudes(780, 335)
+
+        val encoded = assertRoundTrips(10, waveform)
+
+        encoded shouldContain "\"cachedWidth\":780"
+        encoded shouldContain "\"normalizedAmplitudes\":"
     }
 
     "AudioWaveformMapSerializer round-trips empty amplitude state without error" {
-        val realAudioPath = Arb.realAudioFile(ID3_V_24).next()
-        val waveform = ScalableAudioWaveform(42, realAudioPath)
+        val waveform = ScalableAudioWaveform(42, Arb.realAudioFile(ID3_V_24).next())
 
-        val encoded = json.encodeToString(AudioWaveformMapSerializer, mapOf(42 to waveform as AudioWaveform))
+        val encoded = assertRoundTrips(42, waveform)
+
         encoded shouldContain "\"cachedWidth\":0"
         encoded shouldContain "\"normalizedAmplitudes\":\"\""
-
-        val decoded = json.decodeFromString(AudioWaveformMapSerializer, encoded)
-        val decodedWaveform = decoded.getValue(42)
-
-        decodedWaveform.id shouldBe 42
-        decodedWaveform.audioFilePath shouldBe waveform.audioFilePath
-
-        val reEncoded = json.encodeToString(AudioWaveformMapSerializer, mapOf(42 to decodedWaveform))
-        reEncoded shouldBe encoded
     }
 
     "AudioWaveformMapSerializer round-trips through JsonFileRepository" {

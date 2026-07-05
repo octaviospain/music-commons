@@ -17,8 +17,12 @@
 
 package net.transgressoft.commons.music.audio
 
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainOnly
+import io.kotest.matchers.comparables.shouldBeEqualComparingTo
+import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.property.Arb
@@ -123,9 +127,9 @@ internal class ImmutableGenreIndexTest : StringSpec({
         val indexA = ImmutableGenreIndex(genreA, listOf(itemA))
         val indexZ = ImmutableGenreIndex(genreZ, listOf(itemZ))
 
-        (indexA.compareTo(indexZ) < 0) shouldBe true
-        (indexZ.compareTo(indexA) > 0) shouldBe true
-        (indexA.compareTo(indexA) == 0) shouldBe true
+        indexA shouldBeLessThan indexZ
+        indexZ shouldBeGreaterThan indexA
+        indexA shouldBeEqualComparingTo indexA
     }
 
     "ImmutableGenreIndex equals is true for same genre and same items" {
@@ -139,14 +143,17 @@ internal class ImmutableGenreIndexTest : StringSpec({
         index1.hashCode() shouldBe index2.hashCode()
     }
 
-    "ImmutableGenreIndex equals is false for different genres" {
+    "ImmutableGenreIndex with different genres is unequal in both equals and hashCode" {
         val item1 = Arb.audioItem { genres = setOf(Rock) }.next()
         val item2 = Arb.audioItem { genres = setOf(Jazz) }.next()
 
         val index1 = ImmutableGenreIndex(Rock, listOf(item1))
         val index2 = ImmutableGenreIndex(Jazz, listOf(item2))
 
-        (index1 == index2) shouldBe false
+        assertSoftly {
+            (index1 == index2) shouldBe false
+            index1.hashCode() shouldNotBe index2.hashCode()
+        }
     }
 
     "ImmutableGenreIndex equals returns false for null and non-index types" {
@@ -154,16 +161,6 @@ internal class ImmutableGenreIndexTest : StringSpec({
 
         index.equals(null) shouldBe false
         index.equals("not an index") shouldBe false
-    }
-
-    "ImmutableGenreIndex hashCode differs when genres differ" {
-        val item1 = Arb.audioItem { genres = setOf(Classical) }.next()
-        val item2 = Arb.audioItem { genres = setOf(Metal) }.next()
-
-        val index1 = ImmutableGenreIndex(Classical, listOf(item1))
-        val index2 = ImmutableGenreIndex(Metal, listOf(item2))
-
-        index1.hashCode() shouldNotBe index2.hashCode()
     }
 
     "ImmutableGenreIndex toString includes genre and size" {
