@@ -1,6 +1,5 @@
 package net.transgressoft.commons.music
 
-import net.transgressoft.commons.media.persistence.waveform.AudioWaveformMapSerializer
 import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItem
@@ -11,14 +10,10 @@ import net.transgressoft.commons.music.playlist.asJsonKeyValues
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
-import net.transgressoft.commons.persistence.music.audio.AudioItemMapSerializer
-import net.transgressoft.commons.persistence.music.playlist.AudioPlaylistMapSerializer
 import net.transgressoft.commons.util.toJsonUri
-import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import io.kotest.assertions.json.shouldContainJsonKeyValue
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
@@ -35,6 +30,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     val reactive = reactiveScope()
     val files = virtualFiles()
 
+    lateinit var repos: JsonRepoTriad
     lateinit var audioFile: File
     lateinit var playlistsFile: File
     lateinit var waveformsFile: File
@@ -46,16 +42,14 @@ internal class MusicLibraryIntegrationTest : StringSpec({
     lateinit var playlistHierarchy: PlaylistHierarchy
 
     beforeEach {
-        audioFile = tempfile("audioLibrary-test", ".json").apply { deleteOnExit() }
-        playlistsFile = tempfile("playlistHierarchy-test", ".json").apply { deleteOnExit() }
-        waveformsFile = tempfile("waveformRepository-test", ".json").apply { deleteOnExit() }
+        repos = jsonRepoTriad()
+        audioFile = repos.audioFile
+        playlistsFile = repos.playlistsFile
+        waveformsFile = repos.waveformsFile
 
         musicLibrary =
-            CoreMusicLibrary.builder()
-                .metadataIO(files.metadataIO)
-                .audioRepository(JsonFileRepository(audioFile, AudioItemMapSerializer))
-                .playlistRepository(JsonFileRepository(playlistsFile, AudioPlaylistMapSerializer))
-                .waveformRepository(JsonFileRepository(waveformsFile, AudioWaveformMapSerializer))
+            repos
+                .wireInto(CoreMusicLibrary.builder().metadataIO(files.metadataIO))
                 .build()
         audioLibrary = musicLibrary.audioLibrary()
         playlistHierarchy = musicLibrary.playlistHierarchy()
@@ -104,7 +98,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         audioItem.title = "New title"
         reactive.advance()
 
-        audioLibrary.contains { it.title == "New title" }
+        audioLibrary.contains { it.title == "New title" } shouldBe true
         audioLibrary.size() shouldBe 1
         audioLibrary.findAlbumAudioItems(itemArtist, itemAlbum.name).shouldContainOnly(audioItem)
 
@@ -193,17 +187,13 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         reactive.advance()
 
         playlistHierarchy.findByName("Playlist A") shouldBePresent { playlist ->
-            // item1 is no longer in the registry — use referenceIds to avoid NoSuchElementException
-            val refIds =
-                (playlist.audioItems as? net.transgressoft.lirp.persistence.AggregateCollectionRef<*, *>)?.referenceIds?.map { it as Int } ?: emptyList()
-            refIds.none { it == item1.id } shouldBe true
-            refIds.any { it == item2.id } shouldBe true
+            // item1 is no longer in the registry — assert by reference id to avoid NoSuchElementException
+            playlist shouldNotReferenceItemId item1.id
+            playlist shouldReferenceItemId item2.id
         }
         playlistHierarchy.findByName("Playlist B") shouldBePresent { playlist ->
-            val refIds =
-                (playlist.audioItems as? net.transgressoft.lirp.persistence.AggregateCollectionRef<*, *>)?.referenceIds?.map { it as Int } ?: emptyList()
-            refIds.none { it == item1.id } shouldBe true
-            refIds.any { it == item2.id } shouldBe true
+            playlist shouldNotReferenceItemId item1.id
+            playlist shouldReferenceItemId item2.id
         }
     }
 
@@ -233,8 +223,7 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         val item2 = audioLibrary.createFromFile(files.virtualAudioFile().next())
         reactive.advance()
 
-        audioLibrary.findAlbumAudioItems(Artist.of(item2.artist.name), item2.album.name)
-            .none { it.id == item2.id } shouldBe true
+        audioLibrary shouldNotIndex item2
         // Playlist still holds audioItem because playlist hierarchy subscription is separate
         playlistHierarchy.findByName("Close Integration Playlist") shouldBePresent {
             it.audioItems.any { item -> item.id == audioItem.id } shouldBe true
@@ -260,10 +249,8 @@ internal class MusicLibraryIntegrationTest : StringSpec({
         musicLibrary.close()
 
         val restoredLibrary =
-            CoreMusicLibrary.builder()
-                .audioRepository(JsonFileRepository(audioFile, AudioItemMapSerializer))
-                .playlistRepository(JsonFileRepository(playlistsFile, AudioPlaylistMapSerializer))
-                .waveformRepository(JsonFileRepository(waveformsFile, AudioWaveformMapSerializer))
+            repos.reopen()
+                .wireInto(CoreMusicLibrary.builder())
                 .build()
         reactive.advance()
 

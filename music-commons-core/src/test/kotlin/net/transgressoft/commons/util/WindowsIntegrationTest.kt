@@ -6,6 +6,7 @@ import io.kotest.core.annotation.EnabledIf
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.Spec
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldStartWith
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -74,29 +75,16 @@ internal class WindowsIntegrationTest : StringSpec({
         result.absolutePath shouldStartWith "\\\\?\\UNC\\"
     }
 
-    "validatePath rejects reserved name 'CON.mp3' on a real Windows path" {
+    withData(
+        nameFn = { "validatePath rejects reserved name in ${it.joinToString("/")} on a real Windows path" },
+        listOf("CON.mp3"),
+        listOf("PRN.txt"),
+        listOf("AUX", "song.mp3")
+    ) { segments ->
         val tempDir = System.getProperty("java.io.tmpdir")
         val ex =
             shouldThrow<WindowsPathException> {
-                WindowsPathValidator.validatePath(Paths.get(tempDir, "CON.mp3"))
-            }
-        ex.violation.shouldBeInstanceOf<WindowsViolation.ReservedName>()
-    }
-
-    "validatePath rejects reserved name 'PRN.txt' on a real Windows path" {
-        val tempDir = System.getProperty("java.io.tmpdir")
-        val ex =
-            shouldThrow<WindowsPathException> {
-                WindowsPathValidator.validatePath(Paths.get(tempDir, "PRN.txt"))
-            }
-        ex.violation.shouldBeInstanceOf<WindowsViolation.ReservedName>()
-    }
-
-    "validatePath rejects reserved name in a directory segment on a real Windows path" {
-        val tempDir = System.getProperty("java.io.tmpdir")
-        val ex =
-            shouldThrow<WindowsPathException> {
-                WindowsPathValidator.validatePath(Paths.get(tempDir, "AUX", "song.mp3"))
+                WindowsPathValidator.validatePath(Paths.get(tempDir, *segments.toTypedArray()))
             }
         ex.violation.shouldBeInstanceOf<WindowsViolation.ReservedName>()
     }

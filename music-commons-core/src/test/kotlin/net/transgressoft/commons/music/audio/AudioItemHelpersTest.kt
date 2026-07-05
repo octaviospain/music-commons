@@ -18,6 +18,7 @@
 package net.transgressoft.commons.music.audio
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.ints.shouldBeLessThan
 import io.kotest.matchers.shouldBe
@@ -33,45 +34,38 @@ internal class AudioItemHelpersTest : StringSpec({
 
     val comparator = albumBucketComparator<Album<AudioItem>>()
 
-    "albumBucketComparator sorts two buckets with distinct names case-insensitively ascending" {
-        val abbeyRoad = album(AlbumDetails("abbey road", Artist.of("The Beatles")))
-        val nevermind = album(AlbumDetails("Nevermind", Artist.of("Nirvana")))
+    data class OrderingCase(val label: String, val smaller: Album<AudioItem>, val greater: Album<AudioItem>)
 
-        comparator.compare(abbeyRoad, nevermind) shouldBeLessThan 0
-        comparator.compare(nevermind, abbeyRoad) shouldBeGreaterThan 0
-    }
-
-    "albumBucketComparator tie-breaks on album artist name when album names are equal after normalization" {
-        val beatles = album(AlbumDetails("White Album", Artist.of("The Beatles")))
-        val nirvana = album(AlbumDetails("White Album", Artist.of("Nirvana")))
-
-        // "Nirvana" < "The Beatles" alphabetically
-        comparator.compare(nirvana, beatles) shouldBeLessThan 0
-        comparator.compare(beatles, nirvana) shouldBeGreaterThan 0
-    }
-
-    "albumBucketComparator tie-breaks on year ascending when name and artist are equal" {
-        val earlier = album(AlbumDetails("OK Computer", Artist.of("Radiohead"), year = 1997))
-        val later = album(AlbumDetails("OK Computer", Artist.of("Radiohead"), year = 2000))
-
-        comparator.compare(earlier, later) shouldBeLessThan 0
-        comparator.compare(later, earlier) shouldBeGreaterThan 0
-    }
-
-    "albumBucketComparator sorts null year after non-null year" {
-        val withYear = album(AlbumDetails("Kid A", Artist.of("Radiohead"), year = 2000))
-        val withoutYear = album(AlbumDetails("Kid A", Artist.of("Radiohead"), year = null))
-
-        comparator.compare(withYear, withoutYear) shouldBeLessThan 0
-        comparator.compare(withoutYear, withYear) shouldBeGreaterThan 0
-    }
-
-    "albumBucketComparator sorts bucket with blank album name after all named buckets" {
-        val named = album(AlbumDetails("Abbey Road", Artist.of("The Beatles")))
-        val blank = album(AlbumDetails("", Artist.of("Unknown")))
-
-        comparator.compare(named, blank) shouldBeLessThan 0
-        comparator.compare(blank, named) shouldBeGreaterThan 0
+    withData(
+        nameFn = { it.label },
+        OrderingCase(
+            "albumBucketComparator sorts two buckets with distinct names case-insensitively ascending",
+            album(AlbumDetails("abbey road", Artist.of("The Beatles"))),
+            album(AlbumDetails("Nevermind", Artist.of("Nirvana")))
+        ),
+        OrderingCase(
+            "albumBucketComparator tie-breaks on album artist name when album names are equal after normalization",
+            album(AlbumDetails("White Album", Artist.of("Nirvana"))),
+            album(AlbumDetails("White Album", Artist.of("The Beatles")))
+        ),
+        OrderingCase(
+            "albumBucketComparator tie-breaks on year ascending when name and artist are equal",
+            album(AlbumDetails("OK Computer", Artist.of("Radiohead"), year = 1997)),
+            album(AlbumDetails("OK Computer", Artist.of("Radiohead"), year = 2000))
+        ),
+        OrderingCase(
+            "albumBucketComparator sorts null year after non-null year",
+            album(AlbumDetails("Kid A", Artist.of("Radiohead"), year = 2000)),
+            album(AlbumDetails("Kid A", Artist.of("Radiohead"), year = null))
+        ),
+        OrderingCase(
+            "albumBucketComparator sorts bucket with blank album name after all named buckets",
+            album(AlbumDetails("Abbey Road", Artist.of("The Beatles"))),
+            album(AlbumDetails("", Artist.of("Unknown")))
+        )
+    ) { (_, smaller, greater) ->
+        comparator.compare(smaller, greater) shouldBeLessThan 0
+        comparator.compare(greater, smaller) shouldBeGreaterThan 0
     }
 
     "albumBucketComparator returns zero for two buckets both with blank album names" {

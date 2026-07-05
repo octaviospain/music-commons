@@ -1,10 +1,12 @@
 package net.transgressoft.commons.music.m3u
 
+import net.transgressoft.commons.music.shouldHaveMessageContaining
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
@@ -20,23 +22,18 @@ import java.nio.file.Files
 internal class M3uParserTest : StringSpec({
 
     "parses tracks and discards directive metadata" {
-        Jimfs.newFileSystem(Configuration.unix()).use { fs ->
-            val baseDir = fs.getPath("/music")
-            Files.createDirectories(baseDir)
-            val m3u = baseDir.resolve("playlist.m3u")
-            Files.writeString(
-                m3u,
-                """
-                #EXTM3U
-                #EXTINF:180,Track One
-                track1.mp3
-                #EXTINF:240,Track Two
-                track2.flac
-                """.trimIndent()
-            )
-
-            val result = M3uParser(baseDir).parse(m3u)
-
+        parseM3uOnFs(
+            Configuration.unix(),
+            "/music",
+            "playlist.m3u",
+            """
+            #EXTM3U
+            #EXTINF:180,Track One
+            track1.mp3
+            #EXTINF:240,Track Two
+            track2.flac
+            """.trimIndent()
+        ) { _, baseDir, result ->
             result.entries shouldHaveSize 2
             result.nestedPlaylists.shouldBeEmpty()
             result.entries.map { it.resolvedPath } shouldBe
@@ -44,48 +41,14 @@ internal class M3uParserTest : StringSpec({
         }
     }
 
-    "strips BOM from the first line" {
-        Jimfs.newFileSystem(Configuration.unix()).use { fs ->
-            val baseDir = fs.getPath("/music")
-            Files.createDirectories(baseDir)
-            val m3u = baseDir.resolve("bom.m3u")
-            Files.writeString(m3u, "\uFEFF#EXTM3U\ntrack1.mp3\n")
-
-            val result = M3uParser(baseDir).parse(m3u)
-
-            result.entries shouldHaveSize 1
-        }
-    }
-
-    "tolerates CRLF line endings" {
-        Jimfs.newFileSystem(Configuration.unix()).use { fs ->
-            val baseDir = fs.getPath("/music")
-            Files.createDirectories(baseDir)
-            val m3u = baseDir.resolve("crlf.m3u")
-            Files.writeString(m3u, "#EXTM3U\r\n#EXTINF:90,X\r\ntrack1.mp3\r\n")
-
-            M3uParser(baseDir).parse(m3u).entries shouldHaveSize 1
-        }
-    }
-
-    "tolerates missing #EXTM3U header" {
-        Jimfs.newFileSystem(Configuration.unix()).use { fs ->
-            val baseDir = fs.getPath("/music")
-            Files.createDirectories(baseDir)
-            val m3u = baseDir.resolve("noheader.m3u")
-            Files.writeString(m3u, "track1.mp3\n")
-
-            M3uParser(baseDir).parse(m3u).entries shouldHaveSize 1
-        }
-    }
-
-    "skips blank lines and comments" {
-        Jimfs.newFileSystem(Configuration.unix()).use { fs ->
-            val baseDir = fs.getPath("/music")
-            Files.createDirectories(baseDir)
-            val m3u = baseDir.resolve("comments.m3u")
-            Files.writeString(
-                m3u,
+    withData<Triple<String, Pair<String, String>, Int>>(
+        nameFn = { (label, _, _) -> label },
+        Triple("strips BOM from the first line", "bom.m3u" to "\uFEFF#EXTM3U\ntrack1.mp3\n", 1),
+        Triple("tolerates CRLF line endings", "crlf.m3u" to "#EXTM3U\r\n#EXTINF:90,X\r\ntrack1.mp3\r\n", 1),
+        Triple("tolerates missing #EXTM3U header", "noheader.m3u" to "track1.mp3\n", 1),
+        Triple(
+            "skips blank lines and comments",
+            "comments.m3u" to
                 """
                 #EXTM3U
 
@@ -94,22 +57,18 @@ internal class M3uParserTest : StringSpec({
                 track1.mp3
 
                 # trailing comment
-                """.trimIndent()
-            )
-
-            M3uParser(baseDir).parse(m3u).entries shouldHaveSize 1
+                """.trimIndent(),
+            1
+        )
+    ) { (_, fileAndContent, expectedEntryCount) ->
+        val (fileName, m3uContent) = fileAndContent
+        parseM3uOnFs(Configuration.unix(), "/music", fileName, m3uContent) { _, _, result ->
+            result.entries shouldHaveSize expectedEntryCount
         }
     }
 
     "resolves relative and absolute paths" {
-        Jimfs.newFileSystem(Configuration.unix()).use { fs ->
-            val baseDir = fs.getPath("/music")
-            Files.createDirectories(baseDir)
-            val m3u = baseDir.resolve("mixed.m3u")
-            Files.writeString(m3u, "album/track1.mp3\n/other/music/track2.mp3\n")
-
-            val result = M3uParser(baseDir).parse(m3u)
-
+        parseM3uOnFs(Configuration.unix(), "/music", "mixed.m3u", "album/track1.mp3\n/other/music/track2.mp3\n") { fs, baseDir, result ->
             result.entries.map { it.resolvedPath } shouldBe
                 listOf(
                     baseDir.resolve("album/track1.mp3"),
@@ -119,36 +78,24 @@ internal class M3uParserTest : StringSpec({
     }
 
     "classifies m3u and m3u8 entries as nested playlists" {
-        Jimfs.newFileSystem(Configuration.unix()).use { fs ->
-            val baseDir = fs.getPath("/music")
-            Files.createDirectories(baseDir)
-            val m3u = baseDir.resolve("parent.m3u")
-            Files.writeString(m3u, "child.m3u\nchild.M3U8\n")
-
-            val result = M3uParser(baseDir).parse(m3u)
-
+        parseM3uOnFs(Configuration.unix(), "/music", "parent.m3u", "child.m3u\nchild.M3U8\n") { _, _, result ->
             result.entries.shouldBeEmpty()
             result.nestedPlaylists shouldHaveSize 2
         }
     }
 
     "skips remote URLs with a warning" {
-        Jimfs.newFileSystem(Configuration.unix()).use { fs ->
-            val baseDir = fs.getPath("/music")
-            Files.createDirectories(baseDir)
-            val m3u = baseDir.resolve("urls.m3u")
-            Files.writeString(
-                m3u,
-                """
-                http://example.com/track.mp3
-                https://example.com/track.mp3
-                file:///music/local.mp3
-                local.mp3
-                """.trimIndent()
-            )
-
-            val result = M3uParser(baseDir).parse(m3u)
-
+        parseM3uOnFs(
+            Configuration.unix(),
+            "/music",
+            "urls.m3u",
+            """
+            http://example.com/track.mp3
+            https://example.com/track.mp3
+            file:///music/local.mp3
+            local.mp3
+            """.trimIndent()
+        ) { _, baseDir, result ->
             result.entries shouldHaveSize 1
             result.entries[0].resolvedPath shouldBe baseDir.resolve("local.mp3")
         }
@@ -160,19 +107,13 @@ internal class M3uParserTest : StringSpec({
             Files.createDirectories(baseDir)
             val missing = baseDir.resolve("missing.m3u")
             val ex = shouldThrow<M3uParseException> { M3uParser(baseDir).parse(missing) }
-            ex.message!! shouldContain "does not exist"
+            ex shouldHaveMessageContaining "does not exist"
         }
     }
 
     "preserves paths with spaces" {
-        Jimfs.newFileSystem(Configuration.unix()).use { fs ->
-            val baseDir = fs.getPath("/music")
-            Files.createDirectories(baseDir)
-            val m3u = baseDir.resolve("spaces.m3u")
-            Files.writeString(m3u, "My Music/track with spaces.mp3\n")
-
-            M3uParser(baseDir).parse(m3u).entries[0].resolvedPath shouldBe
-                baseDir.resolve("My Music/track with spaces.mp3")
+        parseM3uOnFs(Configuration.unix(), "/music", "spaces.m3u", "My Music/track with spaces.mp3\n") { _, baseDir, result ->
+            result.entries[0].resolvedPath shouldBe baseDir.resolve("My Music/track with spaces.mp3")
         }
     }
 
@@ -185,7 +126,7 @@ internal class M3uParserTest : StringSpec({
             Files.write(m3u, "#EXTM3U\ntrack-é.flac\n".toByteArray(Charsets.ISO_8859_1))
 
             val ex = shouldThrow<M3uParseException> { M3uParser(baseDir).parse(m3u) }
-            ex.message!! shouldContain "UTF-8"
+            ex shouldHaveMessageContaining "UTF-8"
         }
     }
 

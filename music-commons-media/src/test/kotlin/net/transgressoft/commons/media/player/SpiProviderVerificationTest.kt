@@ -20,10 +20,12 @@ package net.transgressoft.commons.media.player
 import net.transgressoft.commons.media.util.loadAudioFileReaders
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain as shouldContainString
+import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 
 /**
@@ -34,8 +36,9 @@ import javax.sound.sampled.AudioSystem
  */
 internal class SpiProviderVerificationTest : FunSpec({
 
-    context("JavaSound SPI provider installation") {
+    fun testFile(name: String) = ArbitraryAudioFile.getResourceAsFile("/testfiles/$name")
 
+    context("JavaSound SPI provider installation") {
         test("AudioSystem.getAudioFileTypes() is not empty — SPI providers are registered") {
             val types = AudioSystem.getAudioFileTypes()
             types.shouldNotBeEmpty()
@@ -44,61 +47,34 @@ internal class SpiProviderVerificationTest : FunSpec({
         }
     }
 
+    data class DecodeCase(val fixture: String, val assertion: (AudioFormat) -> Unit)
+
     context("Audio format decoding via AudioSystem.getAudioInputStream()") {
-
-        val getTestFile = { name: String ->
-            ArbitraryAudioFile.getResourceAsFile("/testfiles/$name")
-        }
-
-        test("WAV decodes via built-in JDK SPI (validates jaad does NOT poison WAV)") {
-            // Critical: de.sfuhrm:jaad must not throw NPE on WAV input (spike 008 case 4b)
-            val file = getTestFile("testeable.wav")
-            val stream = AudioSystem.getAudioInputStream(file)
-            stream.format.channels shouldBe 2
-            stream.format.sampleRate shouldBe 44100.0f
-            stream.close()
-        }
-
-        test("MP3 decodes via mp3spi SPI") {
-            val file = getTestFile("testeable.mp3")
-            val stream = AudioSystem.getAudioInputStream(file)
-            stream.format.toString() shouldContainString "MPEG"
-            stream.close()
-        }
-
-        test("FLAC decodes via javasound-flac SPI") {
-            val file = getTestFile("testeable.flac")
-            val stream = AudioSystem.getAudioInputStream(file)
-            stream.format.toString().lowercase() shouldContainString "flac"
-            stream.close()
-        }
-
-        test("M4A/AAC decodes via javasound-aac + de.sfuhrm:jaad SPI") {
-            val file = getTestFile("testeable_aac.m4a")
-            val stream = AudioSystem.getAudioInputStream(file)
-            stream.format.channels shouldBe 2
-            stream.close()
-        }
-
-        test("OGG decodes via javasound-vorbis SPI") {
-            val file = getTestFile("testeable.ogg")
-            val stream = AudioSystem.getAudioInputStream(file)
-            stream.format.sampleRate shouldBe 44100.0f
-            stream.close()
-        }
-
-        test("ALAC-in-M4A decodes via javasound-alac SPI") {
-            val file = getTestFile("testeable_alac.m4a")
-            val stream = AudioSystem.getAudioInputStream(file)
-            stream.format.channels shouldBe 2
-            stream.close()
-        }
-
-        test("Opus-in-OGG decodes via jse-spi-opus SPI") {
-            val file = getTestFile("testeable_opus.ogg")
-            val stream = AudioSystem.getAudioInputStream(file)
-            stream.format.channels shouldBe 2
-            stream.close()
+        withData(
+            mapOf(
+                // Critical: de.sfuhrm:jaad must not throw NPE on WAV input — jaad must not poison WAV.
+                "WAV via built-in JDK SPI (jaad must not poison WAV)" to
+                    DecodeCase("testeable.wav") { format ->
+                        format.channels shouldBe 2
+                        format.sampleRate shouldBe 44100.0f
+                    },
+                "MP3 via mp3spi SPI" to
+                    DecodeCase("testeable.mp3") { format -> format.toString() shouldContainString "MPEG" },
+                "FLAC via javasound-flac SPI" to
+                    DecodeCase("testeable.flac") { format -> format.toString().lowercase() shouldContainString "flac" },
+                "M4A/AAC via javasound-aac + de.sfuhrm:jaad SPI" to
+                    DecodeCase("testeable_aac.m4a") { format -> format.channels shouldBe 2 },
+                "OGG via javasound-vorbis SPI" to
+                    DecodeCase("testeable.ogg") { format -> format.sampleRate shouldBe 44100.0f },
+                "ALAC-in-M4A via javasound-alac SPI" to
+                    DecodeCase("testeable_alac.m4a") { format -> format.channels shouldBe 2 },
+                "Opus-in-OGG via jse-spi-opus SPI" to
+                    DecodeCase("testeable_opus.ogg") { format -> format.channels shouldBe 2 }
+            )
+        ) { (fixture, assertion) ->
+            AudioSystem.getAudioInputStream(testFile(fixture)).use { stream ->
+                assertion(stream.format)
+            }
         }
 
         // testeable_opus.m4a is intentionally NOT tested here.
@@ -107,32 +83,27 @@ internal class SpiProviderVerificationTest : FunSpec({
     }
 
     context("SPI registry enumeration") {
-
         test("Core format extensions (WAV, FLAC, OGG) are recognized in getAudioFileTypes()") {
             val extensions =
                 AudioSystem.getAudioFileTypes()
                     .map { it.extension.lowercase() }
                     .toSet()
 
-            // WAV is always present (JDK built-in)
+            // WAV is always present (JDK built-in), FLAC via javasound-flac, OGG via javasound-vorbis.
             extensions shouldContain "wav"
-            // FLAC via javasound-flac
             extensions shouldContain "flac"
-            // OGG via javasound-vorbis
             extensions shouldContain "ogg"
 
-            // Note: MP3 and M4A/MP4 SPIs (mp3spi, javasound-aac) handle stream conversion
-            // via getAudioInputStream() but do NOT register in getAudioFileTypes().
-            // This is a known limitation of these SPI implementations.
-            // The individual decode tests above verify they work correctly.
+            // MP3 and M4A/MP4 SPIs (mp3spi, javasound-aac) handle stream conversion via
+            // getAudioInputStream() but do NOT register in getAudioFileTypes(). The decode tests
+            // above verify they work correctly.
         }
 
-        test("loaded AudioFileReader SPI class names are recorded for routing") {
-            val readers = loadAudioFileReaders()
-            readers.shouldNotBeEmpty()
-            val classNames = readers.map { it.javaClass.name }
-            println("Loaded AudioFileReader SPI providers:")
-            classNames.forEach { println("  - $it") }
+        test("loaded AudioFileReader SPI class names include the mp3 and aac routing providers") {
+            val classNames = loadAudioFileReaders().map { it.javaClass.name }
+            classNames.shouldNotBeEmpty()
+            classNames shouldContain "javazoom.spi.mpeg.sampled.file.MpegAudioFileReader"
+            classNames shouldContain "net.sourceforge.jaad.spi.javasound.AACAudioFileReader"
         }
     }
 })

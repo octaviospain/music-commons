@@ -31,12 +31,14 @@ import net.transgressoft.commons.music.audio.testCoverBytes
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import com.neovisionaries.i18n.CountryCode
+import io.kotest.assertions.assertSoftly
+import io.kotest.assertions.json.shouldContainJsonKey
+import io.kotest.assertions.json.shouldNotContainJsonKey
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempfile
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.string.shouldContain
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import java.time.Duration
@@ -81,15 +83,17 @@ internal class AudioItemSerializerRoundTripTest : StringSpec({
         val loaded = reloaded.audioLibrary().findById(original.id).orElse(null)
         loaded.shouldNotBeNull()
 
-        loaded.id shouldBe original.id
-        loaded.path shouldBe original.path
-        loaded.title shouldBe original.title
-        loaded.duration shouldBe original.duration
-        loaded.artist.countryCode shouldBe original.artist.countryCode
-        loaded.album.label.countryCode shouldBe original.album.label.countryCode
-        loaded.genres shouldBe original.genres
-        loaded.trackNumber shouldBe original.trackNumber
-        loaded.discNumber shouldBe original.discNumber
+        assertSoftly {
+            loaded.id shouldBe original.id
+            loaded.path shouldBe original.path
+            loaded.title shouldBe original.title
+            loaded.duration shouldBe original.duration
+            loaded.artist.countryCode shouldBe original.artist.countryCode
+            loaded.album.label.countryCode shouldBe original.album.label.countryCode
+            loaded.genres shouldBe original.genres
+            loaded.trackNumber shouldBe original.trackNumber
+            loaded.discNumber shouldBe original.discNumber
+        }
 
         reloaded.close()
     }
@@ -123,8 +127,8 @@ internal class AudioItemSerializerRoundTripTest : StringSpec({
         // Serialize-side proof: the identity/scalar fields are actually on the wire (not silently
         // dropped), so the round-trip below is genuine rather than a same-second coincidence.
         val persistedJson = audioFile.readText()
-        persistedJson shouldContain "\"dateOfCreation\""
-        persistedJson shouldContain "\"lastDateModified\""
+        persistedJson.shouldContainJsonKey("$id.dateOfCreation")
+        persistedJson.shouldContainJsonKey("$id.lastDateModified")
 
         val reloaded =
             CoreMusicLibrary.builder()
@@ -133,11 +137,13 @@ internal class AudioItemSerializerRoundTripTest : StringSpec({
 
         val loaded = reloaded.audioLibrary().findById(id).orElse(null)
         loaded.shouldNotBeNull()
-        loaded.playCount shouldBe expectedPlayCount
-        loaded.comments shouldBe expectedComments
-        loaded.bpm shouldBe expectedBpm
-        loaded.dateOfCreation.truncatedTo(ChronoUnit.SECONDS) shouldBe expectedCreation
-        loaded.lastDateModified.truncatedTo(ChronoUnit.SECONDS) shouldBe expectedModified
+        assertSoftly {
+            loaded.playCount shouldBe expectedPlayCount
+            loaded.comments shouldBe expectedComments
+            loaded.bpm shouldBe expectedBpm
+            loaded.dateOfCreation.truncatedTo(ChronoUnit.SECONDS) shouldBe expectedCreation
+            loaded.lastDateModified.truncatedTo(ChronoUnit.SECONDS) shouldBe expectedModified
+        }
 
         reloaded.close()
     }
@@ -153,6 +159,7 @@ internal class AudioItemSerializerRoundTripTest : StringSpec({
         val coveredAttributes = Arb.audioAttributes(coverImageBytes = testCoverBytes).next()
         val original = library.audioItemFromFile(Arb.realAudioFile(ID3_V_24, coveredAttributes).next())
         original.coverImageBytes.shouldNotBeNull()
+        val id = original.id
         reactive.advance()
 
         library.close()
@@ -160,7 +167,7 @@ internal class AudioItemSerializerRoundTripTest : StringSpec({
         // The cover bytes never reach the JSON wire — the persisted document carries no base64 blob
         // nor the raw byte sequence. Covers are re-loaded from the audio file lazily by the library.
         val persistedJson = audioFile.readText()
-        persistedJson.contains("coverBytes") shouldBe false
-        persistedJson.contains("coverImageBytes") shouldBe false
+        persistedJson.shouldNotContainJsonKey("$id.coverBytes")
+        persistedJson.shouldNotContainJsonKey("$id.coverImageBytes")
     }
 })

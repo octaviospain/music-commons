@@ -1,5 +1,6 @@
 package net.transgressoft.commons.music.itunes
 
+import net.transgressoft.commons.music.shouldHaveMessageContaining
 import net.transgressoft.commons.util.InvalidAudioFilePathException
 import net.transgressoft.commons.util.OsDetector
 import net.transgressoft.commons.util.WindowsPathException
@@ -13,7 +14,6 @@ import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.string.shouldContain
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -27,9 +27,10 @@ internal class ItunesLibraryParserTest : StringSpec({
 
     val fixturePath = Paths.get(ItunesLibraryParserTest::class.java.getResource("/testfiles/itunes-library.xml")!!.toURI())
 
-    "ItunesLibraryParser parses tracks from valid iTunes XML" {
-        val library = ItunesLibraryParser.parse(fixturePath)
+    // The fixture is immutable read-only data, so every "valid XML" case shares one parse.
+    val library by lazy { ItunesLibraryParser.parse(fixturePath) }
 
+    "ItunesLibraryParser parses tracks from valid iTunes XML" {
         library.tracks.size shouldBe 3
         val track = library.tracks[100]
         track.shouldNotBeNull()
@@ -44,8 +45,6 @@ internal class ItunesLibraryParserTest : StringSpec({
     }
 
     "ItunesLibraryParser parses playlists from valid iTunes XML" {
-        val library = ItunesLibraryParser.parse(fixturePath)
-
         library.playlists shouldHaveSize 4
         val playlist = library.playlists.find { it.name == "My Playlist" }
         playlist.shouldNotBeNull()
@@ -56,22 +55,16 @@ internal class ItunesLibraryParserTest : StringSpec({
     }
 
     "ItunesLibraryParser skips smart playlists" {
-        val library = ItunesLibraryParser.parse(fixturePath)
-
         library.playlists.none { it.name == "Smart Playlist" }.shouldBeTrue()
         library.playlists.none { it.persistentId == "PL003" }.shouldBeTrue()
     }
 
     "ItunesLibraryParser skips tracks without file location" {
-        val library = ItunesLibraryParser.parse(fixturePath)
-
         library.tracks.containsKey(102) shouldBe false
         library.tracks.size shouldBe 3
     }
 
     "ItunesLibraryParser parses folder playlists with parentPersistentId" {
-        val library = ItunesLibraryParser.parse(fixturePath)
-
         val folder = library.playlists.find { it.persistentId == "PL004" }
         folder.shouldNotBeNull()
         folder.isFolder.shouldBeTrue()
@@ -82,8 +75,6 @@ internal class ItunesLibraryParserTest : StringSpec({
     }
 
     "ItunesLibraryParser handles NSDate for dateAdded field" {
-        val library = ItunesLibraryParser.parse(fixturePath)
-
         val track = library.tracks[100]
         track.shouldNotBeNull()
         val dateAdded = track.dateAdded
@@ -97,7 +88,7 @@ internal class ItunesLibraryParserTest : StringSpec({
         Jimfs.newFileSystem(Configuration.unix()).use { fs ->
             val nonExistent = fs.getPath("/missing/library.xml")
             val ex = shouldThrow<InvalidAudioFilePathException> { ItunesLibraryParser.parse(nonExistent) }
-            ex.message!! shouldContain "does not exist"
+            ex shouldHaveMessageContaining "does not exist"
         }
     }
 
@@ -106,7 +97,7 @@ internal class ItunesLibraryParserTest : StringSpec({
             val dir = fs.getPath("/library-dir")
             Files.createDirectory(dir)
             val ex = shouldThrow<InvalidAudioFilePathException> { ItunesLibraryParser.parse(dir) }
-            ex.message!! shouldContain "is not a regular file"
+            ex shouldHaveMessageContaining "is not a regular file"
         }
     }
 
@@ -116,7 +107,7 @@ internal class ItunesLibraryParserTest : StringSpec({
             try {
                 tempFile.toFile().setReadable(false)
                 val ex = shouldThrow<InvalidAudioFilePathException> { ItunesLibraryParser.parse(tempFile) }
-                ex.message!! shouldContain "is not readable"
+                ex shouldHaveMessageContaining "is not readable"
             } finally {
                 tempFile.toFile().setReadable(true)
                 Files.deleteIfExists(tempFile)
@@ -138,7 +129,7 @@ internal class ItunesLibraryParserTest : StringSpec({
             Jimfs.newFileSystem(Configuration.unix()).use { fs ->
                 val path = fs.getPath("/itunes/bad|name.xml")
                 val ex = shouldThrow<InvalidAudioFilePathException> { ItunesLibraryParser.parse(path) }
-                ex.message!! shouldContain "does not exist"
+                ex shouldHaveMessageContaining "does not exist"
             }
         }
     }

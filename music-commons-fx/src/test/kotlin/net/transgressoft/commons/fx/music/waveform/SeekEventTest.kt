@@ -19,7 +19,12 @@ package net.transgressoft.commons.fx.music.waveform
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
+import io.kotest.property.Arb
+import io.kotest.property.arbitrary.double
+import io.kotest.property.arbitrary.filter
+import io.kotest.property.checkAll
 import javafx.event.EventTarget
 
 internal class SeekEventTest : StringSpec({
@@ -34,30 +39,30 @@ internal class SeekEventTest : StringSpec({
         SeekEvent.SEEK.name shouldBe "net.transgressoft.commons.fx.music.waveform.SEEK"
     }
 
-    "constructor stores a finite seekRatio unchanged when inside [0.0, 1.0]" {
-        SeekEvent(source, target, 0.5).seekRatio shouldBe 0.5
-        SeekEvent(source, target, 0.0).seekRatio shouldBe 0.0
-        SeekEvent(source, target, 1.0).seekRatio shouldBe 1.0
+    withData(
+        nameFn = { (input, expected) -> "constructor coerces seekRatio $input to $expected" },
+        0.0 to 0.0,
+        0.5 to 0.5,
+        1.0 to 1.0,
+        -0.5 to 0.0,
+        1.5 to 1.0
+    ) { (input, expected) ->
+        SeekEvent(source, target, input).seekRatio shouldBe expected
     }
 
-    "constructor clamps values below 0.0 up to 0.0" {
-        SeekEvent(source, target, -0.5).seekRatio shouldBe 0.0
+    "constructor clamps every finite seekRatio into [0.0, 1.0]" {
+        checkAll(Arb.double(-10.0..10.0).filter { it.isFinite() }) { input ->
+            SeekEvent(source, target, input).seekRatio shouldBe input.coerceIn(0.0, 1.0)
+        }
     }
 
-    "constructor clamps values above 1.0 down to 1.0" {
-        SeekEvent(source, target, 1.5).seekRatio shouldBe 1.0
-    }
-
-    "constructor rejects NaN seekRatio" {
-        shouldThrow<IllegalArgumentException> { SeekEvent(source, target, Double.NaN) }
-    }
-
-    "constructor rejects positive infinite seekRatio" {
-        shouldThrow<IllegalArgumentException> { SeekEvent(source, target, Double.POSITIVE_INFINITY) }
-    }
-
-    "constructor rejects negative infinite seekRatio" {
-        shouldThrow<IllegalArgumentException> { SeekEvent(source, target, Double.NEGATIVE_INFINITY) }
+    withData(
+        nameFn = { "constructor rejects non-finite seekRatio $it" },
+        Double.NaN,
+        Double.POSITIVE_INFINITY,
+        Double.NEGATIVE_INFINITY
+    ) { ratio ->
+        shouldThrow<IllegalArgumentException> { SeekEvent(source, target, ratio) }
     }
 
     "event reports the configured event type" {

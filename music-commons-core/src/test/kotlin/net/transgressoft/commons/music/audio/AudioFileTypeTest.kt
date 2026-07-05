@@ -20,6 +20,7 @@ package net.transgressoft.commons.music.audio
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
@@ -37,24 +38,30 @@ internal class AudioFileTypeTest : StringSpec({
             listOf("ALAC", "OPUS")
     }
 
-    "AudioFileCodec each codec has correct SPI support flag" {
-        AudioFileCodec.MP3.isSupportedBySpi shouldBe true
-        AudioFileCodec.AAC.isSupportedBySpi shouldBe true
-        AudioFileCodec.PCM.isSupportedBySpi shouldBe true
-        AudioFileCodec.FLAC.isSupportedBySpi shouldBe true
-        AudioFileCodec.VORBIS.isSupportedBySpi shouldBe true
-        AudioFileCodec.ALAC.isSupportedBySpi shouldBe false
-        AudioFileCodec.OPUS.isSupportedBySpi shouldBe false
+    withData(
+        nameFn = { (codec, supported) -> "AudioFileCodec $codec isSupportedBySpi=$supported" },
+        AudioFileCodec.MP3 to true,
+        AudioFileCodec.AAC to true,
+        AudioFileCodec.PCM to true,
+        AudioFileCodec.FLAC to true,
+        AudioFileCodec.VORBIS to true,
+        AudioFileCodec.ALAC to false,
+        AudioFileCodec.OPUS to false
+    ) { (codec, supported) ->
+        codec.isSupportedBySpi shouldBe supported
     }
 
-    "AudioFileCodec each codec has correct default extension" {
-        AudioFileCodec.MP3.defaultExtension shouldBe "mp3"
-        AudioFileCodec.AAC.defaultExtension shouldBe "m4a"
-        AudioFileCodec.ALAC.defaultExtension shouldBe "m4a"
-        AudioFileCodec.PCM.defaultExtension shouldBe "wav"
-        AudioFileCodec.FLAC.defaultExtension shouldBe "flac"
-        AudioFileCodec.VORBIS.defaultExtension shouldBe "ogg"
-        AudioFileCodec.OPUS.defaultExtension shouldBe "ogg"
+    withData(
+        nameFn = { (codec, ext) -> "AudioFileCodec $codec defaultExtension=$ext" },
+        AudioFileCodec.MP3 to "mp3",
+        AudioFileCodec.AAC to "m4a",
+        AudioFileCodec.ALAC to "m4a",
+        AudioFileCodec.PCM to "wav",
+        AudioFileCodec.FLAC to "flac",
+        AudioFileCodec.VORBIS to "ogg",
+        AudioFileCodec.OPUS to "ogg"
+    ) { (codec, ext) ->
+        codec.defaultExtension shouldBe ext
     }
 
     "AudioFileType all file types have extensions" {
@@ -62,14 +69,17 @@ internal class AudioFileTypeTest : StringSpec({
             listOf("mp3", "m4a", "wav", "flac", "ogg")
     }
 
-    "AudioFileType fromExtension returns correct type" {
-        AudioFileType.fromExtension("mp3") shouldBe AudioFileType.MP3
-        AudioFileType.fromExtension("m4a") shouldBe AudioFileType.M4A
-        AudioFileType.fromExtension("wav") shouldBe AudioFileType.WAV
-        AudioFileType.fromExtension("flac") shouldBe AudioFileType.FLAC
-        AudioFileType.fromExtension("ogg") shouldBe AudioFileType.OGG
-        AudioFileType.fromExtension("MP3") shouldBe AudioFileType.MP3
-        AudioFileType.fromExtension("unknown") shouldBe null
+    withData(
+        nameFn = { (ext, type) -> "AudioFileType fromExtension '$ext' -> $type" },
+        "mp3" to AudioFileType.MP3,
+        "m4a" to AudioFileType.M4A,
+        "wav" to AudioFileType.WAV,
+        "flac" to AudioFileType.FLAC,
+        "ogg" to AudioFileType.OGG,
+        "MP3" to AudioFileType.MP3,
+        "unknown" to null
+    ) { (ext, type) ->
+        AudioFileType.fromExtension(ext) shouldBe type
     }
 
     "AudioFileType M4A supports both AAC and ALAC codecs" {
@@ -97,20 +107,26 @@ internal class AudioFileTypeTest : StringSpec({
         AudioFileType.FLAC.possibleCodecs[0] shouldBe AudioFileCodec.FLAC
     }
 
-    "AudioFileType isPrimaryCodecSupported returns true for all current formats" {
-        AudioFileType.MP3.isPrimaryCodecSupported() shouldBe true
-        AudioFileType.M4A.isPrimaryCodecSupported() shouldBe true
-        AudioFileType.WAV.isPrimaryCodecSupported() shouldBe true
-        AudioFileType.FLAC.isPrimaryCodecSupported() shouldBe true
-        AudioFileType.OGG.isPrimaryCodecSupported() shouldBe true
+    withData(
+        nameFn = { "AudioFileType $it isPrimaryCodecSupported" },
+        AudioFileType.MP3,
+        AudioFileType.M4A,
+        AudioFileType.WAV,
+        AudioFileType.FLAC,
+        AudioFileType.OGG
+    ) { type ->
+        type.isPrimaryCodecSupported() shouldBe true
     }
 
-    "toAudioFileType converts valid extensions to AudioFileType" {
-        "mp3".toAudioFileType() shouldBe AudioFileType.MP3
-        "m4a".toAudioFileType() shouldBe AudioFileType.M4A
-        "wav".toAudioFileType() shouldBe AudioFileType.WAV
-        "flac".toAudioFileType() shouldBe AudioFileType.FLAC
-        "ogg".toAudioFileType() shouldBe AudioFileType.OGG
+    withData(
+        nameFn = { (ext, type) -> "toAudioFileType '$ext' -> $type" },
+        "mp3" to AudioFileType.MP3,
+        "m4a" to AudioFileType.M4A,
+        "wav" to AudioFileType.WAV,
+        "flac" to AudioFileType.FLAC,
+        "ogg" to AudioFileType.OGG
+    ) { (ext, type) ->
+        ext.toAudioFileType() shouldBe type
     }
 
     "toAudioFileType throws for unsupported extensions" {

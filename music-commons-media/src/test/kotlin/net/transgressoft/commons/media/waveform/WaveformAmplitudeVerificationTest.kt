@@ -16,8 +16,6 @@ internal class WaveformAmplitudeVerificationTest : StringSpec({
         val amplitudes = waveform.amplitudes(200, 100, Dispatchers.Default)
 
         val maxAmplitude = amplitudes.maxOrNull() ?: 0f
-        println("Max amplitude: $maxAmplitude")
-        println("First 10 amplitudes: ${amplitudes.take(10).toList()}")
 
         maxAmplitude shouldBeGreaterThan 0f
     }

@@ -3,6 +3,9 @@ package net.transgressoft.commons.music.audio
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
+import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 
@@ -18,29 +21,19 @@ internal class AlbumDetailsTest : StringSpec({
         album1 shouldBe album2
     }
 
-    "AlbumDetails equals returns false for different name" {
-        val artist = Artist.of("Artist")
-        val album1 = AlbumDetails("Album One", artist)
-        val album2 = AlbumDetails("Album Two", artist)
+    val base = AlbumDetails("Album", Artist.of("Artist"), isCompilation = false, year = 2000, label = Label.of("Label"))
 
-        album1 shouldNotBe album2
-    }
+    data class InequalityCase(val label: String, val other: AlbumDetails)
 
-    "AlbumDetails equals returns false for different albumArtist" {
-        val artist1 = Artist.of("Artist One")
-        val artist2 = Artist.of("Artist Two")
-        val album1 = AlbumDetails("Album", artist1)
-        val album2 = AlbumDetails("Album", artist2)
-
-        album1 shouldNotBe album2
-    }
-
-    "AlbumDetails equals returns false for different isCompilation flag" {
-        val artist = Artist.of("Artist")
-        val album1 = AlbumDetails("Album", artist, isCompilation = true)
-        val album2 = AlbumDetails("Album", artist, isCompilation = false)
-
-        album1 shouldNotBe album2
+    withData(
+        nameFn = { "AlbumDetails equals returns false when ${it.label} differs" },
+        InequalityCase("name", base.copy(name = "Other")),
+        InequalityCase("albumArtist", base.copy(albumArtist = Artist.of("Other"))),
+        InequalityCase("isCompilation", base.copy(isCompilation = true)),
+        InequalityCase("year", base.copy(year = 1999)),
+        InequalityCase("label", base.copy(label = Label.of("Other")))
+    ) { case ->
+        base shouldNotBe case.other
     }
 
     "AlbumDetails hashCode is consistent with equals" {
@@ -53,42 +46,38 @@ internal class AlbumDetailsTest : StringSpec({
         album1.hashCode() shouldBe album2.hashCode()
     }
 
-    "AlbumDetails compareTo orders by label then year then artist then name" {
-        val artistA = Artist.of("ArtistA")
-        val labelA = Label.of("LabelA")
-        val labelB = Label.of("LabelB")
+    data class OrderingCase(val label: String, val smaller: AlbumDetails, val greater: AlbumDetails)
 
-        val albumLabelA = AlbumDetails("Album", artistA, label = labelA)
-        val albumLabelB = AlbumDetails("Album", artistA, label = labelB)
-
-        // label ordering
-        (albumLabelA.compareTo(albumLabelB) < 0) shouldBe true
-        (albumLabelB.compareTo(albumLabelA) > 0) shouldBe true
-
-        // name ordering when all other fields are equal
-        val albumNameA = AlbumDetails("A", artistA, label = labelA)
-        val albumNameB = AlbumDetails("B", artistA, label = labelA)
-        (albumNameA.compareTo(albumNameB) < 0) shouldBe true
-    }
-
-    "AlbumDetails compareTo orders by year when labels are equal" {
-        val artist = Artist.of("Artist")
-        val label = Label.of("Label")
-        val albumOld = AlbumDetails("Album", artist, year = 1990, label = label)
-        val albumNew = AlbumDetails("Album", artist, year = 2000, label = label)
-
-        (albumOld.compareTo(albumNew) < 0) shouldBe true
-        (albumNew.compareTo(albumOld) > 0) shouldBe true
-    }
-
-    "AlbumDetails compareTo orders by artist when label and year are equal" {
-        val artistA = Artist.of("ArtistA")
-        val artistB = Artist.of("ArtistB")
-        val label = Label.of("Label")
-        val albumArtistA = AlbumDetails("Album", artistA, year = 2000, label = label)
-        val albumArtistB = AlbumDetails("Album", artistB, year = 2000, label = label)
-
-        (albumArtistA.compareTo(albumArtistB) < 0) shouldBe true
+    withData(
+        nameFn = { it.label },
+        OrderingCase(
+            "AlbumDetails compareTo orders by label first",
+            AlbumDetails("Album", Artist.of("ArtistA"), label = Label.of("LabelA")),
+            AlbumDetails("Album", Artist.of("ArtistA"), label = Label.of("LabelB"))
+        ),
+        OrderingCase(
+            "AlbumDetails compareTo orders by year when labels are equal",
+            AlbumDetails("Album", Artist.of("Artist"), year = 1990, label = Label.of("Label")),
+            AlbumDetails("Album", Artist.of("Artist"), year = 2000, label = Label.of("Label"))
+        ),
+        OrderingCase(
+            "AlbumDetails compareTo orders by artist when label and year are equal",
+            AlbumDetails("Album", Artist.of("ArtistA"), year = 2000, label = Label.of("Label")),
+            AlbumDetails("Album", Artist.of("ArtistB"), year = 2000, label = Label.of("Label"))
+        ),
+        OrderingCase(
+            "AlbumDetails compareTo orders by name when label, year and artist are equal",
+            AlbumDetails("A", Artist.of("ArtistA"), year = 2000, label = Label.of("Label")),
+            AlbumDetails("B", Artist.of("ArtistA"), year = 2000, label = Label.of("Label"))
+        ),
+        OrderingCase(
+            "AlbumDetails compareTo falls back to isCompilation when all else is equal",
+            AlbumDetails("Album", Artist.of("Artist"), isCompilation = false, year = 2000, label = Label.of("Label")),
+            AlbumDetails("Album", Artist.of("Artist"), isCompilation = true, year = 2000, label = Label.of("Label"))
+        )
+    ) { (_, smaller, greater) ->
+        smaller shouldBeLessThan greater
+        greater shouldBeGreaterThan smaller
     }
 
     "AlbumDetails UNKNOWN has empty name and UNKNOWN artist" {

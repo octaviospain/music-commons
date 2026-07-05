@@ -1,5 +1,7 @@
 package net.transgressoft.commons.music.itunes
 
+import io.kotest.assertions.assertSoftly
+import io.kotest.assertions.json.shouldContainJsonKeyValue
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainAll
@@ -24,14 +26,16 @@ internal class SyntheticItunesLibraryGeneratorTest : StringSpec({
         val xml = Files.readString(outputDir.resolve(SyntheticItunesLibraryGenerator.DEFAULT_LIBRARY_FILE))
         val expectations = Files.readString(outputDir.resolve(SyntheticItunesLibraryGenerator.DEFAULT_EXPECTATIONS_FILE))
 
-        xml shouldContain "Phase18 Title Sentinel"
-        xml shouldContain "Phase18 Primary Artist"
-        xml shouldContain "Phase18 Album Sentinel"
-        xml shouldContain "root%20song.mp3"
-        xml shouldContain "Album A Tracks"
-        xml shouldContain "Album B Tracks"
-        expectations shouldContain "\"trackCount\": 4"
-        expectations shouldContain "\"playlistCount\": 6"
+        assertSoftly(xml) {
+            shouldContain("Synthetic Title Sentinel")
+            shouldContain("Synthetic Primary Artist")
+            shouldContain("Synthetic Album Sentinel")
+            shouldContain("root%20song.mp3")
+            shouldContain("Album A Tracks")
+            shouldContain("Album B Tracks")
+        }
+        expectations.shouldContainJsonKeyValue("trackCount", 4)
+        expectations.shouldContainJsonKeyValue("playlistCount", 6)
     }
 
     "SyntheticItunesLibraryGenerator writes custom output names" {

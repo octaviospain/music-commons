@@ -7,6 +7,7 @@ import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.persistence.VolatileRepository
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.property.arbitrary.next
@@ -32,35 +33,29 @@ internal class AudioItemEventSubscriberTest : StringSpec({
         library.close()
     }
 
-    "AudioItemEventSubscriber reacts to CREATE event" {
-        var createEventReceived = false
+    withData(
+        nameFn = { "AudioItemEventSubscriber reacts to ${it.eventType} event" },
+        EventReactionCase(CrudEvent.Type.CREATE) {
+            library.createFromFile(files.virtualAudioFile().next())
+            reactive.advance()
+        },
+        EventReactionCase(CrudEvent.Type.DELETE) {
+            val audioItem = library.createFromFile(files.virtualAudioFile().next())
+            reactive.advance()
+            library.remove(audioItem)
+            reactive.advance()
+        }
+    ) { case ->
+        var eventReceived = false
         val subscriber = AudioItemEventSubscriber<AudioItem>("TestSubscriber")
-        subscriber.addOnNextEventAction(CrudEvent.Type.CREATE) {
-            createEventReceived = true
+        subscriber.addOnNextEventAction(case.eventType) {
+            eventReceived = true
         }
         repository.subscribe(subscriber)
 
-        library.createFromFile(files.virtualAudioFile().next())
-        reactive.advance()
+        case.trigger()
 
-        createEventReceived shouldBe true
-    }
-
-    "AudioItemEventSubscriber reacts to DELETE event" {
-        var deleteEventReceived = false
-        val subscriber = AudioItemEventSubscriber<AudioItem>("TestSubscriber")
-        subscriber.addOnNextEventAction(CrudEvent.Type.DELETE) {
-            deleteEventReceived = true
-        }
-        repository.subscribe(subscriber)
-
-        val audioItem = library.createFromFile(files.virtualAudioFile().next())
-        reactive.advance()
-
-        library.remove(audioItem)
-        reactive.advance()
-
-        deleteEventReceived shouldBe true
+        eventReceived shouldBe true
     }
 
     "AudioItemEventSubscriber cancelSubscription stops event delivery" {
@@ -90,3 +85,8 @@ internal class AudioItemEventSubscriberTest : StringSpec({
         subscriber.toString() shouldContain "TestSubscriber"
     }
 })
+
+private class EventReactionCase(
+    val eventType: CrudEvent.Type,
+    val trigger: () -> Unit
+)

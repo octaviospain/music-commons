@@ -1,12 +1,13 @@
 package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.music.testing.reactiveScope
-import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
 import net.transgressoft.lirp.persistence.VolatileRepository
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
+import io.kotest.engine.names.WithDataTestName
 import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.optional.shouldBeEmpty
 import io.kotest.matchers.optional.shouldBePresent
@@ -63,107 +64,117 @@ internal class AudioLibraryBaseCatalogSyncTest : StringSpec({
         audioLibrary.getArtistCatalog(oldArtist).shouldBeEmpty()
     }
 
-    "AudioLibraryBase emits a catalog re-key on album change" {
-        val updateEvents = mutableListOf<CrudEvent<Int, AudioItem>>()
-        repository.subscribe(UPDATE) { updateEvents.add(it) }
-
-        val artist = Artist.of("Radiohead")
-        val audioItem =
-            audioLibrary.createFromFile(
-                files.virtualAudioFile {
-                    this.artist = artist
-                    album = AlbumDetails("Pablo Honey", artist)
-                    title = "Creep"
-                }.next()
-            )
-        reactive.advance()
-        updateEvents.clear()
-
-        audioItem.album = AlbumDetails("OK Computer", artist)
-        reactive.advance()
-
-        updateEvents.isEmpty() shouldBe false
+    // The re-key subscription fires a repository UPDATE only when a catalog-relevant property
+    // (artist, album, genres) or a bulk mutation changes; a title-only change must stay silent.
+    // Each row seeds one item, clears the initial add event, applies its mutation, and asserts
+    // whether an UPDATE surfaced — plus any projection follow-up unique to that mutation.
+    data class RekeyCase(
+        val mutationName: String,
+        val expectRekey: Boolean,
+        val seed: (VirtualFiles, TestAudioLibrary) -> AudioItem,
+        val mutate: (AudioItem) -> Unit,
+        val verifyProjection: (TestAudioLibrary) -> Unit = {}
+    ) : WithDataTestName {
+        override fun dataTestName() = mutationName
     }
 
-    "AudioLibraryBase does not re-key on title-only change" {
-        val updateEvents = mutableListOf<CrudEvent<Int, AudioItem>>()
-        repository.subscribe(UPDATE) { updateEvents.add(it) }
-
-        val audioItem =
-            audioLibrary.createFromFile(
-                files.virtualAudioFile {
-                    artist = Artist.of("Aphex Twin")
-                    album = AlbumDetails("Selected Ambient Works", Artist.of("Aphex Twin"))
-                    title = "Xtal"
-                    trackNumber = 1
-                }.next()
-            )
+    val fourTet = Artist.of("Four Tet")
+    withData(
+        RekeyCase(
+            "album change re-keys the catalog",
+            expectRekey = true,
+            seed = { files, library ->
+                val artist = Artist.of("Radiohead")
+                library.createFromFile(
+                    files.virtualAudioFile {
+                        this.artist = artist
+                        album = AlbumDetails("Pablo Honey", artist)
+                        title = "Creep"
+                    }.next()
+                )
+            },
+            mutate = { it.album = AlbumDetails("OK Computer", Artist.of("Radiohead")) }
+        ),
+        RekeyCase(
+            "title-only change does not re-key the catalog",
+            expectRekey = false,
+            seed = { files, library ->
+                val artist = Artist.of("Aphex Twin")
+                library.createFromFile(
+                    files.virtualAudioFile {
+                        this.artist = artist
+                        album = AlbumDetails("Selected Ambient Works", artist)
+                        title = "Xtal"
+                        trackNumber = 1
+                    }.next()
+                )
+            },
+            // Negative control: title, bpm and trackNumber are not catalog keys, so no UPDATE fires.
+            mutate = {
+                it.title = "Tha"
+                it.bpm = 120f
+                it.trackNumber = 5
+            }
+        ),
+        RekeyCase(
+            "bulk mutation re-keys the catalog",
+            expectRekey = true,
+            seed = { files, library ->
+                val artist = Artist.of("Burial")
+                library.createFromFile(
+                    files.virtualAudioFile {
+                        this.artist = artist
+                        album = AlbumDetails("Untrue", artist)
+                        title = "Archangel"
+                    }.next()
+                )
+            },
+            mutate = { item ->
+                item.mutate {
+                    artist = fourTet
+                    album = AlbumDetails("Rounds", fourTet)
+                    title = "She Moves She"
+                }
+            },
+            verifyProjection = { library ->
+                library.getArtistCatalog(fourTet) shouldBePresent { it.artist.name shouldBe fourTet.name }
+            }
+        ),
+        RekeyCase(
+            "genres change re-keys the catalog",
+            expectRekey = true,
+            seed = { files, library ->
+                val artist = Artist.of("Radiohead", CountryCode.UK)
+                library.createFromFile(
+                    files.virtualAudioFile {
+                        this.artist = artist
+                        album = AlbumDetails("Kid A", artist)
+                        genres = setOf(Electronic)
+                        title = "Everything in Its Right Place"
+                        trackNumber = 1
+                        discNumber = 1
+                    }.next()
+                )
+            },
+            // Negative control for the genres gate: removing it from subscribeCatalogKeyChanges
+            // silences this UPDATE and fails the row.
+            mutate = { it.genres = setOf(Alternative) },
+            verifyProjection = { library ->
+                library.getGenreIndex(Alternative) shouldBePresent { it.genre shouldBe Alternative }
+                library.getGenreIndex(Electronic).shouldBeEmpty()
+            }
+        )
+    ) { case ->
+        val updateEvents = repository.collect(UPDATE)
+        val audioItem = case.seed(files, audioLibrary)
         reactive.advance()
         updateEvents.clear()
 
-        audioItem.title = "Tha"
-        audioItem.bpm = 120f
-        audioItem.trackNumber = 5
+        case.mutate(audioItem)
         reactive.advance()
 
-        updateEvents.isEmpty() shouldBe true
-    }
-
-    "AudioLibraryBase re-keys catalog on bulk mutation" {
-        val updateEvents = mutableListOf<CrudEvent<Int, AudioItem>>()
-        repository.subscribe(UPDATE) { updateEvents.add(it) }
-
-        val audioItem =
-            audioLibrary.createFromFile(
-                files.virtualAudioFile {
-                    artist = Artist.of("Burial")
-                    album = AlbumDetails("Untrue", Artist.of("Burial"))
-                    title = "Archangel"
-                }.next()
-            )
-        reactive.advance()
-        updateEvents.clear()
-
-        val newArtist = Artist.of("Four Tet")
-        audioItem.mutate {
-            artist = newArtist
-            album = AlbumDetails("Rounds", newArtist)
-            title = "She Moves She"
-        }
-        reactive.advance()
-
-        updateEvents.isEmpty() shouldBe false
-        audioLibrary.getArtistCatalog(newArtist) shouldBePresent { it.artist.name shouldBe newArtist.name }
-    }
-
-    "AudioLibraryBase emits a catalog re-key on genres change" {
-        val updateEvents = mutableListOf<CrudEvent<Int, AudioItem>>()
-        repository.subscribe(UPDATE) { updateEvents.add(it) }
-
-        val artist = Artist.of("Radiohead", CountryCode.UK)
-        val audioItem =
-            audioLibrary.createFromFile(
-                files.virtualAudioFile {
-                    this.artist = artist
-                    album = AlbumDetails("Kid A", artist)
-                    genres = setOf(Electronic)
-                    title = "Everything in Its Right Place"
-                    trackNumber = 1
-                    discNumber = 1
-                }.next()
-            )
-        reactive.advance()
-        updateEvents.clear()
-
-        // Editing genres triggers a re-key because genres is a catalog-relevant property.
-        // This test serves as a negative-control: if the genres gate is removed from
-        // subscribeCatalogKeyChanges, no UPDATE is emitted and this test fails.
-        audioItem.genres = setOf(Alternative)
-        reactive.advance()
-
-        updateEvents.isEmpty() shouldBe false
-        audioLibrary.getGenreIndex(Alternative) shouldBePresent { it.genre shouldBe Alternative }
-        audioLibrary.getGenreIndex(Electronic).shouldBeEmpty()
+        updateEvents.isEmpty() shouldBe !case.expectRekey
+        case.verifyProjection(audioLibrary)
     }
 
     "AudioLibraryBase getAlbum and getGenreIndex return correct live values" {

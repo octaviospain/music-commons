@@ -6,9 +6,9 @@ import net.transgressoft.commons.music.audio.id
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.persistence.VolatileRepository
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import io.kotest.property.arbitrary.next
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
@@ -31,62 +31,14 @@ internal class FXArtistCatalogTest : StringSpec({
         FxToolkit.registerPrimaryStage()
     }
 
-    "FXArtistCatalog returns false for equals when audioItemsByAlbum differs" {
-        val path =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-            }.next()
-        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
-
-        val catalog1 = FXArtistCatalog(artist, listOf(audioItem))
-        val catalog2 = FXArtistCatalog(artist, emptyList())
-
-        catalog1 shouldNotBe catalog2
-    }
-
-    "FXArtistCatalog returns true for equals when artist and audioItemsByAlbum match" {
-        val path =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-            }.next()
-        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
-
-        val catalog1 = FXArtistCatalog(artist, listOf(audioItem))
-        val catalog2 = FXArtistCatalog(artist, listOf(audioItem))
-
-        catalog1 shouldBe catalog2
-    }
-
-    "FXArtistCatalog produces different hashCode when audioItemsByAlbum differs" {
-        val path =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-            }.next()
-        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
-
-        val catalog1 = FXArtistCatalog(artist, listOf(audioItem))
-        val catalog2 = FXArtistCatalog(artist, emptyList())
-
-        catalog1.hashCode() shouldNotBe catalog2.hashCode()
-    }
-
-    "FXArtistCatalog clone produces an equal but distinct instance" {
-        val path =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-            }.next()
-        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
-        val catalog = FXArtistCatalog(artist, listOf(audioItem))
-
-        val cloned = catalog.clone()
-
-        cloned shouldBe catalog
-        (cloned === catalog) shouldBe false
-    }
+    flatBucketEqualitySemantics(
+        label = "FXArtistCatalog",
+        buildFromItems = { FXArtistCatalog(artist, it) },
+        buildItem = {
+            files.makeItem(artist, album)
+        },
+        clone = { it.clone() }
+    )
 
     "FXArtistCatalog stores items with the same ordering and unique id when repository ids differ" {
         val path =
@@ -137,37 +89,36 @@ internal class FXArtistCatalogTest : StringSpec({
     }
 
     "FXArtistCatalog observable properties are populated at construction with correct values" {
-        val paths =
-            (1..50).map {
-                files.virtualAudioFile {
-                    this.artist = artist
-                    this.album = album
-                }.next()
-            }
-        val items = paths.map { FXAudioItemTestBridge.createFxAudioItem(it, files.metadataIO) }
+        val items = (1..50).map { files.makeItem(artist, album) }
 
         val catalog = FXArtistCatalog(artist, items)
 
         WaitForAsyncUtils.waitForFxEvents()
 
-        catalog.sizeProperty.get() shouldBe 50
-        catalog.albumCountProperty.get() shouldBe 1
+        assertSoftly {
+            catalog.sizeProperty.get() shouldBe 50
+            catalog.albumCountProperty.get() shouldBe 1
+        }
     }
 
     "FXArtistCatalog returns false for equals with different types or null" {
         val catalog = FXArtistCatalog(artist, emptyList())
 
-        (catalog.equals(null)) shouldBe false
-        (catalog.equals("not a catalog")) shouldBe false
+        assertSoftly {
+            (catalog.equals(null)) shouldBe false
+            (catalog.equals("not a catalog")) shouldBe false
+        }
     }
 
     "FXArtistCatalog exposes empty, artist and uniqueId properties consistent with state" {
         val catalog = FXArtistCatalog(artist, emptyList())
 
-        catalog.emptyProperty.get() shouldBe true
-        catalog.artistProperty.get() shouldBe artist
-        catalog.uniqueId shouldBe artist.id()
-        catalog.compareTo(FXArtistCatalog(artist, emptyList())) shouldBe 0
+        assertSoftly {
+            catalog.emptyProperty.get() shouldBe true
+            catalog.artistProperty.get() shouldBe artist
+            catalog.uniqueId shouldBe artist.id()
+            catalog.compareTo(FXArtistCatalog(artist, emptyList())) shouldBe 0
+        }
     }
 
     "FXArtistCatalog albumAudioItems returns empty set for unknown album" {

@@ -148,36 +148,6 @@ internal class AudioLibraryBaseTest : StringSpec({
         result.any { it.id == item2.id } shouldBe true
     }
 
-    "AudioLibraryBase moves item to new artist catalog when artist changes" {
-        // Use Artists without country codes so the catalog key (derived from name) matches exactly
-        val oldArtist = Artist.of("David Bowie")
-        val newArtist = Artist.of("Lou Reed")
-        // albumArtist matches track artist; change both together so oldArtist leaves artistsInvolved
-        val oldAlbum = AlbumDetails("Heroes", oldArtist)
-        val audioItem =
-            audioLibrary.createFromFile(
-                files.virtualAudioFile {
-                    artist = oldArtist
-                    album = oldAlbum
-                    title = "Heroes"
-                }.next()
-            )
-        reactive.advance()
-
-        audioItem.artist = newArtist
-        // also update album so albumArtist no longer references oldArtist
-        audioItem.album = AlbumDetails("Transformer", newArtist)
-
-        reactive.advance()
-
-        // Item must appear in new artist's catalog
-        audioLibrary.getArtistCatalog(newArtist) shouldBePresent { catalog ->
-            catalog.artist.name shouldBe newArtist.name
-        }
-        // Old artist catalog must be gone because oldArtist is no longer in artistsInvolved
-        audioLibrary.getArtistCatalog(oldArtist).shouldBeEmpty()
-    }
-
     "AudioLibraryBase re-sorts item in catalog when track number changes" {
         // Deterministic artist and title prevent random titles from injecting extra artist keys
         val artist = Artist.of("Boards Of Canada")

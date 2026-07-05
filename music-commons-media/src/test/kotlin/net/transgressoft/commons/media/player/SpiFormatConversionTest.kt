@@ -1,45 +1,42 @@
 package net.transgressoft.commons.media.player
 
+import net.transgressoft.commons.media.util.drainAndCount
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
-import net.transgressoft.commons.music.audio.AudioFileTagType
-import io.kotest.core.spec.style.StringSpec
+import net.transgressoft.commons.music.audio.AudioFileTagType.ID3_V_24
+import net.transgressoft.commons.music.audio.AudioFileTagType.VORBIS_COMMENT
+import io.kotest.core.spec.style.FunSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 
-internal class SpiFormatConversionTest : StringSpec({
+internal class SpiFormatConversionTest : FunSpec({
 
-    "OGG format conversion produces PCM data" {
-        val realAudioPath = Arb.realAudioFile(AudioFileTagType.VORBIS_COMMENT).next()
-        val file = realAudioPath.toFile()
+    context("format conversion via the raw AudioSystem SPI path produces PCM data") {
+        withData(
+            mapOf(
+                "mp3" to ID3_V_24,
+                "ogg" to VORBIS_COMMENT
+            )
+        ) { tagType ->
+            val file = Arb.realAudioFile(tagType).next().toFile()
 
-        AudioSystem.getAudioInputStream(file).use { rawStream ->
-            println("OGG base format: ${rawStream.format}")
+            AudioSystem.getAudioInputStream(file).use { rawStream ->
+                val targetFormat =
+                    AudioFormat(
+                        AudioFormat.Encoding.PCM_SIGNED,
+                        rawStream.format.sampleRate,
+                        16,
+                        rawStream.format.channels,
+                        rawStream.format.channels * 2,
+                        rawStream.format.sampleRate,
+                        false
+                    )
 
-            val targetFormat =
-                AudioFormat(
-                    AudioFormat.Encoding.PCM_SIGNED,
-                    rawStream.format.sampleRate,
-                    16,
-                    rawStream.format.channels,
-                    rawStream.format.channels * 2,
-                    rawStream.format.sampleRate,
-                    false
-                )
-
-            val pcmStream = AudioSystem.getAudioInputStream(targetFormat, rawStream)
-            val buffer = ByteArray(8192)
-            var totalBytes = 0
-            var bytesRead = pcmStream.read(buffer)
-            while (bytesRead != -1) {
-                if (bytesRead > 0) totalBytes += bytesRead
-                bytesRead = pcmStream.read(buffer)
+                AudioSystem.getAudioInputStream(targetFormat, rawStream).drainAndCount() shouldBeGreaterThan 0
             }
-            pcmStream.close()
-            println("OGG PCM bytes produced: $totalBytes")
-            totalBytes shouldBeGreaterThan 0
         }
     }
 })

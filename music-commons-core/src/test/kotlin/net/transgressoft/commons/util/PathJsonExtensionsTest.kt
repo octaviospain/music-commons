@@ -2,6 +2,7 @@ package net.transgressoft.commons.util
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldStartWith
@@ -15,13 +16,6 @@ internal class PathJsonExtensionsTest : StringSpec({
         val uri = path.toJsonUri()
         uri shouldStartWith "file://"
         uri shouldContain "/home/u/song.mp3"
-    }
-
-    "Path.toJsonUri produces file:// URI for an absolute path on the default filesystem" {
-        val path = Path.of("/tmp/test/song.mp3")
-        val uri = path.toJsonUri()
-        uri shouldStartWith "file://"
-        uri shouldContain "song.mp3"
     }
 
     "Path.toJsonUri percent-encodes spaces and special characters" {
@@ -45,22 +39,20 @@ internal class PathJsonExtensionsTest : StringSpec({
         recovered.toString() shouldBe original.toAbsolutePath().toString()
     }
 
-    "String.toPathFromJsonUri rejects raw path string with no scheme (D-02 hard-break)" {
+    "String.toPathFromJsonUri rejects raw path string with no scheme, hard-breaking on legacy formats" {
         val ex = shouldThrow<SerializationException> { "/home/u/song.mp3".toPathFromJsonUri() }
         ex.message!! shouldContain "file://"
         ex.message!! shouldContain "pre-25.1"
     }
 
-    "String.toPathFromJsonUri rejects http URI (only file:// accepted)" {
-        shouldThrow<SerializationException> { "http://example.com/x.mp3".toPathFromJsonUri() }
-    }
-
-    "String.toPathFromJsonUri rejects empty string" {
-        shouldThrow<SerializationException> { "".toPathFromJsonUri() }
-    }
-
-    "String.toPathFromJsonUri rejects raw Windows-style path string" {
-        shouldThrow<SerializationException> { "C:\\Users\\u\\song.mp3".toPathFromJsonUri() }
+    withData(
+        mapOf(
+            "String.toPathFromJsonUri rejects http URI (only file:// accepted)" to "http://example.com/x.mp3",
+            "String.toPathFromJsonUri rejects empty string (only file:// accepted)" to "",
+            "String.toPathFromJsonUri rejects raw Windows-style path (only file:// accepted)" to "C:\\Users\\u\\song.mp3"
+        )
+    ) { input ->
+        shouldThrow<SerializationException> { input.toPathFromJsonUri() }
     }
 
     "file:// URI encoding is stable for ASCII paths (golden fixture)" {

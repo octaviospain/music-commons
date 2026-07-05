@@ -25,7 +25,9 @@ import net.transgressoft.commons.music.audio.parseGenre
 import com.neovisionaries.i18n.CountryCode
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 
 /**
@@ -38,36 +40,35 @@ internal class AudioItemContextualSerializersTest : StringSpec({
 
     val json = Json { serializersModule = audioItemSerializersModule }
 
-    "LabelContextualSerializer round-trips name and country code" {
-        val label = Label.of("Warp", CountryCode.GB)
-        val decoded = json.decodeFromString(LabelContextualSerializer, json.encodeToString(LabelContextualSerializer, label))
-        decoded.name shouldBe "Warp"
-        decoded.countryCode shouldBe CountryCode.GB
-    }
+    fun <T> T.decodeEncoded(serializer: KSerializer<T>): T =
+        json.decodeFromString(serializer, json.encodeToString(serializer, this))
 
-    "LabelContextualSerializer round-trips an undefined country code" {
-        val label = Label.of("Self-Released", CountryCode.UNDEFINED)
-        val decoded = json.decodeFromString(LabelContextualSerializer, json.encodeToString(LabelContextualSerializer, label))
-        decoded.name shouldBe "Self-Released"
-        decoded.countryCode shouldBe CountryCode.UNDEFINED
-    }
+    data class RoundTripCase(val name: String, val assert: () -> Unit)
 
-    "ArtistContextualSerializer round-trips name and country code" {
-        val artist = Artist.of("Aphex Twin", CountryCode.GB)
-        val decoded = json.decodeFromString(ArtistContextualSerializer, json.encodeToString(ArtistContextualSerializer, artist))
-        decoded.name shouldBe "Aphex Twin"
-        decoded.countryCode shouldBe CountryCode.GB
-    }
-
-    "GenreContextualSerializer round-trips a known genre" {
-        val genre = parseGenre("Electronic").first()
-        val decoded = json.decodeFromString(GenreContextualSerializer, json.encodeToString(GenreContextualSerializer, genre))
-        decoded shouldBe genre
-    }
-
-    "GenreContextualSerializer round-trips a custom genre" {
-        val genre = Genre.Custom("Hauntology")
-        val decoded = json.decodeFromString(GenreContextualSerializer, json.encodeToString(GenreContextualSerializer, genre))
-        decoded shouldBe genre
-    }
+    withData(
+        nameFn = { it.name },
+        RoundTripCase("LabelContextualSerializer round-trips name and country code") {
+            val decoded = Label.of("Warp", CountryCode.GB).decodeEncoded(LabelContextualSerializer)
+            decoded.name shouldBe "Warp"
+            decoded.countryCode shouldBe CountryCode.GB
+        },
+        RoundTripCase("LabelContextualSerializer round-trips an undefined country code") {
+            val decoded = Label.of("Self-Released", CountryCode.UNDEFINED).decodeEncoded(LabelContextualSerializer)
+            decoded.name shouldBe "Self-Released"
+            decoded.countryCode shouldBe CountryCode.UNDEFINED
+        },
+        RoundTripCase("ArtistContextualSerializer round-trips name and country code") {
+            val decoded = Artist.of("Aphex Twin", CountryCode.GB).decodeEncoded(ArtistContextualSerializer)
+            decoded.name shouldBe "Aphex Twin"
+            decoded.countryCode shouldBe CountryCode.GB
+        },
+        RoundTripCase("GenreContextualSerializer round-trips a known genre") {
+            val genre = parseGenre("Electronic").first()
+            genre.decodeEncoded(GenreContextualSerializer) shouldBe genre
+        },
+        RoundTripCase("GenreContextualSerializer round-trips a custom genre") {
+            val genre = Genre.Custom("Hauntology")
+            genre.decodeEncoded(GenreContextualSerializer) shouldBe genre
+        }
+    ) { it.assert() }
 })

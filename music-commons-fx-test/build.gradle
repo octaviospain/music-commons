@@ -28,5 +28,7 @@ dependencies {
     api project(path: ':music-commons-test')
     implementation libs.mockk.get()
     implementation libs.kotest.property.get()
+    api libs.kotest.assertions.core.get()
+    api libs.testfx.core.get()
 }
 

@@ -3,6 +3,7 @@ package net.transgressoft.commons.util
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldStartWith
@@ -22,39 +23,43 @@ import java.nio.file.Path
 internal class WindowsLongPathSupportTest : StringSpec({
     isolationMode = IsolationMode.SingleInstance
 
-    "WindowsLongPathSupport.toLongPathSafe(Path) passes through unchanged on Linux" {
+    // Each overload's result is normalized to its raw path string: File via `.path`, Path via
+    // `.toString()`. Dispatch stays explicit so a broken overload fails on its own row.
+    val rawOf: (Overload, String) -> String = { overload, raw ->
+        when (overload) {
+            Overload.FILE -> WindowsLongPathSupport.toLongPathSafe(File(raw)).path
+            Overload.PATH -> WindowsLongPathSupport.toLongPathSafe(Path.of(raw)).toString()
+        }
+    }
+
+    withData(
+        nameFn = { "WindowsLongPathSupport.toLongPathSafe($it) passes through unchanged on Linux" },
+        Overload.FILE, Overload.PATH
+    ) { overload ->
         OsDetector.withOverriddenIsWindows(false) {
-            val longName = "a".repeat(300)
-            val long = Path.of("/$longName.mp3")
-            val result = WindowsLongPathSupport.toLongPathSafe(long)
-            result shouldBe long
+            val raw = "/${"a".repeat(300)}.mp3"
+            rawOf(overload, raw) shouldBe raw
         }
     }
 
-    "WindowsLongPathSupport.toLongPathSafe(File) passes through unchanged on Linux" {
-        OsDetector.withOverriddenIsWindows(false) {
-            val longName = "a".repeat(300)
-            val long = File("/$longName.mp3")
-            val result = WindowsLongPathSupport.toLongPathSafe(long)
-            result shouldBe long
-        }
-    }
-
-    "WindowsLongPathSupport.toLongPathSafe(File) passes through short paths" {
+    withData(
+        nameFn = { "WindowsLongPathSupport.toLongPathSafe($it) passes through short paths" },
+        Overload.FILE, Overload.PATH
+    ) { overload ->
         OsDetector.withOverriddenIsWindows(true) {
-            val short = File("/short.mp3")
-            val result = WindowsLongPathSupport.toLongPathSafe(short)
-            result.path shouldBe short.path
+            rawOf(overload, "/short.mp3") shouldBe "/short.mp3"
         }
     }
 
-    "WindowsLongPathSupport.toLongPathSafe(File) prefixes long File path" {
+    withData(
+        nameFn = { "WindowsLongPathSupport.toLongPathSafe($it) prefixes long path" },
+        Overload.FILE, Overload.PATH
+    ) { overload ->
         OsDetector.withOverriddenIsWindows(true) {
             val longName = "a".repeat(300)
-            val long = File("/long-dir/$longName.mp3")
-            val result = WindowsLongPathSupport.toLongPathSafe(long)
-            result.path shouldStartWith "\\\\?\\"
-            result.path shouldContain longName
+            val result = rawOf(overload, "/long-dir/$longName.mp3")
+            result shouldStartWith "\\\\?\\"
+            result shouldContain longName
         }
     }
 
@@ -74,23 +79,6 @@ internal class WindowsLongPathSupportTest : StringSpec({
         }
     }
 
-    "WindowsLongPathSupport.toLongPathSafe(Path) passes through short paths" {
-        OsDetector.withOverriddenIsWindows(true) {
-            val short = Path.of("/short.mp3")
-            val result = WindowsLongPathSupport.toLongPathSafe(short)
-            result.toString() shouldBe short.toString()
-        }
-    }
-
-    "WindowsLongPathSupport.toLongPathSafe(Path) prefixes long path" {
-        OsDetector.withOverriddenIsWindows(true) {
-            val longName = "a".repeat(300)
-            val long = Path.of("/long-dir/$longName.mp3")
-            val result = WindowsLongPathSupport.toLongPathSafe(long)
-            result.toString() shouldStartWith "\\\\?\\"
-        }
-    }
-
     "WindowsLongPathSupport.toLongPathSafe(File) uses \\\\?\\UNC\\ for UNC paths" {
         OsDetector.withOverriddenIsWindows(true) {
             val longName = "a".repeat(300)
@@ -101,4 +89,10 @@ internal class WindowsLongPathSupportTest : StringSpec({
             result.path.startsWith("\\\\?\\\\\\") shouldBe false
         }
     }
-})
+}) {
+    /**
+     * The two `toLongPathSafe` overloads under test: [FILE] takes a [java.io.File], [PATH] takes a
+     * [java.nio.file.Path]. Used to drive the mirror-pair cases through one parametrized table.
+     */
+    private enum class Overload { FILE, PATH }
+}

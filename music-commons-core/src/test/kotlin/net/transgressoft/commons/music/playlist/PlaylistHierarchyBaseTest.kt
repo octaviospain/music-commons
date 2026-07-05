@@ -3,13 +3,16 @@ package net.transgressoft.commons.music.playlist
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.TestAudioLibrary
 import net.transgressoft.commons.music.audio.virtualFiles
+import net.transgressoft.commons.music.shouldNotReferenceItemId
+import net.transgressoft.commons.music.shouldReferenceItemId
 import net.transgressoft.commons.music.testing.reactiveScope
-import net.transgressoft.lirp.persistence.AggregateCollectionRef
 import net.transgressoft.lirp.persistence.RegistryBase.Companion.deregisterRepository
 import net.transgressoft.lirp.persistence.RegistryBase.Companion.registerRepository
 import net.transgressoft.lirp.persistence.VolatileRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.optional.shouldBeEmpty
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
@@ -63,16 +66,15 @@ internal class PlaylistHierarchyBaseTest : StringSpec({
         playlist.addAudioItem(audioItem)
         reactive.advance()
 
-        playlist.audioItems.any { it.id == audioItem.id } shouldBe true
+        playlist.audioItems.map { it.id } shouldContain audioItem.id
 
         audioLibrary.remove(audioItem) shouldBe true
         reactive.advance()
 
         playlistHierarchy.findByName("Sync Test Playlist") shouldBePresent { found ->
-            // Use referenceIds instead of iterating the proxy: the audio item was removed from
+            // Assert by reference id instead of iterating the proxy: the audio item was removed from
             // the registry so iterating would throw NoSuchElementException.
-            val refIds = (found.audioItems as? AggregateCollectionRef<*, *>)?.referenceIds?.map { it as Int } ?: emptyList()
-            refIds.none { it == audioItem.id } shouldBe true
+            found shouldNotReferenceItemId audioItem.id
         }
         audioLibrary.close()
         deregisterRepository(AudioItem::class.java)
@@ -85,16 +87,16 @@ internal class PlaylistHierarchyBaseTest : StringSpec({
         playlistHierarchy.addPlaylistsToDirectory(setOf(playlist), dirA.name)
 
         playlistHierarchy.findByName("Directory A") shouldBePresent { dir ->
-            dir.playlists.any { it.name == "Movable Playlist" } shouldBe true
+            dir.playlists.map { it.name } shouldContain "Movable Playlist"
         }
 
         playlistHierarchy.movePlaylist("Movable Playlist", "Directory B")
 
         playlistHierarchy.findByName("Directory A") shouldBePresent { dir ->
-            dir.playlists.none { it.name == "Movable Playlist" } shouldBe true
+            dir.playlists.map { it.name } shouldNotContain "Movable Playlist"
         }
         playlistHierarchy.findByName("Directory B") shouldBePresent { dir ->
-            dir.playlists.any { it.name == "Movable Playlist" } shouldBe true
+            dir.playlists.map { it.name } shouldContain "Movable Playlist"
         }
     }
 
@@ -120,8 +122,7 @@ internal class PlaylistHierarchyBaseTest : StringSpec({
         // After close(), the audio item deletion event is no longer processed —
         // the playlist's audioItemIds still contains the id even though the audio item was removed from the library
         playlistHierarchy.findByName("Close Test Playlist") shouldBePresent { found ->
-            val refIds = (found.audioItems as? net.transgressoft.lirp.persistence.AggregateCollectionRef<*, *>)?.referenceIds?.map { it as Int } ?: emptyList()
-            refIds.any { it == audioItem.id } shouldBe true
+            found shouldReferenceItemId audioItem.id
         }
         audioLibrary.close()
         deregisterRepository(AudioItem::class.java)

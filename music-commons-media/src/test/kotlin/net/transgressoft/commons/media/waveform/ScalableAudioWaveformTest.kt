@@ -1,10 +1,7 @@
 package net.transgressoft.commons.media.waveform
 
+import net.transgressoft.commons.media.player.SUPPORTED_FORMATS
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
-import net.transgressoft.commons.music.audio.AudioFileTagType.FLAC
-import net.transgressoft.commons.music.audio.AudioFileTagType.ID3_V_24
-import net.transgressoft.commons.music.audio.AudioFileTagType.MP4_INFO
-import net.transgressoft.commons.music.audio.AudioFileTagType.VORBIS_COMMENT
 import net.transgressoft.commons.music.audio.AudioFileTagType.WAV
 import net.transgressoft.commons.music.waveform.AudioWaveformProcessingException
 import io.kotest.assertions.throwables.shouldThrow
@@ -31,15 +28,7 @@ internal class ScalableAudioWaveformTest : FunSpec({
     val testDispatcher = UnconfinedTestDispatcher()
 
     context("Creates a waveform image from") {
-        withData(
-            mapOf(
-                "a wav file" to Arb.realAudioFile(WAV).next(),
-                "a flac file" to Arb.realAudioFile(FLAC).next(),
-                "an mp3 file" to Arb.realAudioFile(ID3_V_24).next(),
-                "an ogg file" to Arb.realAudioFile(VORBIS_COMMENT).next(),
-                "an m4a file" to Arb.realAudioFile(MP4_INFO).next()
-            )
-        ) {
+        withData(SUPPORTED_FORMATS.mapValues { Arb.realAudioFile(it.value).next() }) {
             val pngTempFile = deleteOnExitTempFile(".png")
             ScalableAudioWaveform(1, it).createImage(pngTempFile, Color.RED, Color.BLUE, 780, 335, testDispatcher)
             pngTempFile.exists() shouldBe true
@@ -56,22 +45,6 @@ internal class ScalableAudioWaveformTest : FunSpec({
         }
     }
 
-    test("Creates a waveform image from an mp3 file") {
-        val mp3Path = Arb.realAudioFile(ID3_V_24).next()
-        val pngTempFile = deleteOnExitTempFile(".png")
-        ScalableAudioWaveform(1, mp3Path).createImage(pngTempFile, Color.RED, Color.BLUE, 780, 335, testDispatcher)
-        pngTempFile.exists() shouldBe true
-        pngTempFile.extension shouldBe "png"
-    }
-
-    test("Creates a waveform image from an m4a file") {
-        val m4aPath = Arb.realAudioFile(MP4_INFO).next()
-        val pngTempFile = deleteOnExitTempFile(".png")
-        ScalableAudioWaveform(1, m4aPath).createImage(pngTempFile, Color.RED, Color.BLUE, 780, 335, testDispatcher)
-        pngTempFile.exists() shouldBe true
-        pngTempFile.extension shouldBe "png"
-    }
-
     test("Throws AudioWaveformProcessingException when creating waveform from corrupted file") {
         val corruptedFile = deleteOnExitTempFile(".mp3")
         corruptedFile.writeText("This is not a valid mp3 file")
@@ -84,7 +57,6 @@ internal class ScalableAudioWaveformTest : FunSpec({
 
         exception.message shouldContain "Error processing waveform"
         exception.cause shouldNotBe null
-        exception.toString()
     }
 
     test("ScalableAudioWaveform amplitudes cache hit returns same-size array with linear height scaling") {
@@ -141,21 +113,18 @@ internal class ScalableAudioWaveformTest : FunSpec({
         }
     }
 
-    test("ScalableAudioWaveform amplitudes throws IllegalStateException for zero width") {
-        val realAudioPath = Arb.realAudioFile(WAV).next()
-        val waveform = ScalableAudioWaveform(1, realAudioPath)
+    context("ScalableAudioWaveform amplitudes throws IllegalStateException for non-positive dimensions") {
+        data class DimensionCase(val width: Int, val height: Int)
+        withData(
+            nameFn = { "width=${it.width}, height=${it.height}" },
+            DimensionCase(width = 0, height = 100),
+            DimensionCase(width = 780, height = 0)
+        ) { (width, height) ->
+            val waveform = ScalableAudioWaveform(1, Arb.realAudioFile(WAV).next())
 
-        shouldThrow<IllegalStateException> {
-            waveform.amplitudes(0, 100)
-        }
-    }
-
-    test("ScalableAudioWaveform amplitudes throws IllegalStateException for zero height") {
-        val realAudioPath = Arb.realAudioFile(WAV).next()
-        val waveform = ScalableAudioWaveform(1, realAudioPath)
-
-        shouldThrow<IllegalStateException> {
-            waveform.amplitudes(780, 0)
+            shouldThrow<IllegalStateException> {
+                waveform.amplitudes(width, height)
+            }
         }
     }
 })

@@ -10,6 +10,7 @@ import net.transgressoft.commons.util.WindowsPathException
 import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.VolatileRepository
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
+import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.json.shouldEqualJson
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.assertions.throwables.shouldThrowMessage
@@ -89,9 +90,15 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         reactive.advance()
 
         playlistHierarchy.size() shouldBe 1
-        playlistHierarchy.contains {
-            it.id == 1 && it.isDirectory && it.name == "Rock" && it.audioItems == listOf(audioItem) && it.playlists.isEmpty()
-        } shouldBe true
+        playlistHierarchy.findById(1) shouldBePresent {
+            assertSoftly {
+                it.id shouldBe 1
+                it.isDirectory shouldBe true
+                it.name shouldBe "Rock"
+                it.audioItems shouldBe listOf(audioItem)
+                it.playlists.isEmpty() shouldBe true
+            }
+        }
 
         playlistHierarchy.close()
         audioLibrary.close()
@@ -266,11 +273,13 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         playlistHierarchy.isEmpty shouldBe true
 
         // Recursive removal clears nested playlist delegates
-        bestHits.playlists.isEmpty() shouldBe true
-        fifties.playlists.isEmpty() shouldBe true
-        selection.playlists.isEmpty() shouldBe true
-        rock.playlists.isEmpty() shouldBe true
-        pop.playlists.isEmpty() shouldBe true
+        assertSoftly {
+            bestHits.playlists.isEmpty() shouldBe true
+            fifties.playlists.isEmpty() shouldBe true
+            selection.playlists.isEmpty() shouldBe true
+            rock.playlists.isEmpty() shouldBe true
+            pop.playlists.isEmpty() shouldBe true
+        }
 
         playlistHierarchy.close()
     }

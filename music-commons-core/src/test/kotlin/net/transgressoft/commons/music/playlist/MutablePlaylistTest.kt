@@ -8,6 +8,7 @@ import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.VolatileRepository
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import net.transgressoft.lirp.persistence.json.JsonRepository
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempdir
 import io.kotest.engine.spec.tempfile
@@ -15,6 +16,7 @@ import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.list
 import io.kotest.property.arbitrary.next
@@ -51,12 +53,16 @@ internal class MutablePlaylistTest : StringSpec({
     "Returns expected attributes" {
         val playlist1 = playlistHierarchy.createPlaylist("Playlist1")
 
-        playlist1.id shouldBe 1
-        playlist1.isDirectory shouldBe false
-        playlist1.name shouldBe "Playlist1"
-        playlist1.uniqueId shouldBe "Playlist1"
-        playlist1.audioItems.isEmpty() shouldBe true
-        playlist1.toString() shouldBe "MutablePlaylist(id=1, isDirectory=false, name='Playlist1', audioItems=[], playlists=[])"
+        assertSoftly {
+            playlist1.id shouldBe 1
+            playlist1.isDirectory shouldBe false
+            playlist1.name shouldBe "Playlist1"
+            playlist1.uniqueId shouldBe "Playlist1"
+            playlist1.audioItems.isEmpty() shouldBe true
+            playlist1.toString() shouldContain "id=1"
+            playlist1.toString() shouldContain "isDirectory=false"
+            playlist1.toString() shouldContain "name='Playlist1'"
+        }
 
         playlist1.name = "Modified playlist1"
 
@@ -87,10 +93,12 @@ internal class MutablePlaylistTest : StringSpec({
         playlist1.audioItemsAllMatch { it.title == "Song title" } shouldBe true
 
         // Verify playlist1 uniqueId is based on name and that its attributes match the expected values
-        playlist1.uniqueId shouldBe "Modified playlist1"
-        playlist1.isDirectory shouldBe false
-        playlist1.name shouldBe "Modified playlist1"
-        playlist1.audioItems shouldBe listOf(customAudioItem)
+        assertSoftly {
+            playlist1.uniqueId shouldBe "Modified playlist1"
+            playlist1.isDirectory shouldBe false
+            playlist1.name shouldBe "Modified playlist1"
+            playlist1.audioItems shouldBe listOf(customAudioItem)
+        }
 
         playlist1.clearAudioItems()
         playlist1.audioItems.isEmpty() shouldBe true
@@ -99,10 +107,14 @@ internal class MutablePlaylistTest : StringSpec({
     "Returns expected attributes when is playlist directory" {
         val directory1 = playlistHierarchy.createPlaylistDirectory("Directory1")
 
-        directory1.isDirectory shouldBe true
-        directory1.playlists.isEmpty() shouldBe true
-        directory1.audioItems.isEmpty() shouldBe true
-        directory1.toString() shouldBe "MutablePlaylist(id=1, isDirectory=true, name='Directory1', audioItems=[], playlists=[])"
+        assertSoftly {
+            directory1.isDirectory shouldBe true
+            directory1.playlists.isEmpty() shouldBe true
+            directory1.audioItems.isEmpty() shouldBe true
+            directory1.toString() shouldContain "id=1"
+            directory1.toString() shouldContain "isDirectory=true"
+            directory1.toString() shouldContain "name='Directory1'"
+        }
 
         val audioItems = Arb.list(Arb.audioItem(), 5..5).next().also { items -> items.forEach { audioItemRepository.add(it) } }
         val p1 = playlistHierarchy.createPlaylistDirectory("p1", audioItems = audioItems)

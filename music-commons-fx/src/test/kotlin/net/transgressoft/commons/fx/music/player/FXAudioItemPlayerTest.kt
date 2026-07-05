@@ -26,6 +26,7 @@ import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
@@ -52,126 +53,81 @@ internal class FXAudioItemPlayerTest : FunSpec({
     context("FX observable properties reflect core player state") {
 
         test("initial properties are at default values") {
-            val corePlayer =
-                mockk<CoreAudioItemPlayer>(relaxed = true) {
-                    every { status() } returns AudioItemPlayer.Status.UNKNOWN
-                    every { getCurrentTime() } returns Duration.ZERO
-                    every { totalDuration } returns Duration.ZERO
-                }
-            val player = FXAudioItemPlayer(corePlayer)
-
-            try {
+            val corePlayer = corePlayerMock(AudioItemPlayer.Status.UNKNOWN, Duration.ZERO)
+            withPlayer(corePlayer) { player ->
                 player.statusProperty.get() shouldBe AudioItemPlayer.Status.UNKNOWN
                 player.currentTimeProperty.get() shouldBe FxDuration.ZERO
                 player.volumeProperty.get() shouldBe 1.0
-            } finally {
-                player.dispose()
             }
         }
 
-        test("play delegates to core player and syncs status") {
-            val audioItem =
-                mockk<ReactiveAudioItem<*>>(relaxed = true) {
-                    every { path } returns Files.createTempFile("test", ".wav")
-                    every { fileName } returns "test.wav"
-                    every { extension } returns "wav"
-                    every { encoding } returns null
-                    every { encoder } returns null
+        withData(
+            nameFn = { it.name },
+            TransportCase(
+                "play",
+                AudioItemPlayer.Status.PLAYING,
+                expectedMillis = 100.0,
+                currentTime = Duration.ofMillis(100),
+                total = Duration.ofSeconds(10),
+                act = { player, core ->
+                    val audioItem =
+                        mockk<ReactiveAudioItem<*>>(relaxed = true) {
+                            every { path } returns Files.createTempFile("test", ".wav")
+                            every { fileName } returns "test.wav"
+                            every { extension } returns "wav"
+                            every { encoding } returns null
+                            every { encoder } returns null
+                        }
+                    player.play(audioItem)
+                    verify { core.play(audioItem) }
+                    audioItem.path.toFile().delete()
                 }
-            val corePlayer =
-                mockk<CoreAudioItemPlayer>(relaxed = true) {
-                    every { status() } returns AudioItemPlayer.Status.PLAYING
-                    every { getCurrentTime() } returns Duration.ofMillis(100)
-                    every { totalDuration } returns Duration.ofSeconds(10)
+            ),
+            TransportCase(
+                "pause",
+                AudioItemPlayer.Status.PAUSED,
+                expectedMillis = 500.0,
+                currentTime = Duration.ofMillis(500),
+                act = { player, core ->
+                    player.pause()
+                    verify { core.pause() }
                 }
-            val player = FXAudioItemPlayer(corePlayer)
-
-            try {
-                player.play(audioItem)
-
-                verify { corePlayer.play(audioItem) }
+            ),
+            TransportCase(
+                "stop",
+                AudioItemPlayer.Status.STOPPED,
+                expectedMillis = 0.0,
+                currentTime = Duration.ZERO,
+                act = { player, core ->
+                    player.stop()
+                    verify { core.stop() }
+                }
+            ),
+            TransportCase(
+                "resume",
+                AudioItemPlayer.Status.PLAYING,
+                expectedMillis = 750.0,
+                currentTime = Duration.ofMillis(750),
+                act = { player, core ->
+                    player.resume()
+                    verify { core.resume() }
+                }
+            )
+        ) { case ->
+            val corePlayer = corePlayerMock(case.expectedStatus, case.currentTime, case.total)
+            withPlayer(corePlayer) { player ->
+                case.act(player, corePlayer)
 
                 eventually(1.seconds) {
-                    player.statusProperty.get() shouldBe AudioItemPlayer.Status.PLAYING
-                    player.currentTimeProperty.get().toMillis() shouldBe 100.0
+                    player.statusProperty.get() shouldBe case.expectedStatus
+                    player.currentTimeProperty.get().toMillis() shouldBe case.expectedMillis
                 }
-            } finally {
-                player.dispose()
-                audioItem.path.toFile().delete()
-            }
-        }
-
-        test("pause delegates to core player and syncs status") {
-            val corePlayer =
-                mockk<CoreAudioItemPlayer>(relaxed = true) {
-                    every { status() } returns AudioItemPlayer.Status.PAUSED
-                    every { getCurrentTime() } returns Duration.ofMillis(500)
-                }
-            val player = FXAudioItemPlayer(corePlayer)
-
-            try {
-                player.pause()
-
-                verify { corePlayer.pause() }
-
-                eventually(1.seconds) {
-                    player.statusProperty.get() shouldBe AudioItemPlayer.Status.PAUSED
-                    player.currentTimeProperty.get().toMillis() shouldBe 500.0
-                }
-            } finally {
-                player.dispose()
-            }
-        }
-
-        test("stop delegates to core player and syncs status") {
-            val corePlayer =
-                mockk<CoreAudioItemPlayer>(relaxed = true) {
-                    every { status() } returns AudioItemPlayer.Status.STOPPED
-                    every { getCurrentTime() } returns Duration.ZERO
-                }
-            val player = FXAudioItemPlayer(corePlayer)
-
-            try {
-                player.stop()
-
-                verify { corePlayer.stop() }
-
-                eventually(1.seconds) {
-                    player.statusProperty.get() shouldBe AudioItemPlayer.Status.STOPPED
-                    player.currentTimeProperty.get() shouldBe FxDuration.ZERO
-                }
-            } finally {
-                player.dispose()
-            }
-        }
-
-        test("resume delegates to core player and syncs status") {
-            val corePlayer =
-                mockk<CoreAudioItemPlayer>(relaxed = true) {
-                    every { status() } returns AudioItemPlayer.Status.PLAYING
-                    every { getCurrentTime() } returns Duration.ofMillis(750)
-                }
-            val player = FXAudioItemPlayer(corePlayer)
-
-            try {
-                player.resume()
-
-                verify { corePlayer.resume() }
-
-                eventually(1.seconds) {
-                    player.statusProperty.get() shouldBe AudioItemPlayer.Status.PLAYING
-                    player.currentTimeProperty.get().toMillis() shouldBe 750.0
-                }
-            } finally {
-                player.dispose()
             }
         }
 
         test("setVolume updates FX property and delegates to core player") {
             val corePlayer = mockk<CoreAudioItemPlayer>(relaxed = true)
-            val player = FXAudioItemPlayer(corePlayer)
-
-            try {
+            withPlayer(corePlayer) { player ->
                 player.setVolume(0.75)
 
                 eventually(1.seconds) {
@@ -179,22 +135,16 @@ internal class FXAudioItemPlayerTest : FunSpec({
                 }
 
                 verify { corePlayer.setVolume(0.75) }
-            } finally {
-                player.dispose()
             }
         }
 
         test("seek delegates to core player") {
             val corePlayer = mockk<CoreAudioItemPlayer>(relaxed = true)
-            val player = FXAudioItemPlayer(corePlayer)
             val seekPosition = Duration.ofSeconds(30)
-
-            try {
+            withPlayer(corePlayer) { player ->
                 player.seek(seekPosition)
 
                 verify { corePlayer.seek(seekPosition) }
-            } finally {
-                player.dispose()
             }
         }
 
@@ -212,7 +162,6 @@ internal class FXAudioItemPlayerTest : FunSpec({
 
         test("play throws UnsupportedAudioPlaybackException for non-existent file") {
             // Use real CoreAudioItemPlayer to test actual file validation
-            val player = FXAudioItemPlayer()
             val nonExistentFile = Files.createTempFile("corrupt-audio", ".mp3").also { it.toFile().delete() }
             val item =
                 mockk<ReactiveAudioItem<*>>(relaxed = true) {
@@ -224,142 +173,86 @@ internal class FXAudioItemPlayerTest : FunSpec({
                     every { path } returns nonExistentFile
                 }
 
-            try {
+            withPlayer(FXAudioItemPlayer()) { player ->
                 shouldThrow<UnsupportedAudioPlaybackException> {
                     player.play(item)
                 }
-            } finally {
-                player.dispose()
             }
         }
     }
 
     context("detectCodec delegates to AudioItemPlayer") {
-
-        test("detects AAC codec for M4A files") {
-            val m4a =
-                mockk<ReactiveAudioItem<*>>(relaxed = true) {
-                    every { extension } returns "m4a"
-                    every { encoding } returns "AAC"
-                    every { encoder } returns null
-                }
-            val codec = AudioItemPlayer.detectCodec(m4a)
-            codec shouldBe AudioItemPlayer.detectCodec(m4a)
-            codec shouldBe AudioFileCodec.AAC
-        }
-
-        test("detects primary codec for single-codec formats") {
-            val mp3 =
-                mockk<ReactiveAudioItem<*>>(relaxed = true) {
-                    every { extension } returns "mp3"
-                    every { encoding } returns "MPEG-1 Layer 3"
-                    every { encoder } returns null
-                }
-            val wav =
-                mockk<ReactiveAudioItem<*>>(relaxed = true) {
-                    every { extension } returns "wav"
-                    every { encoding } returns "PCM"
-                    every { encoder } returns null
-                }
-            val flac =
-                mockk<ReactiveAudioItem<*>>(relaxed = true) {
-                    every { extension } returns "flac"
-                    every { encoding } returns "FLAC"
-                    every { encoder } returns null
-                }
-            val ogg =
-                mockk<ReactiveAudioItem<*>>(relaxed = true) {
-                    every { extension } returns "ogg"
-                    every { encoding } returns "Vorbis"
-                    every { encoder } returns null
-                }
-
-            AudioItemPlayer.detectCodec(mp3) shouldBe AudioFileCodec.MP3
-            AudioItemPlayer.detectCodec(mp3) shouldBe AudioFileCodec.MP3
-            AudioItemPlayer.detectCodec(wav) shouldBe AudioFileCodec.PCM
-            AudioItemPlayer.detectCodec(wav) shouldBe AudioFileCodec.PCM
-            AudioItemPlayer.detectCodec(flac) shouldBe AudioFileCodec.FLAC
-            AudioItemPlayer.detectCodec(flac) shouldBe AudioFileCodec.FLAC
-            AudioItemPlayer.detectCodec(ogg) shouldBe AudioFileCodec.VORBIS
-            AudioItemPlayer.detectCodec(ogg) shouldBe AudioFileCodec.VORBIS
-        }
-
-        test("detects ALAC by Apple encoding prefix") {
+        withData(
+            nameFn = { it.name },
+            // container-only single-codec formats
+            CodecCase("detects MP3 for mp3 files", "mp3", "MPEG-1 Layer 3", null, AudioFileCodec.MP3),
+            CodecCase("detects PCM for wav files", "wav", "PCM", null, AudioFileCodec.PCM),
+            CodecCase("detects Vorbis for ogg files", "ogg", "Vorbis", null, AudioFileCodec.VORBIS),
+            // AAC / ALAC / FLAC / Opus by encoding
+            CodecCase("detects AAC for M4A files", "m4a", "AAC", null, AudioFileCodec.AAC),
+            CodecCase("detects ALAC by Apple encoding prefix", "m4a", "Apple ALAC", null, AudioFileCodec.ALAC, expectedPlayable = false),
+            CodecCase("codec patterns match case-insensitively", "m4a", "apple alac", null, AudioFileCodec.ALAC),
+            CodecCase("detects AAC via MPEG-4 encoding prefix", "m4a", "MPEG-4 AAC", null, AudioFileCodec.AAC, expectedPlayable = true),
+            // Regression: encoder = "iTunes ..." must not be treated as proof of ALAC; a regular AAC
+            // M4A from iTunes carries an "iTunes ..." encoder too.
+            CodecCase("iTunes-encoded AAC files remain playable AAC", "m4a", "AAC", "iTunes 12.10", AudioFileCodec.AAC, expectedPlayable = true),
+            CodecCase("detects Opus encoding regardless of container", "ogg", "Opus", null, AudioFileCodec.OPUS, expectedPlayable = false),
+            CodecCase("detects FLAC-in-M4A as FLAC and marks it unplayable", "m4a", "FLAC", null, AudioFileCodec.FLAC, expectedPlayable = false),
+            CodecCase("native FLAC files remain playable", "flac", "FLAC", null, AudioFileCodec.FLAC, expectedPlayable = true)
+        ) { (_, ext, encodingValue, encoderValue, expectedCodec, expectedPlayable) ->
             val item =
                 mockk<ReactiveAudioItem<*>>(relaxed = true) {
-                    every { extension } returns "m4a"
-                    every { encoding } returns "Apple ALAC"
-                    every { encoder } returns null
+                    every { extension } returns ext
+                    every { encoding } returns encodingValue
+                    every { encoder } returns encoderValue
                 }
-            AudioItemPlayer.detectCodec(item) shouldBe AudioFileCodec.ALAC
-            AudioItemPlayer.isPlayable(item) shouldBe false
-        }
 
-        test("iTunes-encoded AAC files remain playable and detected as AAC") {
-            // Regression: encoder = "iTunes ..." must not be treated as proof of ALAC;
-            // a regular AAC M4A from iTunes has encoder set to "iTunes ..." as well.
-            val item =
-                mockk<ReactiveAudioItem<*>>(relaxed = true) {
-                    every { extension } returns "m4a"
-                    every { encoding } returns "AAC"
-                    every { encoder } returns "iTunes 12.10"
-                }
-            AudioItemPlayer.detectCodec(item) shouldBe AudioFileCodec.AAC
-            AudioItemPlayer.isPlayable(item) shouldBe true
-        }
-
-        test("detects Opus encoding regardless of container") {
-            val item =
-                mockk<ReactiveAudioItem<*>>(relaxed = true) {
-                    every { extension } returns "ogg"
-                    every { encoding } returns "Opus"
-                    every { encoder } returns null
-                }
-            AudioItemPlayer.detectCodec(item) shouldBe AudioFileCodec.OPUS
-            AudioItemPlayer.isPlayable(item) shouldBe false
-        }
-
-        test("detects FLAC-in-M4A as FLAC and marks it unplayable") {
-            val item =
-                mockk<ReactiveAudioItem<*>>(relaxed = true) {
-                    every { extension } returns "m4a"
-                    every { encoding } returns "FLAC"
-                    every { encoder } returns null
-                }
-            AudioItemPlayer.detectCodec(item) shouldBe AudioFileCodec.FLAC
-            AudioItemPlayer.isPlayable(item) shouldBe false
-        }
-
-        test("native FLAC files remain playable") {
-            val item =
-                mockk<ReactiveAudioItem<*>>(relaxed = true) {
-                    every { extension } returns "flac"
-                    every { encoding } returns "FLAC"
-                    every { encoder } returns null
-                }
-            AudioItemPlayer.detectCodec(item) shouldBe AudioFileCodec.FLAC
-            AudioItemPlayer.isPlayable(item) shouldBe true
-        }
-
-        test("codec patterns match case-insensitively") {
-            val lowerApple =
-                mockk<ReactiveAudioItem<*>>(relaxed = true) {
-                    every { extension } returns "m4a"
-                    every { encoding } returns "apple alac"
-                    every { encoder } returns null
-                }
-            AudioItemPlayer.detectCodec(lowerApple) shouldBe AudioFileCodec.ALAC
-        }
-
-        test("detects AAC via MPEG-4 encoding prefix") {
-            val item =
-                mockk<ReactiveAudioItem<*>>(relaxed = true) {
-                    every { extension } returns "m4a"
-                    every { encoding } returns "MPEG-4 AAC"
-                    every { encoder } returns null
-                }
-            AudioItemPlayer.detectCodec(item) shouldBe AudioFileCodec.AAC
-            AudioItemPlayer.isPlayable(item) shouldBe true
+            // detectCodec is a pure function of tag state; asserting twice pins its idempotence.
+            AudioItemPlayer.detectCodec(item) shouldBe expectedCodec
+            AudioItemPlayer.detectCodec(item) shouldBe expectedCodec
+            expectedPlayable?.let { AudioItemPlayer.isPlayable(item) shouldBe it }
         }
     }
 })
+
+private data class CodecCase(
+    val name: String,
+    val extension: String,
+    val encoding: String,
+    val encoder: String?,
+    val expectedCodec: AudioFileCodec,
+    val expectedPlayable: Boolean? = null
+)
+
+private class TransportCase(
+    val name: String,
+    val expectedStatus: AudioItemPlayer.Status,
+    val expectedMillis: Double,
+    val currentTime: Duration,
+    val total: Duration = Duration.ZERO,
+    val act: (FXAudioItemPlayer, CoreAudioItemPlayer) -> Unit
+)
+
+/** Builds a relaxed [CoreAudioItemPlayer] mock stubbing the three properties the FX player mirrors. */
+private fun corePlayerMock(
+    status: AudioItemPlayer.Status,
+    currentTime: Duration,
+    total: Duration = Duration.ZERO
+): CoreAudioItemPlayer =
+    mockk(relaxed = true) {
+        every { status() } returns status
+        every { getCurrentTime() } returns currentTime
+        every { totalDuration } returns total
+    }
+
+/** Runs [block] against a freshly-wrapped [FXAudioItemPlayer], disposing it afterward (mirrors `.use`). */
+private suspend fun withPlayer(core: CoreAudioItemPlayer, block: suspend (FXAudioItemPlayer) -> Unit) =
+    withPlayer(FXAudioItemPlayer(core), block)
+
+private suspend fun withPlayer(player: FXAudioItemPlayer, block: suspend (FXAudioItemPlayer) -> Unit) {
+    try {
+        block(player)
+    } finally {
+        player.dispose()
+    }
+}

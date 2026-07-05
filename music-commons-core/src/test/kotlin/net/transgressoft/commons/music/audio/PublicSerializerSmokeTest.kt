@@ -25,6 +25,7 @@ import net.transgressoft.commons.persistence.music.audio.AudioItemMapSerializer
 import net.transgressoft.commons.persistence.music.playlist.AudioPlaylistMapSerializer
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.maps.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import kotlinx.serialization.json.Json
@@ -37,17 +38,33 @@ import kotlinx.serialization.json.Json
 @DisplayName("Public serializer symbols")
 internal class PublicSerializerSmokeTest : StringSpec({
 
-    val files = virtualFiles()
     val json = Json { }
 
-    "AudioItemMapSerializer round-trips an empty map" {
-        val encoded = json.encodeToString(AudioItemMapSerializer, emptyMap())
-        json.decodeFromString(AudioItemMapSerializer, encoded) shouldHaveSize 0
-    }
+    data class EmptyMapCase(
+        val name: String,
+        val encodeEmpty: () -> String,
+        val decodeAndAssertEmpty: (String) -> Unit
+    )
 
-    "AudioPlaylistMapSerializer round-trips an empty map" {
-        val encoded = json.encodeToString(AudioPlaylistMapSerializer, emptyMap<Int, MutableAudioPlaylist>())
-        json.decodeFromString(AudioPlaylistMapSerializer, encoded) shouldHaveSize 0
+    withData(
+        nameFn = { "${it.name} round-trips an empty map" },
+        EmptyMapCase(
+            "AudioItemMapSerializer",
+            { json.encodeToString(AudioItemMapSerializer, emptyMap()) },
+            { json.decodeFromString(AudioItemMapSerializer, it) shouldHaveSize 0 }
+        ),
+        EmptyMapCase(
+            "AudioPlaylistMapSerializer",
+            { json.encodeToString(AudioPlaylistMapSerializer, emptyMap<Int, MutableAudioPlaylist>()) },
+            { json.decodeFromString(AudioPlaylistMapSerializer, it) shouldHaveSize 0 }
+        ),
+        EmptyMapCase(
+            "AudioWaveformMapSerializer",
+            { json.encodeToString(AudioWaveformMapSerializer, emptyMap<Int, AudioWaveform>()) },
+            { json.decodeFromString(AudioWaveformMapSerializer, it) shouldHaveSize 0 }
+        )
+    ) { case ->
+        case.decodeAndAssertEmpty(case.encodeEmpty())
     }
 
     "AudioPlaylistMapSerializer round-trips a single playlist" {
@@ -62,15 +79,5 @@ internal class PublicSerializerSmokeTest : StringSpec({
         decoded[playlist.id]?.name shouldBe "Smoke"
 
         hierarchy.close()
-    }
-
-    "AudioWaveformMapSerializer round-trips an empty map" {
-        val encoded = json.encodeToString(AudioWaveformMapSerializer, emptyMap<Int, AudioWaveform>())
-        json.decodeFromString(AudioWaveformMapSerializer, encoded) shouldHaveSize 0
-    }
-
-    // Touch the virtualFiles fixture so test infrastructure resolves consistently with sibling tests.
-    "virtual filesystem fixture is reachable for serializer smoke tests" {
-        files.fileSystem shouldBe files.fileSystem
     }
 })

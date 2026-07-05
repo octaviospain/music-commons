@@ -25,8 +25,11 @@ import net.transgressoft.lirp.event.LirpErrorHandler
 import net.transgressoft.lirp.event.LirpOperation
 import net.transgressoft.lirp.persistence.VolatileRepository
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.inspectors.forAll
+import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldNotBeInstanceOf
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import java.util.concurrent.CopyOnWriteArrayList
@@ -78,13 +81,14 @@ internal class LirpErrorHandlerTest : StringSpec({
 
         latch.await(5, TimeUnit.SECONDS) shouldBe true
 
-        capturedInvocations.isEmpty() shouldBe false
+        capturedInvocations.shouldNotBeEmpty()
         val (throwable, ctx) = capturedInvocations.first()
         throwable shouldNotBe null
         ctx.operation shouldBe LirpOperation.EMIT
         ctx.repository shouldBe "AudioLibrary-error-test"
-        // LirpErrorContext never carries entity field values — only identity information
-        ctx.entityIds shouldNotBe null
+        // LirpErrorContext never carries entity field values — only identity information such as
+        // primitive ids. Assert no element is a full entity (AudioItem) to lock the contract in.
+        ctx.entityIds.forAll { it.shouldNotBeInstanceOf<AudioItem>() }
     }
 
     "LirpErrorHandler does not alter control flow — library continues operating after failure" {
@@ -112,6 +116,6 @@ internal class LirpErrorHandlerTest : StringSpec({
 
         handlerFired.await(5, TimeUnit.SECONDS) shouldBe true
         successLatch.await(5, TimeUnit.SECONDS) shouldBe true
-        successfulDeliveries.isEmpty() shouldBe false
+        successfulDeliveries.shouldNotBeEmpty()
     }
 })

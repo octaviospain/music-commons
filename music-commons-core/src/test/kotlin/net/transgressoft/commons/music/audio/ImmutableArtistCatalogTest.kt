@@ -19,7 +19,6 @@ package net.transgressoft.commons.music.audio
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainOnly
-import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.property.Arb
@@ -164,16 +163,16 @@ internal class ImmutableArtistCatalogTest : StringSpec({
     }
 
     "ImmutableArtistCatalog hashCode differs when items differ" {
-        val audioItem1 = createAudioItem(files.virtualAudioFile().next())
-        val audioItem2 = createAudioItem(files.virtualAudioFile().next())
+        val firstArtist = Artist.of("A")
+        val secondArtist = Artist.of("B")
+        val item1 = Arb.audioItem { artist = firstArtist }.next()
+        val item2 = Arb.audioItem { artist = secondArtist }.next()
 
-        val catalog1 = ImmutableArtistCatalog(audioItem1.artist, listOf(audioItem1))
-        val catalog2 = ImmutableArtistCatalog(audioItem2.artist, listOf(audioItem2))
+        val catalog1 = ImmutableArtistCatalog(firstArtist, listOf(item1))
+        val catalog2 = ImmutableArtistCatalog(secondArtist, listOf(item2))
 
         // Different artists → different hash codes (artist contributes to hash)
-        if (audioItem1.artist != audioItem2.artist) {
-            catalog1.hashCode() shouldNotBe catalog2.hashCode()
-        }
+        catalog1.hashCode() shouldNotBe catalog2.hashCode()
     }
 
     "ImmutableArtistCatalog compareTo orders by artist" {
@@ -202,8 +201,6 @@ internal class ImmutableArtistCatalogTest : StringSpec({
         val catalog = ImmutableArtistCatalog(artist, albumAudioItems)
         val albumName = albumAudioItems.first().album.name
 
-        catalog.albumAudioItems(albumName) should { items ->
-            items.shouldContainOnly(albumAudioItems)
-        }
+        catalog.albumAudioItems(albumName).shouldContainOnly(albumAudioItems)
     }
 })

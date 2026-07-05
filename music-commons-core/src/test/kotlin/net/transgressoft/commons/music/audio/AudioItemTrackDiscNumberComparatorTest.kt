@@ -3,87 +3,47 @@ package net.transgressoft.commons.music.audio
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.audioItemTrackDiscNumberComparator
 import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.ints.shouldBeGreaterThan
-import io.kotest.matchers.ints.shouldBeLessThan
+import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
+import kotlin.math.sign
 
 internal class AudioItemTrackDiscNumberComparatorTest : StringSpec({
 
-    "Sorts items with null disc and track numbers" {
-        val comparator = audioItemTrackDiscNumberComparator<AudioItem>()
+    val comparator = audioItemTrackDiscNumberComparator<AudioItem>()
 
-        // Test both disc numbers null
-        val item1 =
-            mockk<AudioItem> {
-                every { discNumber } returns null
-                every { trackNumber } returns null
-            }
-        val item2 =
-            mockk<AudioItem> {
-                every { discNumber } returns null
-                every { trackNumber } returns null
-            }
-        comparator.compare(item1, item2) shouldBe 0
+    fun item(disc: Short?, track: Short?): AudioItem =
+        mockk {
+            every { discNumber } returns disc
+            every { trackNumber } returns track
+        }
 
-        // Test first disc number null
-        val item3 =
-            mockk<AudioItem> {
-                every { discNumber } returns null
-                every { trackNumber } returns 1
-            }
-        val item4 =
-            mockk<AudioItem> {
-                every { discNumber } returns 1
-                every { trackNumber } returns 1
-            }
-        comparator.compare(item3, item4) shouldBeGreaterThan 0
+    data class Case(
+        val label: String,
+        val disc1: Short?,
+        val track1: Short?,
+        val disc2: Short?,
+        val track2: Short?,
+        val expectedSign: Int
+    )
 
-        // Test second disc number null
-        comparator.compare(item4, item3) shouldBeLessThan 0
+    withData(
+        nameFn = { it.label },
+        Case("both disc numbers null", null, null, null, null, 0),
+        Case("first disc number null orders after", null, 1, 1, 1, 1),
+        Case("second disc number null orders before", 1, 1, null, 1, -1),
+        Case("disc equal and both track numbers null", 1, null, 1, null, 0),
+        Case("disc equal and first track number null orders after", 1, null, 1, 5, 1),
+        Case("disc equal and second track number null orders before", 1, 5, 1, null, -1),
+        Case("disc equal and normal track ordering ascending", 1, 3, 1, 5, -1),
+        Case("disc equal and normal track ordering descending", 1, 5, 1, 3, 1),
+        Case("disc differs and track equal orders by disc ascending", 1, 1, 2, 1, -1),
+        Case("disc differs and track equal orders by disc descending", 2, 1, 1, 1, 1)
+    ) { (_, disc1, track1, disc2, track2, expectedSign) ->
+        val a = item(disc1, track1)
+        val b = item(disc2, track2)
 
-        // Test disc numbers equal, both track numbers null
-        val item5 =
-            mockk<AudioItem> {
-                every { discNumber } returns 1
-                every { trackNumber } returns null
-            }
-        val item6 =
-            mockk<AudioItem> {
-                every { discNumber } returns 1
-                every { trackNumber } returns null
-            }
-        comparator.compare(item5, item6) shouldBe 0
-
-        // Test disc numbers equal, first track number null
-        val item7 =
-            mockk<AudioItem> {
-                every { discNumber } returns 1
-                every { trackNumber } returns null
-            }
-        val item8 =
-            mockk<AudioItem> {
-                every { discNumber } returns 1
-                every { trackNumber } returns 5
-            }
-        comparator.compare(item7, item8) shouldBeGreaterThan 0
-
-        // Test disc numbers equal, second track number null
-        comparator.compare(item8, item7) shouldBeLessThan 0
-
-        // Test normal comparison
-        val item9 =
-            mockk<AudioItem> {
-                every { discNumber } returns 1
-                every { trackNumber } returns 3
-            }
-        val item10 =
-            mockk<AudioItem> {
-                every { discNumber } returns 1
-                every { trackNumber } returns 5
-            }
-        comparator.compare(item9, item10) shouldBeLessThan 0
-        comparator.compare(item10, item9) shouldBeGreaterThan 0
+        comparator.compare(a, b).sign shouldBe expectedSign
     }
 })

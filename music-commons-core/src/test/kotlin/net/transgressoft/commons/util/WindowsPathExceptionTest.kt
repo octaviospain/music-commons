@@ -18,6 +18,7 @@
 package net.transgressoft.commons.util
 
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -43,20 +44,14 @@ internal class WindowsPathExceptionTest : StringSpec({
         ex.message!! shouldContain "forbidden character '|'"
     }
 
-    "WindowsViolation.ForbiddenChar formats with the char in single quotes" {
-        WindowsViolation.ForbiddenChar('*').toString() shouldBe "forbidden character '*'"
-    }
-
-    "WindowsViolation.ReservedName formats with the name in single quotes" {
-        WindowsViolation.ReservedName("NUL").toString() shouldBe "reserved name 'NUL'"
-    }
-
-    "WindowsViolation.TrailingDotOrSpace formats with fixed phrase" {
-        WindowsViolation.TrailingDotOrSpace.toString() shouldBe "trailing dot or space"
-    }
-
-    "WindowsViolation.ExceedsMaxPath formats with MAX_PATH constant" {
-        WindowsViolation.ExceedsMaxPath.toString() shouldBe "exceeds Windows MAX_PATH (260 characters)"
+    withData<Pair<WindowsViolation, String>>(
+        nameFn = { (violation, expected) -> "${violation::class.simpleName} formats as \"$expected\"" },
+        WindowsViolation.ForbiddenChar('*') to "forbidden character '*'",
+        WindowsViolation.ReservedName("NUL") to "reserved name 'NUL'",
+        WindowsViolation.TrailingDotOrSpace to "trailing dot or space",
+        WindowsViolation.ExceedsMaxPath to "exceeds Windows MAX_PATH (260 characters)"
+    ) { (violation, expected) ->
+        violation.toString() shouldBe expected
     }
 
     "InvalidAudioFilePathException(message) delegates to two-arg constructor with null cause" {

@@ -19,7 +19,6 @@ package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.music.audio.MutableAudioItemTestBridge.createAudioItem
 import net.transgressoft.commons.music.testing.reactiveScope
-import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.StandardCrudEvent
@@ -54,18 +53,7 @@ internal class DefaultGenreIndexRegistryTest : StringSpec({
     "DefaultGenreIndexRegistry creates genre catalog when item is added to repository" {
         val artist = Artist.of("Radiohead", CountryCode.UK)
         val album = AlbumDetails("OK Computer", artist)
-        val audioItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    this.artist = artist
-                    this.album = album
-                    genres = setOf(Alternative)
-                    title = "Karma Police"
-                    trackNumber = 4
-                    discNumber = 1
-                }.next(),
-                files.metadataIO
-            )
+        val audioItem = files.catalogItem(artist, album, "Karma Police", setOf(Alternative), track = 4)
 
         repository.add(audioItem)
         reactive.advance()
@@ -85,18 +73,7 @@ internal class DefaultGenreIndexRegistryTest : StringSpec({
         // in each of those buckets at the same time.
         val artist = Artist.of("Radiohead", CountryCode.UK)
         val album = AlbumDetails("Kid A", artist)
-        val audioItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    this.artist = artist
-                    this.album = album
-                    genres = setOf(Rock, Electronic)
-                    title = "Everything in Its Right Place"
-                    trackNumber = 1
-                    discNumber = 1
-                }.next(),
-                files.metadataIO
-            )
+        val audioItem = files.catalogItem(artist, album, "Everything in Its Right Place", setOf(Rock, Electronic))
 
         repository.add(audioItem)
         reactive.advance()
@@ -118,18 +95,7 @@ internal class DefaultGenreIndexRegistryTest : StringSpec({
     "DefaultGenreIndexRegistry untagged item lands in the Genre.None bucket" {
         val artist = Artist.of("Aphex Twin")
         val album = AlbumDetails("Selected Ambient Works", artist)
-        val audioItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    this.artist = artist
-                    this.album = album
-                    genres = emptySet()
-                    title = "Xtal"
-                    trackNumber = 1
-                    discNumber = 1
-                }.next(),
-                files.metadataIO
-            )
+        val audioItem = files.catalogItem(artist, album, "Xtal")
 
         repository.add(audioItem)
         reactive.advance()
@@ -147,18 +113,7 @@ internal class DefaultGenreIndexRegistryTest : StringSpec({
     "DefaultGenreIndexRegistry untagged item moves out of and back into Genre.None bucket as genres change" {
         val artist = Artist.of("Aphex Twin")
         val album = AlbumDetails("Selected Ambient Works", artist)
-        val audioItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    this.artist = artist
-                    this.album = album
-                    genres = emptySet()
-                    title = "Xtal"
-                    trackNumber = 1
-                    discNumber = 1
-                }.next(),
-                files.metadataIO
-            )
+        val audioItem = files.catalogItem(artist, album, "Xtal")
 
         repository.add(audioItem)
         reactive.advance()
@@ -188,18 +143,7 @@ internal class DefaultGenreIndexRegistryTest : StringSpec({
     "DefaultGenreIndexRegistry Genre.None bucket disappears when last untagged item is removed" {
         val artist = Artist.of("Aphex Twin")
         val album = AlbumDetails("Selected Ambient Works", artist)
-        val audioItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    this.artist = artist
-                    this.album = album
-                    genres = emptySet()
-                    title = "Xtal"
-                    trackNumber = 1
-                    discNumber = 1
-                }.next(),
-                files.metadataIO
-            )
+        val audioItem = files.catalogItem(artist, album, "Xtal")
 
         repository.add(audioItem)
         reactive.advance()
@@ -217,18 +161,7 @@ internal class DefaultGenreIndexRegistryTest : StringSpec({
     "DefaultGenreIndexRegistry re-buckets item when genres change via repository UPDATE" {
         val artist = Artist.of("Bjork", CountryCode.IS)
         val album = AlbumDetails("Homogenic", artist)
-        val audioItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    this.artist = artist
-                    this.album = album
-                    genres = setOf(Electronic)
-                    title = "Joga"
-                    trackNumber = 1
-                    discNumber = 1
-                }.next(),
-                files.metadataIO
-            )
+        val audioItem = files.catalogItem(artist, album, "Joga", setOf(Electronic))
         repository.add(audioItem)
         reactive.advance()
         eventually(2.seconds) { registry.findById(Electronic).isPresent shouldBe true }
@@ -246,18 +179,7 @@ internal class DefaultGenreIndexRegistryTest : StringSpec({
     "DefaultGenreIndexRegistry removes genre catalog when last item is removed from repository" {
         val artist = Artist.of("Burial", CountryCode.UK)
         val album = AlbumDetails("Untrue", artist)
-        val audioItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    this.artist = artist
-                    this.album = album
-                    genres = setOf(Electronic)
-                    title = "Archangel"
-                    trackNumber = 1
-                    discNumber = 1
-                }.next(),
-                files.metadataIO
-            )
+        val audioItem = files.catalogItem(artist, album, "Archangel", setOf(Electronic))
         repository.add(audioItem)
         reactive.advance()
         eventually(2.seconds) { registry.findById(Electronic).isPresent shouldBe true }
@@ -274,18 +196,7 @@ internal class DefaultGenreIndexRegistryTest : StringSpec({
     "DefaultGenreIndexRegistry removing multi-genre item removes it from all its genre buckets" {
         val artist = Artist.of("Beck")
         val album = AlbumDetails("Odelay", artist)
-        val audioItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    this.artist = artist
-                    this.album = album
-                    genres = setOf(Alternative, Folk, Rock)
-                    title = "Where Its At"
-                    trackNumber = 5
-                    discNumber = 1
-                }.next(),
-                files.metadataIO
-            )
+        val audioItem = files.catalogItem(artist, album, "Where Its At", setOf(Alternative, Folk, Rock), track = 5)
         repository.add(audioItem)
         reactive.advance()
         eventually(2.seconds) { registry.size() shouldBe 3 }
@@ -302,23 +213,11 @@ internal class DefaultGenreIndexRegistryTest : StringSpec({
     }
 
     "DefaultGenreIndexRegistry emits CREATE event when first item for genre is added" {
-        val receivedEvents = mutableListOf<CrudEvent<Genre, GenreIndex<AudioItem>>>()
-        registry.genreIndexPublisher.subscribe(CREATE) { receivedEvents.add(it) }
+        val receivedEvents = registry.genreIndexPublisher.collect(CREATE)
 
         val artist = Artist.of("Miles Davis")
         val album = AlbumDetails("Kind of Blue", artist)
-        val audioItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    this.artist = artist
-                    this.album = album
-                    genres = setOf(Jazz)
-                    title = "So What"
-                    trackNumber = 1
-                    discNumber = 1
-                }.next(),
-                files.metadataIO
-            )
+        val audioItem = files.catalogItem(artist, album, "So What", setOf(Jazz))
 
         repository.add(audioItem)
         reactive.advance()
@@ -332,24 +231,12 @@ internal class DefaultGenreIndexRegistryTest : StringSpec({
     "DefaultGenreIndexRegistry emits DELETE event when last item of genre is removed" {
         val artist = Artist.of("Coltrane")
         val album = AlbumDetails("Giant Steps", artist)
-        val audioItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    this.artist = artist
-                    this.album = album
-                    genres = setOf(Jazz)
-                    title = "Giant Steps"
-                    trackNumber = 1
-                    discNumber = 1
-                }.next(),
-                files.metadataIO
-            )
+        val audioItem = files.catalogItem(artist, album, "Giant Steps", setOf(Jazz))
         repository.add(audioItem)
         reactive.advance()
         eventually(2.seconds) { registry.findById(Jazz).isPresent shouldBe true }
 
-        val deleteEvents = mutableListOf<CrudEvent<Genre, GenreIndex<AudioItem>>>()
-        registry.genreIndexPublisher.subscribe(DELETE) { deleteEvents.add(it) }
+        val deleteEvents = registry.genreIndexPublisher.collect(DELETE)
 
         repository.remove(audioItem)
         reactive.advance()
@@ -387,42 +274,9 @@ internal class DefaultGenreIndexRegistryTest : StringSpec({
         val artist = Artist.of("Radiohead", CountryCode.UK)
         val album = AlbumDetails("Kid A", artist)
 
-        val untaggedItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    this.artist = artist
-                    this.album = album
-                    genres = emptySet()
-                    title = "How to Disappear Completely"
-                    trackNumber = 3
-                    discNumber = 1
-                }.next(),
-                files.metadataIO
-            )
-        val customGenreItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    this.artist = artist
-                    this.album = album
-                    genres = setOf(Genre.Custom("Experimental"))
-                    title = "Idioteque"
-                    trackNumber = 8
-                    discNumber = 1
-                }.next(),
-                files.metadataIO
-            )
-        val electronicItem =
-            createAudioItem(
-                files.virtualAudioFile {
-                    this.artist = artist
-                    this.album = album
-                    genres = setOf(Electronic)
-                    title = "Everything in Its Right Place"
-                    trackNumber = 1
-                    discNumber = 1
-                }.next(),
-                files.metadataIO
-            )
+        val untaggedItem = files.catalogItem(artist, album, "How to Disappear Completely", track = 3)
+        val customGenreItem = files.catalogItem(artist, album, "Idioteque", setOf(Genre.Custom("Experimental")), track = 8)
+        val electronicItem = files.catalogItem(artist, album, "Everything in Its Right Place", setOf(Electronic))
 
         // Add out of natural order to verify projection orders by key
         repository.add(customGenreItem)
@@ -444,42 +298,9 @@ internal class DefaultGenreIndexRegistryTest : StringSpec({
         val albumA = AlbumDetails("Selected Ambient Works", artistA)
         val albumB = AlbumDetails("Homogenic", artistB)
 
-        val itemArtistATrack1 =
-            createAudioItem(
-                files.virtualAudioFile {
-                    this.artist = artistA
-                    this.album = albumA
-                    genres = setOf(Electronic)
-                    title = "Xtal"
-                    trackNumber = 1
-                    discNumber = 1
-                }.next(),
-                files.metadataIO
-            )
-        val itemArtistBTrack1 =
-            createAudioItem(
-                files.virtualAudioFile {
-                    this.artist = artistB
-                    this.album = albumB
-                    genres = setOf(Electronic)
-                    title = "Joga"
-                    trackNumber = 1
-                    discNumber = 1
-                }.next(),
-                files.metadataIO
-            )
-        val itemArtistATrack2 =
-            createAudioItem(
-                files.virtualAudioFile {
-                    this.artist = artistA
-                    this.album = albumA
-                    genres = setOf(Electronic)
-                    title = "Tha"
-                    trackNumber = 2
-                    discNumber = 1
-                }.next(),
-                files.metadataIO
-            )
+        val itemArtistATrack1 = files.catalogItem(artistA, albumA, "Xtal", setOf(Electronic))
+        val itemArtistBTrack1 = files.catalogItem(artistB, albumB, "Joga", setOf(Electronic))
+        val itemArtistATrack2 = files.catalogItem(artistA, albumA, "Tha", setOf(Electronic), track = 2)
 
         // Add in mixed order
         repository.add(itemArtistBTrack1)

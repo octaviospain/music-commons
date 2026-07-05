@@ -9,12 +9,12 @@ import net.transgressoft.commons.music.audio.Rock
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.persistence.VolatileRepository
+import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.optional.shouldBeEmpty
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import io.kotest.property.arbitrary.next
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
@@ -40,86 +40,32 @@ internal class FXGenreIndexTest : StringSpec({
         FxToolkit.registerPrimaryStage()
     }
 
-    "FXGenreIndex returns false for equals when track list differs" {
-        val path =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-                this.genres = setOf(genre)
-            }.next()
-        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
-
-        val index1 = FXGenreIndex(genre, listOf(audioItem))
-        val index2 = FXGenreIndex(genre, emptyList())
-
-        index1 shouldNotBe index2
-    }
-
-    "FXGenreIndex returns true for equals when genre and track list match" {
-        val path =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-                this.genres = setOf(genre)
-            }.next()
-        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
-
-        val index1 = FXGenreIndex(genre, listOf(audioItem))
-        val index2 = FXGenreIndex(genre, listOf(audioItem))
-
-        index1 shouldBe index2
-    }
-
-    "FXGenreIndex produces different hashCode when track list differs" {
-        val path =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-                this.genres = setOf(genre)
-            }.next()
-        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
-
-        val index1 = FXGenreIndex(genre, listOf(audioItem))
-        val index2 = FXGenreIndex(genre, emptyList())
-
-        index1.hashCode() shouldNotBe index2.hashCode()
-    }
-
-    "FXGenreIndex clone produces an equal but distinct instance" {
-        val path =
-            files.virtualAudioFile {
-                this.artist = artist
-                this.album = album
-                this.genres = setOf(genre)
-            }.next()
-        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
-        val index = FXGenreIndex(genre, listOf(audioItem))
-
-        val cloned = index.clone()
-
-        cloned shouldBe index
-        (cloned === index) shouldBe false
-    }
+    flatBucketEqualitySemantics(
+        label = "FXGenreIndex",
+        buildFromItems = { FXGenreIndex(genre, it) },
+        buildItem = {
+            files.makeItem(artist, album, genres = setOf(genre))
+        },
+        clone = { it.clone() }
+    )
 
     "FXGenreIndex preserves all items from the input list verbatim" {
-        val path1 =
-            files.virtualAudioFile {
+        val firstAudioItem =
+            files.makeItem(id = 1) {
                 this.artist = artist
                 this.album = album
                 this.genres = setOf(genre)
                 trackNumber = 1
                 discNumber = 1
-            }.next()
-        val path2 =
-            files.virtualAudioFile {
+            }
+        val secondAudioItem =
+            files.makeItem(id = 2) {
                 this.artist = artist
                 this.album = album
                 this.genres = setOf(genre)
                 trackNumber = 2
                 discNumber = 1
-            }.next()
-        val firstAudioItem = FXAudioItemTestBridge.createFxAudioItem(path1, 1, files.metadataIO)
-        val secondAudioItem = FXAudioItemTestBridge.createFxAudioItem(path2, 2, files.metadataIO)
+            }
 
         val index = FXGenreIndex(genre, listOf(firstAudioItem, secondAudioItem))
 
@@ -128,14 +74,13 @@ internal class FXGenreIndexTest : StringSpec({
     }
 
     "FXGenreIndex multi-key: item with two genres appears in both genre buckets" {
-        val path =
-            files.virtualAudioFile {
+        val audioItem =
+            files.makeItem {
                 this.artist = artist
                 this.album = album
                 title = "Crossover Track"
                 this.genres = setOf(Rock, Jazz)
-            }.next()
-        val audioItem = FXAudioItemTestBridge.createFxAudioItem(path, files.metadataIO)
+            }
 
         val rockIndex = FXGenreIndex(Rock, listOf(audioItem))
         val jazzIndex = FXGenreIndex(Jazz, listOf(audioItem))
@@ -165,40 +110,38 @@ internal class FXGenreIndexTest : StringSpec({
     }
 
     "FXGenreIndex observable properties are populated at construction with correct values" {
-        val paths =
-            (1..10).map {
-                files.virtualAudioFile {
-                    this.artist = artist
-                    this.album = album
-                    this.genres = setOf(genre)
-                }.next()
-            }
-        val items = paths.map { FXAudioItemTestBridge.createFxAudioItem(it, files.metadataIO) }
+        val items = (1..10).map { files.makeItem(artist, album, genres = setOf(genre)) }
 
         val index = FXGenreIndex(genre, items)
 
         WaitForAsyncUtils.waitForFxEvents()
 
-        index.sizeProperty.get() shouldBe items.size
-        index.emptyProperty.get() shouldBe false
-        index.genreProperty.get() shouldBe genre
-        index.tracksProperty shouldHaveSize items.size
+        assertSoftly {
+            index.sizeProperty.get() shouldBe items.size
+            index.emptyProperty.get() shouldBe false
+            index.genreProperty.get() shouldBe genre
+            index.tracksProperty shouldHaveSize items.size
+        }
     }
 
     "FXGenreIndex returns false for equals with different types or null" {
         val index = FXGenreIndex(genre, emptyList())
 
-        (index.equals(null)) shouldBe false
-        (index.equals("not an index")) shouldBe false
+        assertSoftly {
+            (index.equals(null)) shouldBe false
+            (index.equals("not an index")) shouldBe false
+        }
     }
 
     "FXGenreIndex exposes empty and genre properties consistent with an empty state" {
         val index = FXGenreIndex(genre, emptyList())
 
-        index.emptyProperty.get() shouldBe true
-        index.genreProperty.get() shouldBe genre
-        index.uniqueId shouldBe genre.name
-        index.compareTo(FXGenreIndex(genre, emptyList())) shouldBe 0
+        assertSoftly {
+            index.emptyProperty.get() shouldBe true
+            index.genreProperty.get() shouldBe genre
+            index.uniqueId shouldBe genre.name
+            index.compareTo(FXGenreIndex(genre, emptyList())) shouldBe 0
+        }
     }
 
     "FXAudioLibrary places untagged item in Genre.None bucket" {

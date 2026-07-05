@@ -23,8 +23,10 @@ import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.AudioFileTagType.ID3_V_24
 import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.lirp.persistence.sql.SqliteRepository
+import io.kotest.assertions.assertSoftly
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
@@ -68,17 +70,19 @@ internal class FXAudioItemSqlTableDefTest : StringSpec({
 
         reloadedLibrary.audioLibrary().forEach { loaded: ObservableAudioItem ->
             val original = byId.getValue(loaded.id)
-            loaded.path shouldBe original.path
-            loaded.title shouldBe original.title
-            loaded.duration shouldBe original.duration
-            loaded.bitRate shouldBe original.bitRate
-            loaded.artist.name shouldBe original.artist.name
-            loaded.artist.countryCode shouldBe original.artist.countryCode
-            loaded.album.name shouldBe original.album.name
-            loaded.album.label.countryCode shouldBe original.album.label.countryCode
-            loaded.genres shouldBe original.genres
-            loaded.trackNumber shouldBe original.trackNumber
-            loaded.discNumber shouldBe original.discNumber
+            assertSoftly {
+                loaded.path shouldBe original.path
+                loaded.title shouldBe original.title
+                loaded.duration shouldBe original.duration
+                loaded.bitRate shouldBe original.bitRate
+                loaded.artist.name shouldBe original.artist.name
+                loaded.artist.countryCode shouldBe original.artist.countryCode
+                loaded.album.name shouldBe original.album.name
+                loaded.album.label.countryCode shouldBe original.album.label.countryCode
+                loaded.genres shouldBe original.genres
+                loaded.trackNumber shouldBe original.trackNumber
+                loaded.discNumber shouldBe original.discNumber
+            }
         }
 
         reloadedLibrary.close()
@@ -117,11 +121,13 @@ internal class FXAudioItemSqlTableDefTest : StringSpec({
 
         val loaded = reloadedLibrary.audioLibrary().findById(id).orElse(null)
         loaded.shouldNotBeNull()
-        loaded.playCount shouldBe expectedPlayCount
-        loaded.comments shouldBe expectedComments
-        loaded.bpm shouldBe expectedBpm
-        loaded.dateOfCreation.truncatedTo(ChronoUnit.SECONDS) shouldBe expectedCreation
-        loaded.lastDateModified.truncatedTo(ChronoUnit.SECONDS) shouldBe expectedModified
+        assertSoftly {
+            loaded.playCount shouldBe expectedPlayCount
+            loaded.comments shouldBe expectedComments
+            loaded.bpm shouldBe expectedBpm
+            loaded.dateOfCreation.truncatedTo(ChronoUnit.SECONDS) shouldBe expectedCreation
+            loaded.lastDateModified.truncatedTo(ChronoUnit.SECONDS) shouldBe expectedModified
+        }
 
         reloadedLibrary.close()
     }
@@ -158,8 +164,8 @@ internal class FXAudioItemSqlTableDefTest : StringSpec({
     }
 
     "FXAudioItemSqlTableDef declares the constructor-param columns the in-base raw constructor expects" {
-        val columnNames = FXAudioItemSqlTableDef.columns.map { it.name }.toSet()
-        columnNames.containsAll(listOf("path", "id", "date_of_creation", "play_count")) shouldBe true
+        val columnNames = FXAudioItemSqlTableDef.columns.map { it.name }
+        columnNames shouldContainAll listOf("path", "id", "date_of_creation", "play_count")
         FXAudioItemSqlTableDef.entityClassName shouldBe "net.transgressoft.commons.fx.music.audio.FXAudioItem"
     }
 })
