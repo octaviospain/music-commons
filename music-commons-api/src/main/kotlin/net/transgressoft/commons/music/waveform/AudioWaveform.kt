@@ -29,6 +29,7 @@ import kotlinx.coroutines.Dispatchers
  */
 interface AudioWaveform : ReactiveEntity<Int, AudioWaveform> {
 
+    /** Absolute path to the audio file from which this waveform was derived. */
     val audioFilePath: Path
 
     /**
@@ -46,7 +47,14 @@ interface AudioWaveform : ReactiveEntity<Int, AudioWaveform> {
     suspend fun amplitudes(width: Int, height: Int, dispatcher: CoroutineDispatcher = Dispatchers.IO): FloatArray
 
     /**
-     * Creates a visual image of the waveform with the specified colors and dimensions.
+     * Renders the waveform as an image file with the specified colors and dimensions.
+     *
+     * @param outputFile destination file to write the image to
+     * @param waveformColor color used to draw the amplitude bars
+     * @param backgroundColor color used to fill the image background
+     * @param width image width in pixels
+     * @param height image height in pixels
+     * @param dispatcher the coroutine dispatcher on which rendering runs; defaults to [Dispatchers.IO]
      */
     suspend fun createImage(
         outputFile: File,

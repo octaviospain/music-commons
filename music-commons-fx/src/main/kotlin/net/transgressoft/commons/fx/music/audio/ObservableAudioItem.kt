@@ -42,29 +42,47 @@ import java.util.Optional
  */
 interface ObservableAudioItem : ReactiveAudioItem<ObservableAudioItem> {
 
+    /** Observable property exposing the track title. */
     val titleProperty: StringProperty
 
+    /** Observable property exposing the primary [Artist] of the track. */
     val artistProperty: ObjectProperty<Artist>
 
+    /** Observable property exposing the [AlbumDetails] the track belongs to. */
     val albumProperty: ObjectProperty<AlbumDetails>
 
+    /** Observable property exposing the set of [Genre]s assigned to the track. */
     val genresProperty: ObjectProperty<Set<Genre>>
 
+    /** Observable property exposing the track's free-text comments field. */
     val commentsProperty: StringProperty
 
+    /** Observable property exposing the track number within its disc. */
     val trackNumberProperty: IntegerProperty
 
+    /** Observable property exposing the disc number within its release. */
     val discNumberProperty: IntegerProperty
 
+    /** Observable property exposing the beats-per-minute value of the track. */
     val bpmProperty: FloatProperty
 
+    /**
+     * Observable property exposing the cover image wrapped in an [Optional].
+     *
+     * Attaching a listener or reading the value for the first time triggers a lazy load of the
+     * cover image from the underlying audio file metadata when the item is wired to a library.
+     */
     val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>>
 
+    /** Observable property exposing the full set of [Artist]s involved in the track, derived from title, artist, and album-artist fields. */
     val artistsInvolvedProperty: ReadOnlySetProperty<Artist>
 
+    /** Observable property exposing the date and time the track metadata was last modified. */
     val lastDateModifiedProperty: ReadOnlyObjectProperty<LocalDateTime>
 
+    /** Observable property exposing the date and time the track was first added to the library. */
     val dateOfCreationProperty: ReadOnlyProperty<LocalDateTime>
 
+    /** Observable property exposing the number of times the track has been played. */
     val playCountProperty: ReadOnlyIntegerProperty
 }

@@ -1,0 +1,30 @@
+# Compile-dependency flow between modules. Arrow A -> B means "A depends on B".
+# Render: d2 d2/dependency-flow.d2 ../music-commons.wiki/images/dependency-flow.svg
+
+direction: right
+
+title: |md
+  # Module dependency flow
+| {near: top-center}
+
+api: music-commons-api {style.fill: "#eef6ff"}
+core: music-commons-core {style.fill: "#eef6ff"}
+fx: music-commons-fx {style.fill: "#eef6ff"}
+media: music-commons-media {style.fill: "#eef6ff"}
+persistence: music-commons-persistence {style.fill: "#f3fff0"}
+persistence_fx: music-commons-persistence-fx {style.fill: "#f3fff0"}
+lirp_sql: lirp-sql {style.fill: "#fff7e6"}
+
+core -> api: depends on
+fx -> core
+media -> core
+persistence -> core
+persistence_fx -> fx
+persistence_fx -> persistence
+persistence -> lirp_sql
+persistence_fx -> lirp_sql
+
+note: |md
+  The four reactive modules (api, core, fx, media) keep **lirp-sql** off their
+  compile classpaths — SQL mapping lives only in the persistence modules.
+| {near: bottom-center; style.font-size: 13}

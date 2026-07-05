@@ -17,16 +17,20 @@ This module bridges the reactive music-commons-core with JavaFX's property bindi
 
 ### Observable Audio Library
 
+`FXMusicLibrary.builder()` is the entry point; `ObservableAudioLibrary`/`ObservablePlaylistHierarchy`
+are interfaces exposed by the facade, not directly constructed.
+
 ```kotlin
-val repository = JsonFileRepository(file, ObservableAudioItemMapSerializer)
-val audioLibrary = ObservableAudioLibrary(repository)
+val library = FXMusicLibrary.builder()
+    .audioRepository(JsonFileRepository(file, ObservableAudioItemMapSerializer))
+    .build()
 
 // Bind to UI components
-tableView.itemsProperty().bind(audioLibrary.audioItemsProperty)
-emptyLabel.visibleProperty().bind(audioLibrary.emptyLibraryProperty)
+tableView.itemsProperty().bind(library.audioItemsProperty)
+emptyLabel.visibleProperty().bind(library.emptyLibraryProperty)
 
 // Create audio items
-val audioItem = audioLibrary.createFromFile(audioFilePath)
+val audioItem = library.audioItemFromFile(audioFilePath)
 
 // Property changes automatically update the UI
 audioItem.titleProperty.set("New Title")    // TableView updates automatically
@@ -36,8 +40,10 @@ audioItem.title = "Another Title"           // Also triggers JavaFX property upd
 ### Observable Playlists
 
 ```kotlin
-val playlistRepository = JsonFileRepository(file, ObservablePlaylistMapSerializer)
-val playlistHierarchy = ObservablePlaylistHierarchy(playlistRepository, audioLibrary)
+val library = FXMusicLibrary.builder()
+    .playlistRepository(JsonFileRepository(file, ObservablePlaylistMapSerializer))
+    .build()
+val playlistHierarchy = library.playlistHierarchy()
 
 // Bind playlist collection to UI
 listView.itemsProperty().bind(playlistHierarchy.playlistsProperty)
@@ -61,7 +67,7 @@ playlistTableView.itemsProperty().bind(playlist.audioItemsProperty)
 ### Audio Playback
 
 ```kotlin
-val player = JavaFxPlayer()
+val player = FXAudioItemPlayer()
 
 // Bind player properties to UI
 playButton.disableProperty().bind(
@@ -79,7 +85,7 @@ timeSlider.valueProperty().bind(
 player.play(audioItem)  // Automatically increments play count at 60% threshold
 
 // Subscribe to playback events
-audioLibrary.playerSubscriber.addOnNextEventAction(PLAYED) { event ->
+library.playerSubscriber.addOnNextEventAction(PLAYED) { event ->
     println("Played: ${event.entities.values.first().title}")
 }
 ```
@@ -171,9 +177,9 @@ Observable components use the same serialization as core components:
 val json = Json.encodeToString(audioLibrary.findAll())
 
 // Deserialize and restore JavaFX bindings
-val restoredLibrary = ObservableAudioLibrary(
-    JsonFileRepository(file, ObservableAudioItemMapSerializer)
-)
+val restoredLibrary = FXMusicLibrary.builder()
+    .audioRepository(JsonFileRepository(file, ObservableAudioItemMapSerializer))
+    .build()
 ```
 
 ## Dependencies
@@ -192,13 +198,13 @@ beforeSpec {
 }
 
 "Observable properties update correctly" {
-    val audioItem = audioLibrary.createFromFile(path)
+    val audioItem = library.audioItemFromFile(path)
 
     audioItem.titleProperty.set("Test Title")
     audioItem.title shouldBe "Test Title"
 
     // Verify reactive updates
-    audioLibrary.audioItemsProperty.contains(audioItem) shouldBe true
+    library.audioItemsProperty.contains(audioItem) shouldBe true
 }
 ```
 

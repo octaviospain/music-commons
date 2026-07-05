@@ -1,0 +1,25 @@
+# How an audio-item CRUD change propagates to a projection bucket and out as a catalog event.
+# Render: d2 d2/registry-projection-flow.d2 ../music-commons.wiki/images/registry-projection-flow.svg
+
+direction: right
+
+title: |md
+  # Registry projection flow (item change to bucket event)
+| {near: top-center}
+
+crud: "Audio item\ncreated / updated / removed" {shape: oval; style.fill: "#eef6ff"}
+extractor: "Key extractor\n(single-key: album identity\nmulti-key: artists, genres)" {shape: rectangle}
+registry: "lirp registry projection\n(re-buckets incrementally)" {shape: rectangle; style.fill: "#f3fff0"}
+bucket: "Bucket change\n(add / update / remove member)" {shape: rectangle}
+event: "CrudEvent published\non catalog / album / genre publisher" {shape: rectangle; style.fill: "#fff7e6"}
+
+fx: "FX two-phase projection" {
+  style.fill: "#ffeef0"
+  transform: "background dataTransform" {shape: rectangle}
+  factory: "FX-thread fxFactory\n(Platform.runLater, coalesced)" {shape: rectangle}
+  prop: "Observable property refreshes\n(albumsProperty, genreIndexesProperty, ...)" {shape: rectangle}
+  transform -> factory -> prop
+}
+
+crud -> extractor -> registry -> bucket -> event
+event -> fx.transform: FX consumers subscribe

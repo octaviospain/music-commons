@@ -14,32 +14,35 @@ This module contains the concrete implementations of the interfaces defined in `
 
 ### Creating an Audio Library
 
+`CoreMusicLibrary.builder()` is the entry point; the `Default*` implementations are `internal` and
+are not instantiated directly. With no repository arguments the library is fully in-memory.
+
 ```kotlin
-// Set up a JSON-backed repository
-val repository = JsonFileRepository(file, AudioItemMapSerializer)
-val audioLibrary = DefaultAudioLibrary(repository)
+// In-memory, or inject a JSON/SQL repository from music-commons-persistence
+val library = CoreMusicLibrary.builder()
+    .audioRepository(JsonFileRepository(file, AudioItemMapSerializer))
+    .build()
 
 // Create audio items from files
-val audioItem = audioLibrary.createFromFile(audioFilePath)
+val audioItem = library.audioItemFromFile(audioFilePath)
 
 // Query by artist and album
-audioLibrary.findAlbumAudioItems(artist, albumName)
+library.findAlbumAudioItems(artist, albumName)
 
 // Batch creation with async support (default batch size: 500)
-audioLibrary.createFromFileBatchAsync(filePaths, executor)
-
-// With custom batch size
-audioLibrary.createFromFileBatchAsync(filePaths, executor, batchSize = 200)
+library.audioLibrary().createFromFileBatchAsync(filePaths).get()
 ```
 
 ### Managing Playlists
 
 ```kotlin
-val playlistRepository = JsonFileRepository(file, AudioPlaylistMapSerializer)
-val playlistHierarchy = DefaultPlaylistHierarchy(playlistRepository)
+val library = CoreMusicLibrary.builder()
+    .playlistRepository(JsonFileRepository(file, AudioPlaylistMapSerializer))
+    .build()
+val playlistHierarchy = library.playlistHierarchy()
 
-// Create playlists and directories
-val playlist = playlistHierarchy.createPlaylist("My Playlist", audioItems)
+// Create playlists and directories (createPlaylist takes audio-item IDs)
+val playlist = playlistHierarchy.createPlaylist("My Playlist", audioItems.map { it.id })
 val directory = playlistHierarchy.createPlaylistDirectory("Rock")
 
 // Build hierarchies
@@ -53,7 +56,7 @@ playlistHierarchy.findByName("Rock")
 ### Generating Waveforms
 
 ```kotlin
-val waveformRepository = DefaultAudioWaveformRepository()
+val waveformRepository = library.waveformRepository()
 
 // Generate waveform asynchronously
 val waveform = waveformRepository
@@ -109,11 +112,12 @@ All components support JSON serialization through kotlinx.serialization, with au
 
 ## Dependencies
 
-- **kotlinx.serialization** - JSON serialization support
 - **JAudioTagger** - Audio file metadata reading/writing
-- **transgressoft-commons** - Base repository and reactive event infrastructure
+- **lirp** - Reactive entity framework, repository pattern, and event-driven infrastructure
 
-Audio decoding and waveform PCM generation live in the separate `music-commons-media` module (JavaSound SPI).
+This module ships no JSON or SQL persistence code — persistence is supplied by the opt-in
+`music-commons-persistence` module. Audio decoding and waveform PCM generation live in the
+separate `music-commons-media` module (JavaSound SPI).
 
 ## Testing
 

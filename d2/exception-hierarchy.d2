@@ -1,0 +1,24 @@
+# Typed path-validation exception hierarchy. Arrow = "subclass of".
+# Render: d2 d2/exception-hierarchy.d2 ../music-commons.wiki/images/exception-hierarchy.svg
+
+direction: down
+
+title: |md
+  # Path-validation exception hierarchy
+| {near: top-center}
+
+base: "AudioItemManipulationException\n(open)" {style.fill: "#eef6ff"}
+invalid: "InvalidAudioFilePathException\n(open)" {style.fill: "#eef6ff"}
+windows: WindowsPathException {style.fill: "#fff7e6"}
+
+violation: "WindowsViolation (sealed)" {
+  style.fill: "#f3fff0"
+  ForbiddenChar
+  ReservedName
+  TrailingDotOrSpace
+  ExceedsMaxPath
+}
+
+invalid -> base: subclass of
+windows -> invalid: subclass of
+windows -> violation: carries

@@ -45,6 +45,13 @@ sealed class Genre(open val name: String) : Comparable<Genre> {
      */
     data object None : Genre("")
 
+    /**
+     * A genre whose name was not found in the predefined whitelist of known genres.
+     *
+     * Preserves the original tag string verbatim rather than discarding or mapping it to a fallback,
+     * ensuring round-trip fidelity for niche or user-defined genre values. The name must not be blank
+     * (reserved for [None]) and must not contain commas (which would be ambiguous as a delimiter).
+     */
     data class Custom(override val name: String) : Genre(name) {
         init {
             // A blank name is reserved for the [None] sentinel: an empty name is compareTo-equal to None

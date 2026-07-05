@@ -57,7 +57,7 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * @param I The type of audio items stored in this library
  * @param AC The concrete artist catalog type
- * @param ALC The concrete album catalog type
+ * @param ALC The type of reactive album exposed by this library
  * @param GC The concrete genre catalog type
  */
 abstract class AudioLibraryBase<I, AC, ALC, GC>(

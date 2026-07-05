@@ -11,11 +11,12 @@ This module provides a reactive, repository-based API for managing music librari
 ### `audio`
 Core music library abstractions for managing audio items and their metadata.
 
+- **`MusicLibrary`** - Unified facade contract implemented by both the headless and JavaFX libraries, enabling library-agnostic consumers
 - **`ReactiveAudioItem`** - Audio file representation with comprehensive metadata (artist, album, genre, etc.)
-- **`AudioLibrary`** - Repository for CRUD operations on audio items with reactive event publishing
-- **`Artist`**, **`Album`**, **`Label`**, **`Genre`** - Metadata domain models
-- **`ArtistCatalog`**, **`Albumset`** - Aggregated views of an artist album and its audio items
-- **`AudioFileType`** - Supported formats: MP3, M4A, WAV, FLAC
+- **`ReactiveAudioLibrary`** - Repository for CRUD operations on audio items with reactive event publishing
+- **`Artist`**, **`AlbumDetails`**, **`Label`**, **`Genre`** - Metadata domain models
+- **`ReactiveArtistCatalog`**, **`ReactiveAlbum`**, **`ReactiveGenreIndex`** - Live per-artist, per-album, and per-genre projections of the library
+- **`AudioFileType`** - Supported formats: MP3, M4A (AAC and ALAC), WAV, FLAC, and OGG (Vorbis and Opus)
 
 ### `player`
 Audio playback control interfaces.
@@ -47,8 +48,8 @@ Audio waveform visualization.
 ## Usage Pattern
 
 ```kotlin
-// Create audio library instance (implementation-specific)
-val library: AudioLibrary<MyAudioItem> = ...
+// Obtain a library through a concrete facade (CoreMusicLibrary / FXMusicLibrary)
+val library: ReactiveAudioLibrary<MyAudioItem, *, *, *> = ...
 
 // Subscribe to library changes
 library.subscribe(object : Flow.Subscriber<CrudEvent<Int, MyAudioItem>> {
@@ -60,18 +61,18 @@ library.subscribe(object : Flow.Subscriber<CrudEvent<Int, MyAudioItem>> {
 // Load audio files asynchronously (default batch size: 500)
 val audioItems = library.createFromFileBatchAsync(paths).get()
 
-// Query artist catalog
-val artistView = library.getArtistCatalog(artist)
+// Query the artist catalog projection
+val artistCatalog = library.getArtistCatalog(artist)
 
-// Create and manage playlists
-val hierarchy: PlaylistHierarchy<MyAudioItem, MyPlaylist> = ...
-val playlist = hierarchy.createPlaylist("My Favorites", audioItems)
+// Create and manage playlists (createPlaylist takes audio-item IDs)
+val hierarchy: ReactivePlaylistHierarchy<MyAudioItem, MyPlaylist> = ...
+val playlist = hierarchy.createPlaylist("My Favorites", audioItems.map { it.id })
 playlist.exportToM3uFile(outputPath)
 
 // Play audio
 val player: AudioItemPlayer = ...
 player.play(audioItem)
-player.volumeProperty.set(0.8)
+player.setVolume(0.8)
 ```
 
 ## License
