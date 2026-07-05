@@ -16,7 +16,7 @@ interface AudioMetadataIO {
      * Reads tag and header metadata from the audio file at [path] and returns a populated
      * [AudioItemMetadata].
      *
-     * Implementations fall back to safe defaults (empty title, [UnknownArtist], [UnknownAlbum],
+     * Implementations fall back to safe defaults (empty title, [Artist.UNKNOWN], [AlbumDetails.UNKNOWN],
      * empty genre set) when the file's tag block is unreadable or absent. Cover image bytes are
      * not included on this path — call [loadCover] when needed.
      *

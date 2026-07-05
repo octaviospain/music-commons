@@ -1,0 +1,56 @@
+# Interface-first layering: api contracts, core (headless), fx (JavaFX).
+# Dashed arrow = "implements / narrows". Render:
+# d2 d2/type-hierarchy.d2 ../music-commons.wiki/images/type-hierarchy.svg
+
+direction: down
+
+title: |md
+  # Interface-first type layering
+| {near: top-center}
+
+classes: {
+  impl: {style: {stroke-dash: 3}}
+}
+
+api: music-commons-api (contracts) {
+  style.fill: "#eef6ff"
+  MusicLibrary
+  ReactiveAudioLibrary
+  ReactiveAudioItem
+  AudioPlaylist
+  ReactiveAudioPlaylist
+  projections: "ReactiveArtistCatalog\nReactiveAlbum / ReactiveGenreIndex"
+
+  ReactiveAudioPlaylist -> AudioPlaylist: extends {class: impl}
+}
+
+core: music-commons-core (headless) {
+  style.fill: "#f3fff0"
+  CoreMusicLibrary
+  AudioLibrary
+  AudioItem
+  MutableAudioPlaylist
+}
+
+fx: music-commons-fx (JavaFX) {
+  style.fill: "#fff7e6"
+  FXMusicLibrary
+  ObservableAudioLibrary
+  ObservableAudioItem
+  ObservablePlaylist
+  fxprojections: "ObservableArtistCatalog\nObservableAlbum / ObservableGenreIndex"
+}
+
+core.CoreMusicLibrary -> api.MusicLibrary: implements {class: impl}
+fx.FXMusicLibrary -> api.MusicLibrary: implements {class: impl}
+
+core.AudioLibrary -> api.ReactiveAudioLibrary: narrows {class: impl}
+fx.ObservableAudioLibrary -> api.ReactiveAudioLibrary: narrows + observable {class: impl}
+
+core.AudioItem -> api.ReactiveAudioItem: implements {class: impl}
+fx.ObservableAudioItem -> api.ReactiveAudioItem: implements + JavaFX props {class: impl}
+
+core.MutableAudioPlaylist -> api.ReactiveAudioPlaylist: implements {class: impl}
+fx.ObservablePlaylist -> api.ReactiveAudioPlaylist: implements + observable {class: impl}
+
+fx.fxprojections -> api.projections: observable views {class: impl}

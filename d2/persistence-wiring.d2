@@ -1,0 +1,39 @@
+# How a consumer wires optional persistence into a library through the mapping modules.
+# Render: d2 d2/persistence-wiring.d2 ../music-commons.wiki/images/persistence-wiring.svg
+
+direction: right
+
+title: |md
+  # Persistence wiring (opt-in)
+| {near: top-center}
+
+consumer: Consumer code {shape: oval; style.fill: "#eef6ff"}
+builder: "CoreMusicLibrary.builder()\nFXMusicLibrary.builder()" {shape: rectangle}
+
+choice: Repository choice {
+  style.fill: "#f3fff0"
+  inmem: "(none)\nin-memory default" {shape: rectangle}
+  json: "JsonFileRepository(file, MapSerializer)" {shape: rectangle}
+  sql: "SqliteRepository.fileBacked(path, SqlTableDef)" {shape: rectangle}
+}
+
+mapping: Persistence-mapping modules {
+  style.fill: "#fff7e6"
+  ser: "MapSerializers\n(AudioItemMapSerializer, ...)" {shape: rectangle}
+  tabledef: "SqlTableDefs\n(MutableAudioItemSqlTableDef, ...)" {shape: rectangle}
+  conv: "ColumnConverters\n(GenreConverter, CountryConverter)" {shape: rectangle}
+}
+
+entities: "Real reactive entities\n(AudioItem, playlists, waveforms)" {shape: rectangle}
+
+consumer -> builder: build()
+builder -> choice.inmem
+builder -> choice.json
+builder -> choice.sql
+choice.inmem -> entities: constructs only
+choice.json -> entities: persists + reloads
+choice.sql -> entities: persists + reloads
+choice.json -> mapping.ser: uses
+choice.sql -> mapping.tabledef: uses
+mapping.tabledef -> mapping.conv: column mapping
+mapping -> entities: maps / reconstructs (construction SPI)

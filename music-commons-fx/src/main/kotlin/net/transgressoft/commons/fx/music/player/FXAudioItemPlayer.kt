@@ -37,12 +37,15 @@ class FXAudioItemPlayer(
     private val corePlayer: CoreAudioItemPlayer = CoreAudioItemPlayer()
 ) : AudioItemPlayer by corePlayer {
 
+    /** Observable property for the playback volume, in the range [0.0, 1.0]. [setVolume] schedules the update on the JavaFX Application Thread. */
     val volumeProperty: DoubleProperty
         field = SimpleDoubleProperty(this, "volume", 1.0)
 
+    /** Observable property reflecting the current [AudioItemPlayer.Status] of the underlying player, updated on the JavaFX Application Thread. */
     val statusProperty: ReadOnlyObjectProperty<AudioItemPlayer.Status>
         field = SimpleObjectProperty(this, "status", AudioItemPlayer.Status.UNKNOWN)
 
+    /** Observable property reflecting the current playback position, updated on each animation frame while the player is active. */
     val currentTimeProperty: ReadOnlyObjectProperty<FxDuration>
         field = SimpleObjectProperty(this, "currentTime", FxDuration.ZERO)
 

@@ -36,7 +36,14 @@ interface AudioWaveformRepository<W : AudioWaveform, I : ReactiveAudioItem<I>>
 : Repository<Int, W>, LirpEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>> {
 
     /**
-     * Retrieves an existing waveform or creates a new one asynchronously for the given audio item.
+     * Retrieves an existing waveform or creates a new one asynchronously for the given audio item,
+     * using the provided coroutine [dispatcher] for amplitude computation.
+     *
+     * @param audioItem the audio item whose waveform is requested
+     * @param width desired waveform width in pixels
+     * @param height desired waveform height in pixels
+     * @param dispatcher coroutine dispatcher for the computation
+     * @return a [CompletableFuture] that completes with the waveform once ready
      */
     fun getOrCreateWaveformAsync(
         audioItem: I,
@@ -45,6 +52,16 @@ interface AudioWaveformRepository<W : AudioWaveform, I : ReactiveAudioItem<I>>
         dispatcher: CoroutineDispatcher
     ): CompletableFuture<W>
 
+    /**
+     * Retrieves an existing waveform or creates a new one asynchronously for the given audio item,
+     * using the provided Java [executor] as the coroutine dispatcher.
+     *
+     * @param audioItem the audio item whose waveform is requested
+     * @param width desired waveform width in pixels
+     * @param height desired waveform height in pixels
+     * @param executor Java executor to back the coroutine dispatcher
+     * @return a [CompletableFuture] that completes with the waveform once ready
+     */
     fun getOrCreateWaveformAsync(
         audioItem: I,
         width: Short,
@@ -52,12 +69,28 @@ interface AudioWaveformRepository<W : AudioWaveform, I : ReactiveAudioItem<I>>
         executor: Executor
     ): CompletableFuture<W> = getOrCreateWaveformAsync(audioItem, width, height, executor.asCoroutineDispatcher())
 
+    /**
+     * Retrieves an existing waveform or creates a new one asynchronously for the given audio item,
+     * using [Dispatchers.Default] as the coroutine dispatcher.
+     *
+     * @param audioItem the audio item whose waveform is requested
+     * @param width desired waveform width in pixels
+     * @param height desired waveform height in pixels
+     * @return a [CompletableFuture] that completes with the waveform once ready
+     */
     fun getOrCreateWaveformAsync(
         audioItem: I,
         width: Short,
         height: Short
     ): CompletableFuture<W> = getOrCreateWaveformAsync(audioItem, width, height, Dispatchers.Default)
 
+    /**
+     * Removes waveforms associated with audio items whose IDs are in [audioItemIds].
+     *
+     * Silently ignores IDs for which no waveform exists.
+     *
+     * @param audioItemIds set of audio item IDs whose waveforms should be removed
+     */
     fun removeByAudioItemIds(audioItemIds: Set<Int>) {
         audioItemIds.forEach { findById(it).ifPresent { waveform -> remove(waveform) } }
     }

@@ -67,6 +67,17 @@ class WaveformPane : Canvas() {
         }
     }
 
+    /**
+     * Renders the given [waveform] onto this canvas asynchronously.
+     *
+     * Any in-progress rendering task is cancelled before the new one begins. The amplitude data
+     * is computed off the JavaFX Application Thread and the canvas is painted once results arrive.
+     * Resizing the canvas automatically re-triggers this method with the current waveform.
+     *
+     * @param waveform the waveform whose amplitude data will be rendered
+     * @param waveformColor the color used to draw the waveform bars; defaults to the current setting
+     * @param backgroundColor the color used to fill the canvas background; defaults to the current setting
+     */
     fun drawWaveformAsync(waveform: AudioWaveform, waveformColor: Color = this.waveformColor, backgroundColor: Color = this.backgroundColor) {
         this.waveform = waveform
         this.waveformColor = waveformColor
@@ -111,6 +122,11 @@ class WaveformPane : Canvas() {
         }
     }
 
+    /**
+     * Cancels the coroutine scope, stopping any in-progress waveform rendering.
+     *
+     * Must be called when the component is no longer needed to release coroutine resources.
+     */
     fun dispose() {
         job.cancel()
     }

@@ -1,0 +1,23 @@
+# Reactive event propagation for PLAYED and DELETE events.
+# Render: d2 d2/event-flow.d2 ../music-commons.wiki/images/event-flow.svg
+
+direction: down
+
+title: |md
+  # Event flow — play-count and deletion cascades
+| {near: top-center}
+
+player: AudioItemPlayer {shape: rectangle; style.fill: "#fff7e6"}
+playedSub: PlayedEventSubscriber {shape: rectangle}
+library: "AudioLibrary\n(increments play count,\npublishes CrudEvent)" {shape: rectangle; style.fill: "#eef6ff"}
+itemSubPlaylist: "AudioItemEventSubscriber\n(playlist wiring)" {shape: rectangle}
+itemSubWaveform: "AudioItemEventSubscriber\n(waveform wiring)" {shape: rectangle}
+hierarchy: "PlaylistHierarchy\n(removes deleted items)" {shape: rectangle; style.fill: "#f3fff0"}
+waveforms: "AudioWaveformRepository\n(removes cached waveforms)" {shape: rectangle; style.fill: "#f3fff0"}
+
+player -> playedSub: PLAYED event
+playedSub -> library
+library -> itemSubPlaylist: DELETE
+library -> itemSubWaveform: DELETE
+itemSubPlaylist -> hierarchy
+itemSubWaveform -> waveforms

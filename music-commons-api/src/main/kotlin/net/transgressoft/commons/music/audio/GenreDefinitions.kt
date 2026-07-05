@@ -17,6 +17,14 @@
 
 package net.transgressoft.commons.music.audio
 
+/**
+ * Predefined standard genre constants sourced from the
+ * [whatlastgenre whitelist](https://github.com/YetAnotherNerd/whatlastgenre).
+ *
+ * Each singleton is a [Genre] subtype keyed by its display name. Use these constants when
+ * constructing or comparing genre values to avoid raw string allocation and to benefit from
+ * identity-level equality checks. Genres not present here should use [Genre.Custom].
+ */
 data object Abstract : Genre("Abstract")
 
 data object AbstractHipHop : Genre("Abstract Hip Hop")

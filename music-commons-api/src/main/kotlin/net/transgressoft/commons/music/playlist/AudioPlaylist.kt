@@ -34,6 +34,10 @@ import kotlin.io.path.exists
  */
 interface AudioPlaylist<I : ReactiveAudioItem<I>> : IdentifiableEntity<Int>, Comparable<AudioPlaylist<I>> {
 
+    /**
+     * Stable, human-readable identity string used for sorting and equality checks. Prefixed
+     * with `"D-"` for directory playlists so directories sort predictably alongside leaf playlists.
+     */
     override val uniqueId: String
         get() {
             return buildString {
@@ -44,12 +48,18 @@ interface AudioPlaylist<I : ReactiveAudioItem<I>> : IdentifiableEntity<Int>, Com
             }
         }
 
+    /** Whether this playlist acts as a directory that contains nested playlists. */
     val isDirectory: Boolean
 
+    /** Display name of this playlist, unique within its parent directory. */
     val name: String
 
+    /** Ordered list of audio items directly held by this playlist. */
     val audioItems: List<I>
 
+    /**
+     * Flattened list of all audio items in this playlist and all nested [playlists], in depth-first order.
+     */
     val audioItemsRecursive: List<I>
         get() =
             buildList {
@@ -57,10 +67,21 @@ interface AudioPlaylist<I : ReactiveAudioItem<I>> : IdentifiableEntity<Int>, Com
                 addAll(playlists.stream().flatMap { it.audioItemsRecursive.stream() }.toList())
             }
 
+    /** Nested playlists directly contained within this playlist directory. Empty for leaf playlists. */
     val playlists: Set<AudioPlaylist<I>>
 
+    /**
+     * Returns `true` if all audio items in this playlist satisfy [predicate].
+     *
+     * @param predicate the condition to test against each item
+     */
     fun audioItemsAllMatch(predicate: Predicate<I>) = audioItems.stream().allMatch { predicate.test(it) }
 
+    /**
+     * Returns `true` if at least one audio item in this playlist satisfies [predicate].
+     *
+     * @param predicate the condition to test against each item
+     */
     fun audioItemsAnyMatch(predicate: Predicate<I>) = audioItems.stream().anyMatch { predicate.test(it) }
 
     /**
@@ -114,6 +135,12 @@ interface AudioPlaylist<I : ReactiveAudioItem<I>> : IdentifiableEntity<Int>, Com
         }
     }
 
+    /**
+     * Returns a JSON snippet with this playlist's numeric ID as the key and its metadata as the value,
+     * including the audio item IDs and nested playlist IDs.
+     *
+     * @return JSON key-value string suitable for embedding in a larger JSON map
+     */
     fun asJsonKeyValue(): String {
         val audioItemsString =
             buildString {

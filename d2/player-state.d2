@@ -1,0 +1,33 @@
+# AudioItemPlayer.Status lifecycle (music-commons-api / music-commons-media).
+# Render: d2 d2/player-state.d2 ../music-commons.wiki/images/player-state.svg
+
+title: |md
+  # AudioItemPlayer status lifecycle
+| {near: top-center}
+
+UNKNOWN: UNKNOWN\n(initial, no item loaded) {shape: circle}
+READY: READY\n(item loaded, idle)
+PLAYING: PLAYING\n(decoding to output line)
+PAUSED: PAUSED\n(position preserved)
+STOPPED: STOPPED\n(position reset to 0)
+STALLED: STALLED\n(decoder starved)
+HALTED: HALTED\n(halted abnormally; recoverable via play())
+DISPOSED: DISPOSED\n(resources released, terminal) {shape: circle; style.fill: "#ffeef0"}
+
+UNKNOWN -> READY: load item
+READY -> PLAYING: play()
+PLAYING -> PAUSED: pause()
+PAUSED -> PLAYING: resume()
+PLAYING -> STOPPED: stop()
+STOPPED -> PLAYING: play()
+PLAYING -> READY: playback finished
+PLAYING -> STALLED: buffer underrun
+STALLED -> PLAYING: recovers
+STALLED -> HALTED: sustained starvation
+PLAYING -> HALTED: abnormal exit
+HALTED -> PLAYING: play()
+
+READY -> DISPOSED: dispose()
+PLAYING -> DISPOSED: dispose()
+PAUSED -> DISPOSED: dispose()
+STOPPED -> DISPOSED: dispose()

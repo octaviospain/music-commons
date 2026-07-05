@@ -1,0 +1,26 @@
+# Module overview for Music Commons — the eight modules grouped by tier.
+# Render: d2 d2/architecture-modules.d2 ../music-commons.wiki/images/architecture-modules.svg
+
+title: |md
+  # Music Commons — modules
+| {near: top-center}
+
+reactive: Reactive modules {
+  style.fill: "#eef6ff"
+  api: "music-commons-api\ninterfaces & contracts (no impl, no SQL)"
+  core: "music-commons-core\nreactive in-memory implementations"
+  fx: "music-commons-fx\nJavaFX integration (observable properties, UI)"
+  media: "music-commons-media\nJavaFX-free playback + reactive waveforms"
+}
+
+persistence: Persistence-mapping modules (opt-in, mapping-only) {
+  style.fill: "#f3fff0"
+  p: "music-commons-persistence\nJSON serializers + SQL TableDefs for core"
+  pfx: "music-commons-persistence-fx\nJSON serializers + SQL TableDefs for FX"
+}
+
+test: Test-support modules {
+  style.fill: "#faf0ff"
+  t: "music-commons-test\nfactories + Kotest Arb generators"
+  tfx: "music-commons-fx-test\nJavaFX (TestFX / Monocle) test utilities"
+}

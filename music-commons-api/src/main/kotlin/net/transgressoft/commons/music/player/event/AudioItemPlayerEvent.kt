@@ -27,6 +27,7 @@ import net.transgressoft.lirp.event.LirpEvent
  */
 sealed class AudioItemPlayerEvent : LirpEvent<AudioItemPlayerEvent.Type> {
 
+    /** The audio item that triggered this event. */
     abstract val audioItem: ReactiveAudioItem<*>
 
     /**
