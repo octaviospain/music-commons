@@ -23,14 +23,14 @@ jobs:
             -   uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
             -   name: Set up JDK 21
-                uses: actions/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287 # v5.3.0
+                uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5.4.0
                 with:
                     java-version: 21
                     distribution: 'zulu'
                     java-package: 'jdk+fx'
 
             -   name: Cache Gradle packages
-                uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+                uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
                 with:
                     path: |
                         ~/.gradle/caches
@@ -77,7 +77,7 @@ jobs:
                         --output=results.sarif
 
             -   name: Upload SARIF to Code Scanning
-                uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+                uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
                 with:
                     sarif_file: results.sarif
 
@@ -117,7 +117,7 @@ jobs:
 
             -   name: Upload SARIF to Code Scanning
                 continue-on-error: true
-                uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+                uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
                 with:
                     sarif_file: results-build-tooling.sarif
                     category: build-tooling
