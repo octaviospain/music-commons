@@ -265,12 +265,44 @@ internal class FXAudioLibrary
         }
 
         private fun refreshCatalogProperties() {
-            observableArtistCatalogSet.apply {
-                clear()
-                addAll(artistCatalogBacking)
+            // Apply only the changed entries to each FX collection rather than clearing and
+            // rebuilding it wholesale. A full clear+re-add (or setAll) re-fires every bound listener
+            // on every tick, so during a large import — where this debounced refresh fires repeatedly
+            // against steadily-growing collections — the listener/skin work aggregates to O(n^2) of
+            // FX-thread cost. Reconciling in place still scans the current snapshot (O(current size)
+            // per tick), but emits only the add/remove changes that actually occurred, so bound
+            // ListView/TableView consumers do O(delta) work per tick and keep selection/scroll state.
+            // That frees the FX thread for the catalog projections' own builds so they converge in time.
+            observableArtistCatalogSet.retainAll(artistCatalogBacking)
+            observableArtistCatalogSet.addAll(artistCatalogBacking)
+            syncOrderedList(observableAlbumList, observableAlbumRegistry.orderedValues())
+            syncOrderedList(observableGenreIndexList, observableGenreIndexRegistry.orderedValues())
+        }
+
+        /**
+         * Mutates [target] in place so it equals [source] (order included), applying only the
+         * differences. Entries absent from [source] are removed, then each position that differs has
+         * the [source] entry inserted, so a steadily-growing ordered projection fires only the
+         * add/remove changes that actually occurred rather than a whole-list replacement each tick.
+         */
+        private fun <T> syncOrderedList(target: ObservableList<T>, source: List<T>) {
+            if (target == source) {
+                return
             }
-            observableAlbumList.setAll(observableAlbumRegistry.orderedValues())
-            observableGenreIndexList.setAll(observableGenreIndexRegistry.orderedValues())
+            val sourceContents = HashSet(source)
+            target.retainAll(sourceContents)
+            var index = 0
+            while (index < source.size) {
+                if (index >= target.size) {
+                    target.add(source[index])
+                } else if (target[index] != source[index]) {
+                    target.add(index, source[index])
+                }
+                index++
+            }
+            while (target.size > source.size) {
+                target.removeAt(target.size - 1)
+            }
         }
 
         /**
