@@ -42,4 +42,49 @@ dependencies {
 
 tasks.withType(Test).configureEach {
     systemProperty 'java.awt.headless', 'true'
+
+    // Exclude audio-hardware by default unless the caller opts in with -PincludeAudioHardware=true.
+    // Merge with any tags the root build already placed in kotest.tags.exclude so that
+    // -PexcludeLinuxOnly=true etc. still take effect alongside this module-level default.
+    if (!project.findProperty('includeAudioHardware')?.toString()?.toBoolean()) {
+        def existing = systemProperties.get('kotest.tags.exclude') ?: ''
+        def merged = existing.split(',').toList().findAll { it.trim() } + ['audio-hardware']
+        systemProperty 'kotest.tags.exclude', merged.unique().join(',')
+    }
+}
+
+tasks.register('verifyAudioHardwareExclusion') {
+    group = 'verification'
+    description = 'Fails if any audio-hardware-tagged test was executed in the default run.'
+
+    doLast {
+        if (project.findProperty('includeAudioHardware')?.toString()?.toBoolean()) {
+            logger.lifecycle('verifyAudioHardwareExclusion: skipped (includeAudioHardware=true)')
+            return
+        }
+        def xmlDir = layout.buildDirectory.dir('test-results/test').get().asFile
+        if (!xmlDir.exists()) {
+            logger.lifecycle('verifyAudioHardwareExclusion: no test-results directory — nothing to check')
+            return
+        }
+        // When Kotest excludes a spec via kotest.tags.exclude the spec class gets a spec-level
+        // aggregate entry in the Gradle test-run XML with time="0.0", but no per-class XML file
+        // is created. A per-class XML file (TEST-*SmokeTest.xml) only exists when the spec
+        // actually ran. Searching per-class files is therefore the precise execution check.
+        // The glob matches every audio-hardware-tagged *SmokeTest spec in the module
+        // (currently CoreAudioItemPlayerSmokeTest and CoreAudioItemPlayerFormatSmokeTest),
+        // so adding another such spec is covered without editing this task.
+        def hit = fileTree(xmlDir).matching { include '*SmokeTest.xml' }.find()
+        if (hit) {
+            throw new GradleException(
+                "An audio-hardware smoke test was executed in a default run. " +
+                "Found: ${hit.name}. " +
+                "If this was intentional, pass -PincludeAudioHardware=true."
+            )
+        }
+    }
+}
+
+tasks.named('test') {
+    finalizedBy tasks.named('verifyAudioHardwareExclusion')
 }
