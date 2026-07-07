@@ -8,6 +8,7 @@ dependencies {
     implementation libs.jaudiotagger.get()
     implementation libs.lirp.core.get()
     implementation libs.dd.plist.get()
+    implementation libs.coroutines.slf4j.get()
 
     testImplementation project(path: ':music-commons-test')
     testImplementation project(path: ':music-commons-persistence')

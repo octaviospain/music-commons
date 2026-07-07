@@ -11,10 +11,12 @@ import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.parseGenre
 import net.transgressoft.commons.music.playlist.ReactiveAudioPlaylist
 import mu.KotlinLogging
+import org.slf4j.MDC
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import kotlin.io.path.extension
 import kotlinx.coroutines.CancellationException
@@ -23,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.future.future
+import kotlinx.coroutines.slf4j.MDCContext
 
 /**
  * Orchestrates importing tracks and playlists from a parsed [ItunesLibrary] into a [MusicLibrary].
@@ -95,18 +98,31 @@ class ItunesImportService<I, P>
         policy: ItunesImportPolicy = ItunesImportPolicy(),
         rootDirectoryName: String? = null,
         onProgress: (ImportProgress) -> Unit = {}
-    ): CompletableFuture<ImportResult> =
-        CoroutineScope(Dispatchers.IO).future {
-            val effectivePlaylists = playlistBuilder.expandWithAncestors(selectedPlaylists, itunesLibrary)
-            val trackImportResult = importTracks(itunesLibrary, policy, onProgress)
-            val rejectedNames = playlistBuilder.createPlaylists(effectivePlaylists, trackImportResult.trackIdToItem, rootDirectoryName)
+    ): CompletableFuture<ImportResult> {
+        val sessionId = UUID.randomUUID().toString()
+        MDC.put("importSessionId", sessionId)
+        try {
+            return CoroutineScope(Dispatchers.IO + MDCContext()).future {
+                val effectivePlaylists = playlistBuilder.expandWithAncestors(selectedPlaylists, itunesLibrary)
+                val trackImportResult = importTracks(itunesLibrary, policy, onProgress)
+                val rejectedNames = playlistBuilder.createPlaylists(effectivePlaylists, trackImportResult.trackIdToItem, rootDirectoryName)
 
-            ImportResult(
-                imported = trackImportResult.imported.toList(),
-                unresolved = trackImportResult.unresolved.toList(),
-                rejectedPlaylistNames = rejectedNames
-            )
+                ImportResult(
+                    imported = trackImportResult.imported.toList(),
+                    unresolved = trackImportResult.unresolved.toList(),
+                    rejectedPlaylistNames = rejectedNames
+                ).also {
+                    logger.debug {
+                        "iTunes import complete: ${trackImportResult.imported.size} imported, " +
+                            "${trackImportResult.unresolved.size} unresolved, " +
+                            "${rejectedNames.size} playlists rejected"
+                    }
+                }
+            }
+        } finally {
+            MDC.remove("importSessionId")
         }
+    }
 
     private suspend fun importTracks(
         itunesLibrary: ItunesLibrary,
@@ -130,13 +146,13 @@ class ItunesImportService<I, P>
             val path = trackResolver.resolveTrackPath(track)
 
             if (trackResolver.isUnsupportedFileType(path, policy)) {
-                logger.debug { "Skipping track '${track.title}': unsupported file type '${path.extension.lowercase()}'" }
+                logger.trace { "Skipping track '${track.title}': unsupported file type '${path.extension.lowercase()}'" }
                 accumulator.unresolved.add(UnresolvedTrack(path, track.title, UnresolvedReason.UnsupportedType(path.extension.lowercase())))
                 return
             }
 
             if (!Files.exists(path)) {
-                logger.debug { "Track '${track.title}': file not found at $path" }
+                logger.trace { "Track '${track.title}': file not found at $path" }
                 accumulator.unresolved.add(UnresolvedTrack(path, track.title, UnresolvedReason.FileNotFound))
                 return
             }
@@ -144,7 +160,7 @@ class ItunesImportService<I, P>
             val audioItem = importTrack(track, path, policy)
             accumulator.trackIdToItem[trackId] = audioItem
             accumulator.imported.add(audioItem)
-            logger.debug { "Imported track '${track.title}' with id ${audioItem.id}" }
+            logger.trace { "Imported track '${track.title}' with id ${audioItem.id}" }
         } catch (e: CancellationException) {
             // Cooperative cancellation must propagate; recording it as an UnresolvedTrack would
             // contradict importAsync's "stops processing between tracks" contract.

@@ -238,7 +238,7 @@ internal class FXPlaylist(
         val itemsToAdd = audioItems.filter { it.id !in currentIds }
         if (itemsToAdd.isEmpty()) return false
         audioItemsAggregate.addAll(itemsToAdd)
-        logger.debug { "Added $itemsToAdd to playlist $uniqueId" }
+        logger.trace { "Added $itemsToAdd to playlist $uniqueId" }
         return true
     }
 
@@ -246,7 +246,7 @@ internal class FXPlaylist(
         val hasItems = audioItems.any { it in audioItemsAggregate }
         if (hasItems) {
             audioItemsAggregate.removeAll(audioItems.toSet())
-            logger.debug { "Removed $audioItems from playlist $uniqueId" }
+            logger.trace { "Removed $audioItems from playlist $uniqueId" }
         }
         return hasItems
     }
@@ -259,7 +259,7 @@ internal class FXPlaylist(
         val toRemove = audioItemsAggregate.filter { it.id in idsToRemove }
         if (toRemove.isEmpty()) return false
         audioItemsAggregate.removeAll(toRemove.toSet())
-        logger.debug { "Removed audio items with ids $idsToRemove from playlist $uniqueId" }
+        logger.trace { "Removed audio items with ids $idsToRemove from playlist $uniqueId" }
         return true
     }
 
@@ -267,7 +267,7 @@ internal class FXPlaylist(
         val newPlaylists = playlists.filter { it !in playlistsAggregate }
         if (newPlaylists.isEmpty()) return false
         playlistsAggregate.addAll(newPlaylists)
-        logger.debug { "Added $playlists to playlist $uniqueId" }
+        logger.trace { "Added $playlists to playlist $uniqueId" }
         return true
     }
 
@@ -275,7 +275,7 @@ internal class FXPlaylist(
         val containsPlaylists = playlists.any { it in playlistsAggregate }
         if (containsPlaylists) {
             playlistsAggregate.removeAll(playlists.toSet())
-            logger.debug { "Removed $playlists from playlist $uniqueId" }
+            logger.trace { "Removed $playlists from playlist $uniqueId" }
         }
         return containsPlaylists
     }
@@ -287,7 +287,7 @@ internal class FXPlaylist(
         val toRemove = playlistsAggregate.filter { it.id in idsToRemove }
         if (toRemove.isEmpty()) return false
         playlistsAggregate.removeAll(toRemove.toSet())
-        logger.debug { "Removed playlists with ids $playlistIds from playlist $uniqueId" }
+        logger.trace { "Removed playlists with ids $playlistIds from playlist $uniqueId" }
         return true
     }
 
@@ -295,7 +295,7 @@ internal class FXPlaylist(
         if (audioItemsAggregate.isNotEmpty()) {
             val size = audioItemsAggregate.size
             audioItemsAggregate.clear()
-            logger.debug { "Cleared $size audio items from playlist $uniqueId" }
+            logger.trace { "Cleared $size audio items from playlist $uniqueId" }
         }
     }
 
@@ -303,7 +303,7 @@ internal class FXPlaylist(
         if (playlistsAggregate.isNotEmpty()) {
             val size = playlistsAggregate.size
             playlistsAggregate.clear()
-            logger.debug { "Cleared $size playlists from playlist $uniqueId" }
+            logger.trace { "Cleared $size playlists from playlist $uniqueId" }
         }
     }
 

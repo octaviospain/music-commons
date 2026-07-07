@@ -23,9 +23,11 @@ import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.playlist.ReactiveAudioPlaylist
 import net.transgressoft.lirp.entity.toIds
 import mu.KotlinLogging
+import mu.withLoggingContext
 import java.io.IOException
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -35,6 +37,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.slf4j.MDCContext
 
 /**
  * Exception thrown when an unrecoverable error occurs during M3U playlist import.
@@ -109,9 +112,14 @@ class M3uImportService<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>
      * @throws M3uParseException if the root M3U file cannot be parsed
      */
     fun import(rootM3u: Path): P {
-        val plan = planImport(rootM3u, visited = emptyList(), depth = 0)
-        rejectCollisions(plan)
-        return materialize(plan, existingAudioItemsByPath())
+        val sessionId = UUID.randomUUID().toString()
+        return withLoggingContext("importSessionId" to sessionId) {
+            val plan = planImport(rootM3u, visited = emptyList(), depth = 0)
+            rejectCollisions(plan)
+            materialize(plan, existingAudioItemsByPath()).also { playlist ->
+                logger.debug { "M3U import complete: '${plan.name}', ${playlist.audioItems.size} items, ${plan.children.size} nested" }
+            }
+        }
     }
 
     /**
@@ -133,7 +141,7 @@ class M3uImportService<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     fun importAsync(rootM3u: Path, dispatcher: CoroutineDispatcher): CompletableFuture<P> {
-        val deferred = serviceScope.async(dispatcher) { import(rootM3u) }
+        val deferred = serviceScope.async(dispatcher + MDCContext()) { import(rootM3u) }
         val future = CompletableFuture<P>()
         deferred.invokeOnCompletion { error ->
             if (error == null) {

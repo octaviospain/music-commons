@@ -20,6 +20,7 @@ package net.transgressoft.commons.media.player
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Played
+import mu.withLoggingContext
 import java.io.File
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioInputStream
@@ -50,13 +51,21 @@ internal class PlaybackPump(
      * streams PCM until the stream ends or playback is interrupted, then calls [onPlaybackComplete].
      */
     fun asThread(): Thread =
-        Thread({
+        Thread({ runPump() }, "CoreAudioPlayer-pump").apply {
+            isDaemon = true
+            setUncaughtExceptionHandler { _, t -> player.logger.error(t) { "Uncaught exception in pump thread" } }
+        }
+
+    private fun runPump() {
+        // A stop()/dispose() or a newer play() racing ahead of this thread invalidates the active
+        // session; bail before entering the try/finally so a stale pump never reaches
+        // onPlaybackComplete(), which would flush/drain player.lineRef before its own session check
+        // and could cut off a line the active playback has already opened.
+        if (player.activeSessionId.get() != mySession) return
+        withLoggingContext("audioItemId" to audioItem.id.toString()) {
             var hadError = false
             var halted = false
             try {
-                // A stop()/dispose() racing ahead of this thread invalidates the active session;
-                // bail before flipping the state to PLAYING so a stopped player is not resurrected.
-                if (player.activeSessionId.get() != mySession) return@Thread
                 player.state.set(InternalState.PLAYING)
                 streamPcm()
             } catch (_: InterruptedException) {
@@ -67,19 +76,25 @@ internal class PlaybackPump(
                 hadError = true
                 halted = true
             } catch (e: Exception) {
-                val current = player.state.get()
-                if (current != InternalState.STOPPED && current != InternalState.DISPOSED) {
-                    player.logger.error(e) { "Error playing '${audioItem.path.fileName}'" }
-                    halted = true
-                }
+                halted = handlePlaybackError(e)
                 hadError = true
             } finally {
                 onPlaybackComplete(!hadError && player.state.get() == InternalState.PLAYING, halted)
             }
-        }, "CoreAudioPlayer-pump").apply {
-            isDaemon = true
-            setUncaughtExceptionHandler { _, t -> player.logger.error(t) { "Uncaught exception in pump thread" } }
         }
+    }
+
+    /**
+     * Logs an unexpected playback error unless the player was already stopped or disposed (in which
+     * case the failure is an expected consequence of the shutdown). Returns whether the session
+     * should be reported as halted.
+     */
+    private fun handlePlaybackError(e: Exception): Boolean {
+        val current = player.state.get()
+        if (current == InternalState.STOPPED || current == InternalState.DISPOSED) return false
+        player.logger.error(e) { "Error playing '${audioItem.path.fileName}'" }
+        return true
+    }
 
     private fun streamPcm() {
         var session = openStreamSession(player.framePosition)

@@ -62,7 +62,7 @@ internal class ItunesPlaylistBuilder<I, P>(
             val uniqueName = resolveUniqueName(playlist.name)
             musicLibrary.createPlaylistDirectory(uniqueName)
             createdNameByPersistentId[playlist.persistentId] = uniqueName
-            logger.debug { "Created playlist directory '$uniqueName'" }
+            logger.trace { "Created playlist directory '$uniqueName'" }
         }
     }
 
@@ -79,7 +79,7 @@ internal class ItunesPlaylistBuilder<I, P>(
             val uniqueName = resolveUniqueName(playlist.name)
             musicLibrary.createPlaylist(uniqueName, audioItemIds)
             createdNameByPersistentId[playlist.persistentId] = uniqueName
-            logger.debug { "Created playlist '$uniqueName' with ${audioItemIds.size} items" }
+            logger.trace { "Created playlist '$uniqueName' with ${audioItemIds.size} items" }
         }
     }
 
@@ -110,7 +110,7 @@ internal class ItunesPlaylistBuilder<I, P>(
                 }
             try {
                 musicLibrary.playlistHierarchy().addPlaylistsToDirectory(setOf(childName), parentName)
-                logger.debug { "Wired '$childName' to folder '$parentName'" }
+                logger.trace { "Wired '$childName' to folder '$parentName'" }
             } catch (e: Exception) {
                 logger.warn("Could not wire '$childName' to folder '$parentName': ${e.message}")
             }

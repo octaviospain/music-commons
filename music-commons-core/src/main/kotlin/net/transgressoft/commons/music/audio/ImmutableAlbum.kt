@@ -103,6 +103,6 @@ internal class ImmutableAlbum<I>(override val album: AlbumDetails, tracks: List<
     override fun toString() = "ImmutableAlbum(album=$album, size=$size)"
 
     init {
-        logger.debug { "Album created for ${album.name}" }
+        logger.trace { "Album created for ${album.name}" }
     }
 }

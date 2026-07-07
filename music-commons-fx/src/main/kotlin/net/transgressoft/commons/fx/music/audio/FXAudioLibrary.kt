@@ -201,7 +201,7 @@ internal class FXAudioLibrary
                 val audioItem = event.audioItem
                 if (audioItem is FXAudioItem) {
                     audioItem.incrementPlayCount()
-                    logger.debug { "Play count of audio item with id ${audioItem.id} increased to ${audioItem.playCount}" }
+                    logger.trace { "Play count of audio item with id ${audioItem.id} increased to ${audioItem.playCount}" }
                 }
             }
         }
@@ -348,7 +348,7 @@ internal class FXAudioLibrary
             val metadata = metadataIO.readMetadata(audioItemPath)
             return FXAudioItem(audioItemPath, newId(), metadata).also { fxAudioItem ->
                 add(fxAudioItem)
-                logger.debug { "New ObservableAudioItem was created from file $audioItemPath with id ${fxAudioItem.id}" }
+                logger.trace { "New ObservableAudioItem was created from file $audioItemPath with id ${fxAudioItem.id}" }
             }
         }
 

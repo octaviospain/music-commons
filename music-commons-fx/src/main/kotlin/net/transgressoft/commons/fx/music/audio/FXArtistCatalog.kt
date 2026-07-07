@@ -94,7 +94,7 @@ internal class FXArtistCatalog private constructor(
     override val uniqueId: String = artist.id()
 
     init {
-        logger.debug { "FXArtistCatalog created for ${artist.id()}" }
+        logger.trace { "FXArtistCatalog created for ${artist.id()}" }
         populateFxProperties()
     }
 

@@ -25,7 +25,9 @@ import net.transgressoft.lirp.event.StandardCrudEvent.Delete
 import net.transgressoft.lirp.event.StandardCrudEvent.Update
 import net.transgressoft.lirp.persistence.projection.ObservableProjection
 import mu.KotlinLogging
+import mu.withLoggingContext
 import java.util.Optional
+import java.util.UUID
 
 /**
  * Abstract base for genre index registries backed by a lirp [ObservableProjection].
@@ -69,21 +71,24 @@ abstract class GenreIndexRegistryBase<I, GI>(private val publisherName: String =
     protected fun observeGenreIndexChanges(projection: ObservableProjection<Genre, GI>) {
         entriesChangedHandle =
             projection.addOnEntriesChangedListener { changes ->
-                for ((genre, oldIndex, newIndex) in changes) {
-                    when {
-                        oldIndex == null && newIndex != null -> {
-                            genreIndexPublisher.emitAsync(Create(newIndex))
-                            log.debug { "Genre index created for ${genre.name}" }
-                        }
-                        oldIndex != null && newIndex != null -> {
-                            genreIndexPublisher.emitAsync(Update(newIndex, oldIndex))
-                            log.debug { "Genre index updated for ${genre.name}" }
-                        }
-                        oldIndex != null && newIndex == null -> {
-                            genreIndexPublisher.emitAsync(Delete(oldIndex))
-                            log.debug { "Genre index deleted for ${genre.name}" }
+                withLoggingContext("catalogRebuildId" to UUID.randomUUID().toString()) {
+                    for ((genre, oldIndex, newIndex) in changes) {
+                        when {
+                            oldIndex == null && newIndex != null -> {
+                                genreIndexPublisher.emitAsync(Create(newIndex))
+                                log.trace { "Genre index created for ${genre.name}" }
+                            }
+                            oldIndex != null && newIndex != null -> {
+                                genreIndexPublisher.emitAsync(Update(newIndex, oldIndex))
+                                log.trace { "Genre index updated for ${genre.name}" }
+                            }
+                            oldIndex != null && newIndex == null -> {
+                                genreIndexPublisher.emitAsync(Delete(oldIndex))
+                                log.trace { "Genre index deleted for ${genre.name}" }
+                            }
                         }
                     }
+                    log.debug { "Genre index rebuilt: ${projection.size} entries" }
                 }
             }
     }

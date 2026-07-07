@@ -81,7 +81,7 @@ internal class FXGenreIndex(
         field = SimpleObjectProperty(this, "genre", genre)
 
     init {
-        logger.debug { "FXGenreIndex created for ${genre.name}" }
+        logger.trace { "FXGenreIndex created for ${genre.name}" }
         tracksProperty.setAll(trackList)
         sizeProperty.set(size)
     }

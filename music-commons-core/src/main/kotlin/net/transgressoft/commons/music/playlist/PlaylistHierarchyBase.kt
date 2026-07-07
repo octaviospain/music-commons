@@ -29,6 +29,7 @@ import net.transgressoft.lirp.event.LirpEventSubscriber
 import net.transgressoft.lirp.event.LirpEventSubscription
 import net.transgressoft.lirp.persistence.Repository
 import mu.KotlinLogging
+import mu.withLoggingContext
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -200,13 +201,15 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
             "Cannot move playlist '$playlistNameToMove' into its own descendant '$destinationPlaylistName'"
         }
 
-        findParentPlaylist(playlistToMove.get()).ifPresent { parentPlaylist: P ->
-            parentPlaylist.removePlaylist(playlistToMove.get())
-            logger.debug { "Playlist '$playlistNameToMove' removed from '$parentPlaylist'" }
-        }
+        withLoggingContext("playlistId" to playlistToMove.get().id.toString()) {
+            findParentPlaylist(playlistToMove.get()).ifPresent { parentPlaylist: P ->
+                parentPlaylist.removePlaylist(playlistToMove.get())
+                logger.trace { "Playlist '$playlistNameToMove' removed from '$parentPlaylist'" }
+            }
 
-        destinationPlaylist.get().addPlaylist(playlistToMove.get())
-        logger.debug { "Playlist '$playlistNameToMove' moved to '$destinationPlaylistName'" }
+            destinationPlaylist.get().addPlaylist(playlistToMove.get())
+            logger.trace { "Playlist '$playlistNameToMove' moved to '$destinationPlaylistName'" }
+        }
     }
 
     private fun isDescendant(parent: P, candidate: P): Boolean {

@@ -33,6 +33,7 @@ import javafx.beans.property.SimpleSetProperty
 import javafx.collections.FXCollections
 import javafx.collections.ObservableSet
 import mu.KotlinLogging
+import mu.withLoggingContext
 
 /**
  * JavaFX-compatible playlist hierarchy with observable playlist collections.
@@ -129,7 +130,7 @@ internal class FXPlaylistHierarchy(
     ): ObservablePlaylist {
         require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
         return FXPlaylist(newId(), name, false, audioItemIds).also {
-            logger.debug { "Created playlist $it" }
+            withLoggingContext("playlistId" to it.id.toString()) { logger.trace { "Created playlist $it" } }
             add(it)
             // The FXPlaylist init runs refreshDerivedState before lirp registry binding completes,
             // so its cover and audioItemsRecursive view are computed against an empty aggregate.
@@ -147,7 +148,7 @@ internal class FXPlaylistHierarchy(
     ): ObservablePlaylist {
         require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
         return FXPlaylist(newId(), name, true, audioItems.toIds()).also {
-            logger.debug { "Created playlist $it" }
+            withLoggingContext("playlistId" to it.id.toString()) { logger.trace { "Created playlist $it" } }
             add(it)
             it.triggerCoverHydration()
         }
