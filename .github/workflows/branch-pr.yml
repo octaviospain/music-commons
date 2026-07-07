@@ -19,7 +19,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                os: [ubuntu-latest, windows-latest]
+                os: [ubuntu-latest, windows-latest, macos-latest]
 
         steps:
             -   uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -75,6 +75,12 @@ jobs:
                 # That makes any test that opens a real line fail on the runner, so we skip them
                 # via the audio-hardware tag.
                 run: ./gradlew check -PexcludeLinuxOnly=true -PexcludePosixOnly=true -PincludeWindowsOnly=true -PexcludeAudioHardware=true
+
+            -   name: Build (macOS, skip Linux-only and audio-hardware tests)
+                if: matrix.os == 'macos-latest'
+                # macOS needs no gstreamer/Xvfb: JavaFX tests run under Monocle headless (bundled
+                # in Liberica jdk+fx) and audio decode is pure-Java JavaSound SPI.
+                run: ./gradlew check -PexcludeAudioHardware=true -PexcludeLinuxOnly=true
 
             -   name: Cross-check verification metadata against Maven Central
                 # Re-resolves every dependency with --refresh-dependencies (bypasses the
