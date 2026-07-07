@@ -295,3 +295,7 @@ It builds on several open-source libraries, including:
   **[kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization)**
 - **[Kotest](https://kotest.io/)**, **[MockK](https://mockk.io/)**, and
   **[TestFX](https://github.com/TestFX/TestFX)** for testing
+
+The licenses for all bundled JavaSound SPI decoders, including a compatibility analysis for the
+`tritonus-share` LGPL-2.1 / GPL-3.0 interaction, are documented in
+[THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md).
