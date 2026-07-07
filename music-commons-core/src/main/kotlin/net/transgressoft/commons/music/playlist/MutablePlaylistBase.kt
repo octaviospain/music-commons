@@ -64,14 +64,14 @@ abstract class MutablePlaylistBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPl
         val toAdd = audioItems.filter { it.id !in currentIds }
         if (toAdd.isEmpty()) return false
         this.audioItems.addAll(toAdd)
-        logger.debug { "Added $toAdd to playlist $uniqueId" }
+        logger.trace { "Added $toAdd to playlist $uniqueId" }
         return true
     }
 
     override fun removeAudioItems(audioItems: Collection<I>): Boolean {
         val result = this.audioItems.removeAll(audioItems.toSet())
         if (result)
-            logger.debug { "Removed $audioItems from playlist $uniqueId" }
+            logger.trace { "Removed $audioItems from playlist $uniqueId" }
         return result
     }
 
@@ -85,21 +85,21 @@ abstract class MutablePlaylistBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPl
             return false
 
         audioItems.removeAll(toRemove.toSet())
-        logger.debug { "Removed audio items with ids $idsToRemove from playlist $uniqueId" }
+        logger.trace { "Removed audio items with ids $idsToRemove from playlist $uniqueId" }
         return true
     }
 
     override fun addPlaylists(playlists: Collection<P>): Boolean {
         val result = playlists.stream().anyMatch { it !in this.playlists }
         this.playlists.addAll(playlists)
-        logger.debug { "Added $playlists to playlist $uniqueId" }
+        logger.trace { "Added $playlists to playlist $uniqueId" }
         return result
     }
 
     override fun removePlaylists(playlists: Collection<P>): Boolean {
         val result = playlists.stream().anyMatch { it in this.playlists }
         this.playlists.removeAll(playlists.toSet())
-        logger.debug { "Removed $playlists from playlist $uniqueId" }
+        logger.trace { "Removed $playlists from playlist $uniqueId" }
         return result
     }
 
@@ -110,7 +110,7 @@ abstract class MutablePlaylistBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPl
         val result = toRemove.isNotEmpty()
         if (result) {
             this.playlists.removeAll(toRemove.toSet())
-            logger.debug { "Removed playlists with ids $playlistIds from playlist $uniqueId" }
+            logger.trace { "Removed playlists with ids $playlistIds from playlist $uniqueId" }
         }
         return result
     }
@@ -119,7 +119,7 @@ abstract class MutablePlaylistBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPl
         if (audioItems.isNotEmpty()) {
             val size = audioItems.size
             audioItems.clear()
-            logger.debug { "Cleared $size audio items from playlist $uniqueId" }
+            logger.trace { "Cleared $size audio items from playlist $uniqueId" }
         }
     }
 
@@ -127,7 +127,7 @@ abstract class MutablePlaylistBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPl
         if (playlists.isNotEmpty()) {
             val size = playlists.size
             playlists.clear()
-            logger.debug { "Cleared $size playlists from playlist $uniqueId" }
+            logger.trace { "Cleared $size playlists from playlist $uniqueId" }
         }
     }
 

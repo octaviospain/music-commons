@@ -94,7 +94,7 @@ internal class ImmutableArtistCatalog<I>(override val artist: Artist, audioItems
     override fun toString() = "ImmutableArtistCatalog(artist=$artist, size=$size)"
 
     init {
-        logger.debug { "Artist catalog created for ${artist.id()}" }
+        logger.trace { "Artist catalog created for ${artist.id()}" }
     }
 
     companion object {

@@ -25,7 +25,9 @@ import net.transgressoft.lirp.event.StandardCrudEvent.Delete
 import net.transgressoft.lirp.event.StandardCrudEvent.Update
 import net.transgressoft.lirp.persistence.projection.ObservableProjection
 import mu.KotlinLogging
+import mu.withLoggingContext
 import java.util.Optional
+import java.util.UUID
 
 /**
  * Abstract base for album registries backed by a lirp [ObservableProjection].
@@ -65,24 +67,27 @@ abstract class AlbumRegistryBase<I, AE>(private val publisherName: String = "Alb
     protected fun observeAlbumChanges(projection: ObservableProjection<AlbumDetails, AE>) {
         entriesChangedHandle =
             projection.addOnEntriesChangedListener { changes ->
-                for ((album, oldAlbum, newAlbum) in changes) {
-                    when {
-                        oldAlbum == null && newAlbum != null -> {
-                            albumPublisher.emitAsync(Create(newAlbum))
-                            log.debug { "Album created for ${album.name}" }
-                        }
-                        oldAlbum != null && newAlbum != null -> {
-                            // Use the canonical bucket key (not the representative album.id) as the shared
-                            // map key so the Update consistency check passes even when the representative's
-                            // year, label, or casing differs between old and new values.
-                            albumPublisher.emitAsync(Update(mapOf(album to newAlbum), mapOf(album to oldAlbum)))
-                            log.debug { "Album updated for ${album.name}" }
-                        }
-                        oldAlbum != null && newAlbum == null -> {
-                            albumPublisher.emitAsync(Delete(oldAlbum))
-                            log.debug { "Album deleted for ${album.name}" }
+                withLoggingContext("catalogRebuildId" to UUID.randomUUID().toString()) {
+                    for ((album, oldAlbum, newAlbum) in changes) {
+                        when {
+                            oldAlbum == null && newAlbum != null -> {
+                                albumPublisher.emitAsync(Create(newAlbum))
+                                log.trace { "Album created for ${album.name}" }
+                            }
+                            oldAlbum != null && newAlbum != null -> {
+                                // Use the canonical bucket key (not the representative album.id) as the shared
+                                // map key so the Update consistency check passes even when the representative's
+                                // year, label, or casing differs between old and new values.
+                                albumPublisher.emitAsync(Update(mapOf(album to newAlbum), mapOf(album to oldAlbum)))
+                                log.trace { "Album updated for ${album.name}" }
+                            }
+                            oldAlbum != null && newAlbum == null -> {
+                                albumPublisher.emitAsync(Delete(oldAlbum))
+                                log.trace { "Album deleted for ${album.name}" }
+                            }
                         }
                     }
+                    log.debug { "Album registry rebuilt: ${projection.size} entries" }
                 }
             }
     }

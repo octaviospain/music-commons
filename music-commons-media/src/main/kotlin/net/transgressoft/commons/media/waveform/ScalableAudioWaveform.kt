@@ -28,6 +28,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.file.Path
 import javax.imageio.ImageIO
+import javax.sound.sampled.AudioInputStream
 import kotlin.io.path.exists
 import kotlin.io.path.extension
 import kotlin.math.abs
@@ -114,50 +115,53 @@ class ScalableAudioWaveform(
         return try {
             val pcmStream = decodeToPcmStream(audioFilePath)
             val isBigEndian = pcmStream.format.isBigEndian
-            val pcmBytes: ByteArray =
-                pcmStream.use { stream ->
-                    val buf = ByteArrayOutputStream()
-                    val buffer = ByteArray(8192)
-                    var accumulated = 0L
-                    var bytesRead = stream.read(buffer)
-                    while (bytesRead != -1) {
-                        if (bytesRead > 0) {
-                            accumulated += bytesRead
-                            if (accumulated > maxPcmBytes) {
-                                throw AudioWaveformProcessingException(
-                                    "PCM data for '$audioFilePath' exceeds the $maxPcmBytes-byte limit"
-                                )
-                            }
-                            buf.write(buffer, 0, bytesRead)
-                        }
-                        bytesRead = stream.read(buffer)
-                    }
-                    buf.toByteArray()
-                }
+            val pcmBytes = pcmStream.use { readBoundedPcmBytes(it, audioFilePath) }
             if (pcmBytes.isEmpty()) {
                 throw AudioWaveformProcessingException(
                     "No PCM data produced for '$audioFilePath' — format conversion may not be supported"
                 )
             }
-            val sampleCount = pcmBytes.size / 2
-            IntArray(sampleCount) { i ->
-                val byteOffset = i * 2
-                if (isBigEndian) {
-                    val high = pcmBytes[byteOffset].toInt()
-                    val low = pcmBytes[byteOffset + 1].toInt() and 0xFF
-                    (high shl 8) or low
-                } else {
-                    val low = pcmBytes[byteOffset].toInt() and 0xFF
-                    val high = pcmBytes[byteOffset + 1].toInt()
-                    (high shl 8) or low
-                }
-            }
+            decodePcmSamples(pcmBytes, isBigEndian)
         } catch (exception: AudioWaveformProcessingException) {
             throw exception
         } catch (exception: Exception) {
             throw AudioWaveformProcessingException("Error processing waveform", exception)
         }
     }
+
+    /** Reads the full PCM stream into a byte array, failing if it exceeds [maxPcmBytes]. */
+    private fun readBoundedPcmBytes(stream: AudioInputStream, audioFilePath: Path): ByteArray {
+        val buf = ByteArrayOutputStream()
+        val buffer = ByteArray(8192)
+        var accumulated = 0L
+        var bytesRead = stream.read(buffer)
+        while (bytesRead != -1) {
+            if (bytesRead > 0) {
+                accumulated += bytesRead
+                if (accumulated > maxPcmBytes) {
+                    throw AudioWaveformProcessingException(
+                        "PCM data for '$audioFilePath' exceeds the $maxPcmBytes-byte limit"
+                    )
+                }
+                buf.write(buffer, 0, bytesRead)
+            }
+            bytesRead = stream.read(buffer)
+        }
+        return buf.toByteArray()
+    }
+
+    /** Decodes 16-bit PCM bytes into signed sample values, respecting the stream's endianness. */
+    private fun decodePcmSamples(pcmBytes: ByteArray, isBigEndian: Boolean): IntArray =
+        IntArray(pcmBytes.size / 2) { i ->
+            val byteOffset = i * 2
+            val first = pcmBytes[byteOffset].toInt()
+            val second = pcmBytes[byteOffset + 1].toInt()
+            if (isBigEndian) {
+                (first shl 8) or (second and 0xFF)
+            } else {
+                (second shl 8) or (first and 0xFF)
+            }
+        }
 
     /**
      * Computes width-normalized amplitude values from the raw PCM data, without applying

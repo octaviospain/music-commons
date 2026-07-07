@@ -50,7 +50,7 @@ internal object PcmVolume {
         }
         val sampleSizeInBits = format.sampleSizeInBits
         if (sampleSizeInBits <= 0 || sampleSizeInBits % 8 != 0) {
-            logger.debug {
+            logger.trace {
                 "Volume control skipped: sample size ${format.sampleSizeInBits}-bit not supported (requires byte-aligned PCM)"
             }
             return
@@ -66,7 +66,7 @@ internal object PcmVolume {
             }
             in 1..4 -> scaleSignedSamples(buffer, chunk, bytesPerSample, gain, format.isBigEndian)
             else -> {
-                logger.debug {
+                logger.trace {
                     "Volume control skipped: sample size ${format.sampleSizeInBits}-bit not supported (requires 8/16/24/32-bit PCM)"
                 }
             }

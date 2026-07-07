@@ -25,7 +25,9 @@ import net.transgressoft.lirp.event.StandardCrudEvent.Delete
 import net.transgressoft.lirp.event.StandardCrudEvent.Update
 import net.transgressoft.lirp.persistence.projection.ObservableProjection
 import mu.KotlinLogging
+import mu.withLoggingContext
 import java.util.Optional
+import java.util.UUID
 
 /**
  * Abstract base for artist catalog registries backed by a lirp [ObservableProjection].
@@ -65,21 +67,24 @@ abstract class ArtistCatalogRegistryBase<I, AC>(private val publisherName: Strin
     protected fun observeCatalogChanges(projection: ObservableProjection<Artist, AC>) {
         entriesChangedHandle =
             projection.addOnEntriesChangedListener { changes ->
-                for ((artist, oldCatalog, newCatalog) in changes) {
-                    when {
-                        oldCatalog == null && newCatalog != null -> {
-                            artistCatalogPublisher.emitAsync(Create(newCatalog))
-                            log.debug { "Artist catalog created for ${artist.name}" }
-                        }
-                        oldCatalog != null && newCatalog != null -> {
-                            artistCatalogPublisher.emitAsync(Update(newCatalog, oldCatalog))
-                            log.debug { "Artist catalog updated for ${artist.name}" }
-                        }
-                        oldCatalog != null && newCatalog == null -> {
-                            artistCatalogPublisher.emitAsync(Delete(oldCatalog))
-                            log.debug { "Artist catalog deleted for ${artist.name}" }
+                withLoggingContext("catalogRebuildId" to UUID.randomUUID().toString()) {
+                    for ((artist, oldCatalog, newCatalog) in changes) {
+                        when {
+                            oldCatalog == null && newCatalog != null -> {
+                                artistCatalogPublisher.emitAsync(Create(newCatalog))
+                                log.trace { "Artist catalog created for ${artist.name}" }
+                            }
+                            oldCatalog != null && newCatalog != null -> {
+                                artistCatalogPublisher.emitAsync(Update(newCatalog, oldCatalog))
+                                log.trace { "Artist catalog updated for ${artist.name}" }
+                            }
+                            oldCatalog != null && newCatalog == null -> {
+                                artistCatalogPublisher.emitAsync(Delete(oldCatalog))
+                                log.trace { "Artist catalog deleted for ${artist.name}" }
+                            }
                         }
                     }
+                    log.debug { "Artist catalog rebuilt: ${projection.size} entries" }
                 }
             }
     }

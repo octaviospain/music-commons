@@ -74,6 +74,7 @@ internal class CoreAudioItemPlayerUnitTest : FunSpec({
 
     fun audioItem(path: Path): ReactiveAudioItem<*> =
         mockk(relaxed = true) {
+            every { id } returns 1
             every { this@mockk.path } returns path
             every { fileName } returns path.fileName.toString()
             every { extension } returns path.toString().substringAfterLast('.', "")

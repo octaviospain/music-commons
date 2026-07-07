@@ -73,6 +73,6 @@ internal class ImmutableGenreIndex<I>(override val genre: Genre, tracks: List<I>
     override fun toString() = "ImmutableGenreIndex(genre=$genre, size=$size)"
 
     init {
-        logger.debug { "Genre index created for ${genre.name}" }
+        logger.trace { "Genre index created for ${genre.name}" }
     }
 }

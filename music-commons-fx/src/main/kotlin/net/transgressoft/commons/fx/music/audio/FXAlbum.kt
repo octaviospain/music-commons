@@ -142,7 +142,7 @@ internal class FXAlbum(
     }
 
     init {
-        logger.debug { "FXAlbum created for ${album.name}" }
+        logger.trace { "FXAlbum created for ${album.name}" }
         tracksProperty.setAll(trackList)
         sizeProperty.set(size)
     }

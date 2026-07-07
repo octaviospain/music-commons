@@ -27,6 +27,7 @@ import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
 import net.transgressoft.lirp.event.FlowEventPublisher
 import net.transgressoft.lirp.event.LirpEventPublisher
 import mu.KotlinLogging
+import mu.withLoggingContext
 import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicLong
@@ -179,14 +180,17 @@ open class CoreAudioItemPlayer private constructor(
         pumpThread.get()?.start()
         if (audioFileFormat == null || durationProber.requiresDecodedDurationProbe(file, audioFileFormat)) {
             val fileName = audioItem.path.fileName.toString()
+            val audioItemIdStr = audioItem.id.toString()
             durationProbeThread.set(
                 Thread({
-                    val resolved =
-                        runCatching { durationProber.resolvePlayableDurationMillis(file, fileName) }
-                            .onFailure { logger.debug(it) { "Decoded-duration probe failed for '${file.name}' after playback started" } }
-                            .getOrNull()
-                    if (resolved != null && resolved > 0L && activeSessionId.get() == mySession && state.get() != InternalState.DISPOSED) {
-                        sourceDurationMillis = resolved
+                    withLoggingContext("audioItemId" to audioItemIdStr) {
+                        val resolved =
+                            runCatching { durationProber.resolvePlayableDurationMillis(file, fileName) }
+                                .onFailure { logger.debug(it) { "Decoded-duration probe failed for '${file.name}' after playback started" } }
+                                .getOrNull()
+                        if (resolved != null && resolved > 0L && activeSessionId.get() == mySession && state.get() != InternalState.DISPOSED) {
+                            sourceDurationMillis = resolved
+                        }
                     }
                 }, "CoreAudioPlayer-duration-probe").apply { isDaemon = true }
             )

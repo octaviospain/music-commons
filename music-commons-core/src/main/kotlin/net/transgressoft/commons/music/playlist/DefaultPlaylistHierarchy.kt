@@ -62,7 +62,7 @@ internal class DefaultPlaylistHierarchy(
     ): MutableAudioPlaylist {
         require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
         return MutablePlaylist(newId(), name, false, audioItemIds).also {
-            logger.debug { "Created playlist $it" }
+            logger.trace { "Created playlist $it" }
             add(it)
         }
     }
@@ -75,7 +75,7 @@ internal class DefaultPlaylistHierarchy(
     ): MutableAudioPlaylist {
         require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
         return MutablePlaylist(newId(), name, true, audioItems.toIds()).also {
-            logger.debug { "Created playlist directory $it" }
+            logger.trace { "Created playlist directory $it" }
             add(it)
         }
     }

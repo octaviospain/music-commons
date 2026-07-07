@@ -62,7 +62,7 @@ internal class DefaultAudioLibrary
                     val audioItemClone = audioItem.clone()
                     audioItem.incrementPlayCount()
                     repository.emitAsync(Update(audioItem, audioItemClone))
-                    logger.debug { "Play count for audio item ${audioItem.id} increased to ${audioItem.playCount}" }
+                    logger.trace { "Play count for audio item ${audioItem.id} increased to ${audioItem.playCount}" }
                 }
             }
         }
@@ -94,7 +94,7 @@ internal class DefaultAudioLibrary
             val tag = metadataIO.readMetadata(audioItemPath)
             return MutableAudioItem(audioItemPath, newId(), tag).also { audioItem ->
                 add(audioItem)
-                logger.debug { "New AudioItem was created from file $audioItemPath with id ${audioItem.id}" }
+                logger.trace { "New AudioItem was created from file $audioItemPath with id ${audioItem.id}" }
             }
         }
 
