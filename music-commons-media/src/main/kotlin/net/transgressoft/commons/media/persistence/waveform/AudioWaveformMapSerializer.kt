@@ -80,6 +80,14 @@ val AudioWaveformMapSerializer: KSerializer<Map<Int, AudioWaveform>> = MapSerial
  * `lastDateModified` is optional and absent in waveforms persisted before it was round-tripped.
  * Malformed Base64 payloads and cache size mismatches produce [kotlinx.serialization.SerializationException].
  *
+ * **Schema-change convention:** `AudioWaveformSerializer` is hand-written and independent of
+ * `lirpSerializerFor` because [ScalableAudioWaveform] holds non-`@Serializable` cached fields
+ * (`cachedWidth`, `normalizedAmplitudes`) that require manual encoding. Any new persisted field
+ * MUST ship with a round-trip test covering both the field-absent case (older persisted data) and
+ * the field-present case (new data), using [assertOptionalFieldRoundTrips][net.transgressoft.commons.music.testing.assertOptionalFieldRoundTrips]
+ * from `music-commons-test`. The `lastDateModified` field is the reference example of the
+ * optional-field pattern.
+ *
  * @param fileSystem the [FileSystem] used to materialize the [java.nio.file.Path] backing
  *  the deserialized waveform. Defaults to [FileSystems.getDefault]; tests may pass a
  *  Jimfs filesystem to round-trip waveform JSON against an in-memory tree.

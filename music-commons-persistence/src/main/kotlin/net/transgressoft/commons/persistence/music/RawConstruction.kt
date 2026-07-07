@@ -60,6 +60,14 @@ fun <K : Comparable<K>, E : ReactiveEntity<K, E>> rawConstruct(
  * [rawConstruct]. Invoking the [LirpEntitySerializer] constructor directly with `sample::class`
  * sidesteps that, keeping the serializer bound to the concrete internal entity type.
  *
+ * **Schema-change convention:** these serializers are hand-written rather than generated because
+ * lirp's reflective SPI reads primary-constructor parameters and reactive delegates — plain
+ * `@Serializable` fields are not persisted, so generated serializers cannot honour the contract
+ * without exposing internal constructors. Therefore any new persisted field MUST ship with a
+ * round-trip test covering both the field-absent case (older persisted data written before the
+ * field existed) and the field-present case (new data), using [assertOptionalFieldRoundTrips][net.transgressoft.commons.music.testing.assertOptionalFieldRoundTrips]
+ * from `music-commons-test`.
+ *
  * @param sample a single entity instance whose concrete class the serializer mirrors
  * @param module contextual serializers for the entity's non-`@Serializable` nested types
  */
