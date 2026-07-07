@@ -29,10 +29,15 @@ import net.transgressoft.lirp.persistence.RefEntry
 /**
  * Manually-written aggregate reference accessor for [MutablePlaylist].
  *
- * This class replaces the KSP-generated `_LirpRefAccessor` that would normally be produced
- * by the `@Aggregate` annotation processor. A manual implementation is required because the
- * KSP processor generates a `public` accessor that cannot reference `internal` entities,
- * causing a visibility error at compile time.
+ * This class is hand-authored because `music-commons-core` deliberately omits the lirp-ksp
+ * processor to remain persistence-agnostic. lirp-ksp emits a `_LirpRefAccessor` only for entities
+ * annotated with `@PersistenceMapping` plus `@ToManyAggregates` on their aggregate delegates;
+ * annotating this entity to trigger generation would also pull table-definition, raw-initializer,
+ * and property-accessor codegen into the reactive core for every mapped entity in the module. The
+ * accessor is therefore written by hand to keep persistence codegen out of this module — not
+ * because lirp-ksp cannot generate it. Given the annotations, lirp-ksp produces an
+ * equivalent `internal`-visibility accessor with the same `audioItems`/`playlists` collection
+ * entries, so this is an architectural choice rather than a framework limitation.
  *
  * The class name follows the lirp convention `{EntityJvmName}_LirpRefAccessor` so that
  * [net.transgressoft.lirp.persistence.RegistryBase.discoverRefs] locates it via

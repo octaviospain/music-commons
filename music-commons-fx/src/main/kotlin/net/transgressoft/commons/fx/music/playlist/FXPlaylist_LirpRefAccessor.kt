@@ -29,9 +29,15 @@ import net.transgressoft.lirp.persistence.RefEntry
 /**
  * Manually-written aggregate reference accessor for the top-level [FXPlaylist] class.
  *
- * This class replaces the KSP-generated `_LirpRefAccessor` that would normally be produced
- * by the `@Aggregate` annotation processor. A manual implementation is required because
- * [FXPlaylist] is an `internal` class that KSP cannot process.
+ * This class is hand-authored because `music-commons-fx` deliberately omits the lirp-ksp
+ * processor to remain persistence-agnostic. lirp-ksp emits a `_LirpRefAccessor` only for entities
+ * annotated with `@PersistenceMapping` plus `@ToManyAggregates` on their aggregate delegates;
+ * annotating this entity to trigger generation would also pull table-definition, raw-initializer,
+ * and property-accessor codegen into the reactive FX layer for every mapped entity in the module.
+ * The accessor is therefore written by hand to keep persistence codegen out of this module — not
+ * because lirp-ksp cannot generate it. Given the annotations, lirp-ksp produces an
+ * equivalent `internal`-visibility accessor with the same `audioItems`/`playlists` collection
+ * entries, so this is an architectural choice rather than a framework limitation.
  *
  * The class name follows the lirp convention `{EntityJvmName}_LirpRefAccessor`, where the JVM
  * name of the top-level class is `net.transgressoft.commons.fx.music.playlist.FXPlaylist`, so
