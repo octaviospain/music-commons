@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.music.audio
+package net.transgressoft.commons.media.player
 
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
@@ -29,17 +29,16 @@ import javax.sound.sampled.SourceDataLine
  * [SourceDataLine] test double that replaces real hardware output with a virtual clock.
  *
  * Position advances deterministically from bytes written ÷ frame size × frame rate of the
- * open [AudioFormat]; [write] is non-blocking and always accepts all bytes. Use via the
- * [CoreAudioItemPlayer][net.transgressoft.commons.media.player.CoreAudioItemPlayer]
- * `lineFactory` constructor parameter to run playback state-machine tests without
- * real audio hardware or thread sleeps.
+ * open [AudioFormat]; [write] is non-blocking and always accepts all bytes. Use via
+ * [CoreAudioItemPlayerTestSupport] to run playback state-machine tests without real audio
+ * hardware or thread sleeps.
  *
- * Virtual-clock formula (D-01):
+ * Virtual-clock formula:
  * `getMicrosecondPosition() = (totalBytesWritten × 1_000_000.0 / frameSize / frameRate).toLong()`
  *
- * The clock halts while the line is stopped and resumes on [start] (D-03). [flush] resets
+ * The clock halts while the line is stopped and resumes on [start]. [flush] resets
  * the accumulated byte count to zero. [drain] is a no-op. [available] and [getBufferSize]
- * return [Int.MAX_VALUE] so the pump thread never simulates backpressure (D-04).
+ * return [Int.MAX_VALUE] so the pump thread never simulates backpressure.
  *
  * @see SourceDataLine
  */
@@ -80,7 +79,7 @@ class FakeAudioLine : SourceDataLine {
     }
 
     override fun drain() {
-        // No-op: virtual line has no buffered bytes to wait for (D-03)
+        // No-op: virtual line has no buffered bytes to wait for
     }
 
     override fun flush() {

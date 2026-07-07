@@ -1,4 +1,16 @@
+plugins {
+    id 'java-test-fixtures'
+}
+
 description = 'Transgressoft Music Commons - Media (JavaSound)'
+
+kotlin {
+    target {
+        compilations.named('testFixtures') {
+            associateWith(compilations.named('main').get())
+        }
+    }
+}
 
 dependencies {
     api project(path: ':music-commons-api')

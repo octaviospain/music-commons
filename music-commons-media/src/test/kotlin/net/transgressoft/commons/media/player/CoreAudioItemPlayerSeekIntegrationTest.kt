@@ -18,7 +18,6 @@
 package net.transgressoft.commons.media.player
 
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile
-import net.transgressoft.commons.music.audio.FakeAudioLine
 import net.transgressoft.commons.music.audio.audioItem
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.annotation.DisplayName

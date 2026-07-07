@@ -79,6 +79,7 @@ dependencies {
     implementation libs.javafx.controls.get()
 
     testImplementation project(path: ':music-commons-fx-test')
+    testImplementation(testFixtures(project(':music-commons-media')))
     testImplementation(platform(libs.junit.bom.get()))
     testImplementation(libs.junit.jupiter.get())
     testImplementation libs.jimfs.get()
