@@ -17,6 +17,7 @@
 
 package net.transgressoft.commons.music.audio
 
+import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.shouldBe
@@ -26,8 +27,9 @@ import io.kotest.property.arbitrary.next
 import java.nio.file.Path
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
+@DisplayName("ArtistCatalog")
 @ExperimentalCoroutinesApi
-internal class ImmutableArtistCatalogTest : StringSpec({
+internal class ArtistCatalogTest : StringSpec({
 
     val files = virtualFiles()
 
@@ -37,7 +39,7 @@ internal class ImmutableArtistCatalogTest : StringSpec({
     fun createAudioItem(path: Path, id: Int): AudioItem =
         MutableAudioItemTestBridge.createAudioItem(path, id, files.metadataIO)
 
-    "ImmutableArtistCatalog builds correct album grouping from list" {
+    "ArtistCatalog builds correct album grouping from list" {
         val expectedArtist = Arb.artist().next()
         val expectedAlbum = Arb.album().next()
         val audioItem =
@@ -56,7 +58,7 @@ internal class ImmutableArtistCatalogTest : StringSpec({
         catalog.albums.first().tracks.shouldContainOnly(audioItem)
     }
 
-    "ImmutableArtistCatalog within-album track ordering is maintained after construction" {
+    "ArtistCatalog within-album track ordering is maintained after construction" {
         val artist = Arb.artist().next()
         val albumAudioItems = files.virtualAlbumAudioFiles(artist = artist).next().map(::createAudioItem)
 
@@ -65,7 +67,7 @@ internal class ImmutableArtistCatalogTest : StringSpec({
         catalog.albums.first().tracks.shouldBeOrdered()
     }
 
-    "ImmutableArtistCatalog deduplicates by id when both items have assigned ids" {
+    "ArtistCatalog deduplicates by id when both items have assigned ids" {
         val expectedArtist = Arb.artist().next()
         val expectedAlbum = AlbumDetails("Shared Album", expectedArtist)
         val path =
@@ -85,7 +87,7 @@ internal class ImmutableArtistCatalogTest : StringSpec({
         catalog.albumAudioItems(expectedAlbum.name) shouldBe setOf(item1, item2)
     }
 
-    "ImmutableArtistCatalog deduplicates by uniqueId when both items have UNASSIGNED_ID" {
+    "ArtistCatalog deduplicates by uniqueId when both items have UNASSIGNED_ID" {
         val audioItem = Arb.audioItem().next()
 
         // Same reference: uniqueId match → deduplicated
@@ -94,13 +96,13 @@ internal class ImmutableArtistCatalogTest : StringSpec({
         catalog.size shouldBe 1
     }
 
-    "ImmutableArtistCatalog albumAudioItems returns empty set for unknown album" {
+    "ArtistCatalog albumAudioItems returns empty set for unknown album" {
         val catalog = ImmutableArtistCatalog(Arb.artist().next(), listOf(Arb.audioItem().next()))
 
         catalog.albumAudioItems("Nonexistent") shouldBe emptySet()
     }
 
-    "ImmutableArtistCatalog albums returns one entry per distinct album" {
+    "ArtistCatalog albums returns one entry per distinct album" {
         val artist = Arb.artist().next()
         // Same name, differing year: only full-value album identity keeps these as two distinct buckets.
         val album1 = AlbumDetails("Shared Name", artist, year = 1997)
@@ -123,7 +125,7 @@ internal class ImmutableArtistCatalogTest : StringSpec({
         catalog.albums.size shouldBe 2
     }
 
-    "ImmutableArtistCatalog size and isEmpty reflect the item count" {
+    "ArtistCatalog size and isEmpty reflect the item count" {
         val artist = Arb.artist().next()
         val albumItems = files.virtualAlbumAudioFiles().next().map(::createAudioItem)
 
@@ -133,7 +135,7 @@ internal class ImmutableArtistCatalogTest : StringSpec({
         catalog.isEmpty shouldBe false
     }
 
-    "ImmutableArtistCatalog equals returns true for same artist and items" {
+    "ArtistCatalog equals returns true for same artist and items" {
         val audioItem = createAudioItem(files.virtualAudioFile().next())
 
         val catalog1 = ImmutableArtistCatalog(audioItem.artist, listOf(audioItem))
@@ -143,7 +145,7 @@ internal class ImmutableArtistCatalogTest : StringSpec({
         catalog1.hashCode() shouldBe catalog2.hashCode()
     }
 
-    "ImmutableArtistCatalog equals returns false for different artist" {
+    "ArtistCatalog equals returns false for different artist" {
         val firstArtist = Artist.of("First Artist")
         val secondArtist = Artist.of("Second Artist")
         val item1 = Arb.audioItem { artist = firstArtist }.next()
@@ -155,14 +157,14 @@ internal class ImmutableArtistCatalogTest : StringSpec({
         (first == second) shouldBe false
     }
 
-    "ImmutableArtistCatalog equals returns false for non-catalog types and null" {
+    "ArtistCatalog equals returns false for non-catalog types and null" {
         val catalog = ImmutableArtistCatalog(Arb.artist().next(), listOf(Arb.audioItem().next()))
 
         catalog.equals(null) shouldBe false
         catalog.equals("not a catalog") shouldBe false
     }
 
-    "ImmutableArtistCatalog hashCode differs when items differ" {
+    "ArtistCatalog hashCode differs when items differ" {
         val firstArtist = Artist.of("A")
         val secondArtist = Artist.of("B")
         val item1 = Arb.audioItem { artist = firstArtist }.next()
@@ -175,7 +177,7 @@ internal class ImmutableArtistCatalogTest : StringSpec({
         catalog1.hashCode() shouldNotBe catalog2.hashCode()
     }
 
-    "ImmutableArtistCatalog compareTo orders by artist" {
+    "ArtistCatalog compareTo orders by artist" {
         val firstArtist = Artist.of("A Artist")
         val secondArtist = Artist.of("Z Artist")
         val item1 = Arb.audioItem { artist = firstArtist }.next()
@@ -187,14 +189,14 @@ internal class ImmutableArtistCatalogTest : StringSpec({
         (first.compareTo(second) < 0) shouldBe true
     }
 
-    "ImmutableArtistCatalog toString includes artist and size" {
+    "ArtistCatalog toString includes artist and size" {
         val audioItem = createAudioItem(files.virtualAudioFile().next())
         val catalog = ImmutableArtistCatalog(audioItem.artist, listOf(audioItem))
 
         catalog.toString() shouldBe "ImmutableArtistCatalog(artist=${audioItem.artist}, size=1)"
     }
 
-    "ImmutableArtistCatalog albumAudioItems returns items for a known album" {
+    "ArtistCatalog albumAudioItems returns items for a known album" {
         val artist = Arb.artist().next()
         val albumAudioItems = files.virtualAlbumAudioFiles(artist = artist).next().map(::createAudioItem)
 
