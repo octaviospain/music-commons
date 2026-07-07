@@ -152,9 +152,13 @@ interface AudioItemPlayer : Flow.Publisher<AudioItemPlayerEvent> {
      *   AAC/M4A.
      * - **WAV / AIFF**: byte-aligned to the nearest PCM frame. Precision is limited only by
      *   the frame size (4 bytes for 16-bit stereo); effectively sample-accurate.
-     * - **AAC/M4A**: frame-accurate. The implementation decodes to PCM from the beginning of
-     *   the stream and discards bytes up to the target offset, so seeking near the end of a
-     *   long track is proportionally slower than seeking near the start.
+     * - **AAC/M4A (known limitation)**: the implementation decodes PCM from the beginning of the
+     *   stream and discards bytes until the target offset is reached. Unlike MP3 (Xing/Info TOC or
+     *   frame-scan) and OGG (granulepos bisection), the M4A container has no ADTS-frame index that
+     *   enables random-access byte-level seeking in the decoder. Seek cost therefore scales linearly
+     *   with the target position; seeking near the end of a long track is proportionally slower than
+     *   seeking near the start. Implementing efficient ADTS-frame-based seeking is out of scope for
+     *   this release.
      *
      * @param position the target playback position; negative values are clamped to
      *   [Duration.ZERO], and positions beyond `totalDuration` are clamped to it once the total
