@@ -1,6 +1,7 @@
 package net.transgressoft.commons.media.waveform
 
 import net.transgressoft.commons.media.player.SUPPORTED_FORMATS
+import net.transgressoft.commons.music.audio.ArbitraryAudioFile
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.AudioFileTagType.WAV
 import net.transgressoft.commons.music.waveform.AudioWaveformProcessingException
@@ -126,6 +127,29 @@ internal class ScalableAudioWaveformTest : FunSpec({
                 waveform.amplitudes(width, height)
             }
         }
+    }
+
+    test("ScalableAudioWaveform throws AudioWaveformProcessingException when PCM exceeds maxPcmBytes") {
+        // WAV at 44.1kHz/16-bit stereo: ~8787ms * 44100 * 2 * 2 ≈ 1,553,846 bytes — well above 1024
+        val wavFile = ArbitraryAudioFile.getResourceAsFile("/testfiles/testeable.wav")
+        val tinyCapWaveform = ScalableAudioWaveform(1, wavFile.toPath(), maxPcmBytes = 1024L)
+
+        val exception =
+            shouldThrow<AudioWaveformProcessingException> {
+                tinyCapWaveform.amplitudes(780, 335, testDispatcher)
+            }
+
+        exception.message shouldContain wavFile.name
+        exception.message shouldContain "1024"
+    }
+
+    test("ScalableAudioWaveform with default ceiling computes amplitudes for a real WAV fixture") {
+        val wavFile = ArbitraryAudioFile.getResourceAsFile("/testfiles/testeable.wav")
+        val waveform = ScalableAudioWaveform(2, wavFile.toPath())
+
+        val result = waveform.amplitudes(780, 335, testDispatcher)
+
+        result.size shouldBe 780
     }
 })
 
