@@ -4,6 +4,7 @@ import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
 import net.transgressoft.commons.music.audio.audioItem
 import net.transgressoft.commons.music.testing.reactiveScope
+import net.transgressoft.commons.music.testing.registryIsolation
 import net.transgressoft.commons.persistence.music.playlist.AudioPlaylistMapSerializer
 import net.transgressoft.commons.util.OsDetector
 import net.transgressoft.commons.util.WindowsPathException
@@ -31,6 +32,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 @ExperimentalCoroutinesApi
 internal class DefaultPlaylistHierarchyTest : StringSpec({
 
+    registryIsolation()
     // failOnUncaughtExceptions = false: this spec exercises Arb.audioItem mocks that
     // don't stub the full ReactiveEntity subscribe() surface, so background subscribers
     // fail with MockKException after the spec has already verified its assertions.

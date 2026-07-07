@@ -6,6 +6,7 @@ import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.shouldNotReferenceItemId
 import net.transgressoft.commons.music.shouldReferenceItemId
 import net.transgressoft.commons.music.testing.reactiveScope
+import net.transgressoft.commons.music.testing.registryIsolation
 import net.transgressoft.lirp.persistence.RegistryBase.Companion.deregisterRepository
 import net.transgressoft.lirp.persistence.RegistryBase.Companion.registerRepository
 import net.transgressoft.lirp.persistence.VolatileRepository
@@ -22,6 +23,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 @ExperimentalCoroutinesApi
 internal class PlaylistHierarchyBaseTest : StringSpec({
 
+    registryIsolation()
     val reactive = reactiveScope()
     val files = virtualFiles()
     lateinit var playlistHierarchy: TestPlaylistHierarchy
