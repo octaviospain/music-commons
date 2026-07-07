@@ -96,9 +96,9 @@ spaces, MAX_PATH=260, `\\?\` long-path prefix) activates only when the library r
 Windows JVM. Linux and macOS consumers see no behavioral change -- the library remains a
 good Linux citizen.
 
-CI verifies behavior on both Ubuntu and Windows matrix legs on every push and pull
-request. The next section documents the test-tag taxonomy and the Gradle flags that
-gate platform-specific suites.
+CI verifies behavior on `ubuntu-latest`, `windows-latest`, and `macos-latest` matrix legs
+on every push and pull request. The next section documents the test-tag taxonomy and the
+Gradle flags that gate platform-specific suites.
 
 ### Cross-Platform Testing
 
@@ -112,7 +112,15 @@ filter:
 | `linux-only`        | Needs Linux-JDK path semantics (assertions written against Linux `Path.toString()` formatting of `\\?\…` prefixes) | included     | `-PexcludeLinuxOnly=true`           |
 | `posix-only`        | Needs POSIX semantics (POSIX file permissions like `chmod`) -- works on Linux *and* macOS | included     | `-PexcludePosixOnly=true`           |
 | `windows-only`      | Needs a real Windows host (NTFS, Windows JVM filesystem provider) | **EXCLUDED** | `-PincludeWindowsOnly=true`         |
-| `requires-playback` | Needs a working audio output device (opens a real `SourceDataLine`; fragile in headless CI) | included     | `-PexcludePlaybackTests=true`       |
+| `audio-hardware`    | Needs a working audio output device (opens a real `SourceDataLine`; fragile in headless CI) | included (see note) | `-PexcludeAudioHardware=true`       |
+
+> **Note on `audio-hardware` in the media module:** `music-commons-media` excludes
+> `audio-hardware` **by default** so a bare `gradle :music-commons-media:test` is
+> deterministic without relying on CI passing the flag. To run the audio-hardware smoke
+> tests locally on a machine with a real output device, opt back in with
+> `-PincludeAudioHardware=true`. A `verifyAudioHardwareExclusion` build check fails the
+> default run if any audio-hardware-tagged test executed. Other modules keep the
+> repository-wide "included" default shown above.
 
 #### Examples
 
@@ -123,17 +131,23 @@ gradle build
 # Local macOS dev (skip Linux-JDK-path-specific tests, no Windows tests)
 gradle build -PexcludeLinuxOnly=true
 
+# Local macOS dev (mirrors the macOS CI leg: POSIX kept, linux-only + audio-hardware skipped)
+gradle build -PexcludeLinuxOnly=true -PexcludeAudioHardware=true
+
 # Local Windows dev (no POSIX permission tests, no Linux-only tests, include Windows-only tests)
 gradle build -PexcludeLinuxOnly=true -PexcludePosixOnly=true -PincludeWindowsOnly=true
 
-# Headless CI on Linux (skip flaky audio playback)
-gradle build -PexcludePlaybackTests=true
+# Headless CI on Linux (skip audio-hardware tests)
+gradle build -PexcludeAudioHardware=true
+
+# Run the media audio-hardware smoke tests locally (needs a real output device)
+gradle :music-commons-media:test -PincludeAudioHardware=true
 
 # Headless CI on Windows (full Windows leg)
-gradle build -PexcludeLinuxOnly=true -PexcludePosixOnly=true -PincludeWindowsOnly=true -PexcludePlaybackTests=true
+gradle build -PexcludeLinuxOnly=true -PexcludePosixOnly=true -PincludeWindowsOnly=true -PexcludeAudioHardware=true
 ```
 
-CI runs this matrix automatically on both `ubuntu-latest` and `windows-latest`; the Linux
+CI runs this matrix automatically on `ubuntu-latest`, `windows-latest`, and `macos-latest`; the Linux
 leg additionally runs ktlintCheck and SonarQube.
 
 #### Authoring Cross-Platform Tests
