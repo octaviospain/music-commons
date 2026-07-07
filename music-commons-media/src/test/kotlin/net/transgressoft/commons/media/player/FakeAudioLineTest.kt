@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
  ******************************************************************************/
 
-package net.transgressoft.commons.music.audio
+package net.transgressoft.commons.media.player
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe

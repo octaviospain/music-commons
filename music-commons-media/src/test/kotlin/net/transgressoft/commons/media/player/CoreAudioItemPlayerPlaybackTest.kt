@@ -20,7 +20,6 @@ package net.transgressoft.commons.media.player
 import net.transgressoft.commons.media.util.decodeToPcmStream
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile.realAudioFile
 import net.transgressoft.commons.music.audio.AudioFileTagType.WAV
-import net.transgressoft.commons.music.audio.FakeAudioLine
 import net.transgressoft.commons.music.audio.audioItem
 import net.transgressoft.commons.music.player.AudioItemPlayer.Status
 import net.transgressoft.commons.music.player.UnsupportedAudioPlaybackException
