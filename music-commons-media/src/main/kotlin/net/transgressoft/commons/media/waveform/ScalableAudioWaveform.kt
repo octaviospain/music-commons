@@ -51,12 +51,27 @@ import kotlinx.serialization.Transient
  *
  * The waveform data can be scaled to different widths and heights and can generate visual
  * waveform images for display purposes.
+ *
+ * Decoded PCM is bounded by [maxPcmBytes] to prevent unbounded heap growth when processing
+ * untrusted or decode-bomb audio files. Exceeding the ceiling throws [AudioWaveformProcessingException].
  */
 @Serializable
 class ScalableAudioWaveform(
     override val id: Int,
-    override val audioFilePath: Path
+    override val audioFilePath: Path,
+    val maxPcmBytes: Long = DEFAULT_MAX_PCM_BYTES
 ) : ReactiveEntityBase<Int, AudioWaveform>(), AudioWaveform {
+
+    companion object {
+
+        /**
+         * Default maximum PCM bytes accumulated during waveform extraction (~1 GiB, enough for
+         * roughly 1.7 hours of stereo 44.1 kHz/16-bit audio). This ceiling exists to bound
+         * memory growth when decoding untrusted audio content; a crafted or infinitely-looping
+         * file would otherwise exhaust the JVM heap before `getRawAudioPcm` returns.
+         */
+        const val DEFAULT_MAX_PCM_BYTES: Long = 1_073_741_824L
+    }
 
     @Transient private val cacheMutex = Mutex()
 
@@ -73,8 +88,9 @@ class ScalableAudioWaveform(
         id: Int,
         audioFilePath: Path,
         cachedWidth: Int,
-        normalizedAmplitudes: FloatArray
-    ) : this(id, audioFilePath) {
+        normalizedAmplitudes: FloatArray,
+        maxPcmBytes: Long = DEFAULT_MAX_PCM_BYTES
+    ) : this(id, audioFilePath, maxPcmBytes) {
         this.cachedWidth = cachedWidth
         this.normalizedAmplitudes = normalizedAmplitudes
     }
@@ -102,9 +118,18 @@ class ScalableAudioWaveform(
                 pcmStream.use { stream ->
                     val buf = ByteArrayOutputStream()
                     val buffer = ByteArray(8192)
+                    var accumulated = 0L
                     var bytesRead = stream.read(buffer)
                     while (bytesRead != -1) {
-                        if (bytesRead > 0) buf.write(buffer, 0, bytesRead)
+                        if (bytesRead > 0) {
+                            accumulated += bytesRead
+                            if (accumulated > maxPcmBytes) {
+                                throw AudioWaveformProcessingException(
+                                    "PCM data for '$audioFilePath' exceeds the $maxPcmBytes-byte limit"
+                                )
+                            }
+                            buf.write(buffer, 0, bytesRead)
+                        }
                         bytesRead = stream.read(buffer)
                     }
                     buf.toByteArray()
@@ -247,9 +272,9 @@ class ScalableAudioWaveform(
     override fun clone(): ScalableAudioWaveform {
         val cached = normalizedAmplitudes
         return if (cached != null) {
-            ScalableAudioWaveform(id, audioFilePath, cachedWidth, cached.copyOf())
+            ScalableAudioWaveform(id, audioFilePath, cachedWidth, cached.copyOf(), maxPcmBytes)
         } else {
-            ScalableAudioWaveform(id, audioFilePath)
+            ScalableAudioWaveform(id, audioFilePath, maxPcmBytes)
         }
     }
 
