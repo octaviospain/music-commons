@@ -18,6 +18,7 @@
 package net.transgressoft.commons.music.audio
 
 import io.kotest.assertions.assertSoftly
+import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldContainOnly
 import io.kotest.matchers.comparables.shouldBeEqualComparingTo
@@ -30,8 +31,9 @@ import io.kotest.property.arbitrary.next
 import java.nio.file.Path
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
+@DisplayName("Album")
 @ExperimentalCoroutinesApi
-internal class ImmutableAlbumTest : StringSpec({
+internal class AlbumTest : StringSpec({
 
     val files = virtualFiles()
 
@@ -41,7 +43,7 @@ internal class ImmutableAlbumTest : StringSpec({
     fun createAudioItem(path: Path, id: Int): AudioItem =
         MutableAudioItemTestBridge.createAudioItem(path, id, files.metadataIO)
 
-    "ImmutableAlbum exposes album, size, isEmpty, and audioItems from construction list" {
+    "Album exposes album, size, isEmpty, and audioItems from construction list" {
         val artist = Arb.artist().next()
         val albumDetails = Arb.album(albumArtist = artist).next()
         val audioItem =
@@ -58,7 +60,7 @@ internal class ImmutableAlbumTest : StringSpec({
         album.tracks.shouldContainOnly(audioItem)
     }
 
-    "ImmutableAlbum isEmpty is true for empty list" {
+    "Album isEmpty is true for empty list" {
         val albumDetails = Arb.album().next()
 
         val album = ImmutableAlbum(albumDetails, emptyList())
@@ -68,7 +70,7 @@ internal class ImmutableAlbumTest : StringSpec({
         album.tracks shouldBe emptyList()
     }
 
-    "ImmutableAlbum preserves all items as passed — deduplication is the projection layer's responsibility" {
+    "Album preserves all items as passed — deduplication is the projection layer's responsibility" {
         val artist = Arb.artist().next()
         val albumDetails = AlbumDetails("Album", artist)
         val path =
@@ -87,7 +89,7 @@ internal class ImmutableAlbumTest : StringSpec({
         album.tracks.shouldContainOnly(item1, item2)
     }
 
-    "ImmutableAlbum stores tracks verbatim without re-sorting" {
+    "Album stores tracks verbatim without re-sorting" {
         val artist = Arb.artist().next()
         val albumDetails = AlbumDetails("Verbatim", artist)
         val paths = files.virtualAlbumAudioFiles(artist, albumDetails, size = 3..5).next()
@@ -101,7 +103,7 @@ internal class ImmutableAlbumTest : StringSpec({
         album.tracks shouldNotBe items.sorted()
     }
 
-    "ImmutableAlbum compareTo orders by album" {
+    "Album compareTo orders by album" {
         val artist = Arb.artist().next()
         val albumDetailsA = AlbumDetails("A Album", artist)
         val albumDetailsZ = AlbumDetails("Z Album", artist)
@@ -116,7 +118,7 @@ internal class ImmutableAlbumTest : StringSpec({
         albumA shouldBeEqualComparingTo albumA
     }
 
-    "ImmutableAlbum equals is true for same album and same items" {
+    "Album equals is true for same album and same items" {
         val albumDetails = Arb.album().next()
         val audioItem = Arb.audioItem { this.album = albumDetails }.next()
 
@@ -127,7 +129,7 @@ internal class ImmutableAlbumTest : StringSpec({
         album1.hashCode() shouldBe album2.hashCode()
     }
 
-    "ImmutableAlbum with different albums is unequal in both equals and hashCode" {
+    "Album with different albums is unequal in both equals and hashCode" {
         val artist = Arb.artist().next()
         val albumDetails1 = AlbumDetails("First Album", artist)
         val albumDetails2 = AlbumDetails("Second Album", artist)
@@ -143,7 +145,7 @@ internal class ImmutableAlbumTest : StringSpec({
         }
     }
 
-    "ImmutableAlbum equals returns false for null and non-album types" {
+    "Album equals returns false for null and non-album types" {
         val albumDetails = Arb.album().next()
         val album = ImmutableAlbum(albumDetails, listOf(Arb.audioItem { this.album = albumDetails }.next()))
 
@@ -151,7 +153,7 @@ internal class ImmutableAlbumTest : StringSpec({
         album.equals("not an album") shouldBe false
     }
 
-    "ImmutableAlbum toString includes album and size" {
+    "Album toString includes album and size" {
         val artist = Artist.of("Test Artist")
         val albumDetails = AlbumDetails("Test Album", artist)
         val audioItem = Arb.audioItem { this.album = albumDetails }.next()
@@ -161,14 +163,14 @@ internal class ImmutableAlbumTest : StringSpec({
         album.toString() shouldBe "ImmutableAlbum(album=$albumDetails, size=1)"
     }
 
-    "ImmutableAlbum clone returns itself" {
+    "Album clone returns itself" {
         val albumDetails = Arb.album().next()
         val album = ImmutableAlbum(albumDetails, listOf(Arb.audioItem { this.album = albumDetails }.next()))
 
         (album.clone() === album) shouldBe true
     }
 
-    "ImmutableAlbum coverImageBytes returns cover of first covered item" {
+    "Album coverImageBytes returns cover of first covered item" {
         val albumDetails = Arb.album().next()
         val expectedCover = byteArrayOf(10, 20, 30)
         val itemNoCover =
@@ -191,7 +193,7 @@ internal class ImmutableAlbumTest : StringSpec({
         album.coverImageBytes shouldBe expectedCover
     }
 
-    "ImmutableAlbum coverImageBytes returns null when no item has a cover" {
+    "Album coverImageBytes returns null when no item has a cover" {
         val albumDetails = Arb.album().next()
         val item1 =
             Arb.audioItem {
@@ -211,7 +213,7 @@ internal class ImmutableAlbumTest : StringSpec({
         album.coverImageBytes shouldBe null
     }
 
-    "ImmutableAlbum retains two distinct UNASSIGNED_ID items with same disc and track" {
+    "Album retains two distinct UNASSIGNED_ID items with same disc and track" {
         val artist = Arb.artist().next()
         val albumDetails = AlbumDetails("Identity Album", artist)
         val path1 =
