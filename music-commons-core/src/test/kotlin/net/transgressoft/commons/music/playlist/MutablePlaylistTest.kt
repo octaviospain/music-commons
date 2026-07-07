@@ -3,6 +3,7 @@ package net.transgressoft.commons.music.playlist
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.artist
 import net.transgressoft.commons.music.audio.audioItem
+import net.transgressoft.commons.music.testing.registryIsolation
 import net.transgressoft.commons.persistence.music.playlist.AudioPlaylistMapSerializer
 import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.VolatileRepository
@@ -29,6 +30,8 @@ private lateinit var playlistHierarchy: PlaylistHierarchy
 private lateinit var audioItemRepository: VolatileRepository<Int, AudioItem>
 
 internal class MutablePlaylistTest : StringSpec({
+
+    registryIsolation()
 
     lateinit var jsonFileRepository: JsonRepository<Int, MutableAudioPlaylist>
 
