@@ -20,9 +20,27 @@ dependencies {
     testImplementation libs.kotest.property.get()
     testImplementation libs.kotest.assertions.json.get()
     testImplementation libs.coroutines.test.get()
+
+    // Lincheck concurrency model checking (JUnit 5 spec). junit-jupiter supplies the engine that
+    // discovers the plain JUnit 5 Lincheck spec alongside the Kotest specs on the JUnit Platform.
+    testImplementation libs.junit.jupiter.get()
+    testImplementation libs.lincheck.get()
 }
 
 tasks.withType(Test).configureEach {
     systemProperty 'java.awt.headless', 'true'
     systemProperty 'kotest.framework.config.fqn', 'net.transgressoft.commons.music.testing.CoreKotestProjectConfig'
+
+    // Lincheck 3.6 attaches its bytecode-instrumentation agent to the running JVM on demand.
+    // On JDK 21 that requires deep-reflection opens plus enabling dynamic agent loading (which also
+    // suppresses the JDK "Dynamic loading of agents will be disallowed" warning). Wired here so the
+    // concurrency suite stays runnable in CI and is reused by later phases.
+    jvmArgs(
+        '-XX:+EnableDynamicAgentLoading',
+        '-Djdk.attach.allowAttachSelf=true',
+        '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+        '--add-opens', 'java.base/java.util=ALL-UNNAMED',
+        '--add-opens', 'java.base/jdk.internal.misc=ALL-UNNAMED',
+        '--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED'
+    )
 }

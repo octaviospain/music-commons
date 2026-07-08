@@ -2,12 +2,11 @@ package net.transgressoft.commons.util
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.atomic.AtomicReference
-import kotlin.concurrent.thread
 
 /**
- * Verifies the snapshot semantics expected by concurrent hierarchy readers.
+ * Verifies the sequential snapshot semantics of [SortedMultimap]. Its concurrent contract —
+ * that reads stay linearizable while writers mutate — is verified exhaustively by
+ * [SortedMultimapLinearizabilityTest] under Lincheck model checking.
  */
 internal class SortedMultimapTest : StringSpec({
 
@@ -45,38 +44,5 @@ internal class SortedMultimapTest : StringSpec({
         multimap.removeAll(99) shouldBe emptySet()
         multimap.containsValue(3) shouldBe true
         multimap.containsValue(999) shouldBe false
-    }
-
-    "SortedMultimap entries can be read while writes happen concurrently" {
-        val multimap = SortedMultimap<Int, Int>()
-        repeat(100) { multimap.put(0, it) }
-        val start = CountDownLatch(1)
-        val failure = AtomicReference<Throwable?>()
-
-        val reader =
-            thread {
-                start.await()
-                repeat(5_000) {
-                    runCatching {
-                        multimap.entries().forEach { entry -> entry.key + entry.value }
-                    }.onFailure { failure.compareAndSet(null, it) }
-                }
-            }
-
-        val writer =
-            thread {
-                start.await()
-                repeat(5_000) {
-                    val value = it % 200
-                    multimap.put(it % 10, value)
-                    multimap.remove((it + 1) % 10, value)
-                }
-            }
-
-        start.countDown()
-        reader.join()
-        writer.join()
-
-        failure.get() shouldBe null
     }
 })
