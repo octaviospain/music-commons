@@ -17,7 +17,11 @@
 
 package net.transgressoft.commons.fx.music
 
+import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
+import net.transgressoft.commons.fx.music.playlist.ObservablePlaylist
 import net.transgressoft.commons.music.audio.virtualFiles
+import net.transgressoft.lirp.persistence.LirpContext
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
@@ -26,16 +30,13 @@ import org.testfx.api.FxToolkit
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 /*
- * Confirms the multi-instance registry-overwrite corruption reaches the JavaFX facade, and pins down
- * that its exposure is narrower than Core's. An FX playlist keeps a materialized ObservableList of
- * audio-item objects, so it is IMMUNE when items are added as objects in memory; it only resolves
- * audio ids through the shared registry when a playlist is populated from ids — the same aggregate
- * resolution path exercised on deserialization/load. That id-resolution path is where a second live
- * FXMusicLibrary silently redirects resolution to the wrong repository.
+ * Asserts the fail-fast single-live-instance contract on the JavaFX facade: constructing a
+ * second FXMusicLibrary while one is live throws IllegalStateException, leaving the first
+ * library's registry slot intact.
  *
- * No RegistryIsolationExtension, no deregister/register bracketing: the unisolated path is the point.
- * Assertions read the synchronous aggregate (playlistHierarchy().findByName(...).get().audioItems),
- * never the async observable properties.
+ * The companion case confirms that an FX playlist populated with audio-item objects is immune
+ * to any registry interference, since object-based population materialises items directly into
+ * the observable cache without going through the shared registry.
  */
 @DisplayName("MultiInstanceFXCorruptionTest")
 @ExperimentalCoroutinesApi
@@ -61,27 +62,29 @@ internal class MultiInstanceFXCorruptionTest : StringSpec({
         libraries.close()
     }
 
-    "second FXMusicLibrary construction silently resolves an id-populated playlist from the wrong repository" {
-        // Distinct items in each library; both repositories assign the same repository-local id, so the
-        // id-populated playlist in library A resolves (through the overwritten registry) to library B's item.
-        val itemInA = libraries.libraryA.audioItemFromFile(files.virtualAudioFile().next())
-        libraries.libraryB.audioItemFromFile(files.virtualAudioFile().next())
-
-        // Populate by id — the aggregate resolution path shared with deserialization/load.
-        libraries.libraryA.playlistHierarchy().createPlaylist("Library A Playlist", listOf(itemInA.id))
-
-        val resolvedItems =
-            libraries.libraryA
-                .playlistHierarchy()
-                .findByName("Library A Playlist")
-                .get()
-                .audioItems
-        resolvedItems.any { it.uniqueId == itemInA.uniqueId } shouldBe true
+    "second FXMusicLibrary construction throws IllegalStateException while the first is live" {
+        shouldThrow<IllegalStateException> {
+            libraries.attemptSecondConstruction()
+        }
     }
 
-    "an FX playlist populated with audio-item objects is immune to registry overwrite" {
+    "an FXMusicLibrary can be reconstructed after the previous one is closed" {
+        // Release the fixture's live library so both slots are free before the cycle under test.
+        libraries.close()
+
+        LirpContext.default.registryFor(ObservableAudioItem::class.java) shouldBe null
+        LirpContext.default.registryFor(ObservablePlaylist::class.java) shouldBe null
+
+        // A fresh construction must not throw — the slots are available again.
+        val second = FXMusicLibrary.builder().metadataIO(files.metadataIO).build()
+        second.close()
+
+        LirpContext.default.registryFor(ObservableAudioItem::class.java) shouldBe null
+        LirpContext.default.registryFor(ObservablePlaylist::class.java) shouldBe null
+    }
+
+    "an FX playlist populated with audio-item objects resolves items correctly from its own library" {
         val itemInA = libraries.libraryA.audioItemFromFile(files.virtualAudioFile().next())
-        libraries.libraryB.audioItemFromFile(files.virtualAudioFile().next())
 
         // Object-based population materializes the item directly into the observable cache — no registry re-resolution.
         val playlist = libraries.libraryA.playlistHierarchy().createPlaylist("In-Memory Playlist")

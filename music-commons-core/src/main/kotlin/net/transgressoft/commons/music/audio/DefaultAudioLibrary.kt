@@ -17,10 +17,11 @@
 
 package net.transgressoft.commons.music.audio
 
+import net.transgressoft.commons.music.conditionalDeregister
+import net.transgressoft.commons.music.guardedRegister
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent.Type.PLAYED
 import net.transgressoft.commons.util.InvalidAudioFilePathException
 import net.transgressoft.lirp.event.StandardCrudEvent.Update
-import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.Repository
 import mu.KotlinLogging
 import java.nio.file.Files
@@ -33,9 +34,10 @@ import java.nio.file.Path
  * the play count whenever an audio item is played. Provides factory methods to
  * create audio items from file paths by reading their metadata.
  *
- * Registers its backing repository in [net.transgressoft.lirp.persistence.LirpContext] on construction
- * via [RegistryBase.registerRepository], enabling playlist hierarchies to resolve audio item references
- * lazily through the context. Deregisters on [close] to support repeated construction within the same JVM.
+ * Enforces a single-live-instance contract: only one `DefaultAudioLibrary` may hold the
+ * `AudioItem` registry slot in `LirpContext.default` at a time. Constructing a second instance
+ * while one is live throws [IllegalStateException] — close the existing library first.
+ * On [close], the registry slot is released only if this instance still owns it.
  */
 internal class DefaultAudioLibrary
     @JvmOverloads
@@ -53,8 +55,7 @@ internal class DefaultAudioLibrary
         private val logger = KotlinLogging.logger {}
 
         init {
-            RegistryBase.deregisterRepository(AudioItem::class.java)
-            RegistryBase.registerRepository(AudioItem::class.java, repository)
+            guardedRegister(AudioItem::class.java, repository)
             playerSubscriber.addOnNextEventAction(PLAYED) { event ->
                 val audioItem = event.audioItem
                 logger.info { "Audio item with id ${audioItem.id} was played" }
@@ -100,7 +101,7 @@ internal class DefaultAudioLibrary
 
         override fun close() {
             super.close()
-            RegistryBase.deregisterRepository(AudioItem::class.java)
+            conditionalDeregister(AudioItem::class.java, repository)
         }
 
         override fun toString() = "AudioItemJsonRepository(audioItemsCount=${size()})"

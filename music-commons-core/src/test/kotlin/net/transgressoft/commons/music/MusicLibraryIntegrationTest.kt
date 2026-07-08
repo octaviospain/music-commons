@@ -8,6 +8,7 @@ import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.playlist.PlaylistHierarchy
 import net.transgressoft.commons.music.playlist.asJsonKeyValues
 import net.transgressoft.commons.music.testing.reactiveScope
+import net.transgressoft.commons.music.testing.registryIsolation
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
 import net.transgressoft.commons.util.toJsonUri
@@ -27,6 +28,7 @@ import kotlinx.coroutines.asExecutor
 @ExperimentalCoroutinesApi
 internal class MusicLibraryIntegrationTest : StringSpec({
 
+    registryIsolation()
     val reactive = reactiveScope()
     val files = virtualFiles()
 

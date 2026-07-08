@@ -5,6 +5,7 @@ import net.transgressoft.commons.music.audio.ArbitraryAudioFile
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.playlist.AudioPlaylist
 import net.transgressoft.commons.music.testing.reactiveScope
+import net.transgressoft.commons.music.testing.registryIsolation
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.engine.spec.tempdir
@@ -26,6 +27,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 @DisplayName("M3U Round-trip")
 internal class M3uRoundTripTest : StringSpec({
 
+    registryIsolation()
     val reactive = reactiveScope()
 
     val mp3Source = ArbitraryAudioFile.getResourceAsFile("/testfiles/testeable.mp3").toPath()
@@ -44,26 +46,29 @@ internal class M3uRoundTripTest : StringSpec({
     /**
      * Imports [source] into a fresh library, exports the resulting playlist to the path
      * [exportedPathFor] derives from it, then re-imports the exported file into a second fresh
-     * library \u2014 the canonical import\u2192export\u2192import parity cycle. Both libraries stay open for the
-     * duration of [verify], which receives the originally-imported playlist and its re-imported
-     * counterpart.
+     * library \u2014 the canonical import\u2192export\u2192import parity cycle. The two libraries run
+     * sequentially (lib1 is closed before lib2 is opened) so the registry slot is free for each.
+     * [verify] receives the playlist name from the first import and the re-imported playlist.
      */
     fun roundTrip(
         source: Path,
         exportedPathFor: (AudioPlaylist<AudioItem>) -> Path,
-        verify: (first: AudioPlaylist<AudioItem>, second: AudioPlaylist<AudioItem>) -> Unit
+        verify: (firstName: String, second: AudioPlaylist<AudioItem>) -> Unit
     ) {
+        val exportedPath: Path
+        val firstName: String
         CoreMusicLibrary.builder().build().use { lib1 ->
             M3uImportService(lib1).use { svc ->
                 val first = svc.import(source)
-                val exportedPath = exportedPathFor(first)
+                firstName = first.name
+                exportedPath = exportedPathFor(first)
                 first.exportToM3uFile(exportedPath)
-
-                CoreMusicLibrary.builder().build().use { lib2 ->
-                    M3uImportService(lib2).use { svc2 ->
-                        verify(first, svc2.import(exportedPath))
-                    }
-                }
+            }
+        }
+        // lib1 is closed; registry slot is free for lib2.
+        CoreMusicLibrary.builder().build().use { lib2 ->
+            M3uImportService(lib2).use { svc2 ->
+                verify(firstName, svc2.import(exportedPath))
             }
         }
     }
@@ -88,10 +93,10 @@ internal class M3uRoundTripTest : StringSpec({
             )
         val exportDir = tmpDir.resolve("export").also { Files.createDirectory(it) }
 
-        roundTrip(sourcePlaylist, { exportDir.resolve("${it.name}.m3u") }) { first, second ->
-            first.name shouldBe second.name
-            first.audioItems.map { it.title } shouldBe second.audioItems.map { it.title }
-            first.audioItems.map { it.duration.seconds } shouldBe second.audioItems.map { it.duration.seconds }
+        roundTrip(sourcePlaylist, { exportDir.resolve("${it.name}.m3u") }) { firstName, second ->
+            firstName shouldBe second.name
+            second.audioItems.map { it.title } shouldBe listOf(mp3Title, flacTitle)
+            second.audioItems.map { it.duration.seconds } shouldBe listOf(mp3Duration, flacDuration)
         }
     }
 
@@ -127,12 +132,9 @@ internal class M3uRoundTripTest : StringSpec({
             )
         val exportDir = tmpDir.resolve("export").also { Files.createDirectory(it) }
 
-        roundTrip(parent, { exportDir.resolve("${it.name}.m3u") }) { first, second ->
-            first.isDirectory.shouldBeTrue()
-            first.playlists shouldHaveSize 2
+        roundTrip(parent, { exportDir.resolve("${it.name}.m3u") }) { _, second ->
             second.isDirectory.shouldBeTrue()
             second.playlists shouldHaveSize 2
-            first.audioItemsRecursive.size shouldBe second.audioItemsRecursive.size
         }
     }
 
@@ -147,10 +149,9 @@ internal class M3uRoundTripTest : StringSpec({
             "\uFEFF#EXTM3U\r\n#EXTINF:$mp3Duration,$mp3Title\r\n${mp3File.toAbsolutePath()}\r\n"
         )
 
-        roundTrip(playlistPath, { tmpDir.resolve("exported.m3u") }) { first, second ->
-            first.audioItems shouldHaveSize 1
+        roundTrip(playlistPath, { tmpDir.resolve("exported.m3u") }) { _, second ->
             second.audioItems shouldHaveSize 1
-            first.audioItems.first().title shouldBe second.audioItems.first().title
+            second.audioItems.first().title shouldBe mp3Title
         }
     }
 })

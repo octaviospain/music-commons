@@ -4,6 +4,7 @@ import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
+import net.transgressoft.commons.music.testing.registryIsolation
 import net.transgressoft.commons.util.OsDetector
 import net.transgressoft.commons.util.WindowsPathException
 import com.google.common.jimfs.Configuration
@@ -19,6 +20,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 @ExperimentalCoroutinesApi
 internal class MusicLibraryTest : StringSpec({
 
+    registryIsolation()
     val reactive = reactiveScope()
     val files = virtualFiles()
 

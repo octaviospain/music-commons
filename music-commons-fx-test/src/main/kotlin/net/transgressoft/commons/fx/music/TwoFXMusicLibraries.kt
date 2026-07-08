@@ -20,38 +20,43 @@ package net.transgressoft.commons.fx.music
 import net.transgressoft.commons.music.audio.VolatileAudioMetadataIO
 
 /**
- * Holds two [FXMusicLibrary] instances constructed sequentially without closing the first,
- * reproducing the registry-slot eviction crux on the JavaFX facade: both libraries bind their
- * audio-item repository to the same process-wide registry, so the second construction silently
- * overwrites the slot the first still relies on for playlist aggregate resolution.
+ * Holds a live [FXMusicLibrary] and a deferred second-construction attempt, enabling tests to
+ * assert the fail-fast single-live-instance contract on the JavaFX facade.
  *
- * [close] releases the libraries in reverse construction order — [libraryB] (the current slot
- * owner) first, then [libraryA] — each guarded so a failing first close still releases the second.
+ * [libraryA] is the live library. [attemptSecondConstruction] is a lambda whose invocation
+ * triggers a second `FXMusicLibrary.builder().build()` call while [libraryA] is still live;
+ * callers wrap it in `shouldThrow<IllegalStateException>` to assert the guarded rejection.
+ *
+ * [close] releases [libraryA]. Because the second construction is intentionally rejected, no
+ * second library is ever live and no additional cleanup is required.
  */
 class TwoFXMusicLibraries(
     val libraryA: FXMusicLibrary,
-    val libraryB: FXMusicLibrary
+    val attemptSecondConstruction: () -> FXMusicLibrary
 ) : AutoCloseable {
 
     override fun close() {
-        runCatching { libraryB.close() }
         runCatching { libraryA.close() }
     }
 }
 
 /**
- * Builds two [FXMusicLibrary] instances sharing [metadataIO], with NO [FXMusicLibrary.close] between
- * them, so [TwoFXMusicLibraries.libraryB] evicts the registry slot [TwoFXMusicLibraries.libraryA]
- * was using. Both libraries stay live on return.
+ * Builds a live [FXMusicLibrary] and returns it together with a deferred lambda that constructs
+ * a second library while the first is still live, using [metadataIO] for both.
  *
  * The caller MUST have initialized the JavaFX toolkit (e.g. `FxToolkit.registerPrimaryStage()`)
  * before invoking this factory — the fixture deliberately does not start the toolkit itself, so
  * headless test suites keep full control of toolkit lifecycle.
+ *
+ * The returned [TwoFXMusicLibraries.attemptSecondConstruction] will throw [IllegalStateException]
+ * when called, because the fail-fast guard rejects a second construction while [TwoFXMusicLibraries.libraryA]
+ * is live. Callers should wrap the invocation in `shouldThrow<IllegalStateException>`.
  */
 fun buildTwoFXLibrariesWithoutClosing(
     metadataIO: VolatileAudioMetadataIO = VolatileAudioMetadataIO()
 ): TwoFXMusicLibraries {
     val libraryA = FXMusicLibrary.builder().metadataIO(metadataIO).build()
-    val libraryB = FXMusicLibrary.builder().metadataIO(metadataIO).build()
-    return TwoFXMusicLibraries(libraryA, libraryB)
+    return TwoFXMusicLibraries(libraryA) {
+        FXMusicLibrary.builder().metadataIO(metadataIO).build()
+    }
 }

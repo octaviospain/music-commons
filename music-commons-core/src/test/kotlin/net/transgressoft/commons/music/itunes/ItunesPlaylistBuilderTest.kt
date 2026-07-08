@@ -3,6 +3,7 @@ package net.transgressoft.commons.music.itunes
 import net.transgressoft.commons.music.CoreMusicLibrary
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
+import net.transgressoft.commons.music.testing.registryIsolation
 import net.transgressoft.commons.util.OsDetector
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
@@ -13,6 +14,7 @@ import io.kotest.matchers.shouldBe
 @DisplayName("ItunesPlaylistBuilder")
 internal class ItunesPlaylistBuilderTest : StringSpec({
 
+    registryIsolation()
     lateinit var musicLibrary: CoreMusicLibrary
     lateinit var builder: ItunesPlaylistBuilder<AudioItem, MutableAudioPlaylist>
 

@@ -38,7 +38,6 @@ import net.transgressoft.commons.util.WindowsPathValidator
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.LirpEventPublisher
 import net.transgressoft.lirp.persistence.PersistentRepository
-import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.Repository
 import net.transgressoft.lirp.persistence.VolatileRepository
 import javafx.beans.property.ReadOnlyBooleanProperty
@@ -232,7 +231,11 @@ class FXMusicLibrary private constructor(
                     ) { audioItemSubscriber.cancelSubscription() }
 
                 if (playlistRepository is PersistentRepository<*, *>) {
-                    RegistryBase.registerRepository(ObservablePlaylist::class.java, playlistRepository)
+                    // Pre-register before load() so playlist entities can resolve audio-item aggregates
+                    // through the context during deserialization. FXPlaylistHierarchy.init will call
+                    // guardedRegister for the same repository reference — that call is a no-op because
+                    // guardedRegister treats existing === repository as already-registered.
+                    guardedRegister(ObservablePlaylist::class.java, playlistRepository)
                     playlistRepoRegistered = true
                     (playlistRepository as PersistentRepository<*, *>).load()
                 }
@@ -246,7 +249,7 @@ class FXMusicLibrary private constructor(
                 return FXMusicLibrary(audioLibrary, playlistHierarchy, waveformRepo)
             } catch (ex: Exception) {
                 if (playlistRepoRegistered) {
-                    RegistryBase.deregisterRepository(ObservablePlaylist::class.java)
+                    conditionalDeregister(ObservablePlaylist::class.java, playlistRepository)
                 }
                 playlistHierarchy?.close()
                 waveformRepo?.close()

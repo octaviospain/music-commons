@@ -1,6 +1,7 @@
 package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.music.testing.reactiveScope
+import net.transgressoft.commons.music.testing.registryIsolation
 import net.transgressoft.commons.persistence.music.audio.AudioItemMapSerializer
 import net.transgressoft.commons.util.InvalidAudioFilePathException
 import net.transgressoft.lirp.event.CrudEvent
@@ -39,6 +40,7 @@ import kotlinx.serialization.json.Json
 @ExperimentalCoroutinesApi
 internal class DefaultAudioLibraryTest: StringSpec({
 
+    registryIsolation()
     val reactive = reactiveScope()
     val files = virtualFiles()
     lateinit var jsonFile: File

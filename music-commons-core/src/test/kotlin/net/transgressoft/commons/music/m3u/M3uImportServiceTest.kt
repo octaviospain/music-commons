@@ -7,6 +7,7 @@ import net.transgressoft.commons.music.m3u.M3uTestFixtures.PlaylistFixture
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
 import net.transgressoft.commons.music.shouldHaveMessageContaining
 import net.transgressoft.commons.music.testing.reactiveScope
+import net.transgressoft.commons.music.testing.registryIsolation
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
@@ -29,6 +30,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 @DisplayName("M3uImportService")
 internal class M3uImportServiceTest : StringSpec({
 
+    registryIsolation()
     val reactive = reactiveScope()
     val files = virtualFiles()
     val fs: FileSystem = files.fileSystem

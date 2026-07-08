@@ -18,8 +18,9 @@
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.conditionalDeregister
+import net.transgressoft.commons.music.guardedRegister
 import net.transgressoft.lirp.entity.toIds
-import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.Repository
 import net.transgressoft.lirp.persistence.VolatileRepository
 import mu.KotlinLogging
@@ -33,18 +34,22 @@ import mu.KotlinLogging
  *
  * Audio item and nested playlist references are resolved lazily via lirp aggregate delegates
  * registered in [net.transgressoft.lirp.persistence.LirpContext] on construction.
+ *
+ * Enforces a single-live-instance contract: only one `DefaultPlaylistHierarchy` may hold the
+ * `MutableAudioPlaylist` registry slot in `LirpContext.default` at a time. Constructing a second
+ * instance while one is live throws [IllegalStateException] — close the existing hierarchy first.
+ * On [close], the registry slot is released only if this instance still owns it.
  */
 internal class DefaultPlaylistHierarchy(
-    repository: Repository<Int, MutableAudioPlaylist> = VolatileRepository()
-) : PlaylistHierarchyBase<AudioItem, MutableAudioPlaylist>(repository), PlaylistHierarchy {
+    private val playlistRepository: Repository<Int, MutableAudioPlaylist> = VolatileRepository()
+) : PlaylistHierarchyBase<AudioItem, MutableAudioPlaylist>(playlistRepository), PlaylistHierarchy {
 
     private val logger = KotlinLogging.logger {}
 
     override val playlistElementType = MutableAudioPlaylist::class
 
     init {
-        RegistryBase.deregisterRepository(MutableAudioPlaylist::class.java)
-        RegistryBase.registerRepository(MutableAudioPlaylist::class.java, repository)
+        guardedRegister(MutableAudioPlaylist::class.java, playlistRepository)
     }
 
     override fun createPlaylist(name: String): MutableAudioPlaylist = createPlaylist(name, emptyList<Int>())
@@ -82,7 +87,7 @@ internal class DefaultPlaylistHierarchy(
 
     override fun close() {
         super.close()
-        RegistryBase.deregisterRepository(MutableAudioPlaylist::class.java)
+        conditionalDeregister(MutableAudioPlaylist::class.java, playlistRepository)
     }
 
     override fun toString() = "PlaylistRepository(playlistsCount=${size()})"
