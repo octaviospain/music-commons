@@ -35,6 +35,8 @@ import java.time.LocalDateTime
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalCoroutinesApi
@@ -94,6 +96,10 @@ internal class ItunesImportServiceTest : StringSpec({
     }
 
     afterEach {
+        // service is built directly (not via musicLibrary.itunesImport), so musicLibrary.close()
+        // does not cancel its scope — close it explicitly. close() is idempotent, so tests that
+        // already close it in the body are unaffected.
+        service.close()
         musicLibrary.close()
     }
 
@@ -612,5 +618,52 @@ internal class ItunesImportServiceTest : StringSpec({
         result.unresolved shouldHaveSize 1
         result.unresolved.first().reason shouldBe UnresolvedReason.FileNotFound
         result.unresolved.first().title shouldBe "iCloud Only Song"
+    }
+
+    "ItunesImportService close() cancels serviceScope — importAsync after close adds nothing" {
+        service.close()
+        val track = trackFor(1, mp3File)
+        val playlist = playlistFor("PL", "PL1", listOf(1))
+        val library = ItunesLibrary(mapOf(1 to track), listOf(playlist))
+        val policy = ItunesImportPolicy(useFileMetadata = true, writeMetadata = false)
+
+        val result = service.importAsync(listOf(playlist), library, policy)
+
+        shouldThrow<Exception> { result.get() }
+        musicLibrary.audioLibrary().size() shouldBe 0
+    }
+
+    "ItunesImportService in-flight importAsync adds nothing when musicLibrary is closed mid-import" {
+        // SC4: close the library after the first track processes; checkOpen() in add() rejects
+        // any track processed after close as an ImportError, so post-close tracks never reach the repository.
+        // If playlist creation also runs after close it throws IllegalStateException, surfaced via future.get().
+        val tracks = (1..20).associateWith { i -> trackFor(i, mp3File, title = "Track $i") }
+        val playlist = playlistFor("PL", "PL1", (1..20).toList())
+        val library = ItunesLibrary(tracks, listOf(playlist))
+        val policy = ItunesImportPolicy(useFileMetadata = true, writeMetadata = false)
+
+        // Atomics: written from the import coroutine's progress callback, read from the test thread.
+        val libraryClosed = AtomicBoolean(false)
+        val countBeforeClose = AtomicInteger(0)
+        val future: CompletableFuture<ImportResult> =
+            service.importAsync(listOf(playlist), library, policy) { progress ->
+                if (progress.itemsProcessed >= 1 && libraryClosed.compareAndSet(false, true)) {
+                    countBeforeClose.set(musicLibrary.audioLibrary().size())
+                    musicLibrary.close()
+                }
+            }
+
+        // The future may complete normally (if all tracks finished before close) or throw
+        // (if playlist creation hits checkOpen on the closed hierarchy). Either way, the
+        // library size must not exceed countBeforeClose once the library is closed.
+        try {
+            future.get()
+        } catch (e: Exception) {
+            // IllegalStateException from checkOpen() propagated as ExecutionException — expected
+        }
+        // Progress is reported per track, so close lands mid-import: strictly fewer than all
+        // tracks are added. Guards against a vacuous pass where close happens after every add.
+        countBeforeClose.get() shouldBeLessThan tracks.size
+        musicLibrary.audioLibrary().size() shouldBe countBeforeClose.get()
     }
 })

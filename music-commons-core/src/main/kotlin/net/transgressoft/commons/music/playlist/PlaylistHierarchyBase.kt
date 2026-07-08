@@ -32,6 +32,7 @@ import mu.KotlinLogging
 import mu.withLoggingContext
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.reflect.KClass
 
@@ -57,6 +58,22 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
      * The runtime type of playlist elements in this hierarchy, used for typed collection change subscriptions.
      */
     protected abstract val playlistElementType: KClass<P>
+
+    /**
+     * Tracks whether this hierarchy has been closed. Once set to `true`, mutations and queries throw
+     * [IllegalStateException]. Protected so subtypes can read and transition it while external callers
+     * cannot reopen a closed hierarchy.
+     */
+    protected val closed = AtomicBoolean(false)
+
+    /**
+     * Asserts that this playlist hierarchy has not been closed.
+     *
+     * @throws IllegalStateException if [close] has already been called on this hierarchy.
+     */
+    protected fun checkOpen() {
+        check(!closed.get()) { "This playlist hierarchy has been closed and can no longer be used." }
+    }
 
     init {
         repository.disableEvents(CREATE, UPDATE, DELETE)
@@ -86,6 +103,7 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
     }
 
     override fun add(entity: P): Boolean {
+        checkOpen()
         require(findByName(entity.name).isEmpty || findByName(entity.name).get().id == entity.id) {
             "Playlist with name '${entity.name}' already exists"
         }
@@ -133,13 +151,15 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
         playlistMutationSubscriptions[playlist.id] = subscription
     }
 
-    override fun remove(entity: P): Boolean =
-        repository.remove(entity).also { removed ->
+    override fun remove(entity: P): Boolean {
+        checkOpen()
+        return repository.remove(entity).also { removed ->
             if (removed) {
                 cancelPlaylistMutationSubscription(entity.id)
                 removeFromPlaylistsHierarchy(entity)
             }
         }
+    }
 
     private fun cancelPlaylistMutationSubscription(playlistId: Int) {
         playlistMutationSubscriptions.remove(playlistId)?.cancel()
@@ -163,6 +183,7 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
     }
 
     override fun removeAll(entities: Collection<P>): Boolean {
+        checkOpen()
         // Materialize before removal: aggregate proxies resolve lazily from the registry,
         // so iterating them after repository.removeAll() would throw NoSuchElementException.
         val materialized = entities.toList()
@@ -176,10 +197,14 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
         }
     }
 
-    override fun findByName(name: String): Optional<out P> = findFirst { it.name == name }
+    override fun findByName(name: String): Optional<out P> {
+        checkOpen()
+        return findFirst { it.name == name }
+    }
 
-    override fun findParentPlaylist(playlist: ReactiveAudioPlaylist<I, P>): Optional<P> =
-        if (playlistsHierarchyMultiMap.containsValue(playlist)) {
+    override fun findParentPlaylist(playlist: ReactiveAudioPlaylist<I, P>): Optional<P> {
+        checkOpen()
+        return if (playlistsHierarchyMultiMap.containsValue(playlist)) {
             playlistsHierarchyMultiMap.entries().stream()
                 .filter { playlist == it.value }
                 .map { findByUniqueId(it.key) }
@@ -189,8 +214,10 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
         } else {
             Optional.empty()
         }
+    }
 
     override fun movePlaylist(playlistNameToMove: String, destinationPlaylistName: String) {
+        checkOpen()
         val playlistToMove = findByName(playlistNameToMove)
         val destinationPlaylist = findByName(destinationPlaylistName)
 
@@ -313,9 +340,25 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
     override fun numberOfPlaylistDirectories() = search { it.isDirectory }.count()
 
     /**
-     * Cancels the audio item event subscription and all per-playlist mutation subscriptions.
+     * Closes this hierarchy idempotently.
+     *
+     * The first call sets the closed flag and cancels the audio item event subscription and all
+     * per-playlist mutation subscriptions. Subsequent calls return immediately without repeating
+     * the teardown.
      */
     override fun close() {
+        if (!closed.compareAndSet(false, true)) return
+        cancelBaseSubscriptions()
+    }
+
+    /**
+     * Cancels the audio item event subscription and all per-playlist mutation subscriptions.
+     *
+     * Extracted from [close] so a subclass that owns the [closed] compare-and-set as its first
+     * statement can perform its own teardown before invoking the base teardown, without the base
+     * re-running the flag transition.
+     */
+    protected fun cancelBaseSubscriptions() {
         audioItemEventSubscriber.cancelSubscription()
         playlistMutationSubscriptions.values.forEach { it.cancel() }
         playlistMutationSubscriptions.clear()

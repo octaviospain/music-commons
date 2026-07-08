@@ -113,10 +113,13 @@ internal class AudioLibraryBaseTest : StringSpec({
         repository.add(newItem)
         reactive.advance()
 
-        // The catalog for the new item's artist should not exist because subscription was cancelled
-        audioLibrary.getArtistCatalog(Artist.of(newItem.artist.name)).shouldBeEmpty()
+        // Query the catalog registry directly (bypassing the use-after-close guard) to verify
+        // that the subscription was cancelled and the new item's artist was not indexed.
+        audioLibrary.artistCatalogRegistryForTest().findById(Artist.of(newItem.artist.name)).shouldBeEmpty()
         // The original item's catalog is still present from before close
-        audioLibrary.getArtistCatalog(Artist.of("The Cure")) shouldBePresent { it.artist.name shouldBe "The Cure" }
+        audioLibrary.artistCatalogRegistryForTest().findById(Artist.of("The Cure")) shouldBePresent {
+            it.artist.name shouldBe "The Cure"
+        }
     }
 
     "AudioLibraryBase findAlbumAudioItems returns items by artist and album" {

@@ -6,6 +6,7 @@ import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
+import net.transgressoft.commons.music.audio.MutableAudioItem
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.playlist.DefaultPlaylistHierarchy
@@ -14,6 +15,7 @@ import net.transgressoft.commons.music.testing.registryIsolation
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
 import io.kotest.assertions.throwables.shouldNotThrowAny
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.matchers.shouldBe
@@ -71,7 +73,11 @@ internal class LifecycleIntegrationTest : StringSpec({
 
         audioLibrary.close()
 
-        val audioItem2 = audioLibrary.createFromFile(files.virtualAudioFile().next())
+        // After close(), add directly to the repository to bypass the AudioLibraryBase guard
+        // and verify that the catalog subscription no longer processes the new item.
+        val audioFile2 = files.virtualAudioFile().next()
+        val audioItem2 = MutableAudioItem(audioFile2, audioLibrary.size() + 1, files.metadataIO.readMetadata(audioFile2))
+        repos.audioRepository.add(audioItem2)
         reactive.advance()
 
         // After close(), the artist catalog registry subscription is cancelled
@@ -98,8 +104,9 @@ internal class LifecycleIntegrationTest : StringSpec({
         reactive.advance()
 
         // After close(), the audio item deletion event is no longer processed —
-        // the playlist's audioItemIds still contains the id even though the audio item was removed from the library
-        playlistHierarchy.findByName("Lifecycle Test Playlist") shouldBePresent {
+        // the playlist's audioItemIds still contains the id even though the audio item was removed from the library.
+        // Query through the underlying repository directly to avoid the use-after-close guard on findByName.
+        repos.playlistRepository.findFirst { it.name == "Lifecycle Test Playlist" } shouldBePresent {
             it shouldReferenceItemId audioItem.id
         }
     }
@@ -149,6 +156,32 @@ internal class LifecycleIntegrationTest : StringSpec({
             waveforms.close()
             playlistHierarchy.close()
             audioLibrary.close()
+        }
+    }
+
+    "AudioLibraryBase close() is idempotent — second call is a no-op" {
+        shouldNotThrowAny {
+            repeat(2) { audioLibrary.close() }
+        }
+    }
+
+    "AudioLibrary throws IllegalStateException when used after close" {
+        audioLibrary.close()
+        shouldThrow<IllegalStateException> {
+            audioLibrary.createFromFile(files.virtualAudioFile().next())
+        }
+    }
+
+    "PlaylistHierarchyBase close() is idempotent — second call is a no-op" {
+        shouldNotThrowAny {
+            repeat(2) { playlistHierarchy.close() }
+        }
+    }
+
+    "PlaylistHierarchy throws IllegalStateException when used after close" {
+        playlistHierarchy.close()
+        shouldThrow<IllegalStateException> {
+            playlistHierarchy.createPlaylist("Post-close Playlist")
         }
     }
 })

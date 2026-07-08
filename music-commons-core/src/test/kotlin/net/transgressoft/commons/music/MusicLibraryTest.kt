@@ -9,6 +9,7 @@ import net.transgressoft.commons.util.OsDetector
 import net.transgressoft.commons.util.WindowsPathException
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
+import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.optional.shouldBePresent
@@ -98,13 +99,14 @@ internal class MusicLibraryTest : StringSpec({
         library.audioLibrary().findAlbumAudioItems(artist, album.name)
             .any { it.id == audioItem.id } shouldBe true
 
-        library.close()
+        // close() twice to verify idempotency of the full facade
+        shouldNotThrowAny { library.close() }
+        shouldNotThrowAny { library.close() }
 
-        // After close, newly created items are no longer indexed in the artist catalog
-        val item2 = library.audioItemFromFile(files.virtualAudioFile().next())
-        reactive.advance()
-
-        library.audioLibrary() shouldNotIndex item2
+        // After close, mutations on the audio library throw IllegalStateException
+        shouldThrow<IllegalStateException> {
+            library.audioItemFromFile(files.virtualAudioFile().next())
+        }
     }
 
     "MusicLibrary persistence round-trip restores state from JSON files" {

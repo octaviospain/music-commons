@@ -25,4 +25,7 @@ internal class TestAudioLibrary(
         val cover = metadataIO.loadCover(audioItemPath)
         return MutableAudioItem(audioItemPath, newId(), tag.copy(coverBytes = cover)).also { add(it) }
     }
+
+    /** Exposes the artist catalog registry for test assertions on post-close catalog state. */
+    fun artistCatalogRegistryForTest() = observableArtistCatalogRegistry
 }
