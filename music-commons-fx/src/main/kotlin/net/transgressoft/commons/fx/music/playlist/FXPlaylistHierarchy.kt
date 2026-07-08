@@ -70,7 +70,10 @@ internal class FXPlaylistHierarchy(
         AudioPlaylistEventSubscriber<ObservablePlaylist, ObservableAudioItem>("InternalAudioPlaylistSubscriber").apply {
             addOnNextEventAction(CREATE, UPDATE) { event ->
                 synchronized(playlistsProperty) {
-                    Platform.runLater { observablePlaylistsSet.addAll(event.entities.values) }
+                    Platform.runLater {
+                        if (closed.get()) return@runLater
+                        observablePlaylistsSet.addAll(event.entities.values)
+                    }
                 }
             }
             addOnNextEventAction(DELETE) { event ->
@@ -78,7 +81,10 @@ internal class FXPlaylistHierarchy(
                     if (playlist is FXPlaylist) playlist.detachAllChildRecursiveListeners()
                 }
                 synchronized(playlistsProperty) {
-                    Platform.runLater { observablePlaylistsSet.removeAll(event.entities.values.toSet()) }
+                    Platform.runLater {
+                        if (closed.get()) return@runLater
+                        observablePlaylistsSet.removeAll(event.entities.values.toSet())
+                    }
                 }
             }
         }
@@ -112,7 +118,10 @@ internal class FXPlaylistHierarchy(
         }
 
         forEach { playlist ->
-            Platform.runLater { observablePlaylistsSet.add(playlist) }
+            Platform.runLater {
+                if (closed.get()) return@runLater
+                observablePlaylistsSet.add(playlist)
+            }
         }
 
         subscribe(playlistChangesSubscriber)
@@ -158,15 +167,20 @@ internal class FXPlaylistHierarchy(
     }
 
     /**
-     * Cancels the base class subscriptions and the internal playlist changes subscriber,
-     * then conditionally deregisters the playlist repository from LirpContext only if this
-     * instance still owns the slot.
+     * Marks this hierarchy closed as the first action, then detaches child listeners, cancels the
+     * base class subscriptions and the internal playlist changes subscriber, and finally
+     * conditionally deregisters the playlist repository from LirpContext only if this instance still
+     * owns the slot.
+     *
+     * The [closed] compare-and-set runs before any teardown so a concurrent `Platform.runLater` body
+     * guarded by `closed.get()` never observes an open flag while the hierarchy is being torn down.
      */
     override fun close() {
+        if (!closed.compareAndSet(false, true)) return
         forEach { playlist ->
             if (playlist is FXPlaylist) playlist.detachAllChildRecursiveListeners()
         }
-        super.close()
+        cancelBaseSubscriptions()
         playlistChangesSubscriber.cancelSubscription()
         conditionalDeregister(ObservablePlaylist::class.java, repository)
     }

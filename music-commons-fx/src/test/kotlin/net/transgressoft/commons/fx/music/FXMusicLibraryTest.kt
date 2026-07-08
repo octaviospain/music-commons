@@ -123,26 +123,23 @@ internal class FXMusicLibraryTest : StringSpec({
         library.close()
     }
 
-    "FXMusicLibrary close releases all resources" {
+    "FXMusicLibrary close releases all resources and rejects further mutations" {
         val library = FXMusicLibrary.builder().metadataIO(files.metadataIO).build()
 
-        val audioItem = library.audioItemFromFile(files.virtualAudioFile().next())
+        library.audioItemFromFile(files.virtualAudioFile().next())
 
         reactive.advance()
 
         library.audioLibrary().size() shouldBe 1
         WaitForAsyncUtils.waitForFxEvents()
-        val sizeBeforeClose = library.audioItemsProperty.size
 
         library.close()
 
-        // After close, the library retains already-added items but does not track new ones
+        // After close, the library retains its state but mutating operations throw IllegalStateException
         library.audioLibrary().size() shouldBe 1
-        library.audioLibrary().add(library.audioItemFromFile(files.virtualAudioFile().next()))
-        reactive.advance()
-        WaitForAsyncUtils.waitForFxEvents()
-
-        library.audioItemsProperty.size shouldBe sizeBeforeClose
+        shouldThrow<IllegalStateException> {
+            library.audioItemFromFile(files.virtualAudioFile().next())
+        }
     }
 
     "FXMusicLibrary albumsProperty and genreIndexesProperty are index-addressable ordered lists" {

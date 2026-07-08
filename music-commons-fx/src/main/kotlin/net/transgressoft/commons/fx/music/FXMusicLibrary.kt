@@ -32,6 +32,8 @@ import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioMetadataIO
 import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
+import net.transgressoft.commons.music.itunes.ItunesImportService
+import net.transgressoft.commons.music.m3u.M3uImportService
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
 import net.transgressoft.commons.util.WindowsPathValidator
@@ -45,6 +47,7 @@ import javafx.beans.property.ReadOnlyListProperty
 import javafx.beans.property.ReadOnlySetProperty
 import java.nio.file.Path
 import java.util.Optional
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * JavaFX-compatible entry point for managing an observable audio library, playlist hierarchy,
@@ -65,8 +68,12 @@ import java.util.Optional
 class FXMusicLibrary private constructor(
     private val _audioLibrary: FXAudioLibrary,
     private val _playlistHierarchy: FXPlaylistHierarchy,
-    private val _waveformRepository: AudioWaveformRepository<AudioWaveform, ObservableAudioItem>
+    private val _waveformRepository: AudioWaveformRepository<AudioWaveform, ObservableAudioItem>,
+    private val _metadataIO: AudioMetadataIO
 ) : MusicLibrary<ObservableAudioItem, ObservablePlaylist> {
+
+    private val closed = AtomicBoolean(false)
+    private val importLock = Any()
 
     /** Returns the underlying observable audio library for advanced operations. */
     override fun audioLibrary(): ObservableAudioLibrary = _audioLibrary
@@ -76,6 +83,34 @@ class FXMusicLibrary private constructor(
 
     /** Returns the underlying waveform repository for advanced operations. */
     fun waveformRepository(): AudioWaveformRepository<AudioWaveform, ObservableAudioItem> = _waveformRepository
+
+    private var _itunesImport: ItunesImportService<ObservableAudioItem, ObservablePlaylist>? = null
+
+    /**
+     * Accessor for the iTunes import service. Constructed on first access and cancelled on [close].
+     *
+     * @throws IllegalStateException if this library has already been closed.
+     */
+    val itunesImport: ItunesImportService<ObservableAudioItem, ObservablePlaylist>
+        get() =
+            synchronized(importLock) {
+                check(!closed.get()) { "This music library has been closed and can no longer be used." }
+                _itunesImport ?: ItunesImportService(this, _metadataIO).also { _itunesImport = it }
+            }
+
+    private var _m3uImport: M3uImportService<ObservableAudioItem, ObservablePlaylist>? = null
+
+    /**
+     * Accessor for the M3U import service. Constructed on first access and cancelled on [close].
+     *
+     * @throws IllegalStateException if this library has already been closed.
+     */
+    val m3uImport: M3uImportService<ObservableAudioItem, ObservablePlaylist>
+        get() =
+            synchronized(importLock) {
+                check(!closed.get()) { "This music library has been closed and can no longer be used." }
+                _m3uImport ?: M3uImportService(this).also { _m3uImport = it }
+            }
 
     /** Observable list of all audio items in the library, suitable for direct JavaFX binding. */
     val audioItemsProperty: ReadOnlyListProperty<ObservableAudioItem> get() = _audioLibrary.audioItemsProperty
@@ -148,7 +183,17 @@ class FXMusicLibrary private constructor(
 
     override fun findPlaylistByName(name: String): Optional<out ObservablePlaylist> = _playlistHierarchy.findByName(name)
 
+    /**
+     * Closes all components idempotently. The first call cancels the import services first, then the
+     * playlist hierarchy, waveform repository, and audio library. Subsequent calls return immediately
+     * without re-closing the components.
+     */
     override fun close() {
+        if (!closed.compareAndSet(false, true)) return
+        synchronized(importLock) {
+            _itunesImport?.close()
+            _m3uImport?.close()
+        }
         _playlistHierarchy.close()
         _waveformRepository.close()
         _audioLibrary.close()
@@ -246,7 +291,7 @@ class FXMusicLibrary private constructor(
                 audioLibrary.subscribe(waveformRepo)
                 audioLibrary.subscribe(playlistHierarchy)
 
-                return FXMusicLibrary(audioLibrary, playlistHierarchy, waveformRepo)
+                return FXMusicLibrary(audioLibrary, playlistHierarchy, waveformRepo, metadataIO)
             } catch (ex: Exception) {
                 if (playlistRepoRegistered) {
                     conditionalDeregister(ObservablePlaylist::class.java, playlistRepository)

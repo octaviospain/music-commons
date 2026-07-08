@@ -4,6 +4,7 @@ import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.AudioLibrary
+import net.transgressoft.commons.music.audio.MutableAudioItem
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.playlist.PlaylistHierarchy
 import net.transgressoft.commons.music.playlist.asJsonKeyValues
@@ -221,8 +222,11 @@ internal class MusicLibraryIntegrationTest : StringSpec({
 
         audioLibrary.close()
 
-        // After close, newly created items are no longer indexed in the artist catalog
-        val item2 = audioLibrary.createFromFile(files.virtualAudioFile().next())
+        // After close, add directly to the underlying repository to bypass the AudioLibraryBase guard
+        // and verify that the catalog subscription no longer processes the new item.
+        val audioFile2 = files.virtualAudioFile().next()
+        val item2 = MutableAudioItem(audioFile2, audioLibrary.size() + 1, files.metadataIO.readMetadata(audioFile2))
+        repos.audioRepository.add(item2)
         reactive.advance()
 
         audioLibrary shouldNotIndex item2

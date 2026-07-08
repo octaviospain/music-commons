@@ -26,6 +26,8 @@ import net.transgressoft.commons.music.audio.AudioMetadataIO
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
 import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
+import net.transgressoft.commons.music.itunes.ItunesImportService
+import net.transgressoft.commons.music.m3u.M3uImportService
 import net.transgressoft.commons.music.player.event.AudioItemPlayerEvent
 import net.transgressoft.commons.music.playlist.DefaultPlaylistHierarchy
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
@@ -41,6 +43,7 @@ import java.nio.file.Path
 import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Flow
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Unified entry point for managing an audio library, playlist hierarchy, and waveform repository.
@@ -65,8 +68,12 @@ import java.util.concurrent.Flow
 class CoreMusicLibrary private constructor(
     private val _audioLibrary: AudioLibrary,
     private val _playlistHierarchy: PlaylistHierarchy,
-    private val _waveformRepository: AudioWaveformRepository<AudioWaveform, AudioItem>
+    private val _waveformRepository: AudioWaveformRepository<AudioWaveform, AudioItem>,
+    private val _metadataIO: AudioMetadataIO
 ) : MusicLibrary<AudioItem, MutableAudioPlaylist> {
+
+    private val closed = AtomicBoolean(false)
+    private val importLock = Any()
 
     override fun audioLibrary(): AudioLibrary = _audioLibrary
 
@@ -76,6 +83,34 @@ class CoreMusicLibrary private constructor(
      * Returns the underlying waveform repository for direct access to waveform management.
      */
     fun waveformRepository(): AudioWaveformRepository<AudioWaveform, AudioItem> = _waveformRepository
+
+    private var _itunesImport: ItunesImportService<AudioItem, MutableAudioPlaylist>? = null
+
+    /**
+     * Accessor for the iTunes import service. Constructed on first access and cancelled on [close].
+     *
+     * @throws IllegalStateException if this library has already been closed.
+     */
+    val itunesImport: ItunesImportService<AudioItem, MutableAudioPlaylist>
+        get() =
+            synchronized(importLock) {
+                check(!closed.get()) { "This music library has been closed and can no longer be used." }
+                _itunesImport ?: ItunesImportService(this, _metadataIO).also { _itunesImport = it }
+            }
+
+    private var _m3uImport: M3uImportService<AudioItem, MutableAudioPlaylist>? = null
+
+    /**
+     * Accessor for the M3U import service. Constructed on first access and cancelled on [close].
+     *
+     * @throws IllegalStateException if this library has already been closed.
+     */
+    val m3uImport: M3uImportService<AudioItem, MutableAudioPlaylist>
+        get() =
+            synchronized(importLock) {
+                check(!closed.get()) { "This music library has been closed and can no longer be used." }
+                _m3uImport ?: M3uImportService(this).also { _m3uImport = it }
+            }
 
     /**
      * The subscriber for player events. Wire this to an audio player to track play counts.
@@ -154,9 +189,16 @@ class CoreMusicLibrary private constructor(
         _playlistHierarchy.subscribe(subscriber)
 
     /**
-     * Closes all components in reverse subscription order: playlist hierarchy, waveform repository, then audio library.
+     * Closes all components idempotently. The first call cancels the import services first, then the
+     * playlist hierarchy, waveform repository, and audio library in reverse subscription order.
+     * Subsequent calls return immediately without re-closing the components.
      */
     override fun close() {
+        if (!closed.compareAndSet(false, true)) return
+        synchronized(importLock) {
+            _itunesImport?.close()
+            _m3uImport?.close()
+        }
         _playlistHierarchy.close()
         _waveformRepository.close()
         _audioLibrary.close()
@@ -251,7 +293,7 @@ class CoreMusicLibrary private constructor(
                 audioLibrary.subscribe(waveformRepo)
                 audioLibrary.subscribe(playlistHierarchy)
 
-                return CoreMusicLibrary(audioLibrary, playlistHierarchy, waveformRepo)
+                return CoreMusicLibrary(audioLibrary, playlistHierarchy, waveformRepo, metadataIO)
             } catch (ex: Exception) {
                 (playlistHierarchy as? AutoCloseable)?.close()
                 waveformRepo?.close()

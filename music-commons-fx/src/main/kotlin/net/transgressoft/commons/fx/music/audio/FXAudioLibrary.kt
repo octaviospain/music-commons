@@ -49,6 +49,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CopyOnWriteArraySet
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -215,6 +216,7 @@ internal class FXAudioLibrary
             ReactiveScope.flowScope.launch {
                 delay(FX_REFRESH_DEBOUNCE_MILLIS.milliseconds)
                 Platform.runLater {
+                    if (closed.get()) return@runLater
                     try {
                         drainAudioItemChanges()
                     } finally {
@@ -253,6 +255,7 @@ internal class FXAudioLibrary
             ReactiveScope.flowScope.launch {
                 delay(FX_REFRESH_DEBOUNCE_MILLIS.milliseconds)
                 Platform.runLater {
+                    if (closed.get()) return@runLater
                     try {
                         catalogRefreshRequested.set(false)
                         refreshCatalogProperties()
@@ -308,12 +311,17 @@ internal class FXAudioLibrary
         }
 
         /**
-         * Cancels all event subscriptions managed by this library, including those from the base class
-         * and the FX-specific internal and catalog subscriptions, then conditionally deregisters the
-         * repository from LirpContext only if this instance still owns the slot.
+         * Closes this library idempotently, cancelling all event subscriptions. The closed flag is set
+         * first so any in-flight debounce [Platform.runLater] callbacks observe it and no-op instead of
+         * mutating the observable state after close; the debounce coroutines themselves are short-lived
+         * and release their reference to this library as soon as they run. The base-class subscriptions
+         * are cancelled via [cancelBaseSubscriptions] rather than `super.close()` to prevent the base CAS
+         * from swallowing the teardown body when this override has already set the flag. Only the first
+         * call performs teardown; subsequent calls return immediately.
          */
         override fun close() {
-            super.close()
+            if (!closed.compareAndSet(false, true)) return
+            cancelBaseSubscriptions()
             internalSubscription.cancel()
             artistCatalogSubscription.cancel()
             albumSubscription.cancel()
@@ -330,6 +338,7 @@ internal class FXAudioLibrary
             // Empty the observable collections up front so bindings do not show stale items or
             // catalog buckets during the debounce window before the queued refresh runs.
             Platform.runLater {
+                if (closed.get()) return@runLater
                 audioItems.clear()
                 observableArtistCatalogSet.clear()
                 observableAlbumList.clear()
@@ -339,6 +348,7 @@ internal class FXAudioLibrary
         }
 
         override fun createFromFile(audioItemPath: Path): FXAudioItem {
+            checkOpen()
             if (!Files.exists(audioItemPath)) {
                 throw InvalidAudioFilePathException("File '${audioItemPath.toAbsolutePath()}' does not exist")
             }
@@ -356,6 +366,7 @@ internal class FXAudioLibrary
         }
 
         override fun add(entity: ObservableAudioItem): Boolean {
+            checkOpen()
             if (entity is FXAudioItem) entity.metadataIO = metadataIO
             return super.add(entity)
         }

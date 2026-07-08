@@ -22,6 +22,9 @@ import kotlin.io.path.extension
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.future.future
@@ -58,10 +61,12 @@ class ItunesImportService<I, P>
         private val musicLibrary: MusicLibrary<I, P>,
         private val metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO(),
         private val fileSystem: FileSystem = FileSystems.getDefault()
-    ) where I : ReactiveAudioItem<I>,
+    ) : AutoCloseable where I : ReactiveAudioItem<I>,
           P : ReactiveAudioPlaylist<I, P> {
 
     private val logger = KotlinLogging.logger {}
+    private val serviceJob: Job = SupervisorJob()
+    private val serviceScope: CoroutineScope = CoroutineScope(Dispatchers.IO + serviceJob)
 
     internal var trackResolver: ItunesTrackResolver = ItunesTrackResolver(fileSystem)
     internal var playlistBuilder: ItunesPlaylistBuilder<I, P> = ItunesPlaylistBuilder(musicLibrary)
@@ -102,7 +107,7 @@ class ItunesImportService<I, P>
         val sessionId = UUID.randomUUID().toString()
         MDC.put("importSessionId", sessionId)
         try {
-            return CoroutineScope(Dispatchers.IO + MDCContext()).future {
+            return serviceScope.future(MDCContext()) {
                 val effectivePlaylists = playlistBuilder.expandWithAncestors(selectedPlaylists, itunesLibrary)
                 val trackImportResult = importTracks(itunesLibrary, policy, onProgress)
                 val rejectedNames = playlistBuilder.createPlaylists(effectivePlaylists, trackImportResult.trackIdToItem, rootDirectoryName)
@@ -122,6 +127,14 @@ class ItunesImportService<I, P>
         } finally {
             MDC.remove("importSessionId")
         }
+    }
+
+    /**
+     * Releases the coroutine resources backing [importAsync]. After close, async imports
+     * will fail; the underlying music library is not affected.
+     */
+    override fun close() {
+        serviceScope.cancel()
     }
 
     private suspend fun importTracks(

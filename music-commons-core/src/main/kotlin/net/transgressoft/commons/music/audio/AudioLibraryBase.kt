@@ -36,6 +36,7 @@ import net.transgressoft.lirp.event.StandardCrudEvent.Update
 import net.transgressoft.lirp.persistence.Repository
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -92,6 +93,22 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
     /** Publisher exposing the internal genre index registry for reactive genre index updates. */
     override val genreIndexPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Genre, GC>> =
         observableGenreIndexRegistry.genreIndexPublisher
+
+    /**
+     * Tracks whether this library has been closed. Once set to `true`, mutations and queries throw
+     * [IllegalStateException]. Protected so subtypes can read and transition it while external callers
+     * cannot reopen a closed library.
+     */
+    protected val closed = AtomicBoolean(false)
+
+    /**
+     * Asserts that this library has not been closed.
+     *
+     * @throws IllegalStateException if [close] has already been called on this library.
+     */
+    protected fun checkOpen() {
+        check(!closed.get()) { "This audio library has been closed and can no longer be used." }
+    }
 
     private val entitySubscriptions: MutableMap<Int, LirpEventSubscription<in I, MutationEvent.Type, MutationEvent<Int, I>>> =
         ConcurrentHashMap()
@@ -177,15 +194,29 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
         return id
     }
 
-    override fun createAudioItem(factory: (id: Int) -> I): I = factory(newId()).also { add(it) }
+    override fun createAudioItem(factory: (id: Int) -> I): I {
+        checkOpen()
+        return factory(newId()).also { add(it) }
+    }
+
+    override fun add(entity: I): Boolean {
+        checkOpen()
+        return repository.add(entity)
+    }
 
     override val playerSubscriber = PlayedEventSubscriber()
 
     override fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I> = observableArtistCatalogRegistry.findAlbumAudioItems(artist, albumName)
 
-    override fun getArtistCatalog(artist: Artist): Optional<out AC> = observableArtistCatalogRegistry.findById(artist)
+    override fun getArtistCatalog(artist: Artist): Optional<out AC> {
+        checkOpen()
+        return observableArtistCatalogRegistry.findById(artist)
+    }
 
-    override fun getArtistCatalog(artistName: String): Optional<out AC> = observableArtistCatalogRegistry.findFirst(artistName)
+    override fun getArtistCatalog(artistName: String): Optional<out AC> {
+        checkOpen()
+        return observableArtistCatalogRegistry.findFirst(artistName)
+    }
 
     override fun containsAudioItemWithArtist(artistName: String) =
         repository.contains {
@@ -197,9 +228,15 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
     override fun getRandomAudioItemsFromArtist(artist: Artist, size: Short): List<I> =
         repository.search(size.toInt()) { it.artistsInvolved.contains(artist) }.shuffled().toList()
 
-    override fun getAlbum(album: AlbumDetails): Optional<out ALC> = observableAlbumRegistry.findById(album)
+    override fun getAlbum(album: AlbumDetails): Optional<out ALC> {
+        checkOpen()
+        return observableAlbumRegistry.findById(album)
+    }
 
-    override fun getAlbum(albumName: String): Optional<out ALC> = observableAlbumRegistry.findFirst(albumName)
+    override fun getAlbum(albumName: String): Optional<out ALC> {
+        checkOpen()
+        return observableAlbumRegistry.findFirst(albumName)
+    }
 
     override fun containsAudioItemWithAlbum(albumName: String): Boolean =
         repository.contains { it.album.name.contentEquals(albumName, true) }
@@ -207,9 +244,15 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
     override fun getRandomAudioItemsFromAlbum(album: AlbumDetails, size: Short): List<I> =
         repository.search(size.toInt()) { it.album.canonicalKey() == album.canonicalKey() }.shuffled().toList()
 
-    override fun getGenreIndex(genre: Genre): Optional<out GC> = observableGenreIndexRegistry.findById(genre)
+    override fun getGenreIndex(genre: Genre): Optional<out GC> {
+        checkOpen()
+        return observableGenreIndexRegistry.findById(genre)
+    }
 
-    override fun getGenreIndex(genreName: String): Optional<out GC> = observableGenreIndexRegistry.findFirst(genreName)
+    override fun getGenreIndex(genreName: String): Optional<out GC> {
+        checkOpen()
+        return observableGenreIndexRegistry.findFirst(genreName)
+    }
 
     override fun containsAudioItemWithGenre(genreName: String): Boolean {
         // A blank name targets the no-genre bucket: true iff at least one untagged item exists.
@@ -221,12 +264,14 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
         repository.search(size.toInt()) { it.genres.contains(genre) }.shuffled().toList()
 
     /**
-     * Cancels all event subscriptions managed by this library.
+     * Cancels all base-class event subscriptions and closes the catalog registries.
      *
-     * Cancels the repository event subscription, all per-entity mutation subscriptions,
-     * the player subscriber's subscription, and all catalog registries.
+     * Subclasses that take ownership of the idempotency CAS in their own [close] override
+     * (to interpose teardown steps before the base teardown runs) should call this method
+     * directly rather than delegating to [close], which would no-op because [closed] is already
+     * set by the time `super.close()` is reached.
      */
-    override fun close() {
+    protected fun cancelBaseSubscriptions() {
         subscription.cancel()
         entitySubscriptions.values.forEach { it.cancel() }
         entitySubscriptions.clear()
@@ -234,6 +279,18 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
         observableArtistCatalogRegistry.close()
         observableAlbumRegistry.close()
         observableGenreIndexRegistry.close()
+    }
+
+    /**
+     * Closes this library idempotently.
+     *
+     * The first call sets the closed flag and cancels all event subscriptions: the repository
+     * subscription, all per-entity mutation subscriptions, the player subscriber, and all
+     * catalog registries. Subsequent calls return immediately without repeating the teardown.
+     */
+    override fun close() {
+        if (!closed.compareAndSet(false, true)) return
+        cancelBaseSubscriptions()
     }
 
     override fun equals(other: Any?): Boolean {

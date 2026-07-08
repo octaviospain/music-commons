@@ -122,10 +122,9 @@ internal class PlaylistHierarchyBaseTest : StringSpec({
         reactive.advance()
 
         // After close(), the audio item deletion event is no longer processed —
-        // the playlist's audioItemIds still contains the id even though the audio item was removed from the library
-        playlistHierarchy.findByName("Close Test Playlist") shouldBePresent { found ->
-            found shouldReferenceItemId audioItem.id
-        }
+        // the playlist's audioItemIds still contains the id even though the audio item was removed from the library.
+        // Access the captured playlist reference directly to avoid the use-after-close guard on findByName.
+        playlist shouldReferenceItemId audioItem.id
         audioLibrary.close()
         deregisterRepository(AudioItem::class.java)
     }
