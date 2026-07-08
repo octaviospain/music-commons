@@ -36,6 +36,7 @@ architecture, per-feature guides, and a [Glossary](https://github.com/octaviospa
 - [Installation](#installation)
 - [Quickstart](#quickstart)
 - [Features](#features)
+- [Multi-instance model & identity](#multi-instance-model--identity)
 - [Building](#building)
 - [Feature index](#feature-index)
 - [Contributing](#contributing)
@@ -220,6 +221,39 @@ manual save calls. Repositories flush and drain events asynchronously; wire a `L
 via the `onError` constructor parameter to observe flush/event-drain failures that are otherwise
 log-only. The handler is notify-only and carries entity identity (not field values). See
 [SQL Persistence](https://github.com/octaviospain/music-commons/wiki/SQL-Persistence).
+
+### Multi-instance model & identity
+
+Only one live `CoreMusicLibrary` or `FXMusicLibrary` instance per JVM process is supported.
+Constructing a second while one is still open throws `IllegalStateException` and leaves the first
+library's state untouched. The construct → close → construct-again lifecycle is fully supported:
+calling `close()` on a library frees its internal registry slots so a subsequent construction
+succeeds.
+
+```kotlin
+val first = CoreMusicLibrary.builder().build()
+first.close()
+
+// After close(), constructing another library is valid
+val second = CoreMusicLibrary.builder().build()
+second.close()
+```
+
+Audio items and playlists carry two identifiers with different scopes:
+
+- **`id`** — repository-local. The same audio file reloaded into a fresh library instance may
+  receive a different `id`. Do not use `id` to correlate entities across instances.
+- **`uniqueId`** — content-derived and stable across instances. Use `uniqueId` (or content-based
+  `equals`) to identify the same logical entity when comparing across instances or reloads.
+
+Entities are bound to the library instance that created them. Mixing entities from different
+instances leads to incorrect aggregate resolution, because playlist-to-audio-item lookups use the
+repository-local `id` channel.
+
+Support for running multiple live library instances simultaneously within one JVM is planned for a
+future release. The prerequisite work is tracked at
+[lirp#321](https://github.com/octaviospain/lirp/issues/321) and
+[music-commons#196](https://github.com/octaviospain/music-commons/issues/196).
 
 ### Typed path validation
 

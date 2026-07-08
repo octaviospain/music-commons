@@ -4,6 +4,7 @@ import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.testing.reactiveScope
+import net.transgressoft.commons.music.testing.registryIsolation
 import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.persistence.VolatileRepository
 import io.kotest.core.spec.style.StringSpec
@@ -19,6 +20,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 @ExperimentalCoroutinesApi
 internal class AudioItemEventSubscriberTest : StringSpec({
 
+    registryIsolation()
     val reactive = reactiveScope()
     val files = virtualFiles()
     lateinit var repository: VolatileRepository<Int, AudioItem>

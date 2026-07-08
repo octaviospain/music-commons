@@ -264,7 +264,7 @@ internal class MutableAudioItemTest : FunSpec({
                     override fun writeMetadata(item: ReactiveAudioItem<*>) = delegate.writeMetadata(item)
                 }
             val library = DefaultAudioLibrary(VolatileRepository("AudioLibrary"), spyMetadataIO)
-            library.createFromFile(path)
+            library.use { it.createFromFile(path) }
 
             loadCoverCallCount shouldBe 0
         }
@@ -307,10 +307,11 @@ internal class MutableAudioItemTest : FunSpec({
         ) { (_, case) ->
             Jimfs.newFileSystem(Configuration.unix()).use { fs ->
                 val path = case.pathSetup(fs)
-                val library = DefaultAudioLibrary(VolatileRepository("AudioLibrary"))
-                val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(path) }
-                assertSoftly {
-                    case.expectedMessageFragments.forEach { ex.message!! shouldContain it }
+                DefaultAudioLibrary(VolatileRepository("AudioLibrary")).use { library ->
+                    val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(path) }
+                    assertSoftly {
+                        case.expectedMessageFragments.forEach { ex.message!! shouldContain it }
+                    }
                 }
             }
         }

@@ -17,6 +17,7 @@
 
 package net.transgressoft.commons.music.audio
 
+import net.transgressoft.commons.music.testing.registryIsolation
 import net.transgressoft.commons.util.InvalidAudioFilePathException
 import net.transgressoft.commons.util.OsDetector
 import net.transgressoft.lirp.persistence.VolatileRepository
@@ -43,8 +44,11 @@ import kotlin.reflect.KClass
 @EnabledIf(IsPosixConditionForLibrary::class)
 internal class DefaultAudioLibraryPosixTest : StringSpec({
 
+    registryIsolation()
+
     "DefaultAudioLibrary.createFromFile throws InvalidAudioFilePathException when file is not readable" {
         val tempFile = Files.createTempFile("unreadable-default", ".mp3")
+        var library: DefaultAudioLibrary? = null
         try {
             // setReadable(false) is a no-op when running as root (POSIX permissions are bypassed),
             // and some filesystems silently refuse the change. Both conditions abort the test as
@@ -53,10 +57,11 @@ internal class DefaultAudioLibraryPosixTest : StringSpec({
             if (!flipped || Files.isReadable(tempFile)) {
                 throw TestAbortedException("Cannot demote read permission on this filesystem (root or unsupported FS)")
             }
-            val library = DefaultAudioLibrary(VolatileRepository("DefaultAudioLibrary"))
+            library = DefaultAudioLibrary(VolatileRepository("DefaultAudioLibrary"))
             val ex = shouldThrow<InvalidAudioFilePathException> { library.createFromFile(tempFile) }
             ex.message shouldContain "is not readable"
         } finally {
+            library?.close()
             tempFile.toFile().setReadable(true)
             Files.deleteIfExists(tempFile)
         }

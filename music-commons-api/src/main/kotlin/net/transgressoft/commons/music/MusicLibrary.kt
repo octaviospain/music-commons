@@ -33,6 +33,36 @@ import java.util.Optional
  *
  * Core and JavaFX implementations are available via their respective builders.
  *
+ * ## Single-live-instance contract
+ *
+ * Only one live `MusicLibrary` (or `FXMusicLibrary`) instance per JVM process is supported.
+ * Constructing a second library while a first is still open throws [IllegalStateException] — the
+ * first library's state is left untouched. Call [close] on the existing instance before building
+ * another one. The construct → close → construct-again lifecycle is fully supported: [close]
+ * frees the library's registry slots so a subsequent construction succeeds.
+ *
+ * ## Entity identity across instances
+ *
+ * Every entity (audio item, playlist) carries two identifiers with different scopes:
+ *
+ * - **`id`** — a repository-local integer assigned when an entity is persisted. It is not stable
+ *   across library instances: the same audio file reloaded into a freshly built library may
+ *   receive a different `id`. Do not use `id` to correlate entities across instances.
+ * - **`uniqueId`** — a content-derived stable identifier that is consistent across library
+ *   instances. Combined with content-based [equals], `uniqueId` is the correct way to match
+ *   the same logical entity when comparing across instances or reloads.
+ *
+ * Entities are bound to the library instance that created them and must not be mixed across
+ * instances: aggregate lookups (playlist → audio items) use the repository-local `id` channel,
+ * so a playlist from library A resolving against library B will not find the correct items.
+ *
+ * ## Deferred: multiple concurrent live instances
+ *
+ * Support for running multiple live library instances simultaneously within one JVM is planned
+ * for a future release. The prerequisite work is tracked at
+ * [lirp#321](https://github.com/octaviospain/lirp/issues/321) (infrastructure enabler) and
+ * [music-commons#196](https://github.com/octaviospain/music-commons/issues/196) (consumer need).
+ *
  * @param I The concrete audio item type
  * @param P The concrete playlist type
  */

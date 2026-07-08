@@ -18,13 +18,14 @@
 package net.transgressoft.commons.fx.music.playlist
 
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
+import net.transgressoft.commons.fx.music.conditionalDeregister
+import net.transgressoft.commons.fx.music.guardedRegister
 import net.transgressoft.commons.music.playlist.PlaylistHierarchyBase
 import net.transgressoft.commons.music.playlist.event.AudioPlaylistEventSubscriber
 import net.transgressoft.lirp.entity.toIds
 import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
-import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.Repository
 import net.transgressoft.lirp.persistence.VolatileRepository
 import javafx.application.Platform
@@ -48,6 +49,9 @@ import mu.withLoggingContext
  *
  * Playlist deserialization is driven by `lirpSerializer(FXPlaylist(0))` passed to a
  * [net.transgressoft.lirp.persistence.json.JsonFileRepository] at construction time.
+ *
+ * Only one live instance is permitted per JVM; constructing a second while one is live throws
+ * [IllegalStateException]. [close] conditionally deregisters only when this instance still owns the slot.
  */
 internal class FXPlaylistHierarchy(
     private val repository: Repository<Int, ObservablePlaylist> = VolatileRepository("FXPlaylistHierarchy")
@@ -80,8 +84,7 @@ internal class FXPlaylistHierarchy(
         }
 
     init {
-        RegistryBase.deregisterRepository(ObservablePlaylist::class.java)
-        RegistryBase.registerRepository(ObservablePlaylist::class.java, repository)
+        guardedRegister(ObservablePlaylist::class.java, repository)
 
         // Re-sync aggregates after all entities are loaded. During repository load, entities
         // are added one at a time, so forward references (e.g. ROOT playlist referencing CHILD
@@ -156,7 +159,8 @@ internal class FXPlaylistHierarchy(
 
     /**
      * Cancels the base class subscriptions and the internal playlist changes subscriber,
-     * then deregisters the playlist repository from LirpContext.
+     * then conditionally deregisters the playlist repository from LirpContext only if this
+     * instance still owns the slot.
      */
     override fun close() {
         forEach { playlist ->
@@ -164,7 +168,7 @@ internal class FXPlaylistHierarchy(
         }
         super.close()
         playlistChangesSubscriber.cancelSubscription()
-        RegistryBase.deregisterRepository(ObservablePlaylist::class.java)
+        conditionalDeregister(ObservablePlaylist::class.java, repository)
     }
 
     override fun toString() = "observablePlaylistHierarchy(playlistsCount=${size()})"

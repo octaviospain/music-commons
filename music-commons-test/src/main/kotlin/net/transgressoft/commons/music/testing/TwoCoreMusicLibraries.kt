@@ -21,35 +21,39 @@ import net.transgressoft.commons.music.CoreMusicLibrary
 import net.transgressoft.commons.music.audio.VolatileAudioMetadataIO
 
 /**
- * Holds two [CoreMusicLibrary] instances that were constructed sequentially without closing the
- * first, reproducing the registry-slot eviction crux: both libraries bind their audio-item
- * repository to the same process-wide registry, so the second construction silently overwrites the
- * slot the first still relies on for playlist aggregate resolution.
+ * Holds a single live [CoreMusicLibrary] alongside a deferred second-construction action,
+ * enabling tests to assert the fail-fast guard that rejects a concurrent live instance.
  *
- * [close] releases the libraries in reverse construction order — [libraryB] (the current slot
- * owner) first, then [libraryA] — each guarded so a failing first close still releases the second.
+ * [libraryA] is built eagerly and remains live. [attemptSecondConstruction] is a lambda that,
+ * when invoked, attempts to build a second `CoreMusicLibrary` while [libraryA] is still alive —
+ * this is expected to throw [IllegalStateException] because the registry slot is already occupied.
+ *
+ * [close] releases [libraryA] (the only live library this holder owns).
  */
 class TwoCoreMusicLibraries(
     val libraryA: CoreMusicLibrary,
-    val libraryB: CoreMusicLibrary
+    val attemptSecondConstruction: () -> CoreMusicLibrary
 ) : AutoCloseable {
 
     override fun close() {
-        runCatching { libraryB.close() }
         runCatching { libraryA.close() }
     }
 }
 
 /**
- * Builds two [CoreMusicLibrary] instances sharing [metadataIO], with NO [CoreMusicLibrary.close]
- * between them, so [TwoCoreMusicLibraries.libraryB] evicts the registry slot
- * [TwoCoreMusicLibraries.libraryA] was using. Both libraries stay live on return, letting a test
- * observe the resulting cross-instance resolution behaviour.
+ * Builds a [CoreMusicLibrary] as [TwoCoreMusicLibraries.libraryA] and captures the second-build
+ * attempt as a deferred lambda, sharing [metadataIO] across both.
+ *
+ * The second construction is deferred so tests can assert it throws [IllegalStateException] via
+ * `shouldThrow<IllegalStateException> { libraries.attemptSecondConstruction() }` — if it were
+ * eager, the factory itself would throw before returning the fixture.
  */
 fun buildTwoCoreLibrariesWithoutClosing(
     metadataIO: VolatileAudioMetadataIO = VolatileAudioMetadataIO()
 ): TwoCoreMusicLibraries {
     val libraryA = CoreMusicLibrary.builder().metadataIO(metadataIO).build()
-    val libraryB = CoreMusicLibrary.builder().metadataIO(metadataIO).build()
-    return TwoCoreMusicLibraries(libraryA, libraryB)
+    return TwoCoreMusicLibraries(
+        libraryA = libraryA,
+        attemptSecondConstruction = { CoreMusicLibrary.builder().metadataIO(metadataIO).build() }
+    )
 }

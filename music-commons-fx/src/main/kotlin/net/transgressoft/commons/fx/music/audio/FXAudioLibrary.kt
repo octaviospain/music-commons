@@ -17,6 +17,8 @@
 
 package net.transgressoft.commons.fx.music.audio
 
+import net.transgressoft.commons.fx.music.conditionalDeregister
+import net.transgressoft.commons.fx.music.guardedRegister
 import net.transgressoft.commons.music.audio.AudioLibraryBase
 import net.transgressoft.commons.music.audio.AudioMetadataIO
 import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
@@ -26,7 +28,6 @@ import net.transgressoft.lirp.event.CrudEvent.Type.CREATE
 import net.transgressoft.lirp.event.CrudEvent.Type.DELETE
 import net.transgressoft.lirp.event.CrudEvent.Type.UPDATE
 import net.transgressoft.lirp.event.ReactiveScope
-import net.transgressoft.lirp.persistence.RegistryBase
 import net.transgressoft.lirp.persistence.Repository
 import net.transgressoft.lirp.persistence.fx.FxAggregateList
 import net.transgressoft.lirp.persistence.fx.fxAggregateList
@@ -58,9 +59,11 @@ import kotlinx.coroutines.launch
  * events can arrive in large background bursts during directory imports, so JavaFX-facing collections
  * are refreshed through coalesced [Platform.runLater] drains instead of one JavaFX task per entity.
  *
- * Registers its backing repository in [net.transgressoft.lirp.persistence.LirpContext] on construction
- * via [RegistryBase.registerRepository], enabling playlist hierarchies to resolve audio item references
- * lazily through the context. Deregisters on [close] to support repeated construction within the same JVM.
+ * Registers its backing repository in [net.transgressoft.lirp.persistence.LirpContext] on construction,
+ * enabling playlist hierarchies to resolve audio item references lazily through the context. Only one live
+ * instance is permitted per JVM; constructing a second while one is live throws [IllegalStateException].
+ * [close] conditionally deregisters only when this instance still owns the slot, so closing one library
+ * never disturbs a concurrently constructed replacement.
  *
  * The [Platform.runLater] dispatches intentionally omit error handling because they perform only simple
  * collection and property mutations; any exception indicates a programming error that should surface
@@ -169,8 +172,7 @@ internal class FXAudioLibrary
             genreIndexPublisher.subscribe(CREATE, UPDATE, DELETE) { queueCatalogRefresh() }
 
         init {
-            RegistryBase.deregisterRepository(ObservableAudioItem::class.java)
-            RegistryBase.registerRepository(ObservableAudioItem::class.java, repository)
+            guardedRegister(ObservableAudioItem::class.java, repository)
 
             // Populate fxAggregateList from existing items
             val initialAudioItems = toList()
@@ -307,7 +309,8 @@ internal class FXAudioLibrary
 
         /**
          * Cancels all event subscriptions managed by this library, including those from the base class
-         * and the FX-specific internal and catalog subscriptions, then deregisters the repository from LirpContext.
+         * and the FX-specific internal and catalog subscriptions, then conditionally deregisters the
+         * repository from LirpContext only if this instance still owns the slot.
          */
         override fun close() {
             super.close()
@@ -315,7 +318,7 @@ internal class FXAudioLibrary
             artistCatalogSubscription.cancel()
             albumSubscription.cancel()
             genreIndexSubscription.cancel()
-            RegistryBase.deregisterRepository(ObservableAudioItem::class.java)
+            conditionalDeregister(ObservableAudioItem::class.java, repository)
         }
 
         override fun clear() {

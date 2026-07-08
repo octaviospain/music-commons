@@ -10,6 +10,7 @@ import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
 import net.transgressoft.commons.music.audio.virtualFiles
 import net.transgressoft.commons.music.playlist.DefaultPlaylistHierarchy
 import net.transgressoft.commons.music.testing.reactiveScope
+import net.transgressoft.commons.music.testing.registryIsolation
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import net.transgressoft.commons.music.waveform.AudioWaveformRepository
 import io.kotest.assertions.throwables.shouldNotThrowAny
@@ -26,6 +27,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 @ExperimentalCoroutinesApi
 internal class LifecycleIntegrationTest : StringSpec({
 
+    registryIsolation()
     val reactive = reactiveScope()
     val files = virtualFiles()
 
