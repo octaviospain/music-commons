@@ -18,6 +18,7 @@
 package net.transgressoft.commons.music.playlist
 
 import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.UNASSIGNED_ID
 import net.transgressoft.commons.music.conditionalDeregister
 import net.transgressoft.commons.music.guardedRegister
 import net.transgressoft.lirp.entity.toIds
@@ -66,6 +67,9 @@ internal class DefaultPlaylistHierarchy(
         audioItemIds: List<Int>
     ): MutableAudioPlaylist {
         require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
+        require(audioItemIds.none { it == UNASSIGNED_ID }) {
+            "audioItemIds must not contain unassigned (zero) ids — resolve each audio item to a persisted id before adding it to a playlist"
+        }
         return MutablePlaylist(newId(), name, false, audioItemIds).also {
             logger.trace { "Created playlist $it" }
             add(it)
@@ -79,7 +83,11 @@ internal class DefaultPlaylistHierarchy(
         audioItems: List<AudioItem>
     ): MutableAudioPlaylist {
         require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
-        return MutablePlaylist(newId(), name, true, audioItems.toIds()).also {
+        val audioItemIds = audioItems.toIds()
+        require(audioItemIds.none { it == UNASSIGNED_ID }) {
+            "audioItemIds must not contain unassigned (zero) ids — resolve each audio item to a persisted id before adding it to a playlist"
+        }
+        return MutablePlaylist(newId(), name, true, audioItemIds).also {
             logger.trace { "Created playlist directory $it" }
             add(it)
         }

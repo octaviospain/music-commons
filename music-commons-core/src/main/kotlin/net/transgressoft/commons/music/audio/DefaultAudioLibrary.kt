@@ -56,6 +56,14 @@ internal class DefaultAudioLibrary
 
         init {
             guardedRegister(AudioItem::class.java, repository)
+            // Wire metadataIO onto items already hydrated from the repository before subscribing
+            // them to catalog-key mutation events. Doing so first closes the window where an item
+            // mutation fires during the subscription pass while metadataIO is still null on
+            // deserialized items.
+            repository.forEach { item ->
+                if (item is MutableAudioItem) item.metadataIO = metadataIO
+            }
+            subscribeExistingItems()
             playerSubscriber.addOnNextEventAction(PLAYED) { event ->
                 val audioItem = event.audioItem
                 logger.info { "Audio item with id ${audioItem.id} was played" }
@@ -68,17 +76,17 @@ internal class DefaultAudioLibrary
             }
         }
 
-        init {
-            // Wire the metadataIO back-ref onto items already hydrated from the repository.
-            // AudioLibraryBase.init iterates repository.forEach directly without routing through add(),
-            // so this loop is required in addition to the add() override to cover the hydration path.
-            repository.forEach { item ->
-                if (item is MutableAudioItem) item.metadataIO = metadataIO
-            }
-        }
-
         override fun add(entity: AudioItem): Boolean {
-            if (entity is MutableAudioItem) entity.metadataIO = metadataIO
+            if (entity is MutableAudioItem) {
+                val existingMetadataIO = entity.metadataIO
+                if (existingMetadataIO != null && existingMetadataIO !== metadataIO) {
+                    logger.warn {
+                        "Audio item ${entity.id} was created by a different library instance. " +
+                            "Re-wiring its metadata delegate to this library."
+                    }
+                }
+                entity.metadataIO = metadataIO
+            }
             return super.add(entity)
         }
 
@@ -93,6 +101,16 @@ internal class DefaultAudioLibrary
                 throw InvalidAudioFilePathException("File '${audioItemPath.toAbsolutePath()}' is not readable")
             }
             val tag = metadataIO.readMetadata(audioItemPath)
+            // Dedup by physical identity: if an item with the same fileName-duration-bitRate key
+            // already exists, return it without allocating a new id or adding a duplicate.
+            val candidateUniqueId =
+                buildString {
+                    append(audioItemPath.fileName.toString().replace(' ', '_'))
+                    append("-${tag.duration.toSeconds()}")
+                    append("-${tag.bitRate}")
+                }
+            val existing = findByUniqueId(candidateUniqueId)
+            if (existing.isPresent) return existing.get()
             return MutableAudioItem(audioItemPath, newId(), tag).also { audioItem ->
                 add(audioItem)
                 logger.trace { "New AudioItem was created from file $audioItemPath with id ${audioItem.id}" }

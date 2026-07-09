@@ -38,6 +38,12 @@ import java.lang.ref.SoftReference
  * [SoftReference] so that memory pressure can evict the bytes and re-resolution happens
  * transparently on the next access.
  *
+ * Documented behavior: `Artist`, `Album`, and `Label` flyweight instances are cached in
+ * [SoftReference]-backed maps and may be GC-evicted under memory pressure. After eviction a
+ * subsequent lookup creates a new instance that is `equals`-equivalent but not `===`-identical
+ * to the prior one. Always use value-based `equals` (or standard collection operations) to compare
+ * flyweight instances; reference equality (`===`) is not a stable identity across GC cycles.
+ *
  * @param I The type of audio items contained in this album
  */
 internal class ImmutableAlbum<I>(override val album: AlbumDetails, tracks: List<I>) :
@@ -65,15 +71,27 @@ internal class ImmutableAlbum<I>(override val album: AlbumDetails, tracks: List<
     @Volatile
     private var coverRef: SoftReference<ByteArray>? = null
 
+    // `noCover` means "no cover was found at the last load attempt".
+    // It is reset whenever `coverRef` had been set (a cover was found previously) and is then
+    // evicted by the GC — indicated by a non-null `coverRef` whose referent is null — so that
+    // the next access retries loading from the tracks rather than returning null permanently.
     @Volatile
     private var noCover: Boolean = false
 
     override val coverImageBytes: ByteArray?
         get() {
-            coverRef?.get()?.let { return it }
+            val currentRef = coverRef
+            val cached = currentRef?.get()
+            if (cached != null) return cached
+            // If coverRef was previously set (a cover was loaded) but has since been evicted,
+            // reset noCover so the next synchronized block retries loading.
+            if (currentRef != null && cached == null) noCover = false
             if (noCover) return null
             synchronized(this) {
-                coverRef?.get()?.let { return it }
+                val lockedRef = coverRef
+                lockedRef?.get()?.let { return it }
+                // Inner eviction check: re-clear noCover if coverRef was evicted while waiting.
+                if (lockedRef != null && lockedRef.get() == null) noCover = false
                 if (noCover) return null
                 val bytes = firstCoverImageBytes(tracks)
                 return if (bytes != null) {

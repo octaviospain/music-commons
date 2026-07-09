@@ -278,8 +278,9 @@ subprojects {
             events 'passed', 'skipped', 'failed'
         }
 
-        def excludeTags = ['windows-only']
+        def excludeTags = ['windows-only', 'stress']
         if (project.findProperty('includeWindowsOnly')?.toString()?.toBoolean()) excludeTags.remove('windows-only')
+        if (project.findProperty('includeStress')?.toString()?.toBoolean()) excludeTags.remove('stress')
         if (project.findProperty('excludeLinuxOnly')?.toString()?.toBoolean()) excludeTags << 'linux-only'
         if (project.findProperty('excludePosixOnly')?.toString()?.toBoolean()) excludeTags << 'posix-only'
         if (project.findProperty('excludeAudioHardware')?.toString()?.toBoolean()) excludeTags << 'audio-hardware'

@@ -20,6 +20,7 @@ package net.transgressoft.commons.fx.music.playlist
 import net.transgressoft.commons.fx.music.audio.ObservableAudioItem
 import net.transgressoft.commons.fx.music.conditionalDeregister
 import net.transgressoft.commons.fx.music.guardedRegister
+import net.transgressoft.commons.music.audio.UNASSIGNED_ID
 import net.transgressoft.commons.music.playlist.PlaylistHierarchyBase
 import net.transgressoft.commons.music.playlist.event.AudioPlaylistEventSubscriber
 import net.transgressoft.lirp.entity.toIds
@@ -60,6 +61,14 @@ internal class FXPlaylistHierarchy(
     private val logger = KotlinLogging.logger {}
 
     override val playlistElementType = ObservablePlaylist::class
+
+    /**
+     * Module-internal test hook that clears the first-use delete-subscriber guard for standalone
+     * hierarchies constructed outside the library builder. Delegates to the base protected bridge.
+     */
+    internal fun markDeleteSubscriberWiredForTest() {
+        markDeleteSubscriberWiredForTesting()
+    }
 
     private val observablePlaylistsSet: ObservableSet<ObservablePlaylist> = FXCollections.observableSet()
 
@@ -141,6 +150,9 @@ internal class FXPlaylistHierarchy(
         audioItemIds: List<Int>
     ): ObservablePlaylist {
         require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
+        require(audioItemIds.none { it == UNASSIGNED_ID }) {
+            "audioItemIds must not contain unassigned (zero) ids — resolve each audio item to a persisted id before adding it to a playlist"
+        }
         return FXPlaylist(newId(), name, false, audioItemIds).also {
             withLoggingContext("playlistId" to it.id.toString()) { logger.trace { "Created playlist $it" } }
             add(it)
@@ -159,7 +171,11 @@ internal class FXPlaylistHierarchy(
         audioItems: List<ObservableAudioItem>
     ): ObservablePlaylist {
         require(findByName(name).isEmpty) { "Playlist with name '$name' already exists" }
-        return FXPlaylist(newId(), name, true, audioItems.toIds()).also {
+        val audioItemIds = audioItems.toIds()
+        require(audioItemIds.none { it == UNASSIGNED_ID }) {
+            "audioItemIds must not contain unassigned (zero) ids — resolve each audio item to a persisted id before adding it to a playlist"
+        }
+        return FXPlaylist(newId(), name, true, audioItemIds).also {
             withLoggingContext("playlistId" to it.id.toString()) { logger.trace { "Created playlist $it" } }
             add(it)
             it.triggerCoverHydration()

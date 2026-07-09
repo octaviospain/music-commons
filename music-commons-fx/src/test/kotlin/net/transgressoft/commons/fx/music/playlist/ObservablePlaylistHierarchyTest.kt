@@ -45,7 +45,7 @@ internal class ObservablePlaylistHierarchyTest : StringSpec({
 
     /** Runs [block] against a fresh [FXPlaylistHierarchy], closing it afterward (mirrors `.use`). */
     suspend fun withFxHierarchy(block: suspend (FXPlaylistHierarchy) -> Unit) {
-        val hierarchy = FXPlaylistHierarchy()
+        val hierarchy = FXPlaylistHierarchy().also { it.markDeleteSubscriberWiredForTest() }
         hierarchy.use { hierarchy ->
             block(hierarchy)
         }

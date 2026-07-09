@@ -77,6 +77,13 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
           GC : ReactiveGenreIndex<GC, I>,
           GC : Comparable<GC> {
 
+    private companion object {
+        // Upper bound on id-allocation retries; large enough that it is never reached in practice
+        // but prevents an infinite loop when the id space is exhausted (e.g. in tests that
+        // fill the Int range).
+        const val MAX_ID_ALLOCATION_ATTEMPTS = 1_000_000
+    }
+
     /**
      * Publisher exposing the internal artist catalog registry.
      *
@@ -113,7 +120,15 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
     private val entitySubscriptions: MutableMap<Int, LirpEventSubscription<in I, MutationEvent.Type, MutationEvent<Int, I>>> =
         ConcurrentHashMap()
 
-    init {
+    /**
+     * Subscribes existing repository items to catalog-key mutation tracking.
+     *
+     * Subclasses must call this method as the final step of their own initialization, after any
+     * per-item back-references (such as a metadata I/O delegate) have been wired. Calling it
+     * earlier opens a window where an item mutation event fires before back-references are set,
+     * producing a null-reference access on the first catalog-relevant property change.
+     */
+    protected fun subscribeExistingItems() {
         if (repository.isEmpty.not()) {
             repository.forEach {
                 subscribeCatalogKeyChanges(it)
@@ -130,6 +145,12 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
      * non-key mutations (title, bpm, track number, …), which would otherwise cause needless catalog
      * churn. The projection's reverse index re-keys the item to its current bucket from the UPDATE;
      * emitting Update also causes JsonFileRepository to persist the change.
+     *
+     * Documented behavior: subscribers must not mutate catalog-relevant properties (artist, album,
+     * or genres) during event delivery. Doing so re-triggers the projection rebuild synchronously,
+     * causing a re-entrant UPDATE before the current one completes. This leads to redundant
+     * re-key cycles and may produce inconsistent intermediate catalog states visible to other
+     * subscribers observing the same event sequence.
      */
     private fun subscribeCatalogKeyChanges(audioItem: I) {
         entitySubscriptions.remove(audioItem.id)?.cancel()
@@ -188,8 +209,15 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
 
     protected fun newId(): Int {
         var id: Int
+        var attempts = 0
         do {
+            check(attempts++ < MAX_ID_ALLOCATION_ATTEMPTS) {
+                "Cannot allocate a new audio item id: the id space appears to be exhausted after $MAX_ID_ALLOCATION_ATTEMPTS attempts."
+            }
             id = idCounter.getAndIncrement()
+            check(id > 0) {
+                "Cannot allocate a new audio item id: the positive id space is exhausted (the id counter overflowed Int.MAX_VALUE)."
+            }
         } while (contains(id))
         return id
     }

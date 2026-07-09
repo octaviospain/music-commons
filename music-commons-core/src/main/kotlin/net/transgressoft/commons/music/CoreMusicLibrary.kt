@@ -39,11 +39,13 @@ import net.transgressoft.lirp.event.CrudEvent
 import net.transgressoft.lirp.event.LirpEventPublisher
 import net.transgressoft.lirp.persistence.Repository
 import net.transgressoft.lirp.persistence.VolatileRepository
+import mu.withLoggingContext
 import java.nio.file.Path
 import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Flow
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Unified entry point for managing an audio library, playlist hierarchy, and waveform repository.
@@ -69,7 +71,9 @@ class CoreMusicLibrary private constructor(
     private val _audioLibrary: AudioLibrary,
     private val _playlistHierarchy: PlaylistHierarchy,
     private val _waveformRepository: AudioWaveformRepository<AudioWaveform, AudioItem>,
-    private val _metadataIO: AudioMetadataIO
+    private val _metadataIO: AudioMetadataIO,
+    /** Diagnostic label for this library instance, used in MDC logging context. */
+    val instanceName: String
 ) : MusicLibrary<AudioItem, MutableAudioPlaylist> {
 
     private val closed = AtomicBoolean(false)
@@ -95,7 +99,7 @@ class CoreMusicLibrary private constructor(
         get() =
             synchronized(importLock) {
                 check(!closed.get()) { "This music library has been closed and can no longer be used." }
-                _itunesImport ?: ItunesImportService(this, _metadataIO).also { _itunesImport = it }
+                _itunesImport ?: ItunesImportService(this, _metadataIO, instanceName = instanceName).also { _itunesImport = it }
             }
 
     private var _m3uImport: M3uImportService<AudioItem, MutableAudioPlaylist>? = null
@@ -109,7 +113,7 @@ class CoreMusicLibrary private constructor(
         get() =
             synchronized(importLock) {
                 check(!closed.get()) { "This music library has been closed and can no longer be used." }
-                _m3uImport ?: M3uImportService(this).also { _m3uImport = it }
+                _m3uImport ?: M3uImportService(this, instanceName = instanceName).also { _m3uImport = it }
             }
 
     /**
@@ -123,12 +127,13 @@ class CoreMusicLibrary private constructor(
     val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, ArtistCatalog<AudioItem>>>
         get() = _audioLibrary.artistCatalogPublisher
 
-    override fun audioItemFromFile(path: Path): AudioItem {
-        // Defensive boundary check at the public API entry point — MutableAudioItem.init validates
-        // again, but failing here surfaces the exception before the audio item construction kicks off.
-        WindowsPathValidator.validatePath(path)
-        return _audioLibrary.createFromFile(path)
-    }
+    override fun audioItemFromFile(path: Path): AudioItem =
+        withLoggingContext("libraryInstance" to instanceName) {
+            // Defensive boundary check at the public API entry point — MutableAudioItem.init validates
+            // again, but failing here surfaces the exception before the audio item construction kicks off.
+            WindowsPathValidator.validatePath(path)
+            _audioLibrary.createFromFile(path)
+        }
 
     override fun createPlaylist(name: String): MutableAudioPlaylist = _playlistHierarchy.createPlaylist(name)
 
@@ -219,6 +224,7 @@ class CoreMusicLibrary private constructor(
         private var playlistRepository: Repository<Int, MutableAudioPlaylist> = VolatileRepository("PlaylistHierarchy")
         private var waveformRepository: Repository<Int, AudioWaveform> = VolatileRepository("AudioWaveformRepository")
         private var metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO()
+        private var instanceName: String? = null
 
         /**
          * Injects the [repository] backing the audio library.
@@ -266,6 +272,26 @@ class CoreMusicLibrary private constructor(
         fun metadataIO(utils: AudioMetadataIO): Builder = apply { metadataIO = utils }
 
         /**
+         * Sets a human-readable diagnostic label for this library instance.
+         *
+         * The name is surfaced as the `libraryInstance` MDC key around library operations and
+         * import-service scopes, making logs attributable when multiple library instances are
+         * active across time (e.g., sequential open/close cycles or concurrent imports).
+         *
+         * When not set, a short stable default is auto-generated from a per-JVM monotonic
+         * counter (e.g., `music-library-1`, `music-library-2`). The name is the caller's
+         * responsibility when set explicitly — it is a diagnostic label, not a trust boundary.
+         *
+         * @param name the label to assign; must be non-blank
+         * @return this builder, for chaining
+         */
+        fun instanceName(name: String): Builder =
+            apply {
+                require(name.isNotBlank()) { "instanceName must be non-blank" }
+                instanceName = name
+            }
+
+        /**
          * Builds a [CoreMusicLibrary] by injecting the configured repositories and wiring event
          * subscriptions automatically.
          *
@@ -274,6 +300,8 @@ class CoreMusicLibrary private constructor(
          * Rollback on partial failure closes everything constructed so far before rethrowing.
          */
         fun build(): CoreMusicLibrary {
+            val resolvedName = instanceName ?: "core-music-library-${instanceCounter.incrementAndGet()}"
+
             // 1. Audio library first — registers AudioItem in LirpContext
             val audioLibrary = DefaultAudioLibrary(audioRepository, metadataIO)
 
@@ -293,7 +321,7 @@ class CoreMusicLibrary private constructor(
                 audioLibrary.subscribe(waveformRepo)
                 audioLibrary.subscribe(playlistHierarchy)
 
-                return CoreMusicLibrary(audioLibrary, playlistHierarchy, waveformRepo, metadataIO)
+                return CoreMusicLibrary(audioLibrary, playlistHierarchy, waveformRepo, metadataIO, resolvedName)
             } catch (ex: Exception) {
                 (playlistHierarchy as? AutoCloseable)?.close()
                 waveformRepo?.close()
@@ -304,6 +332,9 @@ class CoreMusicLibrary private constructor(
     }
 
     companion object {
+
+        private val instanceCounter = AtomicInteger(0)
+
         /**
          * Returns a new [Builder] to configure and construct a [CoreMusicLibrary].
          */

@@ -43,7 +43,7 @@ internal class MutablePlaylistTest : StringSpec({
         val jsonFile = tempfile("mutablePlaylist-test", ".json").also { it.deleteOnExit() }
 
         jsonFileRepository = JsonFileRepository(jsonFile, AudioPlaylistMapSerializer)
-        playlistHierarchy = DefaultPlaylistHierarchy(jsonFileRepository)
+        playlistHierarchy = DefaultPlaylistHierarchy(jsonFileRepository).also { it.markDeleteSubscriberWired() }
     }
 
     afterEach {

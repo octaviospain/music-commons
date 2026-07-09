@@ -45,9 +45,11 @@ import net.transgressoft.lirp.persistence.VolatileRepository
 import javafx.beans.property.ReadOnlyBooleanProperty
 import javafx.beans.property.ReadOnlyListProperty
 import javafx.beans.property.ReadOnlySetProperty
+import mu.withLoggingContext
 import java.nio.file.Path
 import java.util.Optional
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * JavaFX-compatible entry point for managing an observable audio library, playlist hierarchy,
@@ -69,7 +71,9 @@ class FXMusicLibrary private constructor(
     private val _audioLibrary: FXAudioLibrary,
     private val _playlistHierarchy: FXPlaylistHierarchy,
     private val _waveformRepository: AudioWaveformRepository<AudioWaveform, ObservableAudioItem>,
-    private val _metadataIO: AudioMetadataIO
+    private val _metadataIO: AudioMetadataIO,
+    /** Diagnostic label for this library instance, used in MDC logging context. */
+    val instanceName: String
 ) : MusicLibrary<ObservableAudioItem, ObservablePlaylist> {
 
     private val closed = AtomicBoolean(false)
@@ -95,7 +99,7 @@ class FXMusicLibrary private constructor(
         get() =
             synchronized(importLock) {
                 check(!closed.get()) { "This music library has been closed and can no longer be used." }
-                _itunesImport ?: ItunesImportService(this, _metadataIO).also { _itunesImport = it }
+                _itunesImport ?: ItunesImportService(this, _metadataIO, instanceName = instanceName).also { _itunesImport = it }
             }
 
     private var _m3uImport: M3uImportService<ObservableAudioItem, ObservablePlaylist>? = null
@@ -109,7 +113,7 @@ class FXMusicLibrary private constructor(
         get() =
             synchronized(importLock) {
                 check(!closed.get()) { "This music library has been closed and can no longer be used." }
-                _m3uImport ?: M3uImportService(this).also { _m3uImport = it }
+                _m3uImport ?: M3uImportService(this, instanceName = instanceName).also { _m3uImport = it }
             }
 
     /** Observable list of all audio items in the library, suitable for direct JavaFX binding. */
@@ -153,10 +157,11 @@ class FXMusicLibrary private constructor(
      * @param path the path to the audio file
      * @return the created [ObservableAudioItem]
      */
-    override fun audioItemFromFile(path: Path): ObservableAudioItem {
-        WindowsPathValidator.validatePath(path)
-        return _audioLibrary.createFromFile(path)
-    }
+    override fun audioItemFromFile(path: Path): ObservableAudioItem =
+        withLoggingContext("libraryInstance" to instanceName) {
+            WindowsPathValidator.validatePath(path)
+            _audioLibrary.createFromFile(path)
+        }
 
     override fun createPlaylist(name: String): ObservablePlaylist = _playlistHierarchy.createPlaylist(name)
 
@@ -214,6 +219,7 @@ class FXMusicLibrary private constructor(
         private var playlistRepository: Repository<Int, ObservablePlaylist> = VolatileRepository("FXPlaylistHierarchy")
         private var waveformRepository: Repository<Int, AudioWaveform> = VolatileRepository("FXWaveformRepository")
         private var metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO()
+        private var instanceName: String? = null
 
         /**
          * Injects the [repository] backing the observable audio library.
@@ -261,8 +267,30 @@ class FXMusicLibrary private constructor(
          */
         fun metadataIO(utils: AudioMetadataIO): Builder = apply { metadataIO = utils }
 
+        /**
+         * Sets a human-readable diagnostic label for this library instance.
+         *
+         * The name is surfaced as the `libraryInstance` MDC key around library operations and
+         * import-service scopes, making logs attributable when multiple library instances are
+         * active across time (e.g., sequential open/close cycles or concurrent imports).
+         *
+         * When not set, a short stable default is auto-generated from a per-JVM monotonic
+         * counter (e.g., `music-library-1`, `music-library-2`). The name is the caller's
+         * responsibility when set explicitly — it is a diagnostic label, not a trust boundary.
+         *
+         * @param name the label to assign; must be non-blank
+         * @return this builder, for chaining
+         */
+        fun instanceName(name: String): Builder =
+            apply {
+                require(name.isNotBlank()) { "instanceName must be non-blank" }
+                instanceName = name
+            }
+
         /** Builds the [FXMusicLibrary], wiring all event subscriptions between components. */
         fun build(): FXMusicLibrary {
+            val resolvedName = instanceName ?: "fx-music-library-${instanceCounter.incrementAndGet()}"
+
             val audioLibrary = FXAudioLibrary(audioRepository, metadataIO)
             var playlistRepoRegistered = false
             var waveformRepo: AudioWaveformRepository<AudioWaveform, ObservableAudioItem>? = null
@@ -291,7 +319,7 @@ class FXMusicLibrary private constructor(
                 audioLibrary.subscribe(waveformRepo)
                 audioLibrary.subscribe(playlistHierarchy)
 
-                return FXMusicLibrary(audioLibrary, playlistHierarchy, waveformRepo, metadataIO)
+                return FXMusicLibrary(audioLibrary, playlistHierarchy, waveformRepo, metadataIO, resolvedName)
             } catch (ex: Exception) {
                 if (playlistRepoRegistered) {
                     conditionalDeregister(ObservablePlaylist::class.java, playlistRepository)
@@ -305,6 +333,8 @@ class FXMusicLibrary private constructor(
     }
 
     companion object {
+
+        private val instanceCounter = AtomicInteger(0)
 
         /**
          * Returns a new [Builder] for constructing an [FXMusicLibrary].

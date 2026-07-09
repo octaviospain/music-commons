@@ -1,3 +1,20 @@
+/******************************************************************************
+ * Copyright (C) 2025  Octavio Calleya Garcia                                 *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU General Public License as published by       *
+ * the Free Software Foundation, either version 3 of the License, or          *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU General Public License for more details.                               *
+ *                                                                            *
+ * You should have received a copy of the GNU General Public License          *
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.     *
+ ******************************************************************************/
+
 package net.transgressoft.commons.music.itunes
 
 import net.transgressoft.commons.music.MusicLibrary
@@ -60,7 +77,8 @@ class ItunesImportService<I, P>
     constructor(
         private val musicLibrary: MusicLibrary<I, P>,
         private val metadataIO: AudioMetadataIO = JAudioTaggerMetadataIO(),
-        private val fileSystem: FileSystem = FileSystems.getDefault()
+        private val fileSystem: FileSystem = FileSystems.getDefault(),
+        private val instanceName: String = ""
     ) : AutoCloseable where I : ReactiveAudioItem<I>,
           P : ReactiveAudioPlaylist<I, P> {
 
@@ -106,6 +124,7 @@ class ItunesImportService<I, P>
     ): CompletableFuture<ImportResult> {
         val sessionId = UUID.randomUUID().toString()
         MDC.put("importSessionId", sessionId)
+        if (instanceName.isNotEmpty()) MDC.put("libraryInstance", instanceName)
         try {
             return serviceScope.future(MDCContext()) {
                 val effectivePlaylists = playlistBuilder.expandWithAncestors(selectedPlaylists, itunesLibrary)
@@ -126,6 +145,7 @@ class ItunesImportService<I, P>
             }
         } finally {
             MDC.remove("importSessionId")
+            if (instanceName.isNotEmpty()) MDC.remove("libraryInstance")
         }
     }
 

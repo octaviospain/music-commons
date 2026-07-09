@@ -57,6 +57,7 @@ internal class AudioWaveformSerializerRoundTripTest : StringSpec({
 
         decodedWaveform.id shouldBe id
         decodedWaveform.audioFilePath shouldBe waveform.audioFilePath
+        decodedWaveform.uniqueId shouldBe waveform.uniqueId
 
         val reEncoded = json.encodeToString(AudioWaveformMapSerializer, mapOf(id to decodedWaveform))
         reEncoded shouldBe encoded

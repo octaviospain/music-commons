@@ -36,6 +36,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.reflect.KClass
 
+private const val MAX_ID_SEARCH_ATTEMPTS = 10_000
+
 /**
  * Base implementation for [ReactivePlaylistHierarchy] managing hierarchical playlist structures.
  *
@@ -46,6 +48,12 @@ import kotlin.reflect.KClass
  *
  * Subscribes to mutation events on each playlist to keep [playlistsHierarchyMultiMap] in sync
  * when nested playlists are added or removed directly on a playlist instance.
+ *
+ * **Subscription requirement:** this hierarchy must be subscribed to an audio library's event
+ * publisher before any mutating operation is performed. The audio item delete subscriber keeps
+ * playlists in sync when items are removed from the library — without it, deleted items remain
+ * silently in playlists. Use the library builder, which wires the subscription automatically.
+ * Calling a mutating operation before the subscription is established throws [IllegalStateException].
  */
 abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>>(
     private val repository: Repository<Int, P>,
@@ -67,12 +75,59 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
     protected val closed = AtomicBoolean(false)
 
     /**
+     * Tracks whether this hierarchy's audio item delete subscriber has been wired.
+     * Set to `true` inside the subscriber's own [onSubscribe] hook when the builder calls
+     * `audioLibrary.subscribe(hierarchy)`. Mutating operations check this flag to detect
+     * hierarchies that were constructed outside the builder and therefore lack the delete-sync subscriber.
+     *
+     * Subclasses may call [markDeleteSubscriberWired] to clear this guard in controlled testing
+     * scenarios where the subscriber wiring is handled differently.
+     */
+    private val subscriptionEstablished = AtomicBoolean(false)
+
+    /**
      * Asserts that this playlist hierarchy has not been closed.
      *
      * @throws IllegalStateException if [close] has already been called on this hierarchy.
      */
     protected fun checkOpen() {
         check(!closed.get()) { "This playlist hierarchy has been closed and can no longer be used." }
+    }
+
+    /**
+     * Asserts that the audio item delete subscriber is wired.
+     *
+     * @throws IllegalStateException if the hierarchy was not constructed via the library builder,
+     * which is the only supported construction path that wires the delete subscriber.
+     */
+    private fun checkSubscribed() {
+        check(subscriptionEstablished.get()) {
+            "This playlist hierarchy must be constructed via the library builder so its audio item " +
+                "delete subscriber is wired. Without it, deleted audio items are never removed from playlists."
+        }
+    }
+
+    /**
+     * Marks the audio item delete subscriber as wired, clearing the first-use subscription guard.
+     *
+     * The guard is set automatically when the library builder calls `audioLibrary.subscribe(hierarchy)`.
+     * This method is available to subclasses and same-module test code for controlled scenarios —
+     * such as test doubles or tests that exercise standalone hierarchy behavior — where the
+     * subscription is established through a different mechanism or is not required.
+     */
+    internal fun markDeleteSubscriberWired() {
+        subscriptionEstablished.set(true)
+    }
+
+    /**
+     * Subclass-visible bridge to [markDeleteSubscriberWired].
+     *
+     * [markDeleteSubscriberWired] is module-internal, so subclasses defined in other modules cannot
+     * reach it. This protected delegate lets such a subclass expose its own module-internal test hook
+     * for standalone-hierarchy scenarios where the delete subscriber is wired through a different mechanism.
+     */
+    protected fun markDeleteSubscriberWiredForTesting() {
+        markDeleteSubscriberWired()
     }
 
     init {
@@ -83,6 +138,10 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
                 it.removeAudioItems(event.entities.values)
             }
         }
+        // Set the subscription-established flag when the audio library's publisher delivers its
+        // onSubscribe callback to this subscriber — this happens inside the builder's
+        // audioLibrary.subscribe(hierarchy) call. No builder-file edit is needed.
+        addOnSubscribeEventAction { subscriptionEstablished.set(true) }
     }
 
     private val logger = KotlinLogging.logger {}
@@ -92,18 +151,32 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
     // Tracks per-playlist mutation subscriptions so they can be cancelled on remove/close.
     private val playlistMutationSubscriptions = ConcurrentHashMap<Int, LirpEventSubscription<*, *, *>>()
 
-    private val idCounter: AtomicInteger = AtomicInteger(1)
+    // Seeded above the highest id already present so allocation stays O(1) on a hierarchy loaded
+    // with existing playlists; the retry cap then only guards a genuinely saturated id space rather
+    // than tripping on a dense run of low ids. Seeding is deferred until first allocation so the
+    // repository is fully populated by the time the maximum id is read.
+    private val idCounter: AtomicInteger by lazy {
+        AtomicInteger((search { true }.maxOfOrNull { it.id } ?: 0) + 1)
+    }
 
     protected fun newId(): Int {
         var id: Int
+        var attempts = 0
         do {
+            check(attempts++ < MAX_ID_SEARCH_ATTEMPTS) {
+                "Playlist id space exhausted: no available id found after $MAX_ID_SEARCH_ATTEMPTS attempts"
+            }
             id = idCounter.getAndIncrement()
+            check(id > 0) {
+                "Playlist id space exhausted: the id counter overflowed Int.MAX_VALUE"
+            }
         } while (contains(id))
         return id
     }
 
     override fun add(entity: P): Boolean {
         checkOpen()
+        checkSubscribed()
         require(findByName(entity.name).isEmpty || findByName(entity.name).get().id == entity.id) {
             "Playlist with name '${entity.name}' already exists"
         }
@@ -153,6 +226,7 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
 
     override fun remove(entity: P): Boolean {
         checkOpen()
+        checkSubscribed()
         return repository.remove(entity).also { removed ->
             if (removed) {
                 cancelPlaylistMutationSubscription(entity.id)
@@ -184,6 +258,7 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
 
     override fun removeAll(entities: Collection<P>): Boolean {
         checkOpen()
+        checkSubscribed()
         // Materialize before removal: aggregate proxies resolve lazily from the registry,
         // so iterating them after repository.removeAll() would throw NoSuchElementException.
         val materialized = entities.toList()
@@ -218,6 +293,7 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
 
     override fun movePlaylist(playlistNameToMove: String, destinationPlaylistName: String) {
         checkOpen()
+        checkSubscribed()
         val playlistToMove = findByName(playlistNameToMove)
         val destinationPlaylist = findByName(destinationPlaylistName)
 
@@ -244,29 +320,36 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
         return candidate in children || children.any { isDescendant(it, candidate) }
     }
 
-    override fun addAudioItemsToPlaylist(audioItems: Collection<I>, playlistName: String): Boolean =
-        findByName(playlistName).let {
+    override fun addAudioItemsToPlaylist(audioItems: Collection<I>, playlistName: String): Boolean {
+        checkSubscribed()
+        return findByName(playlistName).let {
             require(it.isPresent) { "Playlist '$playlistName' does not exist" }
             it.get().addAudioItems(audioItems)
         }
+    }
 
-    override fun removeAudioItemsFromPlaylist(audioItems: Collection<I>, playlistName: String): Boolean =
-        findByName(playlistName).let {
+    override fun removeAudioItemsFromPlaylist(audioItems: Collection<I>, playlistName: String): Boolean {
+        checkSubscribed()
+        return findByName(playlistName).let {
             require(it.isPresent) { "Playlist '$playlistName' does not exist" }
             it.get().removeAudioItems(audioItems)
         }
+    }
 
     // @JvmName required on generic interface methods to avoid JVM signature clashes with Java callers
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removeAudioItemIdsFromPlaylist")
-    override fun removeAudioItemsFromPlaylist(audioItemIds: Collection<Int>, playlistName: String): Boolean =
-        findByName(playlistName).let {
+    override fun removeAudioItemsFromPlaylist(audioItemIds: Collection<Int>, playlistName: String): Boolean {
+        checkSubscribed()
+        return findByName(playlistName).let {
             require(it.isPresent) { "Playlist '$playlistName' does not exist" }
             it.get().removeAudioItems(audioItemIds)
         }
+    }
 
-    override fun addPlaylistsToDirectory(playlistsToAdd: Set<P>, directoryName: String): Boolean =
-        findByName(directoryName).let {
+    override fun addPlaylistsToDirectory(playlistsToAdd: Set<P>, directoryName: String): Boolean {
+        checkSubscribed()
+        return findByName(directoryName).let {
             require(it.isPresent) { "Directory '$directoryName' does not exist" }
             require(it.get().isDirectory) { "Playlist '$directoryName' is not a directory" }
             it.get().addPlaylists(playlistsToAdd).also { added ->
@@ -275,11 +358,13 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
                 }
             }
         }
+    }
 
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("addPlaylistNamesToDirectory")
-    override fun addPlaylistsToDirectory(playlistNamesToAdd: Set<String>, directoryName: String): Boolean =
-        findByName(directoryName).let {
+    override fun addPlaylistsToDirectory(playlistNamesToAdd: Set<String>, directoryName: String): Boolean {
+        checkSubscribed()
+        return findByName(directoryName).let {
             require(it.isPresent) { "Directory '$directoryName' does not exist" }
             require(it.get().isDirectory) { "Playlist '$directoryName' is not a directory" }
             playlistNamesToAdd.stream().map { playlistName ->
@@ -293,8 +378,10 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
                 }
             }
         }
+    }
 
     override fun removePlaylistsFromDirectory(playlistsToRemove: Set<P>, directoryName: String): Boolean {
+        checkSubscribed()
         val directory = findByName(directoryName)
         require(directory.isPresent) { "Directory '$directoryName' does not exist" }
         val actualChildren =
@@ -314,6 +401,7 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removePlaylistNamesFromDirectory")
     override fun removePlaylistsFromDirectory(playlistsNamesToRemove: Set<String>, directoryName: String): Boolean {
+        checkSubscribed()
         val directory = findByName(directoryName)
         require(directory.isPresent) { "Directory '$directoryName' does not exist" }
         val resolved =

@@ -4,6 +4,7 @@ import net.transgressoft.commons.music.audio.AudioItem
 import net.transgressoft.commons.music.playlist.DefaultPlaylistHierarchy
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
 import net.transgressoft.commons.music.testing.reactiveScope
+import net.transgressoft.commons.music.testing.registryIsolation
 import net.transgressoft.lirp.event.CrudEvent
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.datatest.withData
@@ -17,11 +18,12 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 @ExperimentalCoroutinesApi
 internal class AudioPlaylistEventSubscriberTest : StringSpec({
 
+    registryIsolation()
     val reactive = reactiveScope()
     lateinit var hierarchy: DefaultPlaylistHierarchy
 
     beforeEach {
-        hierarchy = DefaultPlaylistHierarchy()
+        hierarchy = DefaultPlaylistHierarchy().also { it.markDeleteSubscriberWired() }
     }
 
     afterEach {

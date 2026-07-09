@@ -18,8 +18,9 @@
 package net.transgressoft.commons.music.audio
 
 import net.transgressoft.commons.media.persistence.waveform.AudioWaveformMapSerializer
-import net.transgressoft.commons.music.playlist.DefaultPlaylistHierarchy
+import net.transgressoft.commons.music.CoreMusicLibrary
 import net.transgressoft.commons.music.playlist.MutableAudioPlaylist
+import net.transgressoft.commons.music.testing.registryIsolation
 import net.transgressoft.commons.music.waveform.AudioWaveform
 import net.transgressoft.commons.persistence.music.audio.AudioItemMapSerializer
 import net.transgressoft.commons.persistence.music.playlist.AudioPlaylistMapSerializer
@@ -37,6 +38,8 @@ import kotlinx.serialization.json.Json
  */
 @DisplayName("Public serializer symbols")
 internal class PublicSerializerSmokeTest : StringSpec({
+
+    registryIsolation()
 
     val json = Json { }
 
@@ -68,8 +71,8 @@ internal class PublicSerializerSmokeTest : StringSpec({
     }
 
     "AudioPlaylistMapSerializer round-trips a single playlist" {
-        val hierarchy = DefaultPlaylistHierarchy()
-        val playlist = hierarchy.createPlaylist("Smoke")
+        val library = CoreMusicLibrary.builder().build()
+        val playlist = library.createPlaylist("Smoke")
         val map: Map<Int, MutableAudioPlaylist> = mapOf(playlist.id to playlist)
 
         val encoded = json.encodeToString(AudioPlaylistMapSerializer, map)
@@ -78,6 +81,6 @@ internal class PublicSerializerSmokeTest : StringSpec({
         decoded shouldHaveSize 1
         decoded[playlist.id]?.name shouldBe "Smoke"
 
-        hierarchy.close()
+        library.close()
     }
 })

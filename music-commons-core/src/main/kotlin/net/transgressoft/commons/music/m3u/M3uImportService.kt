@@ -84,7 +84,8 @@ class M3uCycleException(message: String, cause: Throwable? = null) : Exception(m
  */
 class M3uImportService<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>>(
     private val musicLibrary: MusicLibrary<I, P>,
-    private val maxDepth: Int = DEFAULT_MAX_DEPTH
+    private val maxDepth: Int = DEFAULT_MAX_DEPTH,
+    private val instanceName: String = ""
 ) : AutoCloseable {
 
     init {
@@ -113,7 +114,12 @@ class M3uImportService<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>
      */
     fun import(rootM3u: Path): P {
         val sessionId = UUID.randomUUID().toString()
-        return withLoggingContext("importSessionId" to sessionId) {
+        val context =
+            buildMap {
+                put("importSessionId", sessionId)
+                if (instanceName.isNotEmpty()) put("libraryInstance", instanceName)
+            }
+        return withLoggingContext(context) {
             val plan = planImport(rootM3u, visited = emptyList(), depth = 0)
             rejectCollisions(plan)
             materialize(plan, existingAudioItemsByPath()).also { playlist ->
