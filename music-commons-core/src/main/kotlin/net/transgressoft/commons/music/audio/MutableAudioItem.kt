@@ -135,7 +135,6 @@ internal class MutableAudioItem
             get() =
                 buildString {
                     append(path.fileName.toString().replace(' ', '_'))
-                    append("-$title")
                     append("-${duration.toSeconds()}")
                     append("-$bitRate")
                 }

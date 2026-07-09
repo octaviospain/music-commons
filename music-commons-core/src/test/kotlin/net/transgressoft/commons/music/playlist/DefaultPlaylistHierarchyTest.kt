@@ -9,6 +9,7 @@ import net.transgressoft.commons.persistence.music.playlist.AudioPlaylistMapSeri
 import net.transgressoft.commons.util.OsDetector
 import net.transgressoft.commons.util.WindowsPathException
 import net.transgressoft.lirp.persistence.RegistryBase
+import net.transgressoft.lirp.persistence.Repository
 import net.transgressoft.lirp.persistence.VolatileRepository
 import net.transgressoft.lirp.persistence.json.JsonFileRepository
 import io.kotest.assertions.assertSoftly
@@ -29,6 +30,14 @@ import io.mockk.every
 import java.time.Duration
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
+/**
+ * Creates a [DefaultPlaylistHierarchy] backed by [repository] (or a fresh [VolatileRepository] if
+ * omitted) and marks the delete subscriber as wired so tests that exercise standalone hierarchy
+ * behavior — without a connected audio library — are not blocked by the first-use guard.
+ */
+private fun wiredHierarchy(repository: Repository<Int, MutableAudioPlaylist> = VolatileRepository()): DefaultPlaylistHierarchy =
+    DefaultPlaylistHierarchy(repository).also { it.markDeleteSubscriberWired() }
+
 @ExperimentalCoroutinesApi
 internal class DefaultPlaylistHierarchyTest : StringSpec({
 
@@ -44,7 +53,7 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         RegistryBase.registerRepository(AudioItem::class.java, audioItemRepository)
 
         val jsonFile = tempfile("playlistRepository-test", ".json").apply { deleteOnExit() }
-        val playlistHierarchy = DefaultPlaylistHierarchy(JsonFileRepository(jsonFile, AudioPlaylistMapSerializer))
+        val playlistHierarchy = wiredHierarchy(JsonFileRepository(jsonFile, AudioPlaylistMapSerializer))
 
         val rockAudioItem = Arb.audioItem { title = "50s Rock hit 1" }.next().also { audioItemRepository.add(it) }
         val rockAudioItems = listOf(rockAudioItem)
@@ -87,7 +96,7 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         val audioLibrary = DefaultAudioLibrary(audioLibraryRepository)
         audioLibrary.add(audioItem)
 
-        val playlistHierarchy = DefaultPlaylistHierarchy(JsonFileRepository(jsonFile, AudioPlaylistMapSerializer))
+        val playlistHierarchy = wiredHierarchy(JsonFileRepository(jsonFile, AudioPlaylistMapSerializer))
 
         reactive.advance()
 
@@ -125,7 +134,7 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
         RegistryBase.deregisterRepository(AudioItem::class.java)
         RegistryBase.registerRepository(AudioItem::class.java, audioItemRepository)
 
-        val playlistHierarchy = DefaultPlaylistHierarchy()
+        val playlistHierarchy = wiredHierarchy()
         val rockAudioItems =
             listOf(
                 Arb.audioItem {
@@ -227,7 +236,7 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
      └──Selection of playlists
      */
     "Moves playlists from/to playlist directories" {
-        val playlistHierarchy = DefaultPlaylistHierarchy()
+        val playlistHierarchy = wiredHierarchy()
 
         val rock = playlistHierarchy.createPlaylist("Rock")
         playlistHierarchy.findByName(rock.name) shouldBePresent { it shouldBe rock }
@@ -287,7 +296,7 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
     }
 
     "Removing playlist directory from it is recursive and changes reflects on playlists" {
-        val playlistHierarchy = DefaultPlaylistHierarchy()
+        val playlistHierarchy = wiredHierarchy()
 
         val pop = playlistHierarchy.createPlaylist("Pop")
         val fifties = playlistHierarchy.createPlaylistDirectory("50s").also { it.addPlaylist(pop) }
@@ -329,7 +338,7 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
     }
 
     "Throws Exception when creating playlists with an existing name" {
-        val playlistHierarchy = DefaultPlaylistHierarchy()
+        val playlistHierarchy = wiredHierarchy()
 
         playlistHierarchy.createPlaylistDirectory("New playlist")
         playlistHierarchy.size() shouldBe 1
@@ -344,7 +353,7 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
     }
 
     "Removing child playlist directly from one, does not remove them from the repository" {
-        val playlistHierarchy = DefaultPlaylistHierarchy()
+        val playlistHierarchy = wiredHierarchy()
 
         val fifties = playlistHierarchy.createPlaylistDirectory("50s")
         val rock = playlistHierarchy.createPlaylistDirectory("Rock")
@@ -385,7 +394,7 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
     }
 
     "Deleting playlist from the repository removes it from any parent one" {
-        val playlistHierarchy = DefaultPlaylistHierarchy()
+        val playlistHierarchy = wiredHierarchy()
 
         val rock = playlistHierarchy.createPlaylist("Rock")
         val fifties = playlistHierarchy.createPlaylistDirectory("50s")
@@ -404,7 +413,7 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
 
     "MutablePlaylistBase.name assignment throws WindowsPathException on Windows when name contains forbidden char" {
         OsDetector.withOverriddenIsWindows(false) {
-            DefaultPlaylistHierarchy().use { playlistHierarchy ->
+            wiredHierarchy().use { playlistHierarchy ->
                 val playlist = playlistHierarchy.createPlaylist("ok")
                 OsDetector.withOverriddenIsWindows(true) {
                     val beforeName = playlist.name
@@ -417,7 +426,7 @@ internal class DefaultPlaylistHierarchyTest : StringSpec({
 
     "MutablePlaylistBase.name assignment with forbidden chars on Linux succeeds (pass-through)" {
         OsDetector.withOverriddenIsWindows(false) {
-            DefaultPlaylistHierarchy().use { playlistHierarchy ->
+            wiredHierarchy().use { playlistHierarchy ->
                 val playlist = playlistHierarchy.createPlaylist("ok")
                 playlist.name = "bad|name"
                 playlist.name shouldBe "bad|name"

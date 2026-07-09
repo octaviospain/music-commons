@@ -48,9 +48,11 @@ import java.util.Optional
  * - **`id`** — a repository-local integer assigned when an entity is persisted. It is not stable
  *   across library instances: the same audio file reloaded into a freshly built library may
  *   receive a different `id`. Do not use `id` to correlate entities across instances.
- * - **`uniqueId`** — a content-derived stable identifier that is consistent across library
- *   instances. Combined with content-based [equals], `uniqueId` is the correct way to match
- *   the same logical entity when comparing across instances or reloads.
+ * - **`uniqueId`** — a physical-identity key derived from the file name, the track duration in
+ *   whole seconds, and the bit rate. It is stable under re-tagging: mutating the title or other
+ *   metadata tags does not change the key, so two copies of the same physical track with different
+ *   titles compute the same `uniqueId`. Combined with content-based [equals], `uniqueId` is the
+ *   correct way to match the same physical track across library instances or reloads.
  *
  * Entities are bound to the library instance that created them and must not be mixed across
  * instances: aggregate lookups (playlist → audio items) use the repository-local `id` channel,

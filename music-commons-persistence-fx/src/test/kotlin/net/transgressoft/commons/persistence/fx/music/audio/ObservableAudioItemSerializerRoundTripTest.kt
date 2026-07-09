@@ -88,6 +88,7 @@ internal class ObservableAudioItemSerializerRoundTripTest : StringSpec({
 
         assertSoftly {
             loaded.id shouldBe original.id
+            loaded.uniqueId shouldBe original.uniqueId
             loaded.path shouldBe original.path
             loaded.title shouldBe original.title
             loaded.duration shouldBe original.duration

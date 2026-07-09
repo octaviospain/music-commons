@@ -55,6 +55,14 @@ import java.time.Duration
  * instead — the guard surfaces the mismatch with a helpful message rather than the cryptic
  * upstream exception.
  *
+ * Documented behavior: [TagOptionSingleton] is a process-wide mutable singleton shared by all
+ * JAudioTagger operations. Its genre-text flags are set once at construction time. Constructing
+ * multiple [JAudioTaggerMetadataIO] instances concurrently — or mutating [TagOptionSingleton]
+ * from application code while write operations are in progress — can cause one format's settings
+ * to be transiently observed by a concurrent write targeting a different format. For correct
+ * behavior, create a single [JAudioTaggerMetadataIO] instance per JVM and do not mutate
+ * [TagOptionSingleton] externally.
+ *
  * Future Kotlin-native metadata libraries land alongside this class as additional
  * [AudioMetadataIO] implementations.
  */

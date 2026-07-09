@@ -562,7 +562,9 @@ internal class ItunesImportServiceTest : StringSpec({
         result.imported shouldHaveSize 3
         if (selectSubset) {
             result.unresolved.shouldBeEmpty()
-            musicLibrary.audioLibrary().size() shouldBe 3
+            // track1 and track3 share the same physical file (mp3File); D-07 dedup collapses
+            // them into a single item, so only 2 distinct items exist in the library.
+            musicLibrary.audioLibrary().size() shouldBe 2
         } else {
             result.rejectedPlaylistNames.shouldBeEmpty()
             musicLibrary.findPlaylistByName("Playlist A").isPresent shouldBe false

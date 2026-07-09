@@ -44,8 +44,6 @@ infix fun AudioItem.shouldMatch(attributes: AudioItemTestAttributes) {
             buildString {
                 append(path.fileName.toString().replace(' ', '_'))
                 append('-')
-                append(title)
-                append('-')
                 append(duration.toSeconds())
                 append('-')
                 append(bitRate)

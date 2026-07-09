@@ -175,12 +175,14 @@ internal class FXAudioLibrary
         init {
             guardedRegister(ObservableAudioItem::class.java, repository)
 
-            // Populate fxAggregateList from existing items
+            // Populate fxAggregateList from existing items. Wire metadataIO back-refs first so that
+            // any mutation event fired during the subscription pass (subscribeExistingItems) finds a
+            // non-null delegate on every rehydrated item.
             val initialAudioItems = toList()
-            // Wire the library back-ref on items rehydrated from JSON so coverImageBytes can lazy-load.
             initialAudioItems.forEach { item ->
                 if (item is FXAudioItem) item.metadataIO = metadataIO
             }
+            subscribeExistingItems()
             audioItemIds.addAll(initialAudioItems.map { it.id })
             if (initialAudioItems.isNotEmpty()) {
                 Platform.runLater {
@@ -359,6 +361,16 @@ internal class FXAudioLibrary
                 throw InvalidAudioFilePathException("File '${audioItemPath.toAbsolutePath()}' is not readable")
             }
             val metadata = metadataIO.readMetadata(audioItemPath)
+            // Dedup by physical identity: if an item with the same fileName-duration-bitRate key
+            // already exists, return it without allocating a new id or adding a duplicate.
+            val candidateUniqueId =
+                buildString {
+                    append(audioItemPath.fileName.toString().replace(' ', '_'))
+                    append("-${metadata.duration.toSeconds()}")
+                    append("-${metadata.bitRate}")
+                }
+            val existing = findByUniqueId(candidateUniqueId)
+            if (existing.isPresent) return existing.get() as FXAudioItem
             return FXAudioItem(audioItemPath, newId(), metadata).also { fxAudioItem ->
                 add(fxAudioItem)
                 logger.trace { "New ObservableAudioItem was created from file $audioItemPath with id ${fxAudioItem.id}" }
@@ -367,7 +379,16 @@ internal class FXAudioLibrary
 
         override fun add(entity: ObservableAudioItem): Boolean {
             checkOpen()
-            if (entity is FXAudioItem) entity.metadataIO = metadataIO
+            if (entity is FXAudioItem) {
+                val existingMetadataIO = entity.metadataIO
+                if (existingMetadataIO != null && existingMetadataIO !== metadataIO) {
+                    logger.warn {
+                        "Audio item ${entity.id} was created by a different library instance. " +
+                            "Re-wiring its metadata delegate to this library."
+                    }
+                }
+                entity.metadataIO = metadataIO
+            }
             return super.add(entity)
         }
 

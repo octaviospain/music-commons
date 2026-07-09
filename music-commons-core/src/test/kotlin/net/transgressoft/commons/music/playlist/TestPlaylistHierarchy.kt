@@ -28,6 +28,9 @@ internal class TestPlaylistHierarchy(
     init {
         RegistryBase.deregisterRepository(MutableAudioPlaylist::class.java)
         RegistryBase.registerRepository(MutableAudioPlaylist::class.java, repository)
+        // Test double: mark as wired so the first-use subscription guard does not block
+        // tests that exercise base class behavior directly without wiring to an audio library.
+        markDeleteSubscriberWired()
     }
 
     override fun createPlaylist(name: String): MutableAudioPlaylist {
