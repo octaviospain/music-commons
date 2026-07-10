@@ -18,12 +18,35 @@
 package net.transgressoft.commons.music.testing
 
 import io.kotest.assertions.json.shouldContainJsonKey
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
+
+/**
+ * Expected deserializer behaviour when an optional field is absent from persisted JSON — the two
+ * field-absent contracts present in this library's hand-written map serializers.
+ */
+enum class FieldAbsentContract {
+    /**
+     * Decoding fails fast, throwing with a diagnostic that names the missing field. This is the
+     * contract of lirp's reflective entity serializers (`lirpSerializerFor`): a reactive-property
+     * field missing from stored JSON is never silently defaulted, so a schema change that drops a
+     * persisted field surfaces immediately instead of loading a partially-migrated entity.
+     */
+    FAILS_FAST,
+
+    /**
+     * Decoding tolerates the absence and still recovers every entity, applying the field's default.
+     * This is the contract of fully hand-written serializers (e.g. `AudioWaveformSerializer`) whose
+     * own decode logic maps a missing field to a default value.
+     */
+    LOADS_ALL_ENTITIES
+}
 
 /**
  * Asserts that an optional field in a hand-written map serializer round-trips correctly
@@ -35,9 +58,11 @@ import kotlinx.serialization.json.jsonObject
  * then verifies encode→decode→re-encode idempotency.
  *
  * The field-absent branch strips [fieldName] from every entity object in the encoded JSON using
- * type-safe kotlinx JSON operations, then decodes the stripped JSON and asserts that every entity is
- * still recovered (the decoded map retains all [presentMap] entries) — confirming that entities
- * persisted before the field was added are still loadable and none are silently dropped.
+ * type-safe kotlinx JSON operations, then decodes the stripped JSON and asserts the outcome
+ * dictated by [fieldAbsentContract]:
+ * - [FieldAbsentContract.FAILS_FAST] — decoding throws with a message naming the missing field.
+ * - [FieldAbsentContract.LOADS_ALL_ENTITIES] — decoding recovers every entity ([presentMap] size
+ *   is preserved), confirming none is silently dropped.
  *
  * All hand-written `Map<Int, T>` serializers in this library follow the convention that every new
  * persisted field ships with a test that calls this helper, covering both cases. See
@@ -46,12 +71,15 @@ import kotlinx.serialization.json.jsonObject
  * @param serializer the map serializer under test
  * @param presentMap a map of entities where [fieldName] is present in the wire JSON
  * @param fieldName the JSON key of the optional field to verify
+ * @param fieldAbsentContract the deserializer's expected behaviour when [fieldName] is absent;
+ *  defaults to [FieldAbsentContract.FAILS_FAST], the contract of lirp's reflective serializers
  * @param json the [Json] instance to use for encoding and decoding; defaults to [Json.Default]
  */
 fun <T> assertOptionalFieldRoundTrips(
     serializer: KSerializer<Map<Int, T>>,
     presentMap: Map<Int, T>,
     fieldName: String,
+    fieldAbsentContract: FieldAbsentContract = FieldAbsentContract.FAILS_FAST,
     json: Json = Json
 ) {
     require(presentMap.isNotEmpty()) { "presentMap must contain at least one entity to verify the field is on the wire" }
@@ -66,12 +94,19 @@ fun <T> assertOptionalFieldRoundTrips(
     val decoded = json.decodeFromString(serializer, encoded)
     json.encodeToString(serializer, decoded) shouldBe encoded
 
-    // Field-absent: strip the field from every entity object, decode, and confirm every entity is
-    // still recovered — guarding against a deserializer that silently drops entities when the
-    // optional field is missing.
+    // Field-absent: strip the field from every entity object, then assert the contract-appropriate
+    // outcome for a schema change that drops a persisted field.
     val stripped = stripField(json, encoded, fieldName)
-    val fieldAbsentDecoded = json.decodeFromString(serializer, stripped)
-    fieldAbsentDecoded.size shouldBe presentMap.size
+    when (fieldAbsentContract) {
+        FieldAbsentContract.FAILS_FAST -> {
+            val failure = shouldThrow<IllegalStateException> { json.decodeFromString(serializer, stripped) }
+            failure.message shouldContain fieldName
+        }
+        FieldAbsentContract.LOADS_ALL_ENTITIES -> {
+            val fieldAbsentDecoded = json.decodeFromString(serializer, stripped)
+            fieldAbsentDecoded.size shouldBe presentMap.size
+        }
+    }
 }
 
 /**

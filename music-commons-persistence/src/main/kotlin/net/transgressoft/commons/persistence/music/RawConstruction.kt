@@ -64,9 +64,11 @@ public fun <K : Comparable<K>, E : ReactiveEntity<K, E>> rawConstruct(
  * **Schema-change convention:** these serializers are hand-written rather than generated because
  * lirp's reflective SPI reads primary-constructor parameters and reactive delegates — plain
  * `@Serializable` fields are not persisted, so generated serializers cannot honour the contract
- * without exposing internal constructors. Therefore any new persisted field MUST ship with a
- * round-trip test covering both the field-absent case (older persisted data written before the
- * field existed) and the field-present case (new data), using [assertOptionalFieldRoundTrips][net.transgressoft.commons.music.testing.assertOptionalFieldRoundTrips]
+ * without exposing internal constructors. A reactive-property field absent from persisted JSON is
+ * never silently defaulted: lirp fails fast, so persisting a new field requires either migrating
+ * existing JSON or declaring the field as a default-valued constructor parameter. Therefore any new
+ * persisted field MUST ship with a round-trip test covering both the field-present case (new data)
+ * and the field-absent case (fail-fast on stripped JSON), using [assertOptionalFieldRoundTrips][net.transgressoft.commons.music.testing.assertOptionalFieldRoundTrips]
  * from `music-commons-test`.
  *
  * @param sample a single entity instance whose concrete class the serializer mirrors

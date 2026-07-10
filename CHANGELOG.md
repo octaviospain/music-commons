@@ -7,6 +7,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-07-11
+
+First stable release. The public API is frozen and guarded by binary-compatibility
+validation and Kotlin strict `explicitApi()`; subsequent 1.x releases follow
+semantic versioning. This release also hardens the lifecycle, concurrency, and
+corner-case behavior of the three facades. **The JSON persistence format is
+unchanged**, so existing library files remain readable without migration.
+
+### Added
+- `@MusicCommonsExperimentalApi` opt-in marker for the pre-stable API surface,
+  with a documented deprecation and `@since` policy (#203).
+- Optional per-library `instanceName` builder setter, surfaced as a
+  `libraryInstance` MDC key across library operations and import scopes (#201).
+- Dedup-on-add duplicate-file policy: adding an item whose `uniqueId` already
+  exists returns the existing item instead of creating a second (#201).
+
+### Changed
+- **Public API frozen for 1.0.** Strict `explicitApi()` is enabled on every
+  production module and the Binary Compatibility Validator gates unintended
+  public-API changes. Non-contract types were internalized (PCM/format decoders,
+  `LazyObservationObjectProperty`, persistence contextual serializers) and
+  `CoreAudioItemPlayer` was finalized (#203).
+- **Single live instance per JVM enforced.** Constructing a second live library
+  over the same registry slot now fails fast with `IllegalStateException` instead
+  of silently overwriting the first library's aggregate resolution;
+  construct → close → construct-again is fully supported. Cross-instance identity
+  is defined by `uniqueId` and content equality — ids are repository-local (#197).
+- **Lifecycle contracts hardened.** `close()` is idempotent and use-after-close
+  is rejected: mutations and id-lookups throw, while predicate and introspection
+  queries stay readable against the frozen state. Import services are cancelled on
+  close, so an in-flight import completing after close adds nothing (#199).
+- Audio-item `uniqueId` is now a physical-identity key
+  (`fileName-durationSeconds-bitRate`), dropping the mutable title term so
+  re-tagging the same file keeps one identity (#201).
+- Thread-safety, multi-instance, identity, and lifecycle contracts are documented
+  as consumer-facing KDoc on the three facades, with README and wiki summaries
+  (#203, #201).
+
+### Fixed
+- FXAudioLibrary artist-catalog projection lost-update race that left
+  `artistCatalogsProperty` intermittently missing the final update during large,
+  involved-artist-heavy imports (#195).
+- Registry-overwrite corruption when a second library instance shared a store
+  (#197).
+- Id generation fails fast on counter overflow instead of handing out negative
+  ids; `createPlaylist` guards against unassigned ids; the playlist audio-item
+  delete subscriber is non-bypassable; and a GC-evicted `ImmutableAlbum` cover
+  reloads on next access (#201).
+
+## [0.7.1] — 2026-07-07
+
+A stability and quality release. Most changes harden the test suite, CI matrix,
+and diagnostics; the user-facing fixes below address memory and FX-refresh
+behavior during large imports.
+
+### Changed
+- FXAudioLibrary catalog refresh is now incremental — each debounce tick applies
+  only the delta instead of clearing and rebuilding all three FX collections,
+  removing the O(n²) FX-thread work that caused non-convergence on slower
+  machines during large imports (#176).
+- Logging levels right-sized: per-entity and hot-path statements moved from DEBUG
+  to TRACE, coarse operation summaries added at DEBUG, and MDC keys
+  (`importSessionId`, `audioItemId`, `catalogRebuildId`, `playlistId`) wired
+  across the major flows (#193).
+
+### Fixed
+- Bounded PCM accumulation in `ScalableAudioWaveform` to prevent memory
+  exhaustion when generating waveforms for long files (#190).
+
+### Documentation
+- Documented the AAC/M4A seek limitation and added real-fixture MP3/OGG seek
+  tests (#183).
+
+## [0.7.0] — 2026-07-05
+
 The 0.7.0 line simplifies the album/genre projection API and completes the
 persistence-agnostic split. Breaking changes are listed below; **the JSON
 persistence format is unchanged**, so existing library files remain readable

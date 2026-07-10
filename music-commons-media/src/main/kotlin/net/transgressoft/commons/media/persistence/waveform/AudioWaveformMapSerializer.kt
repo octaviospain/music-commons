@@ -83,9 +83,12 @@ public val AudioWaveformMapSerializer: KSerializer<Map<Int, AudioWaveform>> = Ma
  *
  * **Schema-change convention:** `AudioWaveformSerializer` is hand-written and independent of
  * `lirpSerializerFor` because [ScalableAudioWaveform] holds non-`@Serializable` cached fields
- * (`cachedWidth`, `normalizedAmplitudes`) that require manual encoding. Any new persisted field
- * MUST ship with a round-trip test covering both the field-absent case (older persisted data) and
- * the field-present case (new data), using [assertOptionalFieldRoundTrips][net.transgressoft.commons.music.testing.assertOptionalFieldRoundTrips]
+ * (`cachedWidth`, `normalizedAmplitudes`) that require manual encoding. Because this serializer's
+ * own decode logic maps a missing optional field to its default, it tolerates field absence rather
+ * than failing fast like lirp's reflective serializers. Any new persisted field MUST ship with a
+ * round-trip test covering both the field-present case (new data) and the field-absent case (older
+ * persisted data still loads every entity), using [assertOptionalFieldRoundTrips][net.transgressoft.commons.music.testing.assertOptionalFieldRoundTrips]
+ * with [FieldAbsentContract.LOADS_ALL_ENTITIES][net.transgressoft.commons.music.testing.FieldAbsentContract]
  * from `music-commons-test`. The `lastDateModified` field is the reference example of the
  * optional-field pattern.
  *

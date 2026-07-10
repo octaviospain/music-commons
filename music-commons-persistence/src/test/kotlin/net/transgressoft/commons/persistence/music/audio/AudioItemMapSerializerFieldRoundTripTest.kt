@@ -57,7 +57,8 @@ internal class AudioItemMapSerializerFieldRoundTripTest : StringSpec({
         val presentMap = mapOf(item.id to reloaded.audioLibrary().findById(item.id).get())
         reloaded.close()
 
-        // Exercises field-present (comments in wire JSON) and field-absent (strip then decode).
+        // Exercises field-present (comments in wire JSON) and field-absent: lirp's reflective
+        // serializer fails fast when a reactive-property field is stripped from persisted JSON.
         assertOptionalFieldRoundTrips(AudioItemMapSerializer, presentMap, "comments")
     }
 })
