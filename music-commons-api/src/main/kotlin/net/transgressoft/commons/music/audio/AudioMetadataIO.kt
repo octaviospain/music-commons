@@ -9,8 +9,9 @@ import java.nio.file.Path
  * inject a filesystem-aware in-memory implementation from `music-commons-test` that stores metadata
  * in maps keyed by [Path], with no JAudioTagger dependency. Future native backends drop in here as
  * additional implementations with no consumer-side change.
+ * @since 1.0
  */
-interface AudioMetadataIO {
+public interface AudioMetadataIO {
 
     /**
      * Reads tag and header metadata from the audio file at [path] and returns a populated
@@ -22,8 +23,9 @@ interface AudioMetadataIO {
      *
      * @param path location of the audio file to inspect
      * @return populated [AudioItemMetadata] with all 12 non-cover fields seeded from tag + header
+     * @since 1.0
      */
-    fun readMetadata(path: Path): AudioItemMetadata
+    public fun readMetadata(path: Path): AudioItemMetadata
 
     /**
      * Reads the raw cover image bytes from the audio file at [path], or `null` when the file has
@@ -31,13 +33,15 @@ interface AudioMetadataIO {
      *
      * No defensive copy is made at this layer — callers that hand the bytes to external consumers
      * are responsible for copying when isolation is required.
+     * @since 1.0
      */
-    fun loadCover(path: Path): ByteArray?
+    public fun loadCover(path: Path): ByteArray?
 
     /**
      * Convenience overload that reads the cover bytes from the file backing [item].
+     * @since 1.0
      */
-    fun loadCover(item: ReactiveAudioItem<*>): ByteArray? = loadCover(item.path)
+    public fun loadCover(item: ReactiveAudioItem<*>): ByteArray? = loadCover(item.path)
 
     /**
      * Writes the current property values of [item] back to the audio file at [item].path,
@@ -46,6 +50,7 @@ interface AudioMetadataIO {
      * No coroutine wrapping — caller chooses the dispatcher.
      *
      * @throws AudioItemManipulationException if cover artwork creation fails during the write
+     * @since 1.0
      */
-    fun writeMetadata(item: ReactiveAudioItem<*>)
+    public fun writeMetadata(item: ReactiveAudioItem<*>)
 }

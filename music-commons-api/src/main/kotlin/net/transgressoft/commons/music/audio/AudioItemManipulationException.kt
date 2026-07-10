@@ -19,7 +19,8 @@ package net.transgressoft.commons.music.audio
 
 /**
  * Exception thrown when an error occurs during audio item manipulation operations.
+ * @since 1.0
  */
-open class AudioItemManipulationException(message: String, cause: Throwable?) : Exception(message, cause) {
-    constructor(message: String) : this(message, null)
+public open class AudioItemManipulationException(message: String, cause: Throwable?) : Exception(message, cause) {
+    public constructor(message: String) : this(message, null)
 }

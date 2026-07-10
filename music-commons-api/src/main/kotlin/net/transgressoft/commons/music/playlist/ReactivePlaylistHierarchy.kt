@@ -31,9 +31,10 @@ import java.util.concurrent.Flow
  * adding and removing audio items from playlists within the hierarchy.
  *
  * Narrowed versions for concrete item types are available in the core and FX modules.
+ * @since 1.0
  */
-interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPlaylist<I, P>>
-: Repository<Int, P>,
+public interface ReactivePlaylistHierarchy<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>> :
+    Repository<Int, P>,
     LirpEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>>,
     Flow.Publisher<CrudEvent<Int, P>> {
 
@@ -43,9 +44,10 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      * @param name unique name for the new playlist
      * @return the newly created playlist
      * @throws IllegalArgumentException if a playlist with [name] already exists
+     * @since 1.0
      */
     @Throws(IllegalArgumentException::class)
-    fun createPlaylist(name: String): P
+    public fun createPlaylist(name: String): P
 
     /**
      * Creates and registers a new playlist with [name] pre-populated with [audioItems].
@@ -54,9 +56,10 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      * @param audioItems typed audio items to include in the playlist
      * @return the newly created playlist
      * @throws IllegalArgumentException if a playlist with [name] already exists
+     * @since 1.0
      */
     @Throws(IllegalArgumentException::class)
-    fun createPlaylist(
+    public fun createPlaylist(
         name: String,
         audioItems: List<I>
     ): P
@@ -72,11 +75,12 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      * @param audioItemIds the IDs of audio items to include in the playlist
      * @return the created playlist
      * @throws IllegalArgumentException if a playlist with [name] already exists
+     * @since 1.0
      */
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("createPlaylistWithIds")
     @Throws(IllegalArgumentException::class)
-    fun createPlaylist(
+    public fun createPlaylist(
         name: String,
         audioItemIds: List<Int>
     ): P
@@ -87,9 +91,10 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      * @param name unique name for the new directory
      * @return the newly created playlist directory
      * @throws IllegalArgumentException if a playlist with [name] already exists
+     * @since 1.0
      */
     @Throws(IllegalArgumentException::class)
-    fun createPlaylistDirectory(name: String): P
+    public fun createPlaylistDirectory(name: String): P
 
     /**
      * Creates and registers a new playlist directory with [name] pre-populated with [audioItems].
@@ -98,9 +103,10 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      * @param audioItems typed audio items to include in the directory playlist
      * @return the newly created playlist directory
      * @throws IllegalArgumentException if a playlist with [name] already exists
+     * @since 1.0
      */
     @Throws(IllegalArgumentException::class)
-    fun createPlaylistDirectory(
+    public fun createPlaylistDirectory(
         name: String,
         audioItems: List<I>
     ): P
@@ -110,24 +116,27 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      *
      * @param name the name to search for
      * @return an [Optional] containing the matching playlist, or empty if not found
+     * @since 1.0
      */
-    fun findByName(name: String): Optional<out P>
+    public fun findByName(name: String): Optional<out P>
 
     /**
      * Finds the direct parent directory playlist that contains [playlist].
      *
      * @param playlist the playlist whose parent is to be located
      * @return an [Optional] containing the parent directory, or empty if [playlist] is a root-level entry
+     * @since 1.0
      */
-    fun findParentPlaylist(playlist: ReactiveAudioPlaylist<I, P>): Optional<out P>
+    public fun findParentPlaylist(playlist: ReactiveAudioPlaylist<I, P>): Optional<out P>
 
     /**
      * Moves the playlist named [playlistNameToMove] into the directory playlist named [destinationPlaylistName].
      *
      * @param playlistNameToMove name of the playlist to relocate
      * @param destinationPlaylistName name of the target directory playlist
+     * @since 1.0
      */
-    fun movePlaylist(
+    public fun movePlaylist(
         playlistNameToMove: String,
         destinationPlaylistName: String
     )
@@ -136,8 +145,9 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      * Adds [audioItem] to the playlist named [playlistName]. Convenience delegate for [addAudioItemsToPlaylist].
      *
      * @return `true` if the target playlist changed as a result of this call
+     * @since 1.0
      */
-    fun addAudioItemToPlaylist(
+    public fun addAudioItemToPlaylist(
         audioItem: I,
         playlistName: String
     ): Boolean = addAudioItemsToPlaylist(listOf(audioItem), playlistName)
@@ -148,8 +158,9 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      * @param audioItems items to add
      * @param playlistName name of the target playlist
      * @return `true` if the target playlist changed as a result of this call
+     * @since 1.0
      */
-    fun addAudioItemsToPlaylist(
+    public fun addAudioItemsToPlaylist(
         audioItems: Collection<I>,
         playlistName: String
     ): Boolean
@@ -158,8 +169,9 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      * Removes [audioItem] from the playlist named [playlistName]. Convenience delegate for [removeAudioItemsFromPlaylist].
      *
      * @return `true` if the target playlist changed as a result of this call
+     * @since 1.0
      */
-    fun removeAudioItemFromPlaylist(
+    public fun removeAudioItemFromPlaylist(
         audioItem: I,
         playlistName: String
     ): Boolean = removeAudioItemsFromPlaylist(listOf(audioItem), playlistName)
@@ -169,8 +181,9 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      * Convenience delegate for [removeAudioItemsFromPlaylist].
      *
      * @return `true` if the target playlist changed as a result of this call
+     * @since 1.0
      */
-    fun removeAudioItemFromPlaylist(
+    public fun removeAudioItemFromPlaylist(
         audioItemId: Int,
         playlistName: String
     ): Boolean = removeAudioItemsFromPlaylist(listOf(audioItemId), playlistName)
@@ -181,8 +194,9 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      * @param audioItems items to remove
      * @param playlistName name of the target playlist
      * @return `true` if the target playlist changed as a result of this call
+     * @since 1.0
      */
-    fun removeAudioItemsFromPlaylist(
+    public fun removeAudioItemsFromPlaylist(
         audioItems: Collection<I>,
         playlistName: String
     ): Boolean
@@ -195,10 +209,11 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      * @param audioItemIds IDs of items to remove
      * @param playlistName name of the target playlist
      * @return `true` if the target playlist changed as a result of this call
+     * @since 1.0
      */
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removeAudioItemIdsFromPlaylist")
-    fun removeAudioItemsFromPlaylist(
+    public fun removeAudioItemsFromPlaylist(
         audioItemIds: Collection<Int>,
         playlistName: String
     ): Boolean
@@ -208,8 +223,9 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      * Convenience delegate for [addPlaylistsToDirectory].
      *
      * @return `true` if the directory changed as a result of this call
+     * @since 1.0
      */
-    fun addPlaylistToDirectory(
+    public fun addPlaylistToDirectory(
         playlistToAdd: P,
         directoryName: String
     ): Boolean = addPlaylistsToDirectory(setOf(playlistToAdd), directoryName)
@@ -219,8 +235,9 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      * Convenience delegate for [addPlaylistsToDirectory].
      *
      * @return `true` if the directory changed as a result of this call
+     * @since 1.0
      */
-    fun addPlaylistToDirectory(
+    public fun addPlaylistToDirectory(
         playlistNameToAdd: String,
         directoryName: String
     ): Boolean = addPlaylistsToDirectory(setOf(playlistNameToAdd), directoryName)
@@ -231,8 +248,9 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      * @param playlistsToAdd playlists to nest inside the directory
      * @param directoryName name of the target directory playlist
      * @return `true` if the directory changed as a result of this call
+     * @since 1.0
      */
-    fun addPlaylistsToDirectory(
+    public fun addPlaylistsToDirectory(
         playlistsToAdd: Set<P>,
         directoryName: String
     ): Boolean
@@ -243,10 +261,11 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      * @param playlistNamesToAdd names of playlists to nest inside the directory
      * @param directoryName name of the target directory playlist
      * @return `true` if the directory changed as a result of this call
+     * @since 1.0
      */
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("addPlaylistNamesToDirectory")
-    fun addPlaylistsToDirectory(
+    public fun addPlaylistsToDirectory(
         playlistNamesToAdd: Set<String>,
         directoryName: String
     ): Boolean
@@ -256,8 +275,9 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      * Convenience delegate for [removePlaylistsFromDirectory].
      *
      * @return `true` if the directory changed as a result of this call
+     * @since 1.0
      */
-    fun removePlaylistFromDirectory(
+    public fun removePlaylistFromDirectory(
         playlistToRemove: P,
         directoryName: String
     ): Boolean = removePlaylistsFromDirectory(setOf(playlistToRemove), directoryName)
@@ -267,8 +287,9 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      * Convenience delegate for [removePlaylistsFromDirectory].
      *
      * @return `true` if the directory changed as a result of this call
+     * @since 1.0
      */
-    fun removePlaylistFromDirectory(
+    public fun removePlaylistFromDirectory(
         playlistNameToRemove: String,
         directoryName: String
     ): Boolean = removePlaylistsFromDirectory(setOf(playlistNameToRemove), directoryName)
@@ -279,8 +300,9 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      * @param playlistsToRemove playlists to detach from the directory
      * @param directoryName name of the target directory playlist
      * @return `true` if the directory changed as a result of this call
+     * @since 1.0
      */
-    fun removePlaylistsFromDirectory(
+    public fun removePlaylistsFromDirectory(
         playlistsToRemove: Set<P>,
         directoryName: String
     ): Boolean
@@ -291,21 +313,24 @@ interface ReactivePlaylistHierarchy<I: ReactiveAudioItem<I>, P: ReactiveAudioPla
      * @param playlistsNamesToRemove names of playlists to detach from the directory
      * @param directoryName name of the target directory playlist
      * @return `true` if the directory changed as a result of this call
+     * @since 1.0
      */
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removePlaylistNamesFromDirectory")
-    fun removePlaylistsFromDirectory(
+    public fun removePlaylistsFromDirectory(
         playlistsNamesToRemove: Set<String>,
         directoryName: String
     ): Boolean
 
     /**
      * Returns the total number of leaf playlists (non-directory) registered in this hierarchy.
+     * @since 1.0
      */
-    fun numberOfPlaylists(): Int
+    public fun numberOfPlaylists(): Int
 
     /**
      * Returns the total number of directory playlists registered in this hierarchy.
+     * @since 1.0
      */
-    fun numberOfPlaylistDirectories(): Int
+    public fun numberOfPlaylistDirectories(): Int
 }

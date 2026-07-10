@@ -84,8 +84,9 @@ import kotlinx.serialization.Transient
  *
  * [equals] / [hashCode] compare the cached cover-byte field directly rather than the lazy
  * [coverImageBytes] getter, so comparing or hashing an item never triggers the lazy cover load.
+ * @since 1.0
  */
-class FXAudioItem
+public class FXAudioItem
     @JvmOverloads
     internal constructor(
         override val path: Path,
@@ -106,7 +107,7 @@ class FXAudioItem
         @Transient
         internal var metadataIO: AudioMetadataIO? = null
 
-        var metadata: AudioItemMetadata by reactiveProperty(metadata)
+        public var metadata: AudioItemMetadata by reactiveProperty(metadata)
 
         init {
             WindowsPathValidator.validatePath(path)
@@ -128,19 +129,19 @@ class FXAudioItem
         @Transient
         override val dateOfCreationProperty: ReadOnlyObjectProperty<LocalDateTime> = SimpleObjectProperty(this, "date of creation", dateOfCreation)
 
-        override val fileName by lazy {
+        override val fileName: String by lazy {
             path.fileName.toString()
         }
 
-        override val extension by lazy {
+        override val extension: String by lazy {
             path.extension
         }
 
-        override val length by lazy {
+        override val length: Long by lazy {
             Files.size(path)
         }
 
-        override val uniqueId
+        override val uniqueId: String
             get() =
                 buildString {
                     append(path.fileName.toString().replace(' ', '_'))
@@ -459,9 +460,11 @@ class FXAudioItem
             }
         }
 
-        override fun mutate(action: ObservableAudioItem.() -> Unit) = mutateAndPublish { action() }
+        override fun mutate(action: ObservableAudioItem.() -> Unit) {
+            mutateAndPublish { action() }
+        }
 
-        override operator fun compareTo(other: ObservableAudioItem) = audioItemTrackDiscNumberComparator<ObservableAudioItem>().compare(this, other)
+        override operator fun compareTo(other: ObservableAudioItem): Int = audioItemTrackDiscNumberComparator<ObservableAudioItem>().compare(this, other)
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -480,7 +483,7 @@ class FXAudioItem
                 playCount == that.playCount
         }
 
-        override fun hashCode() =
+        override fun hashCode(): Int =
             Objects.hash(path, title, artist, album, genres, comments, trackNumber, discNumber, bpm, duration, playCount)
 
         override fun clone(): FXAudioItem =
@@ -514,7 +517,7 @@ class FXAudioItem
                 it.coverLoaded = coverLoaded
             }
 
-        override fun toString() = "ObservableAudioItem(id=$id, path=$path, title=$title, artist=${artist.name})"
+        override fun toString(): String = "ObservableAudioItem(id=$id, path=$path, title=$title, artist=${artist.name})"
 
         // Runs the action on the JavaFX application thread when the toolkit is initialized; otherwise
         // executes inline. This keeps the lazy cover-load path resilient when invoked from a headless

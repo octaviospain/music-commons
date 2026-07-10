@@ -1,0 +1,3399 @@
+public abstract interface annotation class net/transgressoft/commons/music/MusicCommonsExperimentalApi : java/lang/annotation/Annotation {
+}
+
+public abstract interface class net/transgressoft/commons/music/MusicLibrary : java/lang/AutoCloseable {
+	public abstract fun audioItemFromFile (Ljava/nio/file/Path;)Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;
+	public abstract fun audioLibrary ()Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;
+	public abstract fun createPlaylist (Ljava/lang/String;)Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;
+	public abstract fun createPlaylistDirectory (Ljava/lang/String;)Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;
+	public abstract fun createPlaylistWithIds (Ljava/lang/String;Ljava/util/List;)Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;
+	public abstract fun findPlaylistByName (Ljava/lang/String;)Ljava/util/Optional;
+	public abstract fun movePlaylist (Ljava/lang/String;Ljava/lang/String;)V
+	public abstract fun playlistHierarchy ()Lnet/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy;
+}
+
+public final class net/transgressoft/commons/music/audio/Abstract : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Abstract;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/AbstractHipHop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/AbstractHipHop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/AbstractRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/AbstractRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Acapella : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Acapella;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/AcidBreakbeat : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/AcidBreakbeat;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/AcidHouse : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/AcidHouse;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/AcidJazz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/AcidJazz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/AcidRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/AcidRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Acoustic : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Acoustic;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/AlbumDetails : java/lang/Comparable {
+	public static final field Companion Lnet/transgressoft/commons/music/audio/AlbumDetails$Companion;
+	public fun <init> (Ljava/lang/String;Lnet/transgressoft/commons/music/audio/Artist;ZLjava/lang/Short;Lnet/transgressoft/commons/music/audio/Label;)V
+	public synthetic fun <init> (Ljava/lang/String;Lnet/transgressoft/commons/music/audio/Artist;ZLjava/lang/Short;Lnet/transgressoft/commons/music/audio/Label;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun compareTo (Ljava/lang/Object;)I
+	public fun compareTo (Lnet/transgressoft/commons/music/audio/AlbumDetails;)I
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lnet/transgressoft/commons/music/audio/Artist;
+	public final fun component3 ()Z
+	public final fun component4 ()Ljava/lang/Short;
+	public final fun component5 ()Lnet/transgressoft/commons/music/audio/Label;
+	public final fun copy (Ljava/lang/String;Lnet/transgressoft/commons/music/audio/Artist;ZLjava/lang/Short;Lnet/transgressoft/commons/music/audio/Label;)Lnet/transgressoft/commons/music/audio/AlbumDetails;
+	public static synthetic fun copy$default (Lnet/transgressoft/commons/music/audio/AlbumDetails;Ljava/lang/String;Lnet/transgressoft/commons/music/audio/Artist;ZLjava/lang/Short;Lnet/transgressoft/commons/music/audio/Label;ILjava/lang/Object;)Lnet/transgressoft/commons/music/audio/AlbumDetails;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAlbumArtist ()Lnet/transgressoft/commons/music/audio/Artist;
+	public final fun getLabel ()Lnet/transgressoft/commons/music/audio/Label;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getYear ()Ljava/lang/Short;
+	public fun hashCode ()I
+	public final fun isCompilation ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/AlbumDetails$Companion {
+	public final fun UNKNOWN ()Lnet/transgressoft/commons/music/audio/AlbumDetails;
+}
+
+public final class net/transgressoft/commons/music/audio/AlbumDetailsKt {
+	public static final fun canonicalKey (Lnet/transgressoft/commons/music/audio/AlbumDetails;)Lnet/transgressoft/commons/music/audio/AlbumDetails;
+	public static final fun id (Lnet/transgressoft/commons/music/audio/AlbumDetails;)Ljava/lang/String;
+	public static final fun isCompilationAlbum (Lnet/transgressoft/commons/music/audio/AlbumDetails;)Z
+}
+
+public final class net/transgressoft/commons/music/audio/Alternative : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Alternative;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/AlternativeCountry : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/AlternativeCountry;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/AlternativeDance : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/AlternativeDance;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/AlternativeMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/AlternativeMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/AlternativeRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/AlternativeRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Ambient : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Ambient;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Americana : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Americana;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Anime : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Anime;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ArtRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ArtRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Artist : java/lang/Comparable {
+	public static final field Companion Lnet/transgressoft/commons/music/audio/Artist$Companion;
+	public static final field UNKNOWN Lnet/transgressoft/commons/music/audio/Artist;
+	public synthetic fun compareTo (Ljava/lang/Object;)I
+	public fun compareTo (Lnet/transgressoft/commons/music/audio/Artist;)I
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lcom/neovisionaries/i18n/CountryCode;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCountryCode ()Lcom/neovisionaries/i18n/CountryCode;
+	public final fun getName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static final fun of (Ljava/lang/String;)Lnet/transgressoft/commons/music/audio/Artist;
+	public static final fun of (Ljava/lang/String;Lcom/neovisionaries/i18n/CountryCode;)Lnet/transgressoft/commons/music/audio/Artist;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Artist$Companion {
+	public final fun of (Ljava/lang/String;)Lnet/transgressoft/commons/music/audio/Artist;
+	public final fun of (Ljava/lang/String;Lcom/neovisionaries/i18n/CountryCode;)Lnet/transgressoft/commons/music/audio/Artist;
+	public static synthetic fun of$default (Lnet/transgressoft/commons/music/audio/Artist$Companion;Ljava/lang/String;Lcom/neovisionaries/i18n/CountryCode;ILjava/lang/Object;)Lnet/transgressoft/commons/music/audio/Artist;
+}
+
+public final class net/transgressoft/commons/music/audio/ArtistKt {
+	public static final fun id (Lnet/transgressoft/commons/music/audio/Artist;)Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/AudioFileCodec : java/lang/Enum {
+	public static final field AAC Lnet/transgressoft/commons/music/audio/AudioFileCodec;
+	public static final field ALAC Lnet/transgressoft/commons/music/audio/AudioFileCodec;
+	public static final field Companion Lnet/transgressoft/commons/music/audio/AudioFileCodec$Companion;
+	public static final field FLAC Lnet/transgressoft/commons/music/audio/AudioFileCodec;
+	public static final field MP3 Lnet/transgressoft/commons/music/audio/AudioFileCodec;
+	public static final field OPUS Lnet/transgressoft/commons/music/audio/AudioFileCodec;
+	public static final field PCM Lnet/transgressoft/commons/music/audio/AudioFileCodec;
+	public static final field VORBIS Lnet/transgressoft/commons/music/audio/AudioFileCodec;
+	public final fun getDefaultExtension ()Ljava/lang/String;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun isSupportedBySpi ()Z
+	public static fun valueOf (Ljava/lang/String;)Lnet/transgressoft/commons/music/audio/AudioFileCodec;
+	public static fun values ()[Lnet/transgressoft/commons/music/audio/AudioFileCodec;
+}
+
+public final class net/transgressoft/commons/music/audio/AudioFileCodec$Companion {
+	public final fun getSupportedCodecs ()Ljava/util/List;
+	public final fun getUnsupportedCodecs ()Ljava/util/List;
+}
+
+public final class net/transgressoft/commons/music/audio/AudioFileType : java/lang/Enum {
+	public static final field Companion Lnet/transgressoft/commons/music/audio/AudioFileType$Companion;
+	public static final field FLAC Lnet/transgressoft/commons/music/audio/AudioFileType;
+	public static final field M4A Lnet/transgressoft/commons/music/audio/AudioFileType;
+	public static final field MP3 Lnet/transgressoft/commons/music/audio/AudioFileType;
+	public static final field OGG Lnet/transgressoft/commons/music/audio/AudioFileType;
+	public static final field WAV Lnet/transgressoft/commons/music/audio/AudioFileType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getExtension ()Ljava/lang/String;
+	public final fun getPossibleCodecs ()Ljava/util/List;
+	public final fun getPrimaryCodec ()Lnet/transgressoft/commons/music/audio/AudioFileCodec;
+	public final fun isPrimaryCodecSupported ()Z
+	public final fun supportsCodec (Lnet/transgressoft/commons/music/audio/AudioFileCodec;)Z
+	public fun toString ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Lnet/transgressoft/commons/music/audio/AudioFileType;
+	public static fun values ()[Lnet/transgressoft/commons/music/audio/AudioFileType;
+}
+
+public final class net/transgressoft/commons/music/audio/AudioFileType$Companion {
+	public final fun fromExtension (Ljava/lang/String;)Lnet/transgressoft/commons/music/audio/AudioFileType;
+	public final fun getExtensions ()Ljava/util/List;
+}
+
+public final class net/transgressoft/commons/music/audio/AudioFileTypeKt {
+	public static final fun toAudioFileType (Ljava/lang/String;)Lnet/transgressoft/commons/music/audio/AudioFileType;
+}
+
+public class net/transgressoft/commons/music/audio/AudioItemManipulationException : java/lang/Exception {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+}
+
+public final class net/transgressoft/commons/music/audio/AudioItemMetadata {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;Lnet/transgressoft/commons/music/audio/Artist;Lnet/transgressoft/commons/music/audio/AlbumDetails;Ljava/util/Set;Ljava/lang/String;Ljava/lang/Short;Ljava/lang/Short;Ljava/lang/Float;Ljava/lang/String;Ljava/lang/String;ILjava/time/Duration;[B)V
+	public synthetic fun <init> (Ljava/lang/String;Lnet/transgressoft/commons/music/audio/Artist;Lnet/transgressoft/commons/music/audio/AlbumDetails;Ljava/util/Set;Ljava/lang/String;Ljava/lang/Short;Ljava/lang/Short;Ljava/lang/Float;Ljava/lang/String;Ljava/lang/String;ILjava/time/Duration;[BILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component10 ()Ljava/lang/String;
+	public final fun component11 ()I
+	public final fun component12 ()Ljava/time/Duration;
+	public final fun component13 ()[B
+	public final fun component2 ()Lnet/transgressoft/commons/music/audio/Artist;
+	public final fun component3 ()Lnet/transgressoft/commons/music/audio/AlbumDetails;
+	public final fun component4 ()Ljava/util/Set;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()Ljava/lang/Short;
+	public final fun component7 ()Ljava/lang/Short;
+	public final fun component8 ()Ljava/lang/Float;
+	public final fun component9 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Lnet/transgressoft/commons/music/audio/Artist;Lnet/transgressoft/commons/music/audio/AlbumDetails;Ljava/util/Set;Ljava/lang/String;Ljava/lang/Short;Ljava/lang/Short;Ljava/lang/Float;Ljava/lang/String;Ljava/lang/String;ILjava/time/Duration;[B)Lnet/transgressoft/commons/music/audio/AudioItemMetadata;
+	public static synthetic fun copy$default (Lnet/transgressoft/commons/music/audio/AudioItemMetadata;Ljava/lang/String;Lnet/transgressoft/commons/music/audio/Artist;Lnet/transgressoft/commons/music/audio/AlbumDetails;Ljava/util/Set;Ljava/lang/String;Ljava/lang/Short;Ljava/lang/Short;Ljava/lang/Float;Ljava/lang/String;Ljava/lang/String;ILjava/time/Duration;[BILjava/lang/Object;)Lnet/transgressoft/commons/music/audio/AudioItemMetadata;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAlbum ()Lnet/transgressoft/commons/music/audio/AlbumDetails;
+	public final fun getArtist ()Lnet/transgressoft/commons/music/audio/Artist;
+	public final fun getBitRate ()I
+	public final fun getBpm ()Ljava/lang/Float;
+	public final fun getComments ()Ljava/lang/String;
+	public final fun getCoverBytes ()[B
+	public final fun getDiscNumber ()Ljava/lang/Short;
+	public final fun getDuration ()Ljava/time/Duration;
+	public final fun getEncoder ()Ljava/lang/String;
+	public final fun getEncoding ()Ljava/lang/String;
+	public final fun getGenres ()Ljava/util/Set;
+	public final fun getTitle ()Ljava/lang/String;
+	public final fun getTrackNumber ()Ljava/lang/Short;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class net/transgressoft/commons/music/audio/AudioMetadataIO {
+	public abstract fun loadCover (Ljava/nio/file/Path;)[B
+	public fun loadCover (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)[B
+	public abstract fun readMetadata (Ljava/nio/file/Path;)Lnet/transgressoft/commons/music/audio/AudioItemMetadata;
+	public abstract fun writeMetadata (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)V
+}
+
+public final class net/transgressoft/commons/music/audio/AudioMetadataIO$DefaultImpls {
+	public static fun loadCover (Lnet/transgressoft/commons/music/audio/AudioMetadataIO;Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)[B
+}
+
+public final class net/transgressoft/commons/music/audio/Avantgarde : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Avantgarde;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/AvantgardeJazz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/AvantgardeJazz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/AvantgardeMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/AvantgardeMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Bachata : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Bachata;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Baroque : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Baroque;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/BassMusic : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/BassMusic;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Beatbox : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Beatbox;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Bebop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Bebop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/BigBand : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/BigBand;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/BigBeat : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/BigBeat;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Bitcore : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Bitcore;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Bitpop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Bitpop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/BlackMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/BlackMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Bluegrass : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Bluegrass;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Blues : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Blues;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/BluesRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/BluesRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Boogie : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Boogie;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/BoogieWoogie : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/BoogieWoogie;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/BossaNova : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/BossaNova;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/BrassBand : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/BrassBand;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Breakbeat : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Breakbeat;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Breakcore : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Breakcore;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Britpop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Britpop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/BrokenBeat : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/BrokenBeat;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/BumbaMeuBoi : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/BumbaMeuBoi;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/CGothic : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/CGothic;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/CHipHop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/CHipHop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/CJazz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/CJazz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/CPop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/CPop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/CRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/CRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/CSka : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/CSka;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/CTrance : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/CTrance;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Celtic : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Celtic;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/CelticFusion : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/CelticFusion;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/CelticMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/CelticMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/CelticPunk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/CelticPunk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/CelticReggae : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/CelticReggae;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/CelticRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/CelticRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ChaChaCha : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ChaChaCha;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Chamber : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Chamber;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ChamberJazz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ChamberJazz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ChamberMusic : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ChamberMusic;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ChamberPop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ChamberPop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Chanson : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Chanson;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Chant : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Chant;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Chicha : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Chicha;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Children : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Children;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Chillout : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Chillout;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Chillwave : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Chillwave;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Chiptune : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Chiptune;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Christian : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Christian;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Christmas : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Christmas;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/CityPop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/CityPop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Classic : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Classic;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ClassicPop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ClassicPop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ClassicRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ClassicRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Classical : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Classical;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Club : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Club;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Comedy : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Comedy;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ContemporaryBlues : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ContemporaryBlues;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ContemporaryClassical : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ContemporaryClassical;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ContemporaryJazz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ContemporaryJazz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/CoolJazz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/CoolJazz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Country : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Country;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/CountryPop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/CountryPop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/CountryRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/CountryRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Crossover : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Crossover;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Crunk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Crunk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Crunkcore : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Crunkcore;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/CrustPunk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/CrustPunk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Dance : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Dance;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Dancehall : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Dancehall;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/DarkAmbient : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/DarkAmbient;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/DarkCore : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/DarkCore;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/DarkPop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/DarkPop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/DarkStep : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/DarkStep;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/DarkWave : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/DarkWave;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/DeathMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/DeathMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Deathcore : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Deathcore;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Deathgrind : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Deathgrind;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/DeepFunk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/DeepFunk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/DeepHouse : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/DeepHouse;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/DeepSoul : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/DeepSoul;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Disco : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Disco;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/DiscoHouse : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/DiscoHouse;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/DixielandJazz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/DixielandJazz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/DooWop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/DooWop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/DoomMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/DoomMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Doomcore : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Doomcore;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Downtempo : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Downtempo;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/DreamPop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/DreamPop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Drone : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Drone;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/DroneMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/DroneMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/DrumAndBass : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/DrumAndBass;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Dub : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Dub;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/DubHouse : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/DubHouse;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Dubstep : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Dubstep;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Dubtronica : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Dubtronica;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Ebm : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Ebm;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Edm : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Edm;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Electro : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Electro;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ElectroSwing : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ElectroSwing;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ElectroWave : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ElectroWave;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Electronic : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Electronic;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ElectronicDance : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ElectronicDance;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Electronica : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Electronica;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Electropop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Electropop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Emo : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Emo;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/EmoPop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/EmoPop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/EmoRap : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/EmoRap;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Enka : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Enka;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Ethnic : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Ethnic;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/EuroDance : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/EuroDance;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/EuroDisco : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/EuroDisco;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/EuroHouse : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/EuroHouse;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/EuroPop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/EuroPop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/EuroTrance : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/EuroTrance;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Experimental : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Experimental;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ExperimentalNoise : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ExperimentalNoise;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ExperimentalPop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ExperimentalPop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ExperimentalRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ExperimentalRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/FemaleVocalist : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/FemaleVocalist;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Fingerstyle : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Fingerstyle;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Flamenco : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Flamenco;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Folk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Folk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/FolkHop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/FolkHop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/FolkMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/FolkMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/FolkPop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/FolkPop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/FolkPunk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/FolkPunk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/FolkRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/FolkRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Folktronica : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Folktronica;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/FreakFolk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/FreakFolk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Funk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Funk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Fusion : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Fusion;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/FusionJazz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/FusionJazz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/FutureBass : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/FutureBass;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/FutureJazz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/FutureJazz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/GFunk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/GFunk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Garage : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Garage;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/GarageRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/GarageRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract class net/transgressoft/commons/music/audio/Genre : java/lang/Comparable {
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun compareTo (Ljava/lang/Object;)I
+	public fun compareTo (Lnet/transgressoft/commons/music/audio/Genre;)I
+	public fun getName ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Genre$Custom : net/transgressoft/commons/music/audio/Genre {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lnet/transgressoft/commons/music/audio/Genre$Custom;
+	public static synthetic fun copy$default (Lnet/transgressoft/commons/music/audio/Genre$Custom;Ljava/lang/String;ILjava/lang/Object;)Lnet/transgressoft/commons/music/audio/Genre$Custom;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Genre$None : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Genre$None;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/GenreExtensionsKt {
+	public static final fun joinGenres (Ljava/util/Set;)Ljava/lang/String;
+	public static final fun parseGenre (Ljava/lang/String;)Ljava/util/Set;
+}
+
+public final class net/transgressoft/commons/music/audio/GlamMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/GlamMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/GlamPunk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/GlamPunk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/GlamRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/GlamRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Glitch : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Glitch;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/GlitchHop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/GlitchHop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/GloFi : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/GloFi;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Goa : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Goa;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Gospel : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Gospel;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Gothic : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Gothic;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/GothicMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/GothicMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/GothicRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/GothicRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Grime : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Grime;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Grindcore : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Grindcore;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Grunge : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Grunge;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/GypsyJazz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/GypsyJazz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/GypsyPunk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/GypsyPunk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/HardBop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/HardBop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/HardHouse : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/HardHouse;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/HardRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/HardRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/HardTrance : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/HardTrance;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Hardcore : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Hardcore;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Hardstyle : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Hardstyle;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/HeaderInfo {
+	public fun <init> (Ljava/lang/String;IJLjava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()J
+	public final fun component4 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;IJLjava/lang/String;)Lnet/transgressoft/commons/music/audio/HeaderInfo;
+	public static synthetic fun copy$default (Lnet/transgressoft/commons/music/audio/HeaderInfo;Ljava/lang/String;IJLjava/lang/String;ILjava/lang/Object;)Lnet/transgressoft/commons/music/audio/HeaderInfo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBitRate ()I
+	public final fun getEncodingType ()Ljava/lang/String;
+	public final fun getFormat ()Ljava/lang/String;
+	public final fun getTrackLengthSeconds ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/HeavyMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/HeavyMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/HipHop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/HipHop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/HorrorPunk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/HorrorPunk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Horrorcore : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Horrorcore;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/House : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/House;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Idm : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Idm;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Illbient : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Illbient;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Impressionist : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Impressionist;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Incidental : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Incidental;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Indie : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Indie;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/IndieFolk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/IndieFolk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/IndiePop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/IndiePop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/IndieRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/IndieRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Indietronic : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Indietronic;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Industrial : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Industrial;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/IndustrialMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/IndustrialMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/IndustrialRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/IndustrialRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Instrumental : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Instrumental;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/InstrumentalHipHop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/InstrumentalHipHop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/InstrumentalRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/InstrumentalRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/JFusion : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/JFusion;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/JGothic : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/JGothic;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/JHipHop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/JHipHop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/JJazz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/JJazz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/JPop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/JPop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/JRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/JRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/JSka : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/JSka;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/JTrance : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/JTrance;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Jazz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Jazz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/JazzFusion : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/JazzFusion;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/JazzHop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/JazzHop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Jumpstyle : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Jumpstyle;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Jungle : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Jungle;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/KGothic : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/KGothic;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/KHipHop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/KHipHop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/KJazz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/KJazz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/KPop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/KPop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/KRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/KRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/KSka : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/KSka;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/KTrance : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/KTrance;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Krautrock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Krautrock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Label : java/lang/Comparable {
+	public static final field Companion Lnet/transgressoft/commons/music/audio/Label$Companion;
+	public static final field UNKNOWN Lnet/transgressoft/commons/music/audio/Label;
+	public synthetic fun compareTo (Ljava/lang/Object;)I
+	public fun compareTo (Lnet/transgressoft/commons/music/audio/Label;)I
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lcom/neovisionaries/i18n/CountryCode;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCountryCode ()Lcom/neovisionaries/i18n/CountryCode;
+	public final fun getName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static final fun of (Ljava/lang/String;)Lnet/transgressoft/commons/music/audio/Label;
+	public static final fun of (Ljava/lang/String;Lcom/neovisionaries/i18n/CountryCode;)Lnet/transgressoft/commons/music/audio/Label;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Label$Companion {
+	public final fun of (Ljava/lang/String;)Lnet/transgressoft/commons/music/audio/Label;
+	public final fun of (Ljava/lang/String;Lcom/neovisionaries/i18n/CountryCode;)Lnet/transgressoft/commons/music/audio/Label;
+	public static synthetic fun of$default (Lnet/transgressoft/commons/music/audio/Label$Companion;Ljava/lang/String;Lcom/neovisionaries/i18n/CountryCode;ILjava/lang/Object;)Lnet/transgressoft/commons/music/audio/Label;
+}
+
+public final class net/transgressoft/commons/music/audio/Latin : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Latin;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/LatinJazz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/LatinJazz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/LatinPop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/LatinPop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/LatinRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/LatinRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/LiquidFunk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/LiquidFunk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/LoFi : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/LoFi;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Lounge : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Lounge;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Mambo : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Mambo;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Marimba : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Marimba;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/MathRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/MathRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Mathcore : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Mathcore;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Medieval : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Medieval;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/MedievalMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/MedievalMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/MedievalRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/MedievalRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/MelodicMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/MelodicMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/MelodicMetalcore : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/MelodicMetalcore;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/MelodicTrance : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/MelodicTrance;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Merengue : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Merengue;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Metal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Metal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Metalcore : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Metalcore;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Microhouse : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Microhouse;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Minimal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Minimal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ModalJazz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ModalJazz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ModernClassical : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ModernClassical;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ModernRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ModernRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Motown : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Motown;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Mpb : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Mpb;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/MushroomJazz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/MushroomJazz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Musical : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Musical;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Ndw : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Ndw;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/NeoClassical : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/NeoClassical;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/NeoFolk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/NeoFolk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/NeoMedieval : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/NeoMedieval;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/NeoProgressive : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/NeoProgressive;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/NeoPsychedelic : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/NeoPsychedelic;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/NeoSoul : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/NeoSoul;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Nerdcore : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Nerdcore;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/NewAge : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/NewAge;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/NewWave : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/NewWave;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Newgrass : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Newgrass;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Noise : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Noise;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/NoisePop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/NoisePop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/NoiseRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/NoiseRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/NuDisco : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/NuDisco;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/NuJazz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/NuJazz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/NuMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/NuMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/NuSoul : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/NuSoul;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Nwa : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Nwa;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Nwobhm : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Nwobhm;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Nyhc : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Nyhc;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Oldies : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Oldies;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Opera : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Opera;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Orchestral : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Orchestral;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Oriental : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Oriental;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/OutlawCountry : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/OutlawCountry;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/PFunk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/PFunk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Pop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Pop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/PopPunk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/PopPunk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/PopRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/PopRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/PostBritpop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/PostBritpop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/PostDisco : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/PostDisco;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/PostGrunge : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/PostGrunge;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/PostHardcore : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/PostHardcore;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/PostIndustrial : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/PostIndustrial;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/PostMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/PostMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/PostPunk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/PostPunk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/PostRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/PostRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/PowerMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/PowerMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/PowerNoise : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/PowerNoise;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/PowerPop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/PowerPop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ProgressiveBluegrass : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ProgressiveBluegrass;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ProgressiveCountry : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ProgressiveCountry;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ProgressiveHouse : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ProgressiveHouse;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ProgressiveMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ProgressiveMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ProgressiveRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ProgressiveRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ProgressiveTrance : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ProgressiveTrance;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Protopunk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Protopunk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/PsyTrance : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/PsyTrance;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Psychedelic : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Psychedelic;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/PsychedelicPop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/PsychedelicPop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/PsychedelicRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/PsychedelicRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Punk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Punk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/PunkRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/PunkRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/RAndB : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/RAndB;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Ragga : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Ragga;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Rap : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Rap;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Rapcore : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Rapcore;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class net/transgressoft/commons/music/audio/ReactiveAlbum : net/transgressoft/lirp/entity/ReactiveEntity {
+	public abstract fun getAlbum ()Lnet/transgressoft/commons/music/audio/AlbumDetails;
+	public fun getAlbumArtist ()Lnet/transgressoft/commons/music/audio/Artist;
+	public fun getAlbumName ()Ljava/lang/String;
+	public fun getCoverImageBytes ()[B
+	public fun getLabel ()Lnet/transgressoft/commons/music/audio/Label;
+	public abstract fun getSize ()I
+	public abstract fun getTracks ()Ljava/util/List;
+	public fun getYear ()Ljava/lang/Short;
+	public fun isCompilation ()Z
+	public abstract fun isEmpty ()Z
+}
+
+public final class net/transgressoft/commons/music/audio/ReactiveAlbum$DefaultImpls {
+	public static fun getAlbumArtist (Lnet/transgressoft/commons/music/audio/ReactiveAlbum;)Lnet/transgressoft/commons/music/audio/Artist;
+	public static fun getAlbumName (Lnet/transgressoft/commons/music/audio/ReactiveAlbum;)Ljava/lang/String;
+	public static fun getCoverImageBytes (Lnet/transgressoft/commons/music/audio/ReactiveAlbum;)[B
+	public static fun getLabel (Lnet/transgressoft/commons/music/audio/ReactiveAlbum;)Lnet/transgressoft/commons/music/audio/Label;
+	public static fun getYear (Lnet/transgressoft/commons/music/audio/ReactiveAlbum;)Ljava/lang/Short;
+	public static fun isCompilation (Lnet/transgressoft/commons/music/audio/ReactiveAlbum;)Z
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/audio/ReactiveAlbum;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public abstract interface class net/transgressoft/commons/music/audio/ReactiveArtistCatalog : net/transgressoft/lirp/entity/ReactiveEntity {
+	public abstract fun albumAudioItems (Ljava/lang/String;)Ljava/util/Set;
+	public fun albumAudioItems (Lnet/transgressoft/commons/music/audio/AlbumDetails;)Ljava/util/Set;
+	public abstract fun getAlbums ()Ljava/util/Set;
+	public abstract fun getArtist ()Lnet/transgressoft/commons/music/audio/Artist;
+	public fun getArtistName ()Ljava/lang/String;
+	public abstract fun getSize ()I
+	public abstract fun isEmpty ()Z
+}
+
+public final class net/transgressoft/commons/music/audio/ReactiveArtistCatalog$DefaultImpls {
+	public static fun albumAudioItems (Lnet/transgressoft/commons/music/audio/ReactiveArtistCatalog;Lnet/transgressoft/commons/music/audio/AlbumDetails;)Ljava/util/Set;
+	public static fun getArtistName (Lnet/transgressoft/commons/music/audio/ReactiveArtistCatalog;)Ljava/lang/String;
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/audio/ReactiveArtistCatalog;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public abstract interface class net/transgressoft/commons/music/audio/ReactiveAudioItem : java/lang/Comparable, net/transgressoft/lirp/entity/ReactiveEntity {
+	public fun asJsonKeyValue ()Ljava/lang/String;
+	public fun asJsonValue ()Ljava/lang/String;
+	public abstract fun getAlbum ()Lnet/transgressoft/commons/music/audio/AlbumDetails;
+	public abstract fun getArtist ()Lnet/transgressoft/commons/music/audio/Artist;
+	public abstract fun getArtistsInvolved ()Ljava/util/Set;
+	public abstract fun getBitRate ()I
+	public abstract fun getBpm ()Ljava/lang/Float;
+	public abstract fun getComments ()Ljava/lang/String;
+	public abstract fun getCoverImageBytes ()[B
+	public abstract fun getDateOfCreation ()Ljava/time/LocalDateTime;
+	public abstract fun getDiscNumber ()Ljava/lang/Short;
+	public abstract fun getDuration ()Ljava/time/Duration;
+	public abstract fun getEncoder ()Ljava/lang/String;
+	public abstract fun getEncoding ()Ljava/lang/String;
+	public abstract fun getExtension ()Ljava/lang/String;
+	public abstract fun getFileName ()Ljava/lang/String;
+	public abstract fun getGenres ()Ljava/util/Set;
+	public abstract fun getLength ()J
+	public abstract fun getPath ()Ljava/nio/file/Path;
+	public abstract fun getPlayCount ()S
+	public abstract fun getTitle ()Ljava/lang/String;
+	public abstract fun getTrackNumber ()Ljava/lang/Short;
+	public abstract fun mutate (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun setAlbum (Lnet/transgressoft/commons/music/audio/AlbumDetails;)V
+	public abstract fun setArtist (Lnet/transgressoft/commons/music/audio/Artist;)V
+	public abstract fun setBpm (Ljava/lang/Float;)V
+	public abstract fun setComments (Ljava/lang/String;)V
+	public abstract fun setCoverImageBytes ([B)V
+	public abstract fun setDiscNumber (Ljava/lang/Short;)V
+	public abstract fun setGenres (Ljava/util/Set;)V
+	public abstract fun setPlayCount (S)V
+	public abstract fun setTitle (Ljava/lang/String;)V
+	public abstract fun setTrackNumber (Ljava/lang/Short;)V
+}
+
+public final class net/transgressoft/commons/music/audio/ReactiveAudioItem$DefaultImpls {
+	public static fun asJsonKeyValue (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Ljava/lang/String;
+	public static fun asJsonValue (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Ljava/lang/String;
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public final class net/transgressoft/commons/music/audio/ReactiveAudioItemKt {
+	public static final fun toJsonObject (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Lkotlinx/serialization/json/JsonObject;
+}
+
+public abstract interface class net/transgressoft/commons/music/audio/ReactiveAudioLibrary : java/util/concurrent/Flow$Publisher, net/transgressoft/lirp/persistence/Repository {
+	public abstract fun containsAudioItemWithAlbum (Ljava/lang/String;)Z
+	public abstract fun containsAudioItemWithArtist (Ljava/lang/String;)Z
+	public abstract fun containsAudioItemWithGenre (Ljava/lang/String;)Z
+	public abstract fun createAudioItem (Lkotlin/jvm/functions/Function1;)Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;
+	public abstract fun createFromFile (Ljava/nio/file/Path;)Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;
+	public fun createFromFileBatchAsync (Ljava/util/Collection;I)Ljava/util/concurrent/CompletableFuture;
+	public fun createFromFileBatchAsync (Ljava/util/Collection;Ljava/util/concurrent/Executor;I)Ljava/util/concurrent/CompletableFuture;
+	public fun createFromFileBatchAsync (Ljava/util/Collection;Lkotlinx/coroutines/CoroutineDispatcher;I)Ljava/util/concurrent/CompletableFuture;
+	public static synthetic fun createFromFileBatchAsync$default (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Ljava/util/Collection;IILjava/lang/Object;)Ljava/util/concurrent/CompletableFuture;
+	public static synthetic fun createFromFileBatchAsync$default (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Ljava/util/Collection;Ljava/util/concurrent/Executor;IILjava/lang/Object;)Ljava/util/concurrent/CompletableFuture;
+	public static synthetic fun createFromFileBatchAsync$default (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Ljava/util/Collection;Lkotlinx/coroutines/CoroutineDispatcher;IILjava/lang/Object;)Ljava/util/concurrent/CompletableFuture;
+	public abstract fun findAlbumAudioItems (Lnet/transgressoft/commons/music/audio/Artist;Ljava/lang/String;)Ljava/util/Set;
+	public abstract fun getAlbum (Ljava/lang/String;)Ljava/util/Optional;
+	public abstract fun getAlbum (Lnet/transgressoft/commons/music/audio/AlbumDetails;)Ljava/util/Optional;
+	public abstract fun getAlbumPublisher ()Lnet/transgressoft/lirp/event/LirpEventPublisher;
+	public abstract fun getArtistCatalog (Ljava/lang/String;)Ljava/util/Optional;
+	public abstract fun getArtistCatalog (Lnet/transgressoft/commons/music/audio/Artist;)Ljava/util/Optional;
+	public abstract fun getArtistCatalogPublisher ()Lnet/transgressoft/lirp/event/LirpEventPublisher;
+	public abstract fun getGenreIndex (Ljava/lang/String;)Ljava/util/Optional;
+	public abstract fun getGenreIndex (Lnet/transgressoft/commons/music/audio/Genre;)Ljava/util/Optional;
+	public abstract fun getGenreIndexPublisher ()Lnet/transgressoft/lirp/event/LirpEventPublisher;
+	public abstract fun getPlayerSubscriber ()Ljava/util/concurrent/Flow$Subscriber;
+	public abstract fun getRandomAudioItemsFromAlbum (Lnet/transgressoft/commons/music/audio/AlbumDetails;S)Ljava/util/List;
+	public static synthetic fun getRandomAudioItemsFromAlbum$default (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Lnet/transgressoft/commons/music/audio/AlbumDetails;SILjava/lang/Object;)Ljava/util/List;
+	public abstract fun getRandomAudioItemsFromArtist (Lnet/transgressoft/commons/music/audio/Artist;S)Ljava/util/List;
+	public static synthetic fun getRandomAudioItemsFromArtist$default (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Lnet/transgressoft/commons/music/audio/Artist;SILjava/lang/Object;)Ljava/util/List;
+	public abstract fun getRandomAudioItemsFromGenre (Lnet/transgressoft/commons/music/audio/Genre;S)Ljava/util/List;
+	public static synthetic fun getRandomAudioItemsFromGenre$default (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Lnet/transgressoft/commons/music/audio/Genre;SILjava/lang/Object;)Ljava/util/List;
+}
+
+public final class net/transgressoft/commons/music/audio/ReactiveAudioLibrary$DefaultImpls {
+	public static fun createFromFileBatchAsync (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Ljava/util/Collection;I)Ljava/util/concurrent/CompletableFuture;
+	public static fun createFromFileBatchAsync (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Ljava/util/Collection;Ljava/util/concurrent/Executor;I)Ljava/util/concurrent/CompletableFuture;
+	public static fun createFromFileBatchAsync (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Ljava/util/Collection;Lkotlinx/coroutines/CoroutineDispatcher;I)Ljava/util/concurrent/CompletableFuture;
+	public static synthetic fun createFromFileBatchAsync$default (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Ljava/util/Collection;IILjava/lang/Object;)Ljava/util/concurrent/CompletableFuture;
+	public static synthetic fun createFromFileBatchAsync$default (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Ljava/util/Collection;Ljava/util/concurrent/Executor;IILjava/lang/Object;)Ljava/util/concurrent/CompletableFuture;
+	public static synthetic fun createFromFileBatchAsync$default (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Ljava/util/Collection;Lkotlinx/coroutines/CoroutineDispatcher;IILjava/lang/Object;)Ljava/util/concurrent/CompletableFuture;
+	public static synthetic fun getRandomAudioItemsFromAlbum$default (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Lnet/transgressoft/commons/music/audio/AlbumDetails;SILjava/lang/Object;)Ljava/util/List;
+	public static synthetic fun getRandomAudioItemsFromArtist$default (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Lnet/transgressoft/commons/music/audio/Artist;SILjava/lang/Object;)Ljava/util/List;
+	public static synthetic fun getRandomAudioItemsFromGenre$default (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Lnet/transgressoft/commons/music/audio/Genre;SILjava/lang/Object;)Ljava/util/List;
+	public static fun minus (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Ljava/util/Collection;)Z
+	public static fun minus (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Z
+	public static fun restore (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Z
+	public static fun softDelete (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Z
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;Lkotlin/jvm/functions/Function2;Lnet/transgressoft/lirp/event/LirpErrorHandler;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public abstract interface class net/transgressoft/commons/music/audio/ReactiveGenreIndex : net/transgressoft/lirp/entity/ReactiveEntity {
+	public abstract fun getGenre ()Lnet/transgressoft/commons/music/audio/Genre;
+	public abstract fun getSize ()I
+	public abstract fun getTracks ()Ljava/util/List;
+	public abstract fun isEmpty ()Z
+}
+
+public final class net/transgressoft/commons/music/audio/ReactiveGenreIndex$DefaultImpls {
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/audio/ReactiveGenreIndex;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public final class net/transgressoft/commons/music/audio/Reggae : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Reggae;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ReggaeFusion : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ReggaeFusion;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Reggaeton : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Reggaeton;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Renaissance : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Renaissance;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Rock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Rock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/RockAndRoll : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/RockAndRoll;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Rockabilly : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Rockabilly;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Rocksteady : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Rocksteady;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/RootsReggae : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/RootsReggae;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/RootsRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/RootsRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Salsa : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Salsa;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Samba : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Samba;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Schlager : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Schlager;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Schranz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Schranz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Screamo : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Screamo;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Shoegaze : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Shoegaze;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/SingerSongwriter : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/SingerSongwriter;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Ska : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Ska;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/SkaPunk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/SkaPunk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Skacore : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Skacore;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Skatepunk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Skatepunk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Skiffle : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Skiffle;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Slowcore : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Slowcore;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/SludgeMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/SludgeMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/SmoothJazz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/SmoothJazz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/SoftRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/SoftRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Soul : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Soul;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Soundtrack : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Soundtrack;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/SouthernRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/SouthernRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/SpaceRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/SpaceRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/SpeedGarage : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/SpeedGarage;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/SpeedMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/SpeedMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Speedcore : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Speedcore;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/StageAndScreen : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/StageAndScreen;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/StonerMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/StonerMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/StonerRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/StonerRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/SwampBlues : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/SwampBlues;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/SwampPop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/SwampPop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/SwampRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/SwampRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Swing : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Swing;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/SymphonicMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/SymphonicMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/SymphonicRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/SymphonicRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/SynthPop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/SynthPop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/SynthPunk : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/SynthPunk;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Synthwave : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Synthwave;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Tango : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Tango;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/TechHouse : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/TechHouse;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/TechTrance : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/TechTrance;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/TechnicalMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/TechnicalMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Techno : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Techno;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Techstep : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Techstep;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/ThrashMetal : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/ThrashMetal;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Trance : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Trance;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Trap : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Trap;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/TribalHouse : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/TribalHouse;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/TripHop : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/TripHop;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/TripRock : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/TripRock;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/TropicalHouse : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/TropicalHouse;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/Turntablism : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/Turntablism;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/TwoStep : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/TwoStep;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/VocalHouse : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/VocalHouse;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/VocalJazz : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/VocalJazz;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/VocalTrance : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/VocalTrance;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/World : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/World;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/WorldFusion : net/transgressoft/commons/music/audio/Genre {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/audio/WorldFusion;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/itunes/ImportResult {
+	public fun <init> (Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;Ljava/util/List;Ljava/util/List;)Lnet/transgressoft/commons/music/itunes/ImportResult;
+	public static synthetic fun copy$default (Lnet/transgressoft/commons/music/itunes/ImportResult;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lnet/transgressoft/commons/music/itunes/ImportResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getImported ()Ljava/util/List;
+	public final fun getRejectedPlaylistNames ()Ljava/util/List;
+	public final fun getUnresolved ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/itunes/RejectedPlaylistName {
+	public fun <init> (Ljava/lang/String;Lnet/transgressoft/commons/music/itunes/RejectionReason;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lnet/transgressoft/commons/music/itunes/RejectionReason;
+	public final fun copy (Ljava/lang/String;Lnet/transgressoft/commons/music/itunes/RejectionReason;)Lnet/transgressoft/commons/music/itunes/RejectedPlaylistName;
+	public static synthetic fun copy$default (Lnet/transgressoft/commons/music/itunes/RejectedPlaylistName;Ljava/lang/String;Lnet/transgressoft/commons/music/itunes/RejectionReason;ILjava/lang/Object;)Lnet/transgressoft/commons/music/itunes/RejectedPlaylistName;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getName ()Ljava/lang/String;
+	public final fun getReason ()Lnet/transgressoft/commons/music/itunes/RejectionReason;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract class net/transgressoft/commons/music/itunes/RejectionReason {
+}
+
+public final class net/transgressoft/commons/music/itunes/RejectionReason$ExceedsMaxPath : net/transgressoft/commons/music/itunes/RejectionReason {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/itunes/RejectionReason$ExceedsMaxPath;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/itunes/RejectionReason$ForbiddenChar : net/transgressoft/commons/music/itunes/RejectionReason {
+	public fun <init> (C)V
+	public final fun component1 ()C
+	public final fun copy (C)Lnet/transgressoft/commons/music/itunes/RejectionReason$ForbiddenChar;
+	public static synthetic fun copy$default (Lnet/transgressoft/commons/music/itunes/RejectionReason$ForbiddenChar;CILjava/lang/Object;)Lnet/transgressoft/commons/music/itunes/RejectionReason$ForbiddenChar;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getChar ()C
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/itunes/RejectionReason$ReservedName : net/transgressoft/commons/music/itunes/RejectionReason {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/itunes/RejectionReason$ReservedName;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/itunes/RejectionReason$TrailingDotOrSpace : net/transgressoft/commons/music/itunes/RejectionReason {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/itunes/RejectionReason$TrailingDotOrSpace;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract class net/transgressoft/commons/music/itunes/UnresolvedReason {
+}
+
+public final class net/transgressoft/commons/music/itunes/UnresolvedReason$FileNotFound : net/transgressoft/commons/music/itunes/UnresolvedReason {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/itunes/UnresolvedReason$FileNotFound;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/itunes/UnresolvedReason$ImportError : net/transgressoft/commons/music/itunes/UnresolvedReason {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lnet/transgressoft/commons/music/itunes/UnresolvedReason$ImportError;
+	public static synthetic fun copy$default (Lnet/transgressoft/commons/music/itunes/UnresolvedReason$ImportError;Ljava/lang/String;ILjava/lang/Object;)Lnet/transgressoft/commons/music/itunes/UnresolvedReason$ImportError;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMessage ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/itunes/UnresolvedReason$UnsupportedType : net/transgressoft/commons/music/itunes/UnresolvedReason {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lnet/transgressoft/commons/music/itunes/UnresolvedReason$UnsupportedType;
+	public static synthetic fun copy$default (Lnet/transgressoft/commons/music/itunes/UnresolvedReason$UnsupportedType;Ljava/lang/String;ILjava/lang/Object;)Lnet/transgressoft/commons/music/itunes/UnresolvedReason$UnsupportedType;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getExtension ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/itunes/UnresolvedTrack {
+	public fun <init> (Ljava/nio/file/Path;Ljava/lang/String;Lnet/transgressoft/commons/music/itunes/UnresolvedReason;)V
+	public final fun component1 ()Ljava/nio/file/Path;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lnet/transgressoft/commons/music/itunes/UnresolvedReason;
+	public final fun copy (Ljava/nio/file/Path;Ljava/lang/String;Lnet/transgressoft/commons/music/itunes/UnresolvedReason;)Lnet/transgressoft/commons/music/itunes/UnresolvedTrack;
+	public static synthetic fun copy$default (Lnet/transgressoft/commons/music/itunes/UnresolvedTrack;Ljava/nio/file/Path;Ljava/lang/String;Lnet/transgressoft/commons/music/itunes/UnresolvedReason;ILjava/lang/Object;)Lnet/transgressoft/commons/music/itunes/UnresolvedTrack;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPath ()Ljava/nio/file/Path;
+	public final fun getReason ()Lnet/transgressoft/commons/music/itunes/UnresolvedReason;
+	public final fun getTitle ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class net/transgressoft/commons/music/player/AudioItemPlayer : java/util/concurrent/Flow$Publisher {
+	public static final field Companion Lnet/transgressoft/commons/music/player/AudioItemPlayer$Companion;
+	public abstract fun dispose ()V
+	public abstract fun getCurrentTime ()Ljava/time/Duration;
+	public abstract fun getTotalDuration ()Ljava/time/Duration;
+	public abstract fun onFinish (Ljava/lang/Runnable;)V
+	public abstract fun pause ()V
+	public abstract fun play (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)V
+	public abstract fun resume ()V
+	public abstract fun seek (Ljava/time/Duration;)V
+	public abstract fun setVolume (D)V
+	public abstract fun status ()Lnet/transgressoft/commons/music/player/AudioItemPlayer$Status;
+	public abstract fun stop ()V
+}
+
+public final class net/transgressoft/commons/music/player/AudioItemPlayer$Companion {
+	public final fun detectCodec (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Lnet/transgressoft/commons/music/audio/AudioFileCodec;
+	public final fun isPlayable (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Z
+}
+
+public final class net/transgressoft/commons/music/player/AudioItemPlayer$Status : java/lang/Enum {
+	public static final field DISPOSED Lnet/transgressoft/commons/music/player/AudioItemPlayer$Status;
+	public static final field HALTED Lnet/transgressoft/commons/music/player/AudioItemPlayer$Status;
+	public static final field PAUSED Lnet/transgressoft/commons/music/player/AudioItemPlayer$Status;
+	public static final field PLAYING Lnet/transgressoft/commons/music/player/AudioItemPlayer$Status;
+	public static final field READY Lnet/transgressoft/commons/music/player/AudioItemPlayer$Status;
+	public static final field STALLED Lnet/transgressoft/commons/music/player/AudioItemPlayer$Status;
+	public static final field STOPPED Lnet/transgressoft/commons/music/player/AudioItemPlayer$Status;
+	public static final field UNKNOWN Lnet/transgressoft/commons/music/player/AudioItemPlayer$Status;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lnet/transgressoft/commons/music/player/AudioItemPlayer$Status;
+	public static fun values ()[Lnet/transgressoft/commons/music/player/AudioItemPlayer$Status;
+}
+
+public final class net/transgressoft/commons/music/player/UnsupportedAudioPlaybackException : java/lang/Exception {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public abstract class net/transgressoft/commons/music/player/event/AudioItemPlayerEvent : net/transgressoft/lirp/event/LirpEvent {
+	public abstract fun getAudioItem ()Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;
+}
+
+public final class net/transgressoft/commons/music/player/event/AudioItemPlayerEvent$Played : net/transgressoft/commons/music/player/event/AudioItemPlayerEvent {
+	public fun <init> (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)V
+	public final fun component1 ()Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;
+	public final fun copy (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Lnet/transgressoft/commons/music/player/event/AudioItemPlayerEvent$Played;
+	public static synthetic fun copy$default (Lnet/transgressoft/commons/music/player/event/AudioItemPlayerEvent$Played;Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;ILjava/lang/Object;)Lnet/transgressoft/commons/music/player/event/AudioItemPlayerEvent$Played;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getAudioItem ()Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;
+	public fun getType ()Lnet/transgressoft/commons/music/player/event/AudioItemPlayerEvent$Type;
+	public synthetic fun getType ()Lnet/transgressoft/lirp/event/EventType;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/player/event/AudioItemPlayerEvent$Type : java/lang/Enum, net/transgressoft/lirp/event/EventType {
+	public static final field PLAYED Lnet/transgressoft/commons/music/player/event/AudioItemPlayerEvent$Type;
+	public fun getCode ()I
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public fun toString ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Lnet/transgressoft/commons/music/player/event/AudioItemPlayerEvent$Type;
+	public static fun values ()[Lnet/transgressoft/commons/music/player/event/AudioItemPlayerEvent$Type;
+}
+
+public abstract interface class net/transgressoft/commons/music/playlist/AudioPlaylist : java/lang/Comparable, net/transgressoft/lirp/entity/IdentifiableEntity {
+	public fun asJsonKeyValue ()Ljava/lang/String;
+	public fun audioItemsAllMatch (Ljava/util/function/Predicate;)Z
+	public fun audioItemsAnyMatch (Ljava/util/function/Predicate;)Z
+	public synthetic fun compareTo (Ljava/lang/Object;)I
+	public fun compareTo (Lnet/transgressoft/commons/music/playlist/AudioPlaylist;)I
+	public fun exportToM3uFile (Ljava/nio/file/Path;)V
+	public abstract fun getAudioItems ()Ljava/util/List;
+	public fun getAudioItemsRecursive ()Ljava/util/List;
+	public abstract fun getName ()Ljava/lang/String;
+	public abstract fun getPlaylists ()Ljava/util/Set;
+	public fun getUniqueId ()Ljava/lang/String;
+	public abstract fun isDirectory ()Z
+}
+
+public final class net/transgressoft/commons/music/playlist/AudioPlaylist$DefaultImpls {
+	public static fun asJsonKeyValue (Lnet/transgressoft/commons/music/playlist/AudioPlaylist;)Ljava/lang/String;
+	public static fun audioItemsAllMatch (Lnet/transgressoft/commons/music/playlist/AudioPlaylist;Ljava/util/function/Predicate;)Z
+	public static fun audioItemsAnyMatch (Lnet/transgressoft/commons/music/playlist/AudioPlaylist;Ljava/util/function/Predicate;)Z
+	public static fun compareTo (Lnet/transgressoft/commons/music/playlist/AudioPlaylist;Lnet/transgressoft/commons/music/playlist/AudioPlaylist;)I
+	public static fun exportToM3uFile (Lnet/transgressoft/commons/music/playlist/AudioPlaylist;Ljava/nio/file/Path;)V
+	public static fun getAudioItemsRecursive (Lnet/transgressoft/commons/music/playlist/AudioPlaylist;)Ljava/util/List;
+	public static fun getUniqueId (Lnet/transgressoft/commons/music/playlist/AudioPlaylist;)Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/playlist/AudioPlaylistKt {
+	public static final fun asJsonKeyValues (Ljava/util/Collection;)Ljava/lang/String;
+}
+
+public abstract interface class net/transgressoft/commons/music/playlist/ReactiveAudioPlaylist : net/transgressoft/commons/music/playlist/AudioPlaylist, net/transgressoft/lirp/entity/ReactiveEntity {
+	public fun addAudioItem (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Z
+	public abstract fun addAudioItems (Ljava/util/Collection;)Z
+	public fun addPlaylist (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;)Z
+	public abstract fun addPlaylists (Ljava/util/Collection;)Z
+	public abstract fun clearAudioItems ()V
+	public abstract fun clearPlaylists ()V
+	public abstract fun getName ()Ljava/lang/String;
+	public abstract fun getPlaylists ()Ljava/util/Set;
+	public abstract fun isDirectory ()Z
+	public fun removeAudioItem (I)Z
+	public fun removeAudioItem (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Z
+	public abstract fun removeAudioItemIds (Ljava/util/Collection;)Z
+	public abstract fun removeAudioItems (Ljava/util/Collection;)Z
+	public fun removePlaylist (I)Z
+	public fun removePlaylist (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;)Z
+	public abstract fun removePlaylistIds (Ljava/util/Collection;)Z
+	public abstract fun removePlaylists (Ljava/util/Collection;)Z
+	public abstract fun setDirectory (Z)V
+	public abstract fun setName (Ljava/lang/String;)V
+}
+
+public final class net/transgressoft/commons/music/playlist/ReactiveAudioPlaylist$DefaultImpls {
+	public static fun addAudioItem (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Z
+	public static fun addPlaylist (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;)Z
+	public static fun asJsonKeyValue (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;)Ljava/lang/String;
+	public static fun audioItemsAllMatch (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;Ljava/util/function/Predicate;)Z
+	public static fun audioItemsAnyMatch (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;Ljava/util/function/Predicate;)Z
+	public static fun compareTo (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;Lnet/transgressoft/commons/music/playlist/AudioPlaylist;)I
+	public static fun exportToM3uFile (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;Ljava/nio/file/Path;)V
+	public static fun getAudioItemsRecursive (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;)Ljava/util/List;
+	public static fun getUniqueId (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;)Ljava/lang/String;
+	public static fun removeAudioItem (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;I)Z
+	public static fun removeAudioItem (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Z
+	public static fun removePlaylist (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;I)Z
+	public static fun removePlaylist (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;)Z
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public abstract interface class net/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy : java/util/concurrent/Flow$Publisher, net/transgressoft/lirp/event/LirpEventSubscriber, net/transgressoft/lirp/persistence/Repository {
+	public fun addAudioItemToPlaylist (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;Ljava/lang/String;)Z
+	public abstract fun addAudioItemsToPlaylist (Ljava/util/Collection;Ljava/lang/String;)Z
+	public abstract fun addPlaylistNamesToDirectory (Ljava/util/Set;Ljava/lang/String;)Z
+	public fun addPlaylistToDirectory (Ljava/lang/String;Ljava/lang/String;)Z
+	public fun addPlaylistToDirectory (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;Ljava/lang/String;)Z
+	public abstract fun addPlaylistsToDirectory (Ljava/util/Set;Ljava/lang/String;)Z
+	public abstract fun createPlaylist (Ljava/lang/String;)Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;
+	public abstract fun createPlaylist (Ljava/lang/String;Ljava/util/List;)Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;
+	public abstract fun createPlaylistDirectory (Ljava/lang/String;)Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;
+	public abstract fun createPlaylistDirectory (Ljava/lang/String;Ljava/util/List;)Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;
+	public abstract fun createPlaylistWithIds (Ljava/lang/String;Ljava/util/List;)Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;
+	public abstract fun findByName (Ljava/lang/String;)Ljava/util/Optional;
+	public abstract fun findParentPlaylist (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;)Ljava/util/Optional;
+	public abstract fun movePlaylist (Ljava/lang/String;Ljava/lang/String;)V
+	public abstract fun numberOfPlaylistDirectories ()I
+	public abstract fun numberOfPlaylists ()I
+	public fun removeAudioItemFromPlaylist (ILjava/lang/String;)Z
+	public fun removeAudioItemFromPlaylist (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;Ljava/lang/String;)Z
+	public abstract fun removeAudioItemIdsFromPlaylist (Ljava/util/Collection;Ljava/lang/String;)Z
+	public abstract fun removeAudioItemsFromPlaylist (Ljava/util/Collection;Ljava/lang/String;)Z
+	public fun removePlaylistFromDirectory (Ljava/lang/String;Ljava/lang/String;)Z
+	public fun removePlaylistFromDirectory (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;Ljava/lang/String;)Z
+	public abstract fun removePlaylistNamesFromDirectory (Ljava/util/Set;Ljava/lang/String;)Z
+	public abstract fun removePlaylistsFromDirectory (Ljava/util/Set;Ljava/lang/String;)Z
+}
+
+public final class net/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy$DefaultImpls {
+	public static fun addAudioItemToPlaylist (Lnet/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy;Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;Ljava/lang/String;)Z
+	public static fun addPlaylistToDirectory (Lnet/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy;Ljava/lang/String;Ljava/lang/String;)Z
+	public static fun addPlaylistToDirectory (Lnet/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy;Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;Ljava/lang/String;)Z
+	public static fun minus (Lnet/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy;Ljava/util/Collection;)Z
+	public static fun minus (Lnet/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy;Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;)Z
+	public static fun removeAudioItemFromPlaylist (Lnet/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy;ILjava/lang/String;)Z
+	public static fun removeAudioItemFromPlaylist (Lnet/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy;Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;Ljava/lang/String;)Z
+	public static fun removePlaylistFromDirectory (Lnet/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy;Ljava/lang/String;Ljava/lang/String;)Z
+	public static fun removePlaylistFromDirectory (Lnet/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy;Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;Ljava/lang/String;)Z
+	public static fun restore (Lnet/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy;Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;)Z
+	public static fun softDelete (Lnet/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy;Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;)Z
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy;Lkotlin/jvm/functions/Function2;Lnet/transgressoft/lirp/event/LirpErrorHandler;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public abstract interface class net/transgressoft/commons/music/waveform/AudioWaveform : net/transgressoft/lirp/entity/ReactiveEntity {
+	public abstract fun amplitudes (IILkotlinx/coroutines/CoroutineDispatcher;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun amplitudes$default (Lnet/transgressoft/commons/music/waveform/AudioWaveform;IILkotlinx/coroutines/CoroutineDispatcher;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public abstract fun createImage (Ljava/io/File;Ljava/awt/Color;Ljava/awt/Color;IILkotlinx/coroutines/CoroutineDispatcher;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun createImage$default (Lnet/transgressoft/commons/music/waveform/AudioWaveform;Ljava/io/File;Ljava/awt/Color;Ljava/awt/Color;IILkotlinx/coroutines/CoroutineDispatcher;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public abstract fun getAudioFilePath ()Ljava/nio/file/Path;
+}
+
+public final class net/transgressoft/commons/music/waveform/AudioWaveform$DefaultImpls {
+	public static synthetic fun amplitudes$default (Lnet/transgressoft/commons/music/waveform/AudioWaveform;IILkotlinx/coroutines/CoroutineDispatcher;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun createImage$default (Lnet/transgressoft/commons/music/waveform/AudioWaveform;Ljava/io/File;Ljava/awt/Color;Ljava/awt/Color;IILkotlinx/coroutines/CoroutineDispatcher;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/waveform/AudioWaveform;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public final class net/transgressoft/commons/music/waveform/AudioWaveformProcessingException : java/lang/Exception {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+}
+
+public abstract interface class net/transgressoft/commons/music/waveform/AudioWaveformRepository : net/transgressoft/lirp/event/LirpEventSubscriber, net/transgressoft/lirp/persistence/Repository {
+	public fun getOrCreateWaveformAsync (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;SS)Ljava/util/concurrent/CompletableFuture;
+	public fun getOrCreateWaveformAsync (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;SSLjava/util/concurrent/Executor;)Ljava/util/concurrent/CompletableFuture;
+	public abstract fun getOrCreateWaveformAsync (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;SSLkotlinx/coroutines/CoroutineDispatcher;)Ljava/util/concurrent/CompletableFuture;
+	public fun removeByAudioItemIds (Ljava/util/Set;)V
+}
+
+public final class net/transgressoft/commons/music/waveform/AudioWaveformRepository$DefaultImpls {
+	public static fun getOrCreateWaveformAsync (Lnet/transgressoft/commons/music/waveform/AudioWaveformRepository;Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;SS)Ljava/util/concurrent/CompletableFuture;
+	public static fun getOrCreateWaveformAsync (Lnet/transgressoft/commons/music/waveform/AudioWaveformRepository;Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;SSLjava/util/concurrent/Executor;)Ljava/util/concurrent/CompletableFuture;
+	public static fun minus (Lnet/transgressoft/commons/music/waveform/AudioWaveformRepository;Ljava/util/Collection;)Z
+	public static fun minus (Lnet/transgressoft/commons/music/waveform/AudioWaveformRepository;Lnet/transgressoft/commons/music/waveform/AudioWaveform;)Z
+	public static fun removeByAudioItemIds (Lnet/transgressoft/commons/music/waveform/AudioWaveformRepository;Ljava/util/Set;)V
+	public static fun restore (Lnet/transgressoft/commons/music/waveform/AudioWaveformRepository;Lnet/transgressoft/commons/music/waveform/AudioWaveform;)Z
+	public static fun softDelete (Lnet/transgressoft/commons/music/waveform/AudioWaveformRepository;Lnet/transgressoft/commons/music/waveform/AudioWaveform;)Z
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/waveform/AudioWaveformRepository;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/waveform/AudioWaveformRepository;Lkotlin/jvm/functions/Function2;Lnet/transgressoft/lirp/event/LirpErrorHandler;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public class net/transgressoft/commons/util/InvalidAudioFilePathException : java/lang/Exception {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+}
+
+public final class net/transgressoft/commons/util/OsDetector {
+	public static final field INSTANCE Lnet/transgressoft/commons/util/OsDetector;
+	public final fun isWindows ()Z
+	public final fun withOverriddenIsWindows (ZLkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+}
+
+public final class net/transgressoft/commons/util/PathJsonExtensionsKt {
+	public static final fun toJsonUri (Ljava/nio/file/Path;)Ljava/lang/String;
+	public static final fun toPathFromJsonUri (Ljava/lang/String;)Ljava/nio/file/Path;
+	public static final fun toPathFromJsonUri (Ljava/lang/String;Ljava/nio/file/FileSystem;)Ljava/nio/file/Path;
+}
+
+public final class net/transgressoft/commons/util/WindowsLongPathSupport {
+	public static final field INSTANCE Lnet/transgressoft/commons/util/WindowsLongPathSupport;
+	public final fun toLongPathSafe (Ljava/io/File;)Ljava/io/File;
+	public final fun toLongPathSafe (Ljava/nio/file/Path;)Ljava/nio/file/Path;
+}
+
+public final class net/transgressoft/commons/util/WindowsPathException : net/transgressoft/commons/util/InvalidAudioFilePathException {
+	public fun <init> (Ljava/lang/String;Lnet/transgressoft/commons/util/WindowsViolation;)V
+	public final fun getOffendingName ()Ljava/lang/String;
+	public final fun getViolation ()Lnet/transgressoft/commons/util/WindowsViolation;
+}
+
+public final class net/transgressoft/commons/util/WindowsPathValidator {
+	public static final field INSTANCE Lnet/transgressoft/commons/util/WindowsPathValidator;
+	public final fun sanitizeForTempFile (Ljava/lang/String;)Ljava/lang/String;
+	public final fun validateName (Ljava/lang/String;Ljava/lang/String;)V
+	public static synthetic fun validateName$default (Lnet/transgressoft/commons/util/WindowsPathValidator;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)V
+	public final fun validatePath (Ljava/nio/file/Path;)V
+}
+
+public abstract class net/transgressoft/commons/util/WindowsViolation {
+}
+
+public final class net/transgressoft/commons/util/WindowsViolation$ExceedsMaxPath : net/transgressoft/commons/util/WindowsViolation {
+	public static final field INSTANCE Lnet/transgressoft/commons/util/WindowsViolation$ExceedsMaxPath;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/util/WindowsViolation$ForbiddenChar : net/transgressoft/commons/util/WindowsViolation {
+	public fun <init> (C)V
+	public final fun component1 ()C
+	public final fun copy (C)Lnet/transgressoft/commons/util/WindowsViolation$ForbiddenChar;
+	public static synthetic fun copy$default (Lnet/transgressoft/commons/util/WindowsViolation$ForbiddenChar;CILjava/lang/Object;)Lnet/transgressoft/commons/util/WindowsViolation$ForbiddenChar;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getChar ()C
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/util/WindowsViolation$ReservedName : net/transgressoft/commons/util/WindowsViolation {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lnet/transgressoft/commons/util/WindowsViolation$ReservedName;
+	public static synthetic fun copy$default (Lnet/transgressoft/commons/util/WindowsViolation$ReservedName;Ljava/lang/String;ILjava/lang/Object;)Lnet/transgressoft/commons/util/WindowsViolation$ReservedName;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/util/WindowsViolation$TrailingDotOrSpace : net/transgressoft/commons/util/WindowsViolation {
+	public static final field INSTANCE Lnet/transgressoft/commons/util/WindowsViolation$TrailingDotOrSpace;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+

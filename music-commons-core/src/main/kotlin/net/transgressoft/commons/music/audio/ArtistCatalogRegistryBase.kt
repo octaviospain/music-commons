@@ -42,14 +42,22 @@ import java.util.UUID
  * @param I The type of audio items stored in catalogs
  * @param AC The concrete artist catalog type managed by this registry
  * @param publisherName Name for the event publisher, used in logging
+ *
+ * This is a framework base type. It is `public` only because `music-commons-fx` extends it across the
+ * module boundary; it is not a consumer extension point and its protected surface is not a stable
+ * contract. Extend the provided library facades instead of subclassing this type directly.
+ * @since 1.0
  */
-abstract class ArtistCatalogRegistryBase<I, AC>(private val publisherName: String = "ArtistCatalogRegistry")
+public abstract class ArtistCatalogRegistryBase<I, AC>(private val publisherName: String = "ArtistCatalogRegistry")
     where I : ReactiveAudioItem<I>, I : Comparable<I>, AC : ReactiveArtistCatalog<AC, I>, AC : Comparable<AC> {
 
     private val log = KotlinLogging.logger {}
 
-    /** CRUD event publisher for artist catalog changes — exposed to [AudioLibraryBase] consumers. */
-    val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>> =
+    /**
+     * CRUD event publisher for artist catalog changes — exposed to [AudioLibraryBase] consumers.
+     * @since 1.0
+     */
+    public val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>> =
         FlowEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>>(publisherName).also {
             it.activateEvents(CrudEvent.Type.CREATE, CrudEvent.Type.UPDATE, CrudEvent.Type.DELETE)
         }
@@ -89,14 +97,18 @@ abstract class ArtistCatalogRegistryBase<I, AC>(private val publisherName: Strin
             }
     }
 
-    /** Returns the catalog for the given artist, or empty if none exists. */
-    fun findById(artist: Artist): Optional<AC> = Optional.ofNullable(projection[artist])
+    /**
+     * Returns the catalog for the given artist, or empty if none exists.
+     * @since 1.0
+     */
+    public fun findById(artist: Artist): Optional<AC> = Optional.ofNullable(projection[artist])
 
     /**
      * Returns the first catalog whose artist name contains [artistName] (case-insensitive),
      * or empty if none matches.
+     * @since 1.0
      */
-    fun findFirst(artistName: String): Optional<AC> =
+    public fun findFirst(artistName: String): Optional<AC> =
         Optional.ofNullable(
             projection.entries.firstOrNull {
                 it.key.name.lowercase().contains(artistName.lowercase())
@@ -105,32 +117,51 @@ abstract class ArtistCatalogRegistryBase<I, AC>(private val publisherName: Strin
 
     /**
      * Returns the first catalog matching [predicate], or empty if none matches.
+     * @since 1.0
      */
-    fun findFirst(predicate: (AC) -> Boolean): Optional<AC> =
+    public fun findFirst(predicate: (AC) -> Boolean): Optional<AC> =
         Optional.ofNullable(projection.values.firstOrNull(predicate))
 
-    /** Returns the audio items for the given artist and album name, or empty set if not found. */
-    fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I> =
+    /**
+     * Returns the audio items for the given artist and album name, or empty set if not found.
+     * @since 1.0
+     */
+    public fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I> =
         projection[artist]?.albumAudioItems(albumName) ?: emptySet()
 
-    /** Iterates all current catalog values. */
-    fun forEach(action: (AC) -> Unit) = projection.values.forEach(action)
+    /**
+     * Iterates all current catalog values.
+     * @since 1.0
+     */
+    public fun forEach(action: (AC) -> Unit): Unit = projection.values.forEach(action)
 
-    /** Returns the number of artist catalogs. */
-    fun size(): Int = projection.size
+    /**
+     * Returns the number of artist catalogs.
+     * @since 1.0
+     */
+    public fun size(): Int = projection.size
 
-    /** Returns `true` if there are no artist catalogs. */
-    val isEmpty: Boolean get() = projection.isEmpty()
+    /**
+     * Returns `true` if there are no artist catalogs.
+     * @since 1.0
+     */
+    public val isEmpty: Boolean get() = projection.isEmpty()
 
-    /** Returns `true` if any catalog satisfies [predicate]. */
-    fun contains(predicate: (AC) -> Boolean): Boolean = projection.values.any(predicate)
+    /**
+     * Returns `true` if any catalog satisfies [predicate].
+     * @since 1.0
+     */
+    public fun contains(predicate: (AC) -> Boolean): Boolean = projection.values.any(predicate)
 
-    /** Releases the projection subscription and the projection. Called when the owning library is closed. */
-    open fun close() {
+    /**
+     * Releases the projection subscription and the projection. Called when the owning library is closed.
+     * @since 1.0
+     */
+    public open fun close() {
         entriesChangedHandle?.close()
         projection.close()
         log.debug { "$publisherName closed" }
     }
 
-    override fun toString() = "${this::class.simpleName}(numberOfArtists=${projection.size})"
+    override fun toString(): String = "${this::class.simpleName}(numberOfArtists=${projection.size})"
 }

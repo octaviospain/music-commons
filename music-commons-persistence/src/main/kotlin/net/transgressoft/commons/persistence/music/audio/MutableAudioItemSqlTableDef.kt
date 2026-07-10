@@ -46,8 +46,9 @@ import kotlinx.datetime.toKotlinLocalDateTime
  *
  * Column order and the `audio_item` table name are stable; the `date_of_creation` and `play_count`
  * columns back the constructor parameters of the same name.
+ * @since 1.0
  */
-object MutableAudioItemSqlTableDef : RawConstructibleTableDef<AudioItem> {
+public object MutableAudioItemSqlTableDef : RawConstructibleTableDef<AudioItem> {
 
     override val tableName: String = "audio_item"
 

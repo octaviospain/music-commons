@@ -60,8 +60,13 @@ import java.util.concurrent.atomic.AtomicInteger
  * @param AC The concrete artist catalog type
  * @param ALC The type of reactive album exposed by this library
  * @param GC The concrete genre catalog type
+ *
+ * This is a framework base type. It is `public` only because `music-commons-fx` extends it across the
+ * module boundary; it is not a consumer extension point and its protected surface is not a stable
+ * contract. Extend the provided library facades instead of subclassing this type directly.
+ * @since 1.0
  */
-abstract class AudioLibraryBase<I, AC, ALC, GC>(
+public abstract class AudioLibraryBase<I, AC, ALC, GC>(
     protected val repository: Repository<Int, I>,
     protected val observableArtistCatalogRegistry: ArtistCatalogRegistryBase<I, AC>,
     protected val observableAlbumRegistry: AlbumRegistryBase<I, ALC>,
@@ -106,7 +111,7 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
      * [IllegalStateException]. Protected so subtypes can read and transition it while external callers
      * cannot reopen a closed library.
      */
-    protected val closed = AtomicBoolean(false)
+    protected val closed: AtomicBoolean = AtomicBoolean(false)
 
     /**
      * Asserts that this library has not been closed.
@@ -232,7 +237,7 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
         return repository.add(entity)
     }
 
-    override val playerSubscriber = PlayedEventSubscriber()
+    override val playerSubscriber: PlayedEventSubscriber = PlayedEventSubscriber()
 
     override fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I> = observableArtistCatalogRegistry.findAlbumAudioItems(artist, albumName)
 
@@ -246,7 +251,7 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
         return observableArtistCatalogRegistry.findFirst(artistName)
     }
 
-    override fun containsAudioItemWithArtist(artistName: String) =
+    override fun containsAudioItemWithArtist(artistName: String): Boolean =
         repository.contains {
             it.artistsInvolved.any { artist ->
                 artist.name.contentEquals(artistName, true)
@@ -331,6 +336,6 @@ abstract class AudioLibraryBase<I, AC, ALC, GC>(
             observableGenreIndexRegistry == that.observableGenreIndexRegistry
     }
 
-    override fun hashCode() =
+    override fun hashCode(): Int =
         Objects.hash(repository, observableArtistCatalogRegistry, observableAlbumRegistry, observableGenreIndexRegistry)
 }

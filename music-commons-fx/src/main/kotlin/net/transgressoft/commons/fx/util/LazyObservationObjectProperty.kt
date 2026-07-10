@@ -36,7 +36,7 @@ import javafx.beans.value.ChangeListener
  *
  * @param T the property value type
  */
-class LazyObservationObjectProperty<T>(
+internal class LazyObservationObjectProperty<T>(
     bean: Any,
     name: String,
     initialValue: T,

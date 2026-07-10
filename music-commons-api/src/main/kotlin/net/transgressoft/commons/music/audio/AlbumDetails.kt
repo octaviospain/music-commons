@@ -26,8 +26,9 @@ package net.transgressoft.commons.music.audio
  * are nested value types.
  *
  * The [UNKNOWN] sentinel represents an album whose metadata is entirely unspecified.
+ * @since 1.0
  */
-data class AlbumDetails(
+public data class AlbumDetails(
     val name: String,
     val albumArtist: Artist = Artist.UNKNOWN,
     val isCompilation: Boolean = false,
@@ -50,10 +51,10 @@ data class AlbumDetails(
         }
     }
 
-    companion object {
+    public companion object {
 
         @get:JvmName("UNKNOWN")
-        val UNKNOWN: AlbumDetails = AlbumDetails("", Artist.UNKNOWN, false, null, Label.UNKNOWN)
+        public val UNKNOWN: AlbumDetails = AlbumDetails("", Artist.UNKNOWN, false, null, Label.UNKNOWN)
     }
 }
 
@@ -70,8 +71,9 @@ data class AlbumDetails(
  * encodes only the identity components (normalized name + compilation-aware artist).
  *
  * @see canonicalKey
+ * @since 1.0
  */
-fun AlbumDetails.id(): String =
+public fun AlbumDetails.id(): String =
     listOf(
         name,
         albumArtist.id(),
@@ -87,8 +89,9 @@ fun AlbumDetails.id(): String =
  * as equivalent to [isCompilation] == true. Tracks with these album-artist values
  * share a compilation bucket regardless of their [isCompilation] flag. This intentional
  * overlap means "no album artist" tracks merge with compilations of the same normalized name.
+ * @since 1.0
  */
-fun AlbumDetails.isCompilationAlbum(): Boolean =
+public fun AlbumDetails.isCompilationAlbum(): Boolean =
     isCompilation ||
         albumArtist == Artist.UNKNOWN ||
         albumArtist.name.isBlank() ||
@@ -110,8 +113,9 @@ fun AlbumDetails.isCompilationAlbum(): Boolean =
  * The canonical key is NOT equal to the bucket's representative [AlbumDetails] (which preserves
  * original casing and carries the most-frequent year/label values). Use [canonicalKey] only for
  * projection indexing and lookup; expose the representative to consumers.
+ * @since 1.0
  */
-fun AlbumDetails.canonicalKey(): AlbumDetails =
+public fun AlbumDetails.canonicalKey(): AlbumDetails =
     AlbumDetails(
         name = name.trim().replace(Regex("\\s+"), " ").lowercase(),
         albumArtist =

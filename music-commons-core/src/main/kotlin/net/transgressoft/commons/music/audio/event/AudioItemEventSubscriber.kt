@@ -26,19 +26,25 @@ import net.transgressoft.lirp.event.LirpEventSubscriberBase
  *
  * Allows components like playlists and waveform repositories to stay synchronized
  * with audio library changes by listening to create, update, and delete events.
+ *
+ * This is a framework wiring type. It is `open` and `public` only because `music-commons-fx` uses it
+ * across the module boundary; it is not a consumer extension point and its `open` surface is not a
+ * stable subclassing contract.
+ * @since 1.0
  */
-open class AudioItemEventSubscriber<I: ReactiveAudioItem<I>>(
+public open class AudioItemEventSubscriber<I : ReactiveAudioItem<I>>(
     name: String
-): LirpEventSubscriberBase<I, CrudEvent.Type, CrudEvent<Int, I>>(name) {
+) : LirpEventSubscriberBase<I, CrudEvent.Type, CrudEvent<Int, I>>(name) {
 
     /**
      * Cancels the current subscription, stopping event delivery from the publisher.
+     * @since 1.0
      */
-    fun cancelSubscription() {
+    public fun cancelSubscription() {
         subscription?.cancel()
     }
 
-    override fun toString() =
+    override fun toString(): String =
         buildString {
             append("AudioItemEventSubscriber(name=$name")
             subscription?.let {

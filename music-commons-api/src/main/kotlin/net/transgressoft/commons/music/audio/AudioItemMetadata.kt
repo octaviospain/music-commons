@@ -34,8 +34,9 @@ import java.time.Duration
  * Serialization stays at the entity level (see core's audio item serializer); this type is not
  * `@Serializable` because its consumers serialize the broader audio item rather than the metadata
  * value in isolation.
+ * @since 1.0
  */
-data class AudioItemMetadata(
+public data class AudioItemMetadata(
     val title: String = "",
     val artist: Artist = Artist.UNKNOWN,
     val album: AlbumDetails = AlbumDetails.UNKNOWN,

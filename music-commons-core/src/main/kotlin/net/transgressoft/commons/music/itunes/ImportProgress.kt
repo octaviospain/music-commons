@@ -6,8 +6,9 @@ package net.transgressoft.commons.music.itunes
  * @property itemsProcessed Number of tracks processed so far.
  * @property totalItems Total number of tracks to process.
  * @property currentFile Path of the track currently being processed.
+ * @since 1.0
  */
-data class ImportProgress(
+public data class ImportProgress(
     val itemsProcessed: Int,
     val totalItems: Int,
     val currentFile: String

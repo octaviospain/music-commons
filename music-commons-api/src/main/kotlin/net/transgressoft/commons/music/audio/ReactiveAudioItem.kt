@@ -34,62 +34,112 @@ import kotlinx.serialization.json.put
  *
  * This interface extends [ReactiveEntity] to provide reactive capabilities for audio items,
  * allowing observation of changes to metadata and other properties.
+ * @since 1.0
  */
-interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I>, Comparable<I> {
+public interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I>, Comparable<I> {
 
-    /** Absolute path to the audio file on disk. */
-    val path: Path
+    /**
+     * Absolute path to the audio file on disk.
+     * @since 1.0
+     */
+    public val path: Path
 
-    /** File name including extension, derived from [path]. */
-    val fileName: String
+    /**
+     * File name including extension, derived from [path].
+     * @since 1.0
+     */
+    public val fileName: String
 
-    /** File extension without the leading dot (e.g. `"mp3"`, `"flac"`). */
-    val extension: String
+    /**
+     * File extension without the leading dot (e.g. `"mp3"`, `"flac"`).
+     * @since 1.0
+     */
+    public val extension: String
 
-    /** Track title as stored in the file's tag. */
-    var title: String
+    /**
+     * Track title as stored in the file's tag.
+     * @since 1.0
+     */
+    public var title: String
 
-    /** Playback duration of the audio file. */
-    val duration: Duration
+    /**
+     * Playback duration of the audio file.
+     * @since 1.0
+     */
+    public val duration: Duration
 
-    /** Bit rate of the audio stream in kbps. */
-    val bitRate: Int
+    /**
+     * Bit rate of the audio stream in kbps.
+     * @since 1.0
+     */
+    public val bitRate: Int
 
-    /** Primary credited artist for this track. */
-    var artist: Artist
+    /**
+     * Primary credited artist for this track.
+     * @since 1.0
+     */
+    public var artist: Artist
 
     /**
      * All artists involved in this track, including the primary [artist] and any featured or
      * contributing artists encoded in the tag.
+     * @since 1.0
      */
-    val artistsInvolved: Set<Artist>
+    public val artistsInvolved: Set<Artist>
 
-    /** Album to which this track belongs, including album-level metadata. */
-    var album: AlbumDetails
+    /**
+     * Album to which this track belongs, including album-level metadata.
+     * @since 1.0
+     */
+    public var album: AlbumDetails
 
-    /** Set of genres associated with this track. An empty set means untagged. */
-    var genres: Set<Genre>
+    /**
+     * Set of genres associated with this track. An empty set means untagged.
+     * @since 1.0
+     */
+    public var genres: Set<Genre>
 
-    /** Free-text comment stored in the tag, or `null` if absent. */
-    var comments: String?
+    /**
+     * Free-text comment stored in the tag, or `null` if absent.
+     * @since 1.0
+     */
+    public var comments: String?
 
-    /** Track number within its disc, or `null` if not tagged. */
-    var trackNumber: Short?
+    /**
+     * Track number within its disc, or `null` if not tagged.
+     * @since 1.0
+     */
+    public var trackNumber: Short?
 
-    /** Disc number within the album, or `null` if not tagged. */
-    var discNumber: Short?
+    /**
+     * Disc number within the album, or `null` if not tagged.
+     * @since 1.0
+     */
+    public var discNumber: Short?
 
-    /** Beats per minute, or `null` if not tagged. */
-    var bpm: Float?
+    /**
+     * Beats per minute, or `null` if not tagged.
+     * @since 1.0
+     */
+    public var bpm: Float?
 
-    /** Encoder tool or settings string from the tag, or `null` if absent. */
-    val encoder: String?
+    /**
+     * Encoder tool or settings string from the tag, or `null` if absent.
+     * @since 1.0
+     */
+    public val encoder: String?
 
-    /** Audio encoding format identifier (e.g. codec name), or `null` if absent. */
-    val encoding: String?
+    /**
+     * Audio encoding format identifier (e.g. codec name), or `null` if absent.
+     * @since 1.0
+     */
+    public val encoding: String?
 
-    /** File size in bytes. */
-    val length: Long
+    /**
+     * File size in bytes.
+     * @since 1.0
+     */
+    public val length: Long
 
     /**
      * The cover image bytes for this audio item, or `null` if no cover image is present.
@@ -98,14 +148,21 @@ interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I>, Co
      * as immutable and must not modify its contents. Implementations may load the bytes
      * lazily on first access; subsequent reads return the cached reference. All mutations
      * must go through the setter so reactive change notifications are published.
+     * @since 1.0
      */
-    var coverImageBytes: ByteArray?
+    public var coverImageBytes: ByteArray?
 
-    /** Timestamp when the track entry was first created in the library. */
-    val dateOfCreation: LocalDateTime
+    /**
+     * Timestamp when the track entry was first created in the library.
+     * @since 1.0
+     */
+    public val dateOfCreation: LocalDateTime
 
-    /** Number of times this track has been played. */
-    val playCount: Short
+    /**
+     * Number of times this track has been played.
+     * @since 1.0
+     */
+    public val playCount: Short
 
     /**
      * Sets the play count to [count].
@@ -116,8 +173,9 @@ interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I>, Co
      * not a user-observable state change.
      *
      * @param count The play count value to set.
+     * @since 1.0
      */
-    fun setPlayCount(count: Short)
+    public fun setPlayCount(count: Short)
 
     /**
      * Applies multiple field mutations atomically, emitting a single [net.transgressoft.lirp.event.BatchChanged]
@@ -127,15 +185,17 @@ interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I>, Co
      * e.g. during import operations, so downstream projections re-key once rather than once per field.
      *
      * @param action The mutation block receiving this item as receiver.
+     * @since 1.0
      */
-    fun mutate(action: I.() -> Unit)
+    public fun mutate(action: I.() -> Unit)
 
     /**
      * Returns a JSON string with this item's numeric ID as the key and its full metadata object as the value.
      *
      * @return JSON object string suitable for embedding in a larger JSON map
+     * @since 1.0
      */
-    fun asJsonKeyValue() =
+    public fun asJsonKeyValue(): String =
         buildJsonObject {
             put("$id", toJsonObject())
         }.toString()
@@ -144,14 +204,16 @@ interface ReactiveAudioItem<I: ReactiveAudioItem<I>>: ReactiveEntity<Int, I>, Co
      * Returns a JSON string containing only this item's metadata object, without a surrounding key.
      *
      * @return JSON object string of this item's full metadata
+     * @since 1.0
      */
-    fun asJsonValue() = toJsonObject().toString()
+    public fun asJsonValue(): String = toJsonObject().toString()
 }
 
 /**
  * Converts a reactive audio item to a [JsonObject] containing all metadata.
+ * @since 1.0
  */
-fun ReactiveAudioItem<*>.toJsonObject(): JsonObject =
+public fun ReactiveAudioItem<*>.toJsonObject(): JsonObject =
     buildJsonObject {
         put("id", id)
         put("path", path.toJsonUri())

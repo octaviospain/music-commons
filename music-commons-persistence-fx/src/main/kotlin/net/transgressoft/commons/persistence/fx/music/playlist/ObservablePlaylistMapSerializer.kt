@@ -43,9 +43,10 @@ import kotlinx.serialization.builtins.serializer
  * `_LirpRawConstructor` (resolved reflectively) — no internal constructor exposure, no factory.
  *
  * Thread-safety: the serializer is stateless; concurrent reads are safe.
+ * @since 1.0
  */
 @get:JvmName("ObservablePlaylistMapSerializer")
-val ObservablePlaylistMapSerializer: KSerializer<Map<Int, ObservablePlaylist>> =
+public val ObservablePlaylistMapSerializer: KSerializer<Map<Int, ObservablePlaylist>> =
     MapSerializer(Int.serializer(), lirpSerializerFor(sampleObservablePlaylist()))
 
 private fun sampleObservablePlaylist(): ReactiveEntityBase<Int, ObservablePlaylist> =

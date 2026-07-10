@@ -54,8 +54,13 @@ private const val MAX_ID_SEARCH_ATTEMPTS = 10_000
  * playlists in sync when items are removed from the library — without it, deleted items remain
  * silently in playlists. Use the library builder, which wires the subscription automatically.
  * Calling a mutating operation before the subscription is established throws [IllegalStateException].
+ *
+ * This is a framework base type. It is `public` only because `music-commons-fx` extends it across the
+ * module boundary; it is not a consumer extension point and its protected surface is not a stable
+ * contract. Extend the provided library facades instead of subclassing this type directly.
+ * @since 1.0
  */
-abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>>(
+public abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>>(
     private val repository: Repository<Int, P>,
     private val audioItemEventSubscriber: AudioItemEventSubscriber<I> = AudioItemEventSubscriber("PlaylistHierarchySubscriber")
 ) : ReactivePlaylistHierarchy<I, P>,
@@ -72,7 +77,7 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
      * [IllegalStateException]. Protected so subtypes can read and transition it while external callers
      * cannot reopen a closed hierarchy.
      */
-    protected val closed = AtomicBoolean(false)
+    protected val closed: AtomicBoolean = AtomicBoolean(false)
 
     /**
      * Tracks whether this hierarchy's audio item delete subscriber has been wired.
@@ -125,7 +130,11 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
      * [markDeleteSubscriberWired] is module-internal, so subclasses defined in other modules cannot
      * reach it. This protected delegate lets such a subclass expose its own module-internal test hook
      * for standalone-hierarchy scenarios where the delete subscriber is wired through a different mechanism.
+     *
+     * Marked [JvmSynthetic] so it stays reachable from Kotlin subclasses across modules without becoming
+     * part of the published binary API — it is a test-wiring seam, not a supported extension point.
      */
+    @JvmSynthetic
     protected fun markDeleteSubscriberWiredForTesting() {
         markDeleteSubscriberWired()
     }
@@ -423,9 +432,9 @@ abstract class PlaylistHierarchyBase<I : ReactiveAudioItem<I>, P : ReactiveAudio
         }
     }
 
-    override fun numberOfPlaylists() = search { it.isDirectory.not() }.count()
+    override fun numberOfPlaylists(): Int = search { it.isDirectory.not() }.count()
 
-    override fun numberOfPlaylistDirectories() = search { it.isDirectory }.count()
+    override fun numberOfPlaylistDirectories(): Int = search { it.isDirectory }.count()
 
     /**
      * Closes this hierarchy idempotently.

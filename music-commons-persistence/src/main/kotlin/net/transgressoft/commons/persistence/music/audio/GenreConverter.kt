@@ -34,10 +34,11 @@ import kotlinx.serialization.json.Json
  * therefore intentionally normalized to the standard subtype, keeping persistence consistent with
  * how the same string resolves everywhere else in the library. Individual genre names never contain
  * commas (enforced by [Genre.Custom]'s init block), so per-element encoding is unambiguous.
+ * @since 1.0
  */
-object GenreConverter : ColumnConverter<Genre, String> {
+public object GenreConverter : ColumnConverter<Genre, String> {
 
-    override val sqlType = ColumnType.TextType
+    override val sqlType: ColumnType = ColumnType.TextType
 
     override fun toSql(value: Genre): String = value.name
 
@@ -48,8 +49,9 @@ object GenreConverter : ColumnConverter<Genre, String> {
      *
      * @param genres the genres of an audio item
      * @return a JSON string array of genre names
+     * @since 1.0
      */
-    fun encodeGenres(genres: Set<Genre>): String = Json.encodeToString(genres.map { toSql(it) }.sorted())
+    public fun encodeGenres(genres: Set<Genre>): String = Json.encodeToString(genres.map { toSql(it) }.sorted())
 
     /**
      * Decodes a JSON array of genre names back into a genre set, dropping blank entries so a stray
@@ -57,8 +59,9 @@ object GenreConverter : ColumnConverter<Genre, String> {
      *
      * @param raw the stored JSON string array
      * @return the reconstructed genre set
+     * @since 1.0
      */
-    fun decodeGenres(raw: String): Set<Genre> =
+    public fun decodeGenres(raw: String): Set<Genre> =
         Json.decodeFromString<List<String>>(raw)
             .filter { it.isNotBlank() }
             .map { fromSql(it) }

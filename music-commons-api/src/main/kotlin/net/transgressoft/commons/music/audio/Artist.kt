@@ -31,9 +31,10 @@ import java.util.concurrent.ConcurrentHashMap
  * The [UNKNOWN] singleton represents an artist whose name and country are unspecified.
  *
  * Access instances via the [of] factory rather than the constructor directly.
+ * @since 1.0
  */
 @ConsistentCopyVisibility
-data class Artist internal constructor(
+public data class Artist internal constructor(
     val name: String,
     val countryCode: CountryCode = CountryCode.UNDEFINED
 ) : Comparable<Artist> {
@@ -43,11 +44,11 @@ data class Artist internal constructor(
         return if (result == 0) compareValues(countryCode, other.countryCode) else result
     }
 
-    companion object {
+    public companion object {
 
         @JvmField
         @get:JvmName("UNKNOWN")
-        val UNKNOWN: Artist = Artist("", CountryCode.UNDEFINED)
+        public val UNKNOWN: Artist = Artist("", CountryCode.UNDEFINED)
 
         // Soft-reference flyweight cache: entries are eligible for GC under memory pressure,
         // preventing long-running JVMs from accumulating unbounded entries for transient artists.
@@ -60,10 +61,11 @@ data class Artist internal constructor(
          * Uses a flyweight pattern over soft references so that repeated lookups of the same
          * artist return the same object instance. Returns [UNKNOWN] when both arguments are
          * at their default values.
+         * @since 1.0
          */
         @JvmStatic
         @JvmOverloads
-        fun of(name: String, countryCode: CountryCode = CountryCode.UNDEFINED): Artist {
+        public fun of(name: String, countryCode: CountryCode = CountryCode.UNDEFINED): Artist {
             val normalizedName = name.trim()
             if (normalizedName.isEmpty() && countryCode == CountryCode.UNDEFINED) return UNKNOWN
             expungeStaleEntries(artistMap, artistReferenceQueue)
@@ -90,5 +92,6 @@ data class Artist internal constructor(
  *
  * Used as the unique cache key for the flyweight map and as [net.transgressoft.lirp.entity.ReactiveEntityBase.uniqueId]
  * in artist catalog implementations.
+ * @since 1.0
  */
-fun Artist.id(): String = if (countryCode == CountryCode.UNDEFINED) name else "$name-${countryCode.name}"
+public fun Artist.id(): String = if (countryCode == CountryCode.UNDEFINED) name else "$name-${countryCode.name}"

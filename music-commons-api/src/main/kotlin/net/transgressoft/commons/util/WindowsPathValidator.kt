@@ -32,8 +32,9 @@ import java.nio.file.Path
  * extension), trailing dots or spaces, and MAX_PATH (260 chars) are all enforced.
  * [sanitizeForTempFile] is the only method that strips rather than throws, for use with temp file
  * names which are an internal implementation detail.
+ * @since 1.0
  */
-object WindowsPathValidator {
+public object WindowsPathValidator {
 
     // Per Microsoft naming docs, characters in 0x00-0x1F are also forbidden in path segments.
     private val FORBIDDEN_CHARS =
@@ -58,8 +59,9 @@ object WindowsPathValidator {
      * paths whose [java.nio.file.FileSystem] uses a non-`\` separator (i.e. Unix-style paths on
      * Jimfs unix configuration or similar) — those paths never reach the Win32 IO layer, so the
      * Windows naming contract does not apply.
+     * @since 1.0
      */
-    fun validatePath(path: Path) {
+    public fun validatePath(path: Path) {
         if (!OsDetector.isWindows) return
         if (path.fileSystem.separator != "\\") return
         val fullPathString = path.toAbsolutePath().toString()
@@ -78,8 +80,9 @@ object WindowsPathValidator {
      *
      * @param name the name to validate
      * @param fullPath optional full path for error context; defaults to [name] itself
+     * @since 1.0
      */
-    fun validateName(name: String, fullPath: String? = null) {
+    public fun validateName(name: String, fullPath: String? = null) {
         if (!OsDetector.isWindows) return
         val offending = fullPath ?: name
         name.find { it in FORBIDDEN_CHARS }?.let { ch ->
@@ -99,8 +102,9 @@ object WindowsPathValidator {
     /**
      * Strips Windows-forbidden characters and trailing dots/spaces from [name] for use as a
      * temp-file prefix. Never throws. Returns "_" if the input sanitizes to empty.
+     * @since 1.0
      */
-    fun sanitizeForTempFile(name: String): String =
+    public fun sanitizeForTempFile(name: String): String =
         name.map { if (it in FORBIDDEN_CHARS) '_' else it }
             .joinToString("")
             .trimEnd('.', ' ')

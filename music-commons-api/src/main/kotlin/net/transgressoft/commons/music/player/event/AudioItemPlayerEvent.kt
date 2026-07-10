@@ -24,28 +24,34 @@ import net.transgressoft.lirp.event.LirpEvent
 
 /**
  * Sealed class hierarchy representing events emitted by an audio item player.
+ * @since 1.0
  */
-sealed class AudioItemPlayerEvent : LirpEvent<AudioItemPlayerEvent.Type> {
+public sealed class AudioItemPlayerEvent : LirpEvent<AudioItemPlayerEvent.Type> {
 
-    /** The audio item that triggered this event. */
-    abstract val audioItem: ReactiveAudioItem<*>
+    /**
+     * The audio item that triggered this event.
+     * @since 1.0
+     */
+    public abstract val audioItem: ReactiveAudioItem<*>
 
     /**
      * Types of audio player events.
+     * @since 1.0
      */
-    enum class Type(
+    public enum class Type(
         override val code: Int
     ): EventType {
 
         PLAYED(210) ;
 
-        override fun toString() = "AudioItemPlayerEvent($name, $code)"
+        override fun toString(): String = "AudioItemPlayerEvent($name, $code)"
     }
 
     /**
      * Event emitted when an audio item has been played.
+     * @since 1.0
      */
-    data class Played<I : ReactiveAudioItem<I>>(
+    public data class Played(
         override val audioItem: ReactiveAudioItem<*>
     ): AudioItemPlayerEvent() {
         override val type: Type = PLAYED

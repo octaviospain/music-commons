@@ -403,8 +403,9 @@ private val BY_NAME: Map<String, Genre> by lazy {
  *
  * @param genres the genres to join
  * @return a sorted, comma-separated string, or an empty string if [genres] is empty
+ * @since 1.0
  */
-fun joinGenres(genres: Set<Genre>): String = genres.map(Genre::name).sorted().joinToString(", ")
+public fun joinGenres(genres: Set<Genre>): String = genres.map(Genre::name).sorted().joinToString(", ")
 
 /**
  * Parses a genre string into a set of [Genre] instances.
@@ -415,8 +416,9 @@ fun joinGenres(genres: Set<Genre>): String = genres.map(Genre::name).sorted().jo
  *
  * @param value the raw genre string from audio metadata or JSON persistence
  * @return a set of resolved genres, or an empty set if [value] is blank
+ * @since 1.0
  */
-fun parseGenre(value: String): Set<Genre> {
+public fun parseGenre(value: String): Set<Genre> {
     if (value.isBlank()) return emptySet()
     return value.split(",")
         .map { it.trim() }

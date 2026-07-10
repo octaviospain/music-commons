@@ -32,20 +32,21 @@ import java.io.Serial
  * Consumers must multiply by the player's total duration and convert to the type
  * their player expects (e.g., a [java.time.Duration] for
  * [net.transgressoft.commons.fx.music.player.FXAudioItemPlayer.seek]).
+ * @since 1.0
  */
-class SeekEvent(
+public class SeekEvent(
     source: Any,
     target: EventTarget,
     seekRatio: Double
 ) : Event(source, target, SEEK) {
 
-    val seekRatio: Double =
+    public val seekRatio: Double =
         seekRatio
             .takeIf { it.isFinite() }
             ?.coerceIn(0.0, 1.0)
             ?: throw IllegalArgumentException("seekRatio must be finite, got $seekRatio")
 
-    companion object {
+    public companion object {
 
         @Serial
         private const val serialVersionUID = 1L
@@ -53,8 +54,9 @@ class SeekEvent(
         /**
          * The event type for seek gestures. Namespaced to avoid collisions with
          * other libraries that may register an event type named "SEEK".
+         * @since 1.0
          */
-        val SEEK: EventType<SeekEvent> =
+        public val SEEK: EventType<SeekEvent> =
             EventType(Event.ANY, "net.transgressoft.commons.fx.music.waveform.SEEK")
     }
 }

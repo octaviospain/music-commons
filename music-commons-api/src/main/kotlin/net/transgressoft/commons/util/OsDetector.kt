@@ -23,22 +23,26 @@ package net.transgressoft.commons.util
  *
  * Tests using the override helper must run sequentially (not in parallel Kotest contexts)
  * because the override is stored in a single volatile field.
+ * @since 1.0
  */
-object OsDetector {
+public object OsDetector {
 
+    // Process-wide (not thread-local) so an override set on a test thread is visible to library code
+    // reading isWindows on another thread — e.g. the JavaFX Application Thread in FX tests. Kept private
+    // (non-inline helper below) so it stays off the published binary API.
     @Volatile
-    @PublishedApi
-    internal var overrideIsWindows: Boolean? = null
+    private var overrideIsWindows: Boolean? = null
 
-    val isWindows: Boolean
+    public val isWindows: Boolean
         get() = overrideIsWindows ?: System.getProperty("os.name").lowercase().contains("windows")
 
     /**
      * Executes [block] with [isWindows] temporarily overridden to [value], returning whatever
      * [block] returns. Restores the previous override (or `null` for native detection) in a
      * `finally` block so nested calls do not silently lose the outer override.
+     * @since 1.0
      */
-    inline fun <R> withOverriddenIsWindows(value: Boolean, block: () -> R): R {
+    public fun <R> withOverriddenIsWindows(value: Boolean, block: () -> R): R {
         val previous = overrideIsWindows
         overrideIsWindows = value
         return try {

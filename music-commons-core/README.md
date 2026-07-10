@@ -105,7 +105,7 @@ The audio library maintains an internal catalog organizing tracks by artist and 
 Playlists can contain both audio items and nested playlists, allowing arbitrary organizational structures. Parent-child relationships are tracked automatically.
 
 ### Memory Optimization
-Artist and label instances use the flyweight pattern, ensuring only one instance exists per unique entity to minimize memory usage in large libraries.
+Artist and label instances use the flyweight pattern backed by `SoftReference` entries. The flyweight cache avoids duplicate objects for the same artist or label across the library; under memory pressure the GC may evict entries, which are reconstructed transparently on next access.
 
 ### Persistence
 All components support JSON serialization through kotlinx.serialization, with automatic persistence when backed by `JsonFileRepository`.

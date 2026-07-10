@@ -27,8 +27,9 @@ package net.transgressoft.commons.music.audio
  *
  * Decoupling this from JAudioTagger keeps `music-commons-api` free of library-specific types and
  * lets test fakes synthesize header values without instantiating JAudioTagger objects.
+ * @since 1.0
  */
-data class HeaderInfo(
+public data class HeaderInfo(
     val encodingType: String?,
     val bitRate: Int,
     val trackLengthSeconds: Long,

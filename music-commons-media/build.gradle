@@ -5,6 +5,7 @@ plugins {
 description = 'Transgressoft Music Commons - Media (JavaSound)'
 
 kotlin {
+    explicitApi()
     target {
         compilations.named('testFixtures') {
             associateWith(compilations.named('main').get())

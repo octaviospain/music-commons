@@ -55,23 +55,25 @@ import kotlinx.serialization.Transient
  *
  * Decoded PCM is bounded by [maxPcmBytes] to prevent unbounded heap growth when processing
  * untrusted or decode-bomb audio files. Exceeding the ceiling throws [AudioWaveformProcessingException].
+ * @since 1.0
  */
 @Serializable
-class ScalableAudioWaveform(
+public class ScalableAudioWaveform(
     override val id: Int,
     override val audioFilePath: Path,
-    val maxPcmBytes: Long = DEFAULT_MAX_PCM_BYTES
+    public val maxPcmBytes: Long = DEFAULT_MAX_PCM_BYTES
 ) : ReactiveEntityBase<Int, AudioWaveform>(), AudioWaveform {
 
-    companion object {
+    public companion object {
 
         /**
          * Default maximum PCM bytes accumulated during waveform extraction (~1 GiB, enough for
          * roughly 1.7 hours of stereo 44.1 kHz/16-bit audio). This ceiling exists to bound
          * memory growth when decoding untrusted audio content; a crafted or infinitely-looping
          * file would otherwise exhaust the JVM heap before `getRawAudioPcm` returns.
+         * @since 1.0
          */
-        const val DEFAULT_MAX_PCM_BYTES: Long = 1_073_741_824L
+        public const val DEFAULT_MAX_PCM_BYTES: Long = 1_073_741_824L
     }
 
     @Transient private val cacheMutex = Mutex()
@@ -282,5 +284,5 @@ class ScalableAudioWaveform(
         }
     }
 
-    override fun toString() = "ScalableAudioWaveform(uniqueId=$uniqueId)"
+    override fun toString(): String = "ScalableAudioWaveform(uniqueId=$uniqueId)"
 }

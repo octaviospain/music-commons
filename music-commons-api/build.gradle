@@ -1,5 +1,9 @@
 description = 'Transgressoft Music Commons - API'
 
+kotlin {
+    explicitApi()
+}
+
 dependencies {
     api 'org.jetbrains.kotlinx:kotlinx-coroutines-core'
     api libs.jaudiotagger.get()

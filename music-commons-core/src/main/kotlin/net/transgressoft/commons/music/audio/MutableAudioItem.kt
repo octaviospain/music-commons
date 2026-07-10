@@ -28,15 +28,16 @@ import kotlin.io.path.extension
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
-const val UNASSIGNED_ID = 0
+public const val UNASSIGNED_ID: Int = 0
 
 /**
  * Marker interface representing a concrete audio item implementation.
  *
  * Extends [ReactiveAudioItem] with self-referential type parameter to enable
  * type-safe operations while providing a non-generic entry point for audio item usage.
+ * @since 1.0
  */
-interface AudioItem : ReactiveAudioItem<AudioItem> {
+public interface AudioItem : ReactiveAudioItem<AudioItem> {
 
     override fun clone(): AudioItem
 }

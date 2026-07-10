@@ -32,53 +32,63 @@ import net.transgressoft.lirp.entity.ReactiveEntity
  *
  * @param RA The concrete type of this reactive album, for self-referential generics
  * @param I The type of audio items contained in this album
+ * @since 1.0
  */
-interface ReactiveAlbum<RA : ReactiveAlbum<RA, I>, I : ReactiveAudioItem<I>> : ReactiveEntity<AlbumDetails, RA> {
+public interface ReactiveAlbum<RA : ReactiveAlbum<RA, I>, I : ReactiveAudioItem<I>> : ReactiveEntity<AlbumDetails, RA> {
 
     /**
      * The album details this instance represents.
+     * @since 1.0
      */
-    val album: AlbumDetails
+    public val album: AlbumDetails
 
     /**
      * The ordered tracks in this album, sorted by disc number then track number.
+     * @since 1.0
      */
-    val tracks: List<I>
+    public val tracks: List<I>
 
     /**
      * The total number of tracks in this album.
+     * @since 1.0
      */
-    val size: Int
+    public val size: Int
 
     /**
      * Indicates whether this album contains any tracks.
+     * @since 1.0
      */
-    val isEmpty: Boolean
+    public val isEmpty: Boolean
 
     /**
      * The name of the album.
+     * @since 1.0
      */
-    val albumName: String get() = album.name
+    public val albumName: String get() = album.name
 
     /**
      * The primary artist credited for the album.
+     * @since 1.0
      */
-    val albumArtist: Artist get() = album.albumArtist
+    public val albumArtist: Artist get() = album.albumArtist
 
     /**
      * Whether this album is a compilation of tracks from multiple artists.
+     * @since 1.0
      */
-    val isCompilation: Boolean get() = album.isCompilation
+    public val isCompilation: Boolean get() = album.isCompilation
 
     /**
      * The release year of the album, or `null` if not set.
+     * @since 1.0
      */
-    val year: Short? get() = album.year
+    public val year: Short? get() = album.year
 
     /**
      * The record label associated with the album.
+     * @since 1.0
      */
-    val label: Label get() = album.label
+    public val label: Label get() = album.label
 
     /**
      * Cover image bytes resolved lazily from the first track in this album that carries a cover.
@@ -87,7 +97,8 @@ interface ReactiveAlbum<RA : ReactiveAlbum<RA, I>, I : ReactiveAudioItem<I>> : R
      * next access. Resolution reuses each track's own on-demand cover loader and stops at the first
      * track that yields cover data — so every track probed up to and including that one may populate
      * its own cover cache as a side effect. Returns `null` if no track in this album carries cover data.
+     * @since 1.0
      */
-    val coverImageBytes: ByteArray?
+    public val coverImageBytes: ByteArray?
         get() = null
 }

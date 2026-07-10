@@ -34,8 +34,9 @@ import kotlinx.coroutines.withContext
  * Automatically redraws the waveform when the canvas is resized, computing amplitude
  * data asynchronously to avoid blocking the JavaFX Application Thread. Cancels any
  * pending waveform computations when a new waveform is requested or when the size changes.
+ * @since 1.0
  */
-class WaveformPane : Canvas() {
+public class WaveformPane : Canvas() {
 
     private val logger = KotlinLogging.logger {}
 
@@ -77,8 +78,9 @@ class WaveformPane : Canvas() {
      * @param waveform the waveform whose amplitude data will be rendered
      * @param waveformColor the color used to draw the waveform bars; defaults to the current setting
      * @param backgroundColor the color used to fill the canvas background; defaults to the current setting
+     * @since 1.0
      */
-    fun drawWaveformAsync(waveform: AudioWaveform, waveformColor: Color = this.waveformColor, backgroundColor: Color = this.backgroundColor) {
+    public fun drawWaveformAsync(waveform: AudioWaveform, waveformColor: Color = this.waveformColor, backgroundColor: Color = this.backgroundColor) {
         this.waveform = waveform
         this.waveformColor = waveformColor
         this.backgroundColor = backgroundColor
@@ -126,8 +128,9 @@ class WaveformPane : Canvas() {
      * Cancels the coroutine scope, stopping any in-progress waveform rendering.
      *
      * Must be called when the component is no longer needed to release coroutine resources.
+     * @since 1.0
      */
-    fun dispose() {
+    public fun dispose() {
         job.cancel()
     }
 }

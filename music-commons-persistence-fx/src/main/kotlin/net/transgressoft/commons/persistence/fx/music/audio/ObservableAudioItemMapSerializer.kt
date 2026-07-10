@@ -48,9 +48,10 @@ import kotlinx.serialization.builtins.serializer
  * so this serializer touches no internal constructor and adds no factory.
  *
  * Thread-safety: the serializer is stateless; concurrent reads are safe.
+ * @since 1.0
  */
 @get:JvmName("ObservableAudioItemMapSerializer")
-val ObservableAudioItemMapSerializer: KSerializer<Map<Int, ObservableAudioItem>> =
+public val ObservableAudioItemMapSerializer: KSerializer<Map<Int, ObservableAudioItem>> =
     MapSerializer(Int.serializer(), lirpSerializerFor(sampleObservableAudioItem(), audioItemSerializersModule))
 
 private fun sampleObservableAudioItem(): ReactiveEntityBase<Int, ObservableAudioItem> =

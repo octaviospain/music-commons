@@ -32,8 +32,9 @@ import java.nio.file.Path
  * produces an invalid `\\?\\\server\share\...` that Windows rejects.
  *
  * On non-Windows JVMs all methods return the input unchanged.
+ * @since 1.0
  */
-object WindowsLongPathSupport {
+public object WindowsLongPathSupport {
 
     // MAX_PATH is 260 *including* the null terminator, so 260-char strings already exceed the limit.
     private const val MAX_PATH = 260
@@ -41,8 +42,11 @@ object WindowsLongPathSupport {
     private const val UNC_PATH_PREFIX = "\\\\?\\UNC\\"
     private const val UNC_LEADING = "\\\\"
 
-    /** Applies the long-path prefix to [path] if needed on Windows. Returns the input unchanged on non-Windows. */
-    fun toLongPathSafe(path: Path): Path {
+    /**
+     * Applies the long-path prefix to [path] if needed on Windows. Returns the input unchanged on non-Windows.
+     * @since 1.0
+     */
+    public fun toLongPathSafe(path: Path): Path {
         if (!OsDetector.isWindows) return path
         val raw = path.toString()
         val absolute = path.toAbsolutePath().toString()
@@ -50,8 +54,11 @@ object WindowsLongPathSupport {
         return Path.of(prefixed)
     }
 
-    /** File-valued overload for call sites using [File]. Returns the input unchanged on non-Windows. */
-    fun toLongPathSafe(file: File): File {
+    /**
+     * File-valued overload for call sites using [File]. Returns the input unchanged on non-Windows.
+     * @since 1.0
+     */
+    public fun toLongPathSafe(file: File): File {
         if (!OsDetector.isWindows) return file
         val raw = file.path
         val absolute = file.absolutePath

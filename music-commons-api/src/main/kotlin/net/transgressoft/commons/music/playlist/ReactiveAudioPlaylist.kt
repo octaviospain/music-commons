@@ -24,8 +24,9 @@ import net.transgressoft.lirp.entity.ReactiveEntity
  * Reactive extension of [AudioPlaylist] that allows mutation of the playlist and observation of changes.
  *
  * Provides methods to add and remove audio items and nested playlists.
+ * @since 1.0
  */
-interface ReactiveAudioPlaylist<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>> : AudioPlaylist<I>, ReactiveEntity<Int, P> {
+public interface ReactiveAudioPlaylist<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>> : AudioPlaylist<I>, ReactiveEntity<Int, P> {
 
     /** Mutable display name of this playlist. Changing this value publishes a reactive mutation event. */
     override var name: String
@@ -37,37 +38,42 @@ interface ReactiveAudioPlaylist<I : ReactiveAudioItem<I>, P : ReactiveAudioPlayl
      * Adds [audioItem] to this playlist. Convenience delegate for [addAudioItems].
      *
      * @return `true` if the playlist changed as a result of this call
+     * @since 1.0
      */
-    fun addAudioItem(audioItem: I): Boolean = addAudioItems(listOf(audioItem))
+    public fun addAudioItem(audioItem: I): Boolean = addAudioItems(listOf(audioItem))
 
     /**
      * Adds the given audio items to this playlist. Duplicate items are allowed — if an item
      * already exists in the playlist, it will be added again.
      *
      * @return `true` if any existing item in the playlist is not contained in the given collection
+     * @since 1.0
      */
-    fun addAudioItems(audioItems: Collection<I>): Boolean
+    public fun addAudioItems(audioItems: Collection<I>): Boolean
 
     /**
      * Removes [audioItem] from this playlist. Convenience delegate for [removeAudioItems].
      *
      * @return `true` if the playlist changed as a result of this call
+     * @since 1.0
      */
-    fun removeAudioItem(audioItem: I): Boolean = removeAudioItems(listOf(audioItem))
+    public fun removeAudioItem(audioItem: I): Boolean = removeAudioItems(listOf(audioItem))
 
     /**
      * Removes the audio item with [audioItemId] from this playlist. Convenience delegate for [removeAudioItems].
      *
      * @return `true` if the playlist changed as a result of this call
+     * @since 1.0
      */
-    fun removeAudioItem(audioItemId: Int): Boolean = removeAudioItems(listOf(audioItemId))
+    public fun removeAudioItem(audioItemId: Int): Boolean = removeAudioItems(listOf(audioItemId))
 
     /**
      * Removes all occurrences of each item in [audioItems] from this playlist.
      *
      * @return `true` if the playlist changed as a result of this call
+     * @since 1.0
      */
-    fun removeAudioItems(audioItems: Collection<I>): Boolean
+    public fun removeAudioItems(audioItems: Collection<I>): Boolean
 
     // @JvmName required on generic interface methods to avoid JVM signature clashes with Java callers
 
@@ -75,60 +81,73 @@ interface ReactiveAudioPlaylist<I : ReactiveAudioItem<I>, P : ReactiveAudioPlayl
      * Removes audio items whose IDs are in [audioItemIds] from this playlist.
      *
      * @return `true` if the playlist changed as a result of this call
+     * @since 1.0
      */
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removeAudioItemIds")
-    fun removeAudioItems(audioItemIds: Collection<Int>): Boolean
+    public fun removeAudioItems(audioItemIds: Collection<Int>): Boolean
 
     /**
      * Adds [playlist] as a nested child of this directory playlist. Convenience delegate for [addPlaylists].
      *
      * @return `true` if the set of nested playlists changed as a result of this call
+     * @since 1.0
      */
-    fun addPlaylist(playlist: P): Boolean = addPlaylists(listOf(playlist))
+    public fun addPlaylist(playlist: P): Boolean = addPlaylists(listOf(playlist))
 
     /**
      * Adds all playlists in [playlists] as nested children of this directory playlist.
      *
      * @return `true` if the set of nested playlists changed as a result of this call
+     * @since 1.0
      */
-    fun addPlaylists(playlists: Collection<P>): Boolean
+    public fun addPlaylists(playlists: Collection<P>): Boolean
 
     /**
      * Removes the nested playlist with [playlistId] from this directory playlist. Convenience delegate for [removePlaylists].
      *
      * @return `true` if the set of nested playlists changed as a result of this call
+     * @since 1.0
      */
-    fun removePlaylist(playlistId: Int): Boolean = removePlaylists(listOf(playlistId))
+    public fun removePlaylist(playlistId: Int): Boolean = removePlaylists(listOf(playlistId))
 
     /**
      * Removes [playlist] from this directory playlist. Convenience delegate for [removePlaylists].
      *
      * @return `true` if the set of nested playlists changed as a result of this call
+     * @since 1.0
      */
-    fun removePlaylist(playlist: P): Boolean = removePlaylists(listOf(playlist))
+    public fun removePlaylist(playlist: P): Boolean = removePlaylists(listOf(playlist))
 
     /**
      * Removes all playlists in [playlists] from this directory playlist.
      *
      * @return `true` if the set of nested playlists changed as a result of this call
+     * @since 1.0
      */
-    fun removePlaylists(playlists: Collection<P>): Boolean
+    public fun removePlaylists(playlists: Collection<P>): Boolean
 
     /**
      * Removes nested playlists whose IDs are in [playlistIds] from this directory playlist.
      *
      * @return `true` if the set of nested playlists changed as a result of this call
+     * @since 1.0
      */
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("removePlaylistIds")
-    fun removePlaylists(playlistIds: Collection<Int>): Boolean
+    public fun removePlaylists(playlistIds: Collection<Int>): Boolean
 
-    /** Removes all audio items from this playlist, leaving it empty. */
-    fun clearAudioItems()
+    /**
+     * Removes all audio items from this playlist, leaving it empty.
+     * @since 1.0
+     */
+    public fun clearAudioItems()
 
-    /** Removes all nested playlists from this directory playlist. */
-    fun clearPlaylists()
+    /**
+     * Removes all nested playlists from this directory playlist.
+     * @since 1.0
+     */
+    public fun clearPlaylists()
 
     /** The set of nested playlists directly contained within this playlist directory. */
     override val playlists: Set<P>

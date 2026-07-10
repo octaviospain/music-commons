@@ -33,26 +33,31 @@ import net.transgressoft.lirp.entity.ReactiveEntity
  *
  * @param RGI The concrete type of this reactive genre index, for self-referential generics
  * @param I The type of audio items contained in this index
+ * @since 1.0
  */
-interface ReactiveGenreIndex<RGI : ReactiveGenreIndex<RGI, I>, I : ReactiveAudioItem<I>> : ReactiveEntity<Genre, RGI> {
+public interface ReactiveGenreIndex<RGI : ReactiveGenreIndex<RGI, I>, I : ReactiveAudioItem<I>> : ReactiveEntity<Genre, RGI> {
 
     /**
      * The genre this index represents.
+     * @since 1.0
      */
-    val genre: Genre
+    public val genre: Genre
 
     /**
      * The ordered tracks in this genre index, sorted by artist name, album name, then track number.
+     * @since 1.0
      */
-    val tracks: List<I>
+    public val tracks: List<I>
 
     /**
      * The total number of tracks in this genre index.
+     * @since 1.0
      */
-    val size: Int
+    public val size: Int
 
     /**
      * Indicates whether this genre index contains any tracks.
+     * @since 1.0
      */
-    val isEmpty: Boolean
+    public val isEmpty: Boolean
 }

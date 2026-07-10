@@ -65,8 +65,9 @@ import java.time.Duration
  *
  * Future Kotlin-native metadata libraries land alongside this class as additional
  * [AudioMetadataIO] implementations.
+ * @since 1.0
  */
-class JAudioTaggerMetadataIO : AudioMetadataIO {
+public class JAudioTaggerMetadataIO : AudioMetadataIO {
 
     private val logger = KotlinLogging.logger {}
 

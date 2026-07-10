@@ -1,0 +1,70 @@
+public final class net/transgressoft/commons/persistence/music/RawConstructionKt {
+	public static final fun lirpSerializerFor (Lnet/transgressoft/lirp/entity/ReactiveEntityBase;Lkotlinx/serialization/modules/SerializersModule;)Lkotlinx/serialization/KSerializer;
+	public static synthetic fun lirpSerializerFor$default (Lnet/transgressoft/lirp/entity/ReactiveEntityBase;Lkotlinx/serialization/modules/SerializersModule;ILjava/lang/Object;)Lkotlinx/serialization/KSerializer;
+	public static final fun rawConstruct (Ljava/lang/String;Ljava/util/Map;)Lnet/transgressoft/lirp/entity/ReactiveEntityBase;
+}
+
+public final class net/transgressoft/commons/persistence/music/audio/AudioItemContextualSerializersKt {
+	public static final fun audioItemSerializersModule ()Lkotlinx/serialization/modules/SerializersModule;
+}
+
+public final class net/transgressoft/commons/persistence/music/audio/AudioItemMapSerializerKt {
+	public static final fun AudioItemMapSerializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class net/transgressoft/commons/persistence/music/audio/CountryConverter : net/transgressoft/lirp/persistence/ColumnConverter {
+	public static final field INSTANCE Lnet/transgressoft/commons/persistence/music/audio/CountryConverter;
+	public synthetic fun fromSql (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun fromSql (Ljava/lang/String;)Lcom/neovisionaries/i18n/CountryCode;
+	public fun getSqlType ()Lnet/transgressoft/lirp/persistence/ColumnType;
+	public fun toSql (Lcom/neovisionaries/i18n/CountryCode;)Ljava/lang/String;
+	public synthetic fun toSql (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class net/transgressoft/commons/persistence/music/audio/GenreConverter : net/transgressoft/lirp/persistence/ColumnConverter {
+	public static final field INSTANCE Lnet/transgressoft/commons/persistence/music/audio/GenreConverter;
+	public final fun decodeGenres (Ljava/lang/String;)Ljava/util/Set;
+	public final fun encodeGenres (Ljava/util/Set;)Ljava/lang/String;
+	public synthetic fun fromSql (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun fromSql (Ljava/lang/String;)Lnet/transgressoft/commons/music/audio/Genre;
+	public fun getSqlType ()Lnet/transgressoft/lirp/persistence/ColumnType;
+	public synthetic fun toSql (Ljava/lang/Object;)Ljava/lang/Object;
+	public fun toSql (Lnet/transgressoft/commons/music/audio/Genre;)Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/persistence/music/audio/MutableAudioItemSqlTableDef : net/transgressoft/lirp/persistence/sql/RawConstructibleTableDef {
+	public static final field INSTANCE Lnet/transgressoft/commons/persistence/music/audio/MutableAudioItemSqlTableDef;
+	public synthetic fun applyRow (Ljava/lang/Object;Lorg/jetbrains/exposed/v1/core/ResultRow;Lorg/jetbrains/exposed/v1/core/Table;)V
+	public fun applyRow (Lnet/transgressoft/commons/music/audio/AudioItem;Lorg/jetbrains/exposed/v1/core/ResultRow;Lorg/jetbrains/exposed/v1/core/Table;)V
+	public synthetic fun applyScalarRow (Ljava/lang/Object;Lorg/jetbrains/exposed/v1/core/ResultRow;Lorg/jetbrains/exposed/v1/core/Table;Lnet/transgressoft/lirp/persistence/LirpRawInitializer;)V
+	public fun applyScalarRow (Lnet/transgressoft/commons/music/audio/AudioItem;Lorg/jetbrains/exposed/v1/core/ResultRow;Lorg/jetbrains/exposed/v1/core/Table;Lnet/transgressoft/lirp/persistence/LirpRawInitializer;)V
+	public fun constructorParams (Lorg/jetbrains/exposed/v1/core/ResultRow;Lorg/jetbrains/exposed/v1/core/Table;)Ljava/util/Map;
+	public synthetic fun fromRow (Lorg/jetbrains/exposed/v1/core/ResultRow;Lorg/jetbrains/exposed/v1/core/Table;)Ljava/lang/Object;
+	public fun fromRow (Lorg/jetbrains/exposed/v1/core/ResultRow;Lorg/jetbrains/exposed/v1/core/Table;)Lnet/transgressoft/commons/music/audio/AudioItem;
+	public fun getColumns ()Ljava/util/List;
+	public fun getEntityClassName ()Ljava/lang/String;
+	public fun getTableName ()Ljava/lang/String;
+	public synthetic fun toParams (Ljava/lang/Object;Lorg/jetbrains/exposed/v1/core/Table;)Ljava/util/Map;
+	public fun toParams (Lnet/transgressoft/commons/music/audio/AudioItem;Lorg/jetbrains/exposed/v1/core/Table;)Ljava/util/Map;
+}
+
+public final class net/transgressoft/commons/persistence/music/playlist/AudioPlaylistMapSerializerKt {
+	public static final fun AudioPlaylistMapSerializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class net/transgressoft/commons/persistence/music/playlist/AudioPlaylistSqlTableDef : net/transgressoft/lirp/persistence/sql/RawConstructibleTableDef {
+	public static final field INSTANCE Lnet/transgressoft/commons/persistence/music/playlist/AudioPlaylistSqlTableDef;
+	public synthetic fun applyRow (Ljava/lang/Object;Lorg/jetbrains/exposed/v1/core/ResultRow;Lorg/jetbrains/exposed/v1/core/Table;)V
+	public fun applyRow (Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;Lorg/jetbrains/exposed/v1/core/ResultRow;Lorg/jetbrains/exposed/v1/core/Table;)V
+	public synthetic fun applyScalarRow (Ljava/lang/Object;Lorg/jetbrains/exposed/v1/core/ResultRow;Lorg/jetbrains/exposed/v1/core/Table;Lnet/transgressoft/lirp/persistence/LirpRawInitializer;)V
+	public fun applyScalarRow (Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;Lorg/jetbrains/exposed/v1/core/ResultRow;Lorg/jetbrains/exposed/v1/core/Table;Lnet/transgressoft/lirp/persistence/LirpRawInitializer;)V
+	public fun constructorParams (Lorg/jetbrains/exposed/v1/core/ResultRow;Lorg/jetbrains/exposed/v1/core/Table;)Ljava/util/Map;
+	public synthetic fun fromRow (Lorg/jetbrains/exposed/v1/core/ResultRow;Lorg/jetbrains/exposed/v1/core/Table;)Ljava/lang/Object;
+	public fun fromRow (Lorg/jetbrains/exposed/v1/core/ResultRow;Lorg/jetbrains/exposed/v1/core/Table;)Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;
+	public fun getColumns ()Ljava/util/List;
+	public fun getEntityClassName ()Ljava/lang/String;
+	public fun getTableName ()Ljava/lang/String;
+	public synthetic fun toParams (Ljava/lang/Object;Lorg/jetbrains/exposed/v1/core/Table;)Ljava/util/Map;
+	public fun toParams (Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;Lorg/jetbrains/exposed/v1/core/Table;)Ljava/util/Map;
+}
+

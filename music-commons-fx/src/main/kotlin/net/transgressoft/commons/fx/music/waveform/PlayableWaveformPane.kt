@@ -53,22 +53,35 @@ import kotlinx.coroutines.withContext
  *
  * Consumers bind [progressProperty] to their player's current time and register a
  * [SeekEvent.SEEK] handler to relay seek commands to the player.
+ * @since 1.0
  */
-class PlayableWaveformPane : Region() {
+public class PlayableWaveformPane : Region() {
 
     private val canvas = Canvas()
 
-    /** Observable property holding the current playback position as a fraction in [0.0, 1.0]. Bind to a player's time ratio to drive the waveform split. */
-    val progressProperty = SimpleDoubleProperty(this, "progress", 0.0)
+    /**
+     * Observable property holding the current playback position as a fraction in [0.0, 1.0]. Bind to a player's time ratio to drive the waveform split.
+     * @since 1.0
+     */
+    public val progressProperty: SimpleDoubleProperty = SimpleDoubleProperty(this, "progress", 0.0)
 
-    /** Observable property for the color used to draw bars after the current playback position. */
-    val waveformColorProperty = SimpleObjectProperty(this, "waveformColor", Color.WHITE)
+    /**
+     * Observable property for the color used to draw bars after the current playback position.
+     * @since 1.0
+     */
+    public val waveformColorProperty: SimpleObjectProperty<Color> = SimpleObjectProperty(this, "waveformColor", Color.WHITE)
 
-    /** Observable property for the color used to draw bars before the current playback position, indicating the portion already played. */
-    val playedColorProperty = SimpleObjectProperty(this, "playedColor", Color.GREEN)
+    /**
+     * Observable property for the color used to draw bars before the current playback position, indicating the portion already played.
+     * @since 1.0
+     */
+    public val playedColorProperty: SimpleObjectProperty<Color> = SimpleObjectProperty(this, "playedColor", Color.GREEN)
 
-    /** Observable property for the canvas background fill color. */
-    val backgroundColorProperty: ObjectProperty<Color> = SimpleObjectProperty(this, "backgroundColor", Color.BLACK)
+    /**
+     * Observable property for the canvas background fill color.
+     * @since 1.0
+     */
+    public val backgroundColorProperty: ObjectProperty<Color> = SimpleObjectProperty(this, "backgroundColor", Color.BLACK)
 
     private val job: Job = Job()
     private val scope = CoroutineScope(Dispatchers.Main + job)
@@ -144,8 +157,9 @@ class PlayableWaveformPane : Region() {
      * it stops and the waveform is drawn when amplitude data arrives.
      *
      * Any previously pending amplitude computation is cancelled before the new one begins.
+     * @since 1.0
      */
-    fun loadWaveform(waveform: AudioWaveform) {
+    public fun loadWaveform(waveform: AudioWaveform) {
         this.waveform = waveform
         cachedAmplitudes = null
         amplitudesTask?.cancel()
@@ -248,8 +262,9 @@ class PlayableWaveformPane : Region() {
     /**
      * Cancels the shimmer animation and the coroutine scope. Must be called when the
      * component is no longer needed to release resources.
+     * @since 1.0
      */
-    fun dispose() {
+    public fun dispose() {
         stopShimmer()
         job.cancel()
     }

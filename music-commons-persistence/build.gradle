@@ -1,5 +1,9 @@
 description = 'Transgressoft Music Commons - Persistence'
 
+kotlin {
+    explicitApi()
+}
+
 dependencies {
     api project(path: ':music-commons-core')
 

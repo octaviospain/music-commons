@@ -8,8 +8,9 @@ import java.time.LocalDateTime
  * All fields are extracted from the plist `Tracks` dictionary. Fields absent from the XML
  * default to empty/zero values. The [location] field stores the raw `file://` URI as found
  * in the XML; callers convert it to a [java.nio.file.Path] before import.
+ * @since 1.0
  */
-data class ItunesTrack(
+public data class ItunesTrack(
     val id: Int,
     val title: String,
     val artist: String,

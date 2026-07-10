@@ -26,5 +26,6 @@ package net.transgressoft.commons.music.audio
  * concrete implementations.
  *
  * @param I The type of audio items contained in this index
+ * @since 1.0
  */
-interface GenreIndex<I : ReactiveAudioItem<I>> : ReactiveGenreIndex<GenreIndex<I>, I>, Comparable<GenreIndex<I>>
+public interface GenreIndex<I : ReactiveAudioItem<I>> : ReactiveGenreIndex<GenreIndex<I>, I>, Comparable<GenreIndex<I>>

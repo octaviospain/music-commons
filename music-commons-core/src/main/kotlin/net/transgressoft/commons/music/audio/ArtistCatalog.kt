@@ -24,5 +24,6 @@ package net.transgressoft.commons.music.audio
  * the registry. Mutation operations are internal to the concrete implementations.
  *
  * @param I The type of audio items contained in this catalog
+ * @since 1.0
  */
-interface ArtistCatalog<I : ReactiveAudioItem<I>> : ReactiveArtistCatalog<ArtistCatalog<I>, I>, Comparable<ArtistCatalog<I>>
+public interface ArtistCatalog<I : ReactiveAudioItem<I>> : ReactiveArtistCatalog<ArtistCatalog<I>, I>, Comparable<ArtistCatalog<I>>

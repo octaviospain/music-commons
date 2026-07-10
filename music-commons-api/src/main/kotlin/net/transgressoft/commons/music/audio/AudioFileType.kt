@@ -25,10 +25,11 @@ package net.transgressoft.commons.music.audio
  *
  * @param isSupportedBySpi Whether a JavaSound SPI exists for this codec
  * @param defaultExtension The most common file extension for this codec
+ * @since 1.0
  */
-enum class AudioFileCodec(
-    val isSupportedBySpi: Boolean,
-    val defaultExtension: String
+public enum class AudioFileCodec(
+    public val isSupportedBySpi: Boolean,
+    public val defaultExtension: String
 ) {
     /** MP3 codec (MPEG-1 Audio Layer III) */
     MP3(true, "mp3"),
@@ -51,9 +52,9 @@ enum class AudioFileCodec(
     /** Opus codec in OGG container — not yet supported */
     OPUS(false, "ogg");
 
-    companion object {
-        val supportedCodecs = entries.filter { it.isSupportedBySpi }
-        val unsupportedCodecs = entries.filter { !it.isSupportedBySpi }
+    public companion object {
+        public val supportedCodecs: List<AudioFileCodec> = entries.filter { it.isSupportedBySpi }
+        public val unsupportedCodecs: List<AudioFileCodec> = entries.filter { !it.isSupportedBySpi }
     }
 }
 
@@ -63,11 +64,12 @@ enum class AudioFileCodec(
  * Note: This enum represents container formats, not codecs. Some containers
  * (like M4A) can hold multiple codecs (AAC, ALAC). Use [AudioFileCodec] for
  * codec-specific detection when needed.
+ * @since 1.0
  */
-enum class AudioFileType(
-    val extension: String,
-    val primaryCodec: AudioFileCodec,
-    val possibleCodecs: List<AudioFileCodec>
+public enum class AudioFileType(
+    public val extension: String,
+    public val primaryCodec: AudioFileCodec,
+    public val possibleCodecs: List<AudioFileCodec>
 ) {
     MP3("mp3", AudioFileCodec.MP3, listOf(AudioFileCodec.MP3)),
     M4A("m4a", AudioFileCodec.AAC, listOf(AudioFileCodec.AAC, AudioFileCodec.ALAC)),
@@ -75,16 +77,17 @@ enum class AudioFileType(
     FLAC("flac", AudioFileCodec.FLAC, listOf(AudioFileCodec.FLAC)),
     OGG("ogg", AudioFileCodec.VORBIS, listOf(AudioFileCodec.VORBIS, AudioFileCodec.OPUS));
 
-    companion object {
-        val extensions = entries.map { it.extension }
+    public companion object {
+        public val extensions: List<String> = entries.map { it.extension }
 
         /**
          * Returns the file type for a given extension.
          *
          * @param extension file extension without dot (e.g., "mp3", "m4a")
          * @return the matching AudioFileType or null if not supported
+         * @since 1.0
          */
-        fun fromExtension(extension: String): AudioFileType? =
+        public fun fromExtension(extension: String): AudioFileType? =
             entries.find { it.extension.equals(extension, ignoreCase = true) }
     }
 
@@ -93,15 +96,17 @@ enum class AudioFileType(
      *
      * @param codec the codec to check
      * @return true if this codec can be contained in this file type
+     * @since 1.0
      */
-    fun supportsCodec(codec: AudioFileCodec): Boolean = codec in possibleCodecs
+    public fun supportsCodec(codec: AudioFileCodec): Boolean = codec in possibleCodecs
 
     /**
      * Checks if the primary codec for this file type is supported by a JavaSound SPI.
      *
      * @return true if the primary codec has SPI support
+     * @since 1.0
      */
-    fun isPrimaryCodecSupported(): Boolean = primaryCodec.isSupportedBySpi
+    public fun isPrimaryCodecSupported(): Boolean = primaryCodec.isSupportedBySpi
 
     override fun toString(): String = extension
 }
@@ -110,7 +115,8 @@ enum class AudioFileType(
  * Converts a file extension string to its corresponding [AudioFileType].
  *
  * @throws UnsupportedOperationException if the extension is not supported
+ * @since 1.0
  */
-fun String.toAudioFileType(): AudioFileType =
+public fun String.toAudioFileType(): AudioFileType =
     AudioFileType.fromExtension(this)
         ?: throw UnsupportedOperationException("'$this' is not a supported audio file extension")

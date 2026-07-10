@@ -31,8 +31,9 @@ import kotlin.io.path.exists
  * Represents a playlist of audio items that can optionally contain nested playlists.
  *
  * Supports exporting to M3U format and provides methods to query audio items within the playlist.
+ * @since 1.0
  */
-interface AudioPlaylist<I : ReactiveAudioItem<I>> : IdentifiableEntity<Int>, Comparable<AudioPlaylist<I>> {
+public interface AudioPlaylist<I : ReactiveAudioItem<I>> : IdentifiableEntity<Int>, Comparable<AudioPlaylist<I>> {
 
     /**
      * Stable, human-readable identity string used for sorting and equality checks. Prefixed
@@ -48,41 +49,56 @@ interface AudioPlaylist<I : ReactiveAudioItem<I>> : IdentifiableEntity<Int>, Com
             }
         }
 
-    /** Whether this playlist acts as a directory that contains nested playlists. */
-    val isDirectory: Boolean
+    /**
+     * Whether this playlist acts as a directory that contains nested playlists.
+     * @since 1.0
+     */
+    public val isDirectory: Boolean
 
-    /** Display name of this playlist, unique within its parent directory. */
-    val name: String
+    /**
+     * Display name of this playlist, unique within its parent directory.
+     * @since 1.0
+     */
+    public val name: String
 
-    /** Ordered list of audio items directly held by this playlist. */
-    val audioItems: List<I>
+    /**
+     * Ordered list of audio items directly held by this playlist.
+     * @since 1.0
+     */
+    public val audioItems: List<I>
 
     /**
      * Flattened list of all audio items in this playlist and all nested [playlists], in depth-first order.
+     * @since 1.0
      */
-    val audioItemsRecursive: List<I>
+    public val audioItemsRecursive: List<I>
         get() =
             buildList {
                 addAll(audioItems)
                 addAll(playlists.stream().flatMap { it.audioItemsRecursive.stream() }.toList())
             }
 
-    /** Nested playlists directly contained within this playlist directory. Empty for leaf playlists. */
-    val playlists: Set<AudioPlaylist<I>>
+    /**
+     * Nested playlists directly contained within this playlist directory. Empty for leaf playlists.
+     * @since 1.0
+     */
+    public val playlists: Set<AudioPlaylist<I>>
 
     /**
      * Returns `true` if all audio items in this playlist satisfy [predicate].
      *
      * @param predicate the condition to test against each item
+     * @since 1.0
      */
-    fun audioItemsAllMatch(predicate: Predicate<I>) = audioItems.stream().allMatch { predicate.test(it) }
+    public fun audioItemsAllMatch(predicate: Predicate<I>): Boolean = audioItems.stream().allMatch { predicate.test(it) }
 
     /**
      * Returns `true` if at least one audio item in this playlist satisfies [predicate].
      *
      * @param predicate the condition to test against each item
+     * @since 1.0
      */
-    fun audioItemsAnyMatch(predicate: Predicate<I>) = audioItems.stream().anyMatch { predicate.test(it) }
+    public fun audioItemsAnyMatch(predicate: Predicate<I>): Boolean = audioItems.stream().anyMatch { predicate.test(it) }
 
     /**
      * Exports this playlist to an M3U file at the specified destination path.
@@ -91,9 +107,10 @@ interface AudioPlaylist<I : ReactiveAudioItem<I>> : IdentifiableEntity<Int>, Com
      * to a subdirectory alongside the main playlist file.
      *
      * @throws IOException if the destination file or directory already exists
+     * @since 1.0
      */
     @Throws(IOException::class)
-    fun exportToM3uFile(destinationPath: Path) {
+    public fun exportToM3uFile(destinationPath: Path) {
         if (destinationPath.exists()) {
             throw IOException("Destination file already exists: $destinationPath")
         } else {
@@ -140,8 +157,9 @@ interface AudioPlaylist<I : ReactiveAudioItem<I>> : IdentifiableEntity<Int>, Com
      * including the audio item IDs and nested playlist IDs.
      *
      * @return JSON key-value string suitable for embedding in a larger JSON map
+     * @since 1.0
      */
-    fun asJsonKeyValue(): String {
+    public fun asJsonKeyValue(): String {
         val audioItemsString =
             buildString {
                 append("[")
@@ -174,14 +192,15 @@ interface AudioPlaylist<I : ReactiveAudioItem<I>> : IdentifiableEntity<Int>, Com
             }"""
     }
 
-    override fun compareTo(other: AudioPlaylist<I>) =
+    override fun compareTo(other: AudioPlaylist<I>): Int =
         Comparator.comparing(IdentifiableEntity<Int>::uniqueId, java.lang.String.CASE_INSENSITIVE_ORDER).compare(this, other)
 }
 
 /**
  * Converts a collection of audio playlists to a JSON string with playlists as key-value pairs.
+ * @since 1.0
  */
-fun <A : AudioPlaylist<*>> Collection<A>.asJsonKeyValues(): String =
+public fun <A : AudioPlaylist<*>> Collection<A>.asJsonKeyValues(): String =
     buildString {
         append("{")
         this@asJsonKeyValues.forEachIndexed { index, it ->

@@ -50,8 +50,9 @@ import kotlinx.serialization.json.Json
  * The column shape mirrors the core-tier audio-item table so the two tiers stay interchangeable for
  * consumers; the `date_of_creation` and `play_count` columns back the constructor parameters of the
  * same name.
+ * @since 1.0
  */
-object FXAudioItemSqlTableDef : RawConstructibleTableDef<ObservableAudioItem> {
+public object FXAudioItemSqlTableDef : RawConstructibleTableDef<ObservableAudioItem> {
 
     override val tableName: String = "fx_audio_item"
 

@@ -33,8 +33,9 @@ import kotlinx.serialization.SerializationException
  * which would fail the `file://` guard in [toPathFromJsonUri] on round-trip. To keep the
  * serialized form stable across filesystems, non-default-FS paths emit a synthetic `file://`
  * URI built from the absolute path string.
+ * @since 1.0
  */
-fun Path.toJsonUri(): String =
+public fun Path.toJsonUri(): String =
     if (fileSystem == FileSystems.getDefault()) {
         toAbsolutePath().toUri().toString()
     } else {
@@ -59,8 +60,9 @@ fun Path.toJsonUri(): String =
  *         (indicating pre-25.1 JSON using raw OS path strings — no migration
  *         fallback is provided), or if the URI is structurally invalid or
  *         points at a filesystem provider that is not registered in this JVM.
+ * @since 1.0
  */
-fun String.toPathFromJsonUri(): Path = toPathFromJsonUri(FileSystems.getDefault())
+public fun String.toPathFromJsonUri(): Path = toPathFromJsonUri(FileSystems.getDefault())
 
 /**
  * Reconstructs a [Path] from a `file://` URI string against an explicit [FileSystem].
@@ -73,8 +75,9 @@ fun String.toPathFromJsonUri(): Path = toPathFromJsonUri(FileSystems.getDefault(
  * @param fileSystem the [FileSystem] used to materialize the resulting [Path].
  * @throws SerializationException if the string does not start with `file://`,
  *         or if the URI is structurally invalid.
+ * @since 1.0
  */
-fun String.toPathFromJsonUri(fileSystem: FileSystem): Path {
+public fun String.toPathFromJsonUri(fileSystem: FileSystem): Path {
     if (!startsWith("file://")) {
         throw SerializationException(
             "Invalid path format: expected a file:// URI but found '$this'. " +

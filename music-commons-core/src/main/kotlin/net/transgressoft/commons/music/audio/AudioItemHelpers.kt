@@ -24,8 +24,9 @@ import java.util.regex.Pattern
  *
  * Items are first sorted by disc number, then by track number. Null values are considered
  * greater than non-null values, placing items without disc/track numbers at the end.
+ * @since 1.0
  */
-fun <I : ReactiveAudioItem<I>> audioItemTrackDiscNumberComparator(): Comparator<I> =
+public fun <I : ReactiveAudioItem<I>> audioItemTrackDiscNumberComparator(): Comparator<I> =
     Comparator { audioItem1, audioItem2 ->
         val discNumberComparison = compareDiscNumbers(audioItem1.discNumber, audioItem2.discNumber)
         if (discNumberComparison == 0) {
@@ -60,8 +61,9 @@ private fun compareTrackNumbers(track1: Short?, track2: Short?): Int =
  * Album ordering is by album name specifically — not the natural [AlbumDetails] ordering, which
  * tie-breaks on label and year before name — so the traversal matches the name-based grouping that
  * genre-index consumers expect.
+ * @since 1.0
  */
-fun <I : ReactiveAudioItem<I>> audioItemArtistAlbumTrackComparator(): Comparator<I> =
+public fun <I : ReactiveAudioItem<I>> audioItemArtistAlbumTrackComparator(): Comparator<I> =
     compareBy<I>({ it.artist }, { it.album.name }).thenComparing(audioItemTrackDiscNumberComparator())
 
 /**
@@ -83,8 +85,9 @@ fun <I : ReactiveAudioItem<I>> audioItemArtistAlbumTrackComparator(): Comparator
  *
  * The generic bound `RA : ReactiveAlbum<RA, *>` means one definition serves both the core
  * [Album] type and the FX `ObservableAlbum` type without duplication.
+ * @since 1.0
  */
-fun <RA : ReactiveAlbum<RA, *>> albumBucketComparator(): Comparator<RA> =
+public fun <RA : ReactiveAlbum<RA, *>> albumBucketComparator(): Comparator<RA> =
     Comparator { a, b ->
         val nameA = a.album.name
         val nameB = b.album.name
@@ -133,7 +136,7 @@ private fun compareAlbumYears(year1: Short?, year2: Short?): Int =
  * meaningful tiebreak at this level; the projection framework's mandatory natural-order final
  * tiebreak handles any remaining collisions.
  */
-fun albumCanonicalKeyComparator(): Comparator<AlbumDetails> =
+internal fun albumCanonicalKeyComparator(): Comparator<AlbumDetails> =
     Comparator { a, b ->
         val nameA = a.name
         val nameB = b.name
@@ -158,7 +161,7 @@ fun albumCanonicalKeyComparator(): Comparator<AlbumDetails> =
  * primary sort key is identical (e.g. two different tracks with the same disc and track number).
  * When both items have an assigned id, comparison is by id; otherwise it falls back to [ReactiveAudioItem.uniqueId].
  */
-fun <I : ReactiveAudioItem<I>> audioItemIdentityComparator(): Comparator<I> =
+internal fun <I : ReactiveAudioItem<I>> audioItemIdentityComparator(): Comparator<I> =
     Comparator { a, b ->
         when {
             a.id != UNASSIGNED_ID && b.id != UNASSIGNED_ID -> a.id.compareTo(b.id)
@@ -177,8 +180,9 @@ fun <I : ReactiveAudioItem<I>> audioItemIdentityComparator(): Comparator<I> =
  *
  * @param items The collection of audio items to search.
  * @return The raw cover image bytes of the first covered item, or `null`.
+ * @since 1.0
  */
-fun <I : ReactiveAudioItem<I>> firstCoverImageBytes(items: Iterable<I>): ByteArray? {
+public fun <I : ReactiveAudioItem<I>> firstCoverImageBytes(items: Iterable<I>): ByteArray? {
     for (item in items) {
         val bytes = item.coverImageBytes
         if (bytes != null) return bytes
@@ -228,8 +232,9 @@ private val artistsRegexMap: Map<Pattern, Pattern> =
  * @param albumArtistName The album artist name of an audio item
  *
  * @return A `Set` with the names of the artists
+ * @since 1.0
  */
-fun getArtistsNamesInvolved(title: String, artistName: String, albumArtistName: String): Set<String> {
+public fun getArtistsNamesInvolved(title: String, artistName: String, albumArtistName: String): Set<String> {
     val artistsInvolved: MutableSet<String> = mutableSetOf()
     val albumArtistNames: Collection<String> = albumArtistName.split("&", ",").map { it.trim() }.filter { it.isNotEmpty() }
 
@@ -307,8 +312,9 @@ private fun getNamesInTitle(title: String): Set<String> {
  *
  * Normalizes whitespace, capitalizes the first character, and standardizes separators like
  * "vs" and "versus" to ensure a uniform presentation.
+ * @since 1.0
  */
-fun beautifyArtistName(name: String): String =
+public fun beautifyArtistName(name: String): String =
     name.replaceFirstChar(Char::titlecase)
         .replace("\\s+".toRegex(), " ")
         .replace(" (?i)(vs)(\\.|\\s)".toRegex(), " vs ")

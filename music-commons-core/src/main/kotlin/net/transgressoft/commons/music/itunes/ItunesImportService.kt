@@ -71,8 +71,9 @@ import kotlinx.coroutines.slf4j.MDCContext
  * so the user's original folder structure is reproduced in the target library.
  *
  * @param musicLibrary The target library to import into.
+ * @since 1.0
  */
-class ItunesImportService<I, P>
+public class ItunesImportService<I, P>
     @JvmOverloads
     constructor(
         private val musicLibrary: MusicLibrary<I, P>,
@@ -114,8 +115,9 @@ class ItunesImportService<I, P>
      *  the hierarchy and the consumer is responsible for placing them.
      * @param onProgress Callback invoked after each track is processed.
      * @return A cancellable future completing with the import result.
+     * @since 1.0
      */
-    fun importAsync(
+    public fun importAsync(
         selectedPlaylists: List<ItunesPlaylist>,
         itunesLibrary: ItunesLibrary,
         policy: ItunesImportPolicy = ItunesImportPolicy(),

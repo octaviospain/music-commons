@@ -34,16 +34,18 @@ import javafx.beans.property.ReadOnlySetProperty
  * JavaFX Application Thread via `Platform.runLater`, ensuring thread-safe UI binding.
  *
  * @see ReactiveArtistCatalog
+ * @since 1.0
  */
-interface ObservableArtistCatalog :
+public interface ObservableArtistCatalog :
     ReactiveArtistCatalog<ObservableArtistCatalog, ObservableAudioItem>, Comparable<ObservableArtistCatalog> {
 
     /**
      * Observable set of album details in this artist's catalog.
      *
      * @return A read-only set property containing the album details
+     * @since 1.0
      */
-    val albumsProperty: ReadOnlySetProperty<AlbumDetails>
+    public val albumsProperty: ReadOnlySetProperty<AlbumDetails>
 
     /**
      * Returns an observable list of audio items for the specified album.
@@ -54,8 +56,9 @@ interface ObservableArtistCatalog :
      *
      * @param albumName The name of the album to retrieve items for
      * @return A read-only list property containing the album's audio items
+     * @since 1.0
      */
-    fun albumAudioItemsProperty(albumName: String): ReadOnlyListProperty<ObservableAudioItem>
+    public fun albumAudioItemsProperty(albumName: String): ReadOnlyListProperty<ObservableAudioItem>
 
     /**
      * Observable count of albums in this artist's catalog.
@@ -64,27 +67,31 @@ interface ObservableArtistCatalog :
      * This property counts the number of distinct albums.
      *
      * @return A read-only integer property with the album count
+     * @since 1.0
      */
-    val albumCountProperty: ReadOnlyIntegerProperty
+    public val albumCountProperty: ReadOnlyIntegerProperty
 
     /**
      * Observable total count of audio items across all albums in this catalog.
      *
      * @return A read-only integer property with the total item count
+     * @since 1.0
      */
-    val sizeProperty: ReadOnlyIntegerProperty
+    public val sizeProperty: ReadOnlyIntegerProperty
 
     /**
      * Observable boolean indicating whether this catalog is empty.
      *
      * @return A read-only boolean property that is true when the catalog has no audio items
+     * @since 1.0
      */
-    val emptyProperty: ReadOnlyBooleanProperty
+    public val emptyProperty: ReadOnlyBooleanProperty
 
     /**
      * Observable artist associated with this catalog.
      *
      * @return A read-only object property containing the artist
+     * @since 1.0
      */
-    val artistProperty: ReadOnlyObjectProperty<Artist>
+    public val artistProperty: ReadOnlyObjectProperty<Artist>
 }
