@@ -46,14 +46,22 @@ import java.util.UUID
  * @param I The type of audio items stored in indexes
  * @param GI The concrete genre index type managed by this registry
  * @param publisherName Name for the event publisher, used in logging
+ *
+ * This is a framework base type. It is `public` only because `music-commons-fx` extends it across the
+ * module boundary; it is not a consumer extension point and its protected surface is not a stable
+ * contract. Extend the provided library facades instead of subclassing this type directly.
+ * @since 1.0
  */
-abstract class GenreIndexRegistryBase<I, GI>(private val publisherName: String = "GenreIndexRegistry")
+public abstract class GenreIndexRegistryBase<I, GI>(private val publisherName: String = "GenreIndexRegistry")
     where I : ReactiveAudioItem<I>, I : Comparable<I>, GI : ReactiveGenreIndex<GI, I>, GI : Comparable<GI> {
 
     private val log = KotlinLogging.logger {}
 
-    /** CRUD event publisher for genre index changes — exposed to [AudioLibraryBase] consumers. */
-    val genreIndexPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Genre, GI>> =
+    /**
+     * CRUD event publisher for genre index changes — exposed to [AudioLibraryBase] consumers.
+     * @since 1.0
+     */
+    public val genreIndexPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Genre, GI>> =
         FlowEventPublisher<CrudEvent.Type, CrudEvent<Genre, GI>>(publisherName).also {
             it.activateEvents(CrudEvent.Type.CREATE, CrudEvent.Type.UPDATE, CrudEvent.Type.DELETE)
         }
@@ -93,15 +101,19 @@ abstract class GenreIndexRegistryBase<I, GI>(private val publisherName: String =
             }
     }
 
-    /** Returns the index for the given genre, or empty if none exists. */
-    fun findById(genre: Genre): Optional<GI> = Optional.ofNullable(projection[genre])
+    /**
+     * Returns the index for the given genre, or empty if none exists.
+     * @since 1.0
+     */
+    public fun findById(genre: Genre): Optional<GI> = Optional.ofNullable(projection[genre])
 
     /**
      * Returns the first index whose genre name contains [genreName] (case-insensitive), or empty if
      * none matches. A blank [genreName] resolves to the no-genre bucket ([Genre.None]) if present,
      * or empty if no untagged items exist.
+     * @since 1.0
      */
-    fun findFirst(genreName: String): Optional<GI> {
+    public fun findFirst(genreName: String): Optional<GI> {
         if (genreName.isBlank()) return Optional.ofNullable(projection[Genre.None])
         return Optional.ofNullable(
             projection.entries.firstOrNull {
@@ -112,33 +124,50 @@ abstract class GenreIndexRegistryBase<I, GI>(private val publisherName: String =
 
     /**
      * Returns the first index matching [predicate], or empty if none matches.
+     * @since 1.0
      */
-    fun findFirst(predicate: (GI) -> Boolean): Optional<GI> =
+    public fun findFirst(predicate: (GI) -> Boolean): Optional<GI> =
         Optional.ofNullable(projection.values.firstOrNull(predicate))
 
     /**
      * Returns all current genre index values in bucket order (Genre natural order, Genre.None first).
+     * @since 1.0
      */
-    fun orderedValues(): List<GI> = projection.values.toList()
+    public fun orderedValues(): List<GI> = projection.values.toList()
 
-    /** Iterates all current index values. */
-    fun forEach(action: (GI) -> Unit) = projection.values.forEach(action)
+    /**
+     * Iterates all current index values.
+     * @since 1.0
+     */
+    public fun forEach(action: (GI) -> Unit): Unit = projection.values.forEach(action)
 
-    /** Returns the number of genre indexes. */
-    fun size(): Int = projection.size
+    /**
+     * Returns the number of genre indexes.
+     * @since 1.0
+     */
+    public fun size(): Int = projection.size
 
-    /** Returns `true` if there are no genre indexes. */
-    val isEmpty: Boolean get() = projection.isEmpty()
+    /**
+     * Returns `true` if there are no genre indexes.
+     * @since 1.0
+     */
+    public val isEmpty: Boolean get() = projection.isEmpty()
 
-    /** Returns `true` if any index satisfies [predicate]. */
-    fun contains(predicate: (GI) -> Boolean): Boolean = projection.values.any(predicate)
+    /**
+     * Returns `true` if any index satisfies [predicate].
+     * @since 1.0
+     */
+    public fun contains(predicate: (GI) -> Boolean): Boolean = projection.values.any(predicate)
 
-    /** Releases the projection subscription and the projection. Called when the owning library is closed. */
-    open fun close() {
+    /**
+     * Releases the projection subscription and the projection. Called when the owning library is closed.
+     * @since 1.0
+     */
+    public open fun close() {
         entriesChangedHandle?.close()
         projection.close()
         log.debug { "$publisherName closed" }
     }
 
-    override fun toString() = "${this::class.simpleName}(numberOfGenres=${projection.size})"
+    override fun toString(): String = "${this::class.simpleName}(numberOfGenres=${projection.size})"
 }

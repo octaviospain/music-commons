@@ -41,18 +41,20 @@ import kotlinx.coroutines.slf4j.MDCContext
 
 /**
  * Exception thrown when an unrecoverable error occurs during M3U playlist import.
+ * @since 1.0
  */
-class M3uImportException(message: String, cause: Throwable? = null) : Exception(message, cause) {
-    constructor(message: String) : this(message, null)
+public class M3uImportException(message: String, cause: Throwable? = null) : Exception(message, cause) {
+    public constructor(message: String) : this(message, null)
 }
 
 /**
  * Exception thrown when an unrecoverable error occurs during M3U playlist parsing.
  *
  * Typical causes include missing files, non-regular file paths, or unreadable content.
+ * @since 1.0
  */
-class M3uParseException(message: String, cause: Throwable? = null) : Exception(message, cause) {
-    constructor(message: String) : this(message, null)
+public class M3uParseException(message: String, cause: Throwable? = null) : Exception(message, cause) {
+    public constructor(message: String) : this(message, null)
 }
 
 /**
@@ -60,9 +62,10 @@ class M3uParseException(message: String, cause: Throwable? = null) : Exception(m
  *
  * The message includes the cycle path for debugging (e.g.,
  * `"Cycle detected: /music/A.m3u -> /music/B.m3u -> /music/A.m3u"`).
+ * @since 1.0
  */
-class M3uCycleException(message: String, cause: Throwable? = null) : Exception(message, cause) {
-    constructor(message: String) : this(message, null)
+public class M3uCycleException(message: String, cause: Throwable? = null) : Exception(message, cause) {
+    public constructor(message: String) : this(message, null)
 }
 
 /**
@@ -81,8 +84,9 @@ class M3uCycleException(message: String, cause: Throwable? = null) : Exception(m
  * @param P the concrete playlist type, mirroring [MusicLibrary]'s `P` bound
  * @param musicLibrary the target library to import into
  * @param maxDepth maximum nested playlist depth, with the root playlist at depth 0
+ * @since 1.0
  */
-class M3uImportService<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>>(
+public class M3uImportService<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>>(
     private val musicLibrary: MusicLibrary<I, P>,
     private val maxDepth: Int = DEFAULT_MAX_DEPTH,
     private val instanceName: String = ""
@@ -111,8 +115,9 @@ class M3uImportService<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>
      * @throws M3uImportException if the configured recursion depth limit is exceeded
      *         or a derived playlist name collides with an existing playlist
      * @throws M3uParseException if the root M3U file cannot be parsed
+     * @since 1.0
      */
-    fun import(rootM3u: Path): P {
+    public fun import(rootM3u: Path): P {
         val sessionId = UUID.randomUUID().toString()
         val context =
             buildMap {
@@ -134,8 +139,9 @@ class M3uImportService<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>
      * @param rootM3u path to the M3U or M3U8 file
      * @return a [CompletableFuture] completing with the imported playlist. Cancelling
      *         the future propagates cancellation to the underlying coroutine.
+     * @since 1.0
      */
-    fun importAsync(rootM3u: Path): CompletableFuture<P> = importAsync(rootM3u, Dispatchers.IO)
+    public fun importAsync(rootM3u: Path): CompletableFuture<P> = importAsync(rootM3u, Dispatchers.IO)
 
     /**
      * Asynchronously imports the M3U playlist at [rootM3u] using [dispatcher].
@@ -144,9 +150,10 @@ class M3uImportService<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>
      * @param dispatcher coroutine dispatcher used for the import work
      * @return a [CompletableFuture] completing with the imported playlist. Cancelling
      *         the future propagates cancellation to the underlying coroutine.
+     * @since 1.0
      */
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun importAsync(rootM3u: Path, dispatcher: CoroutineDispatcher): CompletableFuture<P> {
+    public fun importAsync(rootM3u: Path, dispatcher: CoroutineDispatcher): CompletableFuture<P> {
         val deferred = serviceScope.async(dispatcher + MDCContext()) { import(rootM3u) }
         val future = CompletableFuture<P>()
         deferred.invokeOnCompletion { error ->
@@ -284,8 +291,11 @@ class M3uImportService<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>
             }
     }
 
-    companion object {
-        /** Default maximum nested playlist depth. */
-        const val DEFAULT_MAX_DEPTH: Int = 32
+    public companion object {
+        /**
+         * Default maximum nested playlist depth.
+         * @since 1.0
+         */
+        public const val DEFAULT_MAX_DEPTH: Int = 32
     }
 }

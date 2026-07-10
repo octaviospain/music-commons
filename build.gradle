@@ -32,6 +32,7 @@ plugins {
     id 'org.sonarqube'
     id 'pl.allegro.tech.build.axion-release'
     id 'org.cyclonedx.bom' version '3.2.4'
+    id 'org.jetbrains.kotlinx.binary-compatibility-validator' version '0.18.1'
 }
 
 repositories {
@@ -84,6 +85,11 @@ scmVersion {
         uncommittedChanges = false
         aheadOfRemote = false
     }
+}
+
+apiValidation {
+    // Exclude non-production utility modules; they are never published and carry no consumer ABI.
+    ignoredProjects += ['music-commons-test', 'music-commons-fx-test']
 }
 
 tasks.withType(PublishToMavenLocal).configureEach {

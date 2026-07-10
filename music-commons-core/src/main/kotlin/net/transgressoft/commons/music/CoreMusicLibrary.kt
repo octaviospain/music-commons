@@ -57,23 +57,36 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * ```kotlin
  * // In-memory (volatile) library:
- * val library = MusicLibrary.builder().build()
+ * val library = CoreMusicLibrary.builder().build()
  *
  * // JSON-persisted library — consumers construct repositories directly:
- * val library = MusicLibrary.builder()
+ * val library = CoreMusicLibrary.builder()
  *     .audioRepository(JsonFileRepository(audioFile, AudioItemMapSerializer))
  *     .playlistRepository(JsonFileRepository(playlistsFile, AudioPlaylistMapSerializer))
  *     .waveformRepository(JsonFileRepository(waveformsFile, AudioWaveformMapSerializer))
  *     .build()
  * ```
+ *
+ * ## Thread safety
+ *
+ * `CoreMusicLibrary` is thread-safe. All CRUD operations delegate through lirp repositories and
+ * are safe to call from any thread. The import service accessors ([itunesImport], [m3uImport])
+ * are guarded by `synchronized(importLock)` so concurrent first-access calls are safe. [close]
+ * may be called from any thread: it is idempotent and uses `AtomicBoolean` to ensure the
+ * underlying components are closed exactly once.
+ *
+ * @since 1.0
  */
-class CoreMusicLibrary private constructor(
+public class CoreMusicLibrary private constructor(
     private val _audioLibrary: AudioLibrary,
     private val _playlistHierarchy: PlaylistHierarchy,
     private val _waveformRepository: AudioWaveformRepository<AudioWaveform, AudioItem>,
     private val _metadataIO: AudioMetadataIO,
-    /** Diagnostic label for this library instance, used in MDC logging context. */
-    val instanceName: String
+    /**
+     * Diagnostic label for this library instance, used in MDC logging context.
+     * @since 1.0
+     */
+    public val instanceName: String
 ) : MusicLibrary<AudioItem, MutableAudioPlaylist> {
 
     private val closed = AtomicBoolean(false)
@@ -85,8 +98,9 @@ class CoreMusicLibrary private constructor(
 
     /**
      * Returns the underlying waveform repository for direct access to waveform management.
+     * @since 1.0
      */
-    fun waveformRepository(): AudioWaveformRepository<AudioWaveform, AudioItem> = _waveformRepository
+    public fun waveformRepository(): AudioWaveformRepository<AudioWaveform, AudioItem> = _waveformRepository
 
     private var _itunesImport: ItunesImportService<AudioItem, MutableAudioPlaylist>? = null
 
@@ -94,8 +108,9 @@ class CoreMusicLibrary private constructor(
      * Accessor for the iTunes import service. Constructed on first access and cancelled on [close].
      *
      * @throws IllegalStateException if this library has already been closed.
+     * @since 1.0
      */
-    val itunesImport: ItunesImportService<AudioItem, MutableAudioPlaylist>
+    public val itunesImport: ItunesImportService<AudioItem, MutableAudioPlaylist>
         get() =
             synchronized(importLock) {
                 check(!closed.get()) { "This music library has been closed and can no longer be used." }
@@ -108,8 +123,9 @@ class CoreMusicLibrary private constructor(
      * Accessor for the M3U import service. Constructed on first access and cancelled on [close].
      *
      * @throws IllegalStateException if this library has already been closed.
+     * @since 1.0
      */
-    val m3uImport: M3uImportService<AudioItem, MutableAudioPlaylist>
+    public val m3uImport: M3uImportService<AudioItem, MutableAudioPlaylist>
         get() =
             synchronized(importLock) {
                 check(!closed.get()) { "This music library has been closed and can no longer be used." }
@@ -118,13 +134,15 @@ class CoreMusicLibrary private constructor(
 
     /**
      * The subscriber for player events. Wire this to an audio player to track play counts.
+     * @since 1.0
      */
-    val playerSubscriber: Flow.Subscriber<AudioItemPlayerEvent> get() = _audioLibrary.playerSubscriber
+    public val playerSubscriber: Flow.Subscriber<AudioItemPlayerEvent> get() = _audioLibrary.playerSubscriber
 
     /**
      * Publisher for artist catalog change events emitted by the audio library.
+     * @since 1.0
      */
-    val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, ArtistCatalog<AudioItem>>>
+    public val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, ArtistCatalog<AudioItem>>>
         get() = _audioLibrary.artistCatalogPublisher
 
     override fun audioItemFromFile(path: Path): AudioItem =
@@ -139,8 +157,9 @@ class CoreMusicLibrary private constructor(
 
     /**
      * Creates a new playlist with [name] pre-populated with [audioItems].
+     * @since 1.0
      */
-    fun createPlaylist(name: String, audioItems: List<AudioItem>): MutableAudioPlaylist =
+    public fun createPlaylist(name: String, audioItems: List<AudioItem>): MutableAudioPlaylist =
         _playlistHierarchy.createPlaylist(name, audioItems)
 
     @Suppress("INAPPLICABLE_JVM_NAME")
@@ -150,26 +169,29 @@ class CoreMusicLibrary private constructor(
 
     override fun createPlaylistDirectory(name: String): MutableAudioPlaylist = _playlistHierarchy.createPlaylistDirectory(name)
 
-    override fun movePlaylist(playlistNameToMove: String, destinationPlaylistName: String) =
+    override fun movePlaylist(playlistNameToMove: String, destinationPlaylistName: String): Unit =
         _playlistHierarchy.movePlaylist(playlistNameToMove, destinationPlaylistName)
 
     override fun findPlaylistByName(name: String): Optional<out MutableAudioPlaylist> = _playlistHierarchy.findByName(name)
 
     /**
      * Returns all audio items in [albumName] by [artist].
+     * @since 1.0
      */
-    fun findAlbumAudioItems(artist: Artist, albumName: String): Collection<AudioItem> =
+    public fun findAlbumAudioItems(artist: Artist, albumName: String): Collection<AudioItem> =
         _audioLibrary.findAlbumAudioItems(artist, albumName)
 
     /**
      * Returns the artist catalog for [artist], or an empty [Optional] if not found.
+     * @since 1.0
      */
-    fun getArtistCatalog(artist: Artist): Optional<out ArtistCatalog<AudioItem>> = _audioLibrary.getArtistCatalog(artist)
+    public fun getArtistCatalog(artist: Artist): Optional<out ArtistCatalog<AudioItem>> = _audioLibrary.getArtistCatalog(artist)
 
     /**
      * Retrieves or creates a waveform asynchronously for [audioItem] with the given [width] and [height].
+     * @since 1.0
      */
-    fun getOrCreateWaveformAsync(audioItem: AudioItem, width: Short, height: Short): CompletableFuture<AudioWaveform> =
+    public fun getOrCreateWaveformAsync(audioItem: AudioItem, width: Short, height: Short): CompletableFuture<AudioWaveform> =
         _waveformRepository.getOrCreateWaveformAsync(audioItem, width, height)
 
     /**
@@ -179,8 +201,9 @@ class CoreMusicLibrary private constructor(
      * the async bridge for the given subscriber. This is separate from the lambda-based
      * `subscribe { event -> ... }` overload and is not affected by the synchronous-by-default
      * classification that applies only to lambda subscriptions.
+     * @since 1.0
      */
-    fun subscribeToAudioItemEvents(subscriber: Flow.Subscriber<CrudEvent<Int, AudioItem>>) =
+    public fun subscribeToAudioItemEvents(subscriber: Flow.Subscriber<CrudEvent<Int, AudioItem>>): Unit =
         _audioLibrary.subscribe(subscriber)
 
     /**
@@ -189,8 +212,9 @@ class CoreMusicLibrary private constructor(
      * Uses the `subscribe(Flow.Subscriber)` overload — a distinct Java-Flow-based overload, separate
      * from the lambda `subscribe { }` form. The synchronous-by-default classification does not apply;
      * no rename to `subscribeAsync` is needed.
+     * @since 1.0
      */
-    fun subscribeToPlaylistEvents(subscriber: Flow.Subscriber<CrudEvent<Int, MutableAudioPlaylist>>) =
+    public fun subscribeToPlaylistEvents(subscriber: Flow.Subscriber<CrudEvent<Int, MutableAudioPlaylist>>): Unit =
         _playlistHierarchy.subscribe(subscriber)
 
     /**
@@ -217,8 +241,9 @@ class CoreMusicLibrary private constructor(
      * persistence. JSON and SQL mappings for the library's entities are supplied by the opt-in
      * `music-commons-persistence` module; add it (plus `lirp-sql` and a JDBC driver) to your build
      * only if you intend to back any component with a persistent repository.
+     * @since 1.0
      */
-    class Builder {
+    public class Builder {
 
         private var audioRepository: Repository<Int, AudioItem> = VolatileRepository("AudioLibrary")
         private var playlistRepository: Repository<Int, MutableAudioPlaylist> = VolatileRepository("PlaylistHierarchy")
@@ -240,8 +265,9 @@ class CoreMusicLibrary private constructor(
          * information (`LirpErrorContext.operation`, `entityIds`, `repository`).
          * Failure surfaces: [net.transgressoft.lirp.event.LirpOperation.FLUSH] (persistence write)
          * and [net.transgressoft.lirp.event.LirpOperation.EMIT] (event-channel drain).
+         * @since 1.0
          */
-        fun audioRepository(repository: Repository<Int, AudioItem>): Builder = apply { audioRepository = repository }
+        public fun audioRepository(repository: Repository<Int, AudioItem>): Builder = apply { audioRepository = repository }
 
         /**
          * Injects the [repository] backing the playlist hierarchy.
@@ -249,8 +275,9 @@ class CoreMusicLibrary private constructor(
          * To observe async persistence failures, wire a [net.transgressoft.lirp.event.LirpErrorHandler]
          * via the `onError` parameter when constructing the repository (same contract as
          * [audioRepository] — notify-only, identity-only context, no field values).
+         * @since 1.0
          */
-        fun playlistRepository(repository: Repository<Int, MutableAudioPlaylist>): Builder =
+        public fun playlistRepository(repository: Repository<Int, MutableAudioPlaylist>): Builder =
             apply { playlistRepository = repository }
 
         /**
@@ -259,8 +286,9 @@ class CoreMusicLibrary private constructor(
          * To observe async persistence failures, wire a [net.transgressoft.lirp.event.LirpErrorHandler]
          * via the `onError` parameter when constructing the repository (same contract as
          * [audioRepository] — notify-only, identity-only context, no field values).
+         * @since 1.0
          */
-        fun waveformRepository(repository: Repository<Int, AudioWaveform>): Builder =
+        public fun waveformRepository(repository: Repository<Int, AudioWaveform>): Builder =
             apply { waveformRepository = repository }
 
         /**
@@ -268,8 +296,9 @@ class CoreMusicLibrary private constructor(
          *
          * Defaults to the JAudioTagger-backed implementation. Production callers rarely override
          * this — the seam exists primarily for tests that route reads/writes through a fake.
+         * @since 1.0
          */
-        fun metadataIO(utils: AudioMetadataIO): Builder = apply { metadataIO = utils }
+        public fun metadataIO(utils: AudioMetadataIO): Builder = apply { metadataIO = utils }
 
         /**
          * Sets a human-readable diagnostic label for this library instance.
@@ -284,8 +313,9 @@ class CoreMusicLibrary private constructor(
          *
          * @param name the label to assign; must be non-blank
          * @return this builder, for chaining
+         * @since 1.0
          */
-        fun instanceName(name: String): Builder =
+        public fun instanceName(name: String): Builder =
             apply {
                 require(name.isNotBlank()) { "instanceName must be non-blank" }
                 instanceName = name
@@ -298,8 +328,9 @@ class CoreMusicLibrary private constructor(
          * Construction order matters: the audio library is created first so its repository is
          * registered in LirpContext before the playlist hierarchy resolves audio item references.
          * Rollback on partial failure closes everything constructed so far before rethrowing.
+         * @since 1.0
          */
-        fun build(): CoreMusicLibrary {
+        public fun build(): CoreMusicLibrary {
             val resolvedName = instanceName ?: "core-music-library-${instanceCounter.incrementAndGet()}"
 
             // 1. Audio library first — registers AudioItem in LirpContext
@@ -331,14 +362,15 @@ class CoreMusicLibrary private constructor(
         }
     }
 
-    companion object {
+    public companion object {
 
         private val instanceCounter = AtomicInteger(0)
 
         /**
          * Returns a new [Builder] to configure and construct a [CoreMusicLibrary].
+         * @since 1.0
          */
         @JvmStatic
-        fun builder(): Builder = Builder()
+        public fun builder(): Builder = Builder()
     }
 }

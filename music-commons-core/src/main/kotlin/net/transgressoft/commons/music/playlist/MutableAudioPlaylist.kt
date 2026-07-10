@@ -24,5 +24,6 @@ import net.transgressoft.commons.music.audio.AudioItem
  *
  * Provides a concrete type alias for reactive playlists to simplify type signatures
  * throughout the playlist management system.
+ * @since 1.0
  */
-interface MutableAudioPlaylist : ReactiveAudioPlaylist<AudioItem, MutableAudioPlaylist>
+public interface MutableAudioPlaylist : ReactiveAudioPlaylist<AudioItem, MutableAudioPlaylist>

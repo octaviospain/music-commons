@@ -47,8 +47,9 @@ import kotlinx.datetime.toKotlinLocalDateTime
  * `initialAudioItemIds`/`initialPlaylistIds` keys the entity's `_LirpRawConstructor` expects.
  *
  * Column order and the `fx_playlist` table name are stable.
+ * @since 1.0
  */
-object ObservablePlaylistSqlTableDef : RawConstructibleTableDef<ObservablePlaylist> {
+public object ObservablePlaylistSqlTableDef : RawConstructibleTableDef<ObservablePlaylist> {
 
     override val tableName: String = "fx_playlist"
 

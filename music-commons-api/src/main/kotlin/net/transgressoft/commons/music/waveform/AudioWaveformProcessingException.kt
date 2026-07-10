@@ -19,8 +19,9 @@ package net.transgressoft.commons.music.waveform
 
 /**
  * Exception thrown when an error occurs during waveform processing operations.
+ * @since 1.0
  */
-class AudioWaveformProcessingException : Exception {
-    constructor(message: String) : super(message)
-    constructor(message: String, cause: Throwable) : super(message, cause)
+public class AudioWaveformProcessingException : Exception {
+    public constructor(message: String) : super(message)
+    public constructor(message: String, cause: Throwable) : super(message, cause)
 }

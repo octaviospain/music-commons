@@ -230,3 +230,28 @@ To automatically fix formatting issues:
 ## Questions?
 
 If you have any questions or need help with the contribution process, please don't hesitate to open an issue asking for guidance.
+
+## API Stability and Deprecation Policy
+
+This library follows a structured lifecycle for public API changes.
+
+### Stability tiers
+
+| Tier | Marker | Meaning |
+|------|--------|---------|
+| Stable | (none) | Part of the public API contract; may not be removed without a deprecation cycle |
+| Experimental | `@MusicCommonsExperimentalApi` | May change or be removed in a future minor version; opt-in required at every call site with `@OptIn(MusicCommonsExperimentalApi::class)` |
+
+### Deprecation lifecycle
+
+1. API is marked `@Deprecated(message = "...", replaceWith = ReplaceWith("..."), level = DeprecationLevel.WARNING)`.
+2. It remains at `WARNING` level for at least one minor release cycle so consumers have time to migrate.
+3. The level is raised to `ERROR` to make any remaining call sites fail compilation.
+4. The declaration is removed in a subsequent release.
+5. Binary Compatibility Validator (`apiCheck`) catches unintended removals — any deliberate removal
+   must be accompanied by a regenerated `.api` baseline (`gradle apiDump`) committed alongside the code change.
+
+### `@since` discipline
+
+All public API is stamped with `@since 1.0` in KDoc. New additions in future releases carry their
+own `@since X.Y` tag so consumers can identify when a feature became available.

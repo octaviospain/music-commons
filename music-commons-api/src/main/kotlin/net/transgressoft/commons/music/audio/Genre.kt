@@ -30,8 +30,9 @@ package net.transgressoft.commons.music.audio
  * this sealed base. Note this differs from album ordering, which compares names case-insensitively.
  *
  * @property name display-friendly genre name (e.g. "Hip Hop", "Drum And Bass")
+ * @since 1.0
  */
-sealed class Genre(open val name: String) : Comparable<Genre> {
+public sealed class Genre(public open val name: String) : Comparable<Genre> {
 
     override fun compareTo(other: Genre): Int = name.compareTo(other.name)
 
@@ -42,8 +43,9 @@ sealed class Genre(open val name: String) : Comparable<Genre> {
      *
      * [None] is never parsed, never persisted, and never assigned to an item's `genres` set;
      * it exists solely so the genre index can surface untagged tracks rather than dropping them.
+     * @since 1.0
      */
-    data object None : Genre("")
+    public data object None : Genre("")
 
     /**
      * A genre whose name was not found in the predefined whitelist of known genres.
@@ -51,8 +53,9 @@ sealed class Genre(open val name: String) : Comparable<Genre> {
      * Preserves the original tag string verbatim rather than discarding or mapping it to a fallback,
      * ensuring round-trip fidelity for niche or user-defined genre values. The name must not be blank
      * (reserved for [None]) and must not contain commas (which would be ambiguous as a delimiter).
+     * @since 1.0
      */
-    data class Custom(override val name: String) : Genre(name) {
+    public data class Custom(override val name: String) : Genre(name) {
         init {
             // A blank name is reserved for the [None] sentinel: an empty name is compareTo-equal to None
             // and a whitespace-only name is unreachable via the blank-name query helpers (which route to

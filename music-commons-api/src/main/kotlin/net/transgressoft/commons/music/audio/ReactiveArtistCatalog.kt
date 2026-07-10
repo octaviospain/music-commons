@@ -30,47 +30,55 @@ import net.transgressoft.lirp.entity.ReactiveEntity
  * @param AC The concrete type of this artist catalog, allowing for self-referential
  *           generic types in reactive operations
  * @param I The type of audio items contained in this catalog
+ * @since 1.0
  */
-interface ReactiveArtistCatalog<AC : ReactiveArtistCatalog<AC, I>, I : ReactiveAudioItem<I>> : ReactiveEntity<Artist, AC> {
+public interface ReactiveArtistCatalog<AC : ReactiveArtistCatalog<AC, I>, I : ReactiveAudioItem<I>> : ReactiveEntity<Artist, AC> {
 
     /**
      * The artist this catalog represents.
+     * @since 1.0
      */
-    val artist: Artist
+    public val artist: Artist
 
     /**
      * The display name of the artist this catalog represents.
+     * @since 1.0
      */
-    val artistName: String get() = artist.name
+    public val artistName: String get() = artist.name
 
     /**
      * All albums in this artist's catalog, each containing its tracks.
+     * @since 1.0
      */
-    val albums: Set<ReactiveAlbum<*, I>>
+    public val albums: Set<ReactiveAlbum<*, I>>
 
     /**
      * The total number of audio items in this catalog across all albums.
+     * @since 1.0
      */
-    val size: Int
+    public val size: Int
 
     /**
      * Retrieves all audio items for the specified album.
      *
      * @param album The album details to retrieve items for
      * @return Set of audio items belonging to the album, or empty set if album not found
+     * @since 1.0
      */
-    fun albumAudioItems(album: AlbumDetails): Set<I> = albumAudioItems(album.name)
+    public fun albumAudioItems(album: AlbumDetails): Set<I> = albumAudioItems(album.name)
 
     /**
      * Retrieves all audio items for the album with the specified name.
      *
      * @param albumName The name of the album to retrieve items for
      * @return Set of audio items belonging to the album, or empty set if album not found
+     * @since 1.0
      */
-    fun albumAudioItems(albumName: String): Set<I>
+    public fun albumAudioItems(albumName: String): Set<I>
 
     /**
      * Indicates whether this catalog contains any audio items.
+     * @since 1.0
      */
-    val isEmpty: Boolean
+    public val isEmpty: Boolean
 }

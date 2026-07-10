@@ -20,8 +20,9 @@ import net.transgressoft.commons.music.audio.AudioFileType
  *   `useFileMetadata=false`, iTunes metadata overwrites existing file tags. This operation is destructive.
  * @property acceptedFileTypes Set of audio file types to import. Tracks with file extensions not in this
  *   set are skipped.
+ * @since 1.0
  */
-data class ItunesImportPolicy(
+public data class ItunesImportPolicy(
     val useFileMetadata: Boolean = true,
     val holdPlayCount: Boolean = true,
     val writeMetadata: Boolean = true,

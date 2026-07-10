@@ -26,17 +26,24 @@ import net.transgressoft.lirp.event.LirpEventSubscriberBase
  *
  * Connects audio libraries to player components, allowing libraries to react to
  * playback events such as updating play counts or triggering related actions.
+ *
+ * This is a framework wiring type. It is `open` and `public` only because `music-commons-fx` uses it
+ * across the module boundary; it is not a consumer extension point and its `open` surface is not a
+ * stable subclassing contract.
+ * @since 1.0
  */
-open class PlayedEventSubscriber: LirpEventSubscriberBase<ReactiveAudioItem<*>, AudioItemPlayerEvent.Type, AudioItemPlayerEvent>("PlayedEventSubscriber") {
+public open class PlayedEventSubscriber :
+    LirpEventSubscriberBase<ReactiveAudioItem<*>, AudioItemPlayerEvent.Type, AudioItemPlayerEvent>("PlayedEventSubscriber") {
 
     /**
      * Cancels the current subscription, stopping event delivery from the publisher.
+     * @since 1.0
      */
-    fun cancelSubscription() {
+    public fun cancelSubscription() {
         subscription?.cancel()
     }
 
-    override fun toString() =
+    override fun toString(): String =
         buildString {
             append("PlayedEventSubscriber(name=$name")
             subscription?.let {

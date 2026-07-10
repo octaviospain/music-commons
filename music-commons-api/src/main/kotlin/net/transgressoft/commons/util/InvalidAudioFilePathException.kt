@@ -27,7 +27,8 @@ package net.transgressoft.commons.util
  * `AudioItemManipulationException`. Path-validation errors are decoupled from file-IO errors so the
  * api module owns the entire entity-construction contract without depending on core. Consumers catching
  * path-validation failures should catch this type or its subclass `WindowsPathException`.
+ * @since 1.0
  */
-open class InvalidAudioFilePathException(message: String, cause: Throwable?) : Exception(message, cause) {
-    constructor(message: String) : this(message, null)
+public open class InvalidAudioFilePathException(message: String, cause: Throwable?) : Exception(message, cause) {
+    public constructor(message: String) : this(message, null)
 }

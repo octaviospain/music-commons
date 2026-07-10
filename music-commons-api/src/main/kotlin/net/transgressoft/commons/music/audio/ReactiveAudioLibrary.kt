@@ -47,8 +47,9 @@ import kotlinx.coroutines.future.future
  * @param AC The type of artist catalog exposed by this library
  * @param ALC The type of reactive album exposed by this library
  * @param GC The type of reactive genre index exposed by this library
+ * @since 1.0
  */
-interface ReactiveAudioLibrary<
+public interface ReactiveAudioLibrary<
     I : ReactiveAudioItem<I>,
     AC : ReactiveArtistCatalog<AC, I>,
     ALC : ReactiveAlbum<ALC, I>,
@@ -57,8 +58,9 @@ interface ReactiveAudioLibrary<
 
     /**
      * Subscriber for receiving player events such as when audio items are played.
+     * @since 1.0
      */
-    val playerSubscriber: Flow.Subscriber<AudioItemPlayerEvent>
+    public val playerSubscriber: Flow.Subscriber<AudioItemPlayerEvent>
 
     /**
      * Creates an audio item via the supplied [factory] and adds it to the library.
@@ -70,16 +72,18 @@ interface ReactiveAudioLibrary<
      *
      * @param factory function that receives the allocated ID and returns a fully constructed audio item
      * @return the created and registered audio item
+     * @since 1.0
      */
-    fun createAudioItem(factory: (id: Int) -> I): I
+    public fun createAudioItem(factory: (id: Int) -> I): I
 
     /**
      * Creates an audio item from the file at the specified path.
      *
      * @param audioItemPath Path to the audio file
      * @return The created audio item with populated metadata
+     * @since 1.0
      */
-    fun createFromFile(audioItemPath: Path): I
+    public fun createFromFile(audioItemPath: Path): I
 
     /**
      * Finds all audio items for a specific album by an artist.
@@ -87,8 +91,9 @@ interface ReactiveAudioLibrary<
      * @param artist The artist to search for
      * @param albumName The name of the album
      * @return Set of audio items matching the artist and album, or empty set if not found
+     * @since 1.0
      */
-    fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I>
+    public fun findAlbumAudioItems(artist: Artist, albumName: String): Set<I>
 
     /**
      * Publisher for artist catalog events, enabling consumers to subscribe to changes
@@ -100,32 +105,36 @@ interface ReactiveAudioLibrary<
      * - An artist catalog is deleted (all items for an artist removed from an audio library)
      *
      * The published catalogs are immutable views that update reactively in the background.
+     * @since 1.0
      */
-    val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>>
+    public val artistCatalogPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Artist, AC>>
 
     /**
      * Retrieves the artist catalog for the specified artist.
      *
      * @param artist The artist to get the catalog for
      * @return Optional containing the artist catalog if found, or empty if artist not in library
+     * @since 1.0
      */
-    fun getArtistCatalog(artist: Artist): Optional<out AC>
+    public fun getArtistCatalog(artist: Artist): Optional<out AC>
 
     /**
      * Retrieves the first artist catalog matching the specified name.
      *
      * @param artistName The artist name to search for (case-insensitive substring match)
      * @return Optional containing the first matching artist catalog, or empty if not found
+     * @since 1.0
      */
-    fun getArtistCatalog(artistName: String): Optional<out AC>
+    public fun getArtistCatalog(artistName: String): Optional<out AC>
 
     /**
      * Checks whether the library contains any audio item involving the specified artist.
      *
      * @param artistName The artist names to check for (case-insensitive)
      * @return true if at least one audio item involves the artist, false otherwise
+     * @since 1.0
      */
-    fun containsAudioItemWithArtist(artistName: String): Boolean
+    public fun containsAudioItemWithArtist(artistName: String): Boolean
 
     /**
      * Retrieves a random selection of audio items from the specified artist.
@@ -133,8 +142,9 @@ interface ReactiveAudioLibrary<
      * @param artist The artist to get items from
      * @param size Maximum number of random items to return (default: 100)
      * @return List of randomly selected audio items from the artist
+     * @since 1.0
      */
-    fun getRandomAudioItemsFromArtist(artist: Artist, size: Short = 100): List<I>
+    public fun getRandomAudioItemsFromArtist(artist: Artist, size: Short = 100): List<I>
 
     /**
      * Publisher for album events, enabling consumers to subscribe to changes
@@ -144,16 +154,18 @@ interface ReactiveAudioLibrary<
      * - A new album is created (a new album is encountered in the library)
      * - An album is updated (audio items added or removed for an album)
      * - An album is deleted (all items for an album removed from the library)
+     * @since 1.0
      */
-    val albumPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<AlbumDetails, ALC>>
+    public val albumPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<AlbumDetails, ALC>>
 
     /**
      * Retrieves the album for the specified album details.
      *
      * @param album The album details to look up
      * @return Optional containing the album if found, or empty if the album is not in the library
+     * @since 1.0
      */
-    fun getAlbum(album: AlbumDetails): Optional<out ALC>
+    public fun getAlbum(album: AlbumDetails): Optional<out ALC>
 
     /**
      * Retrieves the first album whose name contains the specified value (case-insensitive).
@@ -165,16 +177,18 @@ interface ReactiveAudioLibrary<
      *
      * @param albumName The album name to search for (case-insensitive substring match)
      * @return Optional containing the first matching album, or empty if not found or the name is blank
+     * @since 1.0
      */
-    fun getAlbum(albumName: String): Optional<out ALC>
+    public fun getAlbum(albumName: String): Optional<out ALC>
 
     /**
      * Checks whether the library contains any audio item with the specified album name.
      *
      * @param albumName The album name to check for (case-insensitive)
      * @return true if at least one audio item has a matching album, false otherwise
+     * @since 1.0
      */
-    fun containsAudioItemWithAlbum(albumName: String): Boolean
+    public fun containsAudioItemWithAlbum(albumName: String): Boolean
 
     /**
      * Retrieves a random selection of audio items from the specified album.
@@ -182,8 +196,9 @@ interface ReactiveAudioLibrary<
      * @param album The album details to get items from
      * @param size Maximum number of random items to return (default: 100)
      * @return List of randomly selected audio items from the album
+     * @since 1.0
      */
-    fun getRandomAudioItemsFromAlbum(album: AlbumDetails, size: Short = 100): List<I>
+    public fun getRandomAudioItemsFromAlbum(album: AlbumDetails, size: Short = 100): List<I>
 
     /**
      * Publisher for genre index events, enabling consumers to subscribe to changes
@@ -193,32 +208,36 @@ interface ReactiveAudioLibrary<
      * - A new genre index is created (a new genre is encountered in the library)
      * - A genre index is updated (audio items added or removed for a genre)
      * - A genre index is deleted (all items for a genre removed from the library)
+     * @since 1.0
      */
-    val genreIndexPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Genre, GC>>
+    public val genreIndexPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<Genre, GC>>
 
     /**
      * Retrieves the genre index for the specified genre.
      *
      * @param genre The genre to get the index for
      * @return Optional containing the genre index if found, or empty if the genre is not in the library
+     * @since 1.0
      */
-    fun getGenreIndex(genre: Genre): Optional<out GC>
+    public fun getGenreIndex(genre: Genre): Optional<out GC>
 
     /**
      * Retrieves the first genre index matching the specified name.
      *
      * @param genreName The genre name to search for (case-insensitive substring match)
      * @return Optional containing the first matching genre index, or empty if not found
+     * @since 1.0
      */
-    fun getGenreIndex(genreName: String): Optional<out GC>
+    public fun getGenreIndex(genreName: String): Optional<out GC>
 
     /**
      * Checks whether the library contains any audio item with the specified genre name.
      *
      * @param genreName The genre name to check for (case-insensitive)
      * @return true if at least one audio item has a matching genre, false otherwise
+     * @since 1.0
      */
-    fun containsAudioItemWithGenre(genreName: String): Boolean
+    public fun containsAudioItemWithGenre(genreName: String): Boolean
 
     /**
      * Retrieves a random selection of audio items from the specified genre.
@@ -226,8 +245,9 @@ interface ReactiveAudioLibrary<
      * @param genre The genre to get items from
      * @param size Maximum number of random items to return (default: 100)
      * @return List of randomly selected audio items from the genre
+     * @since 1.0
      */
-    fun getRandomAudioItemsFromGenre(genre: Genre, size: Short = 100): List<I>
+    public fun getRandomAudioItemsFromGenre(genre: Genre, size: Short = 100): List<I>
 
     /**
      * Creates audio items asynchronously from a batch of file paths using the specified dispatcher.
@@ -242,8 +262,9 @@ interface ReactiveAudioLibrary<
      *   Values below 500 are coerced to 500 to prevent performance degradation.
      * @return a [CompletableFuture] completing with the list of created audio items
      * @throws IllegalArgumentException if [batchSize] is not positive
+     * @since 1.0
      */
-    fun createFromFileBatchAsync(audioItemPaths: Collection<Path>, dispatcher: CoroutineDispatcher, batchSize: Int = 500): CompletableFuture<List<I>> {
+    public fun createFromFileBatchAsync(audioItemPaths: Collection<Path>, dispatcher: CoroutineDispatcher, batchSize: Int = 500): CompletableFuture<List<I>> {
         require(batchSize > 0) { "batchSize must be positive, got $batchSize" }
         val effectiveBatchSize = batchSize.coerceAtLeast(500)
         return CoroutineScope(dispatcher).future {
@@ -267,8 +288,9 @@ interface ReactiveAudioLibrary<
      * @param batchSize number of files to process per batch (default: 500)
      * @return a [CompletableFuture] completing with the list of created audio items
      * @see createFromFileBatchAsync
+     * @since 1.0
      */
-    fun createFromFileBatchAsync(audioItemPaths: Collection<Path>, executor: Executor, batchSize: Int = 500): CompletableFuture<List<I>> =
+    public fun createFromFileBatchAsync(audioItemPaths: Collection<Path>, executor: Executor, batchSize: Int = 500): CompletableFuture<List<I>> =
         createFromFileBatchAsync(audioItemPaths, executor.asCoroutineDispatcher(), batchSize)
 
     /**
@@ -278,7 +300,8 @@ interface ReactiveAudioLibrary<
      * @param batchSize number of files to process per batch (default: 500)
      * @return a [CompletableFuture] completing with the list of created audio items
      * @see createFromFileBatchAsync
+     * @since 1.0
      */
-    fun createFromFileBatchAsync(audioItemPaths: Collection<Path>, batchSize: Int = 500): CompletableFuture<List<I>> =
+    public fun createFromFileBatchAsync(audioItemPaths: Collection<Path>, batchSize: Int = 500): CompletableFuture<List<I>> =
         createFromFileBatchAsync(audioItemPaths, Dispatchers.IO, batchSize)
 }

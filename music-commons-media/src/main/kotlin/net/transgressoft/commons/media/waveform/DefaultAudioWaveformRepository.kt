@@ -106,8 +106,9 @@ internal class DefaultAudioWaveformRepository<I: ReactiveAudioItem<I>>(
  * receives CRUD events that this repository uses to maintain waveform-to-audio-item
  * consistency. The subscriber's lifecycle is managed by the caller — provide an [onClose]
  * callback to cancel the subscription when the repository is closed.
+ * @since 1.0
  */
-fun <I : ReactiveAudioItem<I>> audioWaveformRepository(
+public fun <I : ReactiveAudioItem<I>> audioWaveformRepository(
     repository: Repository<Int, AudioWaveform> = VolatileRepository("AudioWaveformRepository"),
     subscriber: LirpEventSubscriberBase<I, CrudEvent.Type, CrudEvent<Int, I>>,
     onClose: () -> Unit = {}

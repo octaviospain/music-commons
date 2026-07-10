@@ -23,27 +23,29 @@ package net.transgressoft.commons.util
  * Carries the [offendingName] and a specific [violation] describing the Windows rule
  * that was broken, enabling precise diagnostic messages. Only thrown when the JVM is
  * running on a Windows host; pass-through on Linux/macOS.
+ * @since 1.0
  */
-class WindowsPathException(val offendingName: String, val violation: WindowsViolation)
-: InvalidAudioFilePathException("Windows filename violation for '$offendingName': $violation")
+public class WindowsPathException(public val offendingName: String, public val violation: WindowsViolation) :
+    InvalidAudioFilePathException("Windows filename violation for '$offendingName': $violation")
 
 /**
  * Categorizes Windows filename constraint violations.
+ * @since 1.0
  */
-sealed class WindowsViolation {
-    data class ForbiddenChar(val char: Char) : WindowsViolation() {
-        override fun toString() = "forbidden character '$char'"
+public sealed class WindowsViolation {
+    public data class ForbiddenChar(public val char: Char) : WindowsViolation() {
+        override fun toString(): String = "forbidden character '$char'"
     }
 
-    data class ReservedName(val name: String) : WindowsViolation() {
-        override fun toString() = "reserved name '$name'"
+    public data class ReservedName(public val name: String) : WindowsViolation() {
+        override fun toString(): String = "reserved name '$name'"
     }
 
-    data object TrailingDotOrSpace : WindowsViolation() {
-        override fun toString() = "trailing dot or space"
+    public data object TrailingDotOrSpace : WindowsViolation() {
+        override fun toString(): String = "trailing dot or space"
     }
 
-    data object ExceedsMaxPath : WindowsViolation() {
-        override fun toString() = "exceeds Windows MAX_PATH (260 characters)"
+    public data object ExceedsMaxPath : WindowsViolation() {
+        override fun toString(): String = "exceeds Windows MAX_PATH (260 characters)"
     }
 }

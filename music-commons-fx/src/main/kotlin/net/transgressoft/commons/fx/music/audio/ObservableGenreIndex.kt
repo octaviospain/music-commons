@@ -35,35 +35,40 @@ import javafx.beans.property.ReadOnlyObjectProperty
  * UI binding.
  *
  * @see ReactiveGenreIndex
+ * @since 1.0
  */
-interface ObservableGenreIndex :
+public interface ObservableGenreIndex :
     ReactiveGenreIndex<ObservableGenreIndex, ObservableAudioItem>, Comparable<ObservableGenreIndex> {
 
     /**
      * Observable list of all audio items in this genre index, in artist-then-album-then-track order.
      *
      * @return A read-only list property containing the index's audio items
+     * @since 1.0
      */
-    val tracksProperty: ReadOnlyListProperty<ObservableAudioItem>
+    public val tracksProperty: ReadOnlyListProperty<ObservableAudioItem>
 
     /**
      * Observable count of audio items in this index.
      *
      * @return A read-only integer property with the total item count
+     * @since 1.0
      */
-    val sizeProperty: ReadOnlyIntegerProperty
+    public val sizeProperty: ReadOnlyIntegerProperty
 
     /**
      * Observable boolean indicating whether this index is empty.
      *
      * @return A read-only boolean property that is true when the index has no audio items
+     * @since 1.0
      */
-    val emptyProperty: ReadOnlyBooleanProperty
+    public val emptyProperty: ReadOnlyBooleanProperty
 
     /**
      * Observable genre associated with this index.
      *
      * @return A read-only object property containing the genre
+     * @since 1.0
      */
-    val genreProperty: ReadOnlyObjectProperty<Genre>
+    public val genreProperty: ReadOnlyObjectProperty<Genre>
 }

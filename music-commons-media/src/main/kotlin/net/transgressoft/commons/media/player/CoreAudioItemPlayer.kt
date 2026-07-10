@@ -51,8 +51,9 @@ import javax.sound.sampled.SourceDataLine
  *
  * @see AudioItemPlayer
  * @see SourceDataLine
+ * @since 1.0
  */
-open class CoreAudioItemPlayer private constructor(
+public class CoreAudioItemPlayer private constructor(
     internal val publisher: LirpEventPublisher<AudioItemPlayerEvent.Type, AudioItemPlayerEvent>,
     internal val pcmStreamFactory: (Path) -> AudioInputStream,
     internal val lineFactory: (AudioFormat) -> SourceDataLine,
@@ -61,7 +62,7 @@ open class CoreAudioItemPlayer private constructor(
 ) : LirpEventPublisher<AudioItemPlayerEvent.Type, AudioItemPlayerEvent> by publisher, AudioItemPlayer {
 
     @JvmOverloads
-    constructor(
+    public constructor(
         publisher: LirpEventPublisher<AudioItemPlayerEvent.Type, AudioItemPlayerEvent> = FlowEventPublisher("CoreAudioItemPlayer")
     ) : this(
         publisher = publisher,

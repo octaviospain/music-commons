@@ -18,8 +18,9 @@ import java.time.ZoneOffset
  * Uses [PropertyListParser] from the dd-plist library for XML plist parsing.
  * Smart playlists (those with a `Smart Info` key) and tracks without a `file://` location
  * are silently skipped during parsing.
+ * @since 1.0
  */
-object ItunesLibraryParser {
+public object ItunesLibraryParser {
 
     private val logger = KotlinLogging.logger {}
 
@@ -29,8 +30,9 @@ object ItunesLibraryParser {
      * @param xmlPath path to the `library.xml` iTunes export file
      * @return an [ItunesLibrary] containing all valid tracks and non-smart playlists
      * @throws InvalidAudioFilePathException if the file does not exist, is not a regular file, or is not readable
+     * @since 1.0
      */
-    fun parse(xmlPath: Path): ItunesLibrary {
+    public fun parse(xmlPath: Path): ItunesLibrary {
         WindowsPathValidator.validatePath(xmlPath)
         if (!Files.exists(xmlPath)) {
             throw InvalidAudioFilePathException("iTunes library file '${xmlPath.toAbsolutePath()}' does not exist")

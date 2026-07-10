@@ -25,8 +25,9 @@ import java.util.Optional
  * Provides a clean, non-generic entry point for consumers that work with the core domain types.
  * Extends [ReactiveAudioLibrary] with concrete type parameters, removing the need to specify
  * generics at call sites.
+ * @since 1.0
  */
-interface AudioLibrary :
+public interface AudioLibrary :
     ReactiveAudioLibrary<AudioItem, ArtistCatalog<AudioItem>, Album<AudioItem>, GenreIndex<AudioItem>>
 
 /**
@@ -37,5 +38,6 @@ interface AudioLibrary :
  *
  * @param library The library to look up the album in
  * @return An [Optional] containing the album if it is present in the library, or empty if not found
+ * @since 1.0
  */
-fun AudioItem.albumIn(library: AudioLibrary): Optional<out ReactiveAlbum<*, AudioItem>> = library.getAlbum(this.album)
+public fun AudioItem.albumIn(library: AudioLibrary): Optional<out ReactiveAlbum<*, AudioItem>> = library.getAlbum(this.album)

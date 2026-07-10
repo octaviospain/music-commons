@@ -67,7 +67,7 @@ import kotlinx.serialization.modules.SerializersModule
  * libraries stay readable: artist/label as `{name, countryCode}`, album as a nested object, genres
  * as their display-name strings, and paths as `file://` URIs.
  */
-object PathContextualSerializer : KSerializer<Path> {
+internal object PathContextualSerializer : KSerializer<Path> {
 
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("Path", PrimitiveKind.STRING)
 
@@ -76,7 +76,7 @@ object PathContextualSerializer : KSerializer<Path> {
     override fun deserialize(decoder: Decoder): Path = decoder.decodeString().toPathFromJsonUri()
 }
 
-object DurationContextualSerializer : KSerializer<Duration> {
+internal object DurationContextualSerializer : KSerializer<Duration> {
 
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("Duration", PrimitiveKind.LONG)
 
@@ -90,7 +90,7 @@ object DurationContextualSerializer : KSerializer<Duration> {
  *
  * Sub-second precision is intentionally dropped: timestamps round-trip truncated to whole seconds.
  */
-object LocalDateTimeContextualSerializer : KSerializer<LocalDateTime> {
+internal object LocalDateTimeContextualSerializer : KSerializer<LocalDateTime> {
 
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("LocalDateTime", PrimitiveKind.LONG)
 
@@ -99,7 +99,7 @@ object LocalDateTimeContextualSerializer : KSerializer<LocalDateTime> {
     override fun deserialize(decoder: Decoder): LocalDateTime = LocalDateTime.ofEpochSecond(decoder.decodeLong(), 0, ZoneOffset.UTC)
 }
 
-object CountryCodeContextualSerializer : KSerializer<CountryCode> {
+internal object CountryCodeContextualSerializer : KSerializer<CountryCode> {
 
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("CountryCode", PrimitiveKind.STRING)
 
@@ -118,7 +118,7 @@ object CountryCodeContextualSerializer : KSerializer<CountryCode> {
  * [Genre.Custom] — identical to [GenreConverter]'s SQL behavior, keeping the two persistence paths
  * consistent with metadata parsing.
  */
-object GenreContextualSerializer : KSerializer<Genre> {
+internal object GenreContextualSerializer : KSerializer<Genre> {
 
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("Genre", PrimitiveKind.STRING)
 
@@ -130,7 +130,7 @@ object GenreContextualSerializer : KSerializer<Genre> {
     }
 }
 
-object ArtistContextualSerializer : KSerializer<Artist> {
+internal object ArtistContextualSerializer : KSerializer<Artist> {
 
     override val descriptor: SerialDescriptor =
         buildClassSerialDescriptor("Artist") {
@@ -149,7 +149,7 @@ object ArtistContextualSerializer : KSerializer<Artist> {
     }
 }
 
-object LabelContextualSerializer : KSerializer<Label> {
+internal object LabelContextualSerializer : KSerializer<Label> {
 
     override val descriptor: SerialDescriptor =
         buildClassSerialDescriptor("Label") {
@@ -177,7 +177,7 @@ object LabelContextualSerializer : KSerializer<Label> {
     }
 }
 
-object AlbumContextualSerializer : KSerializer<AlbumDetails> {
+internal object AlbumContextualSerializer : KSerializer<AlbumDetails> {
 
     override val descriptor: SerialDescriptor =
         buildClassSerialDescriptor("AlbumDetails") {
@@ -223,7 +223,7 @@ object AlbumContextualSerializer : KSerializer<AlbumDetails> {
     }
 }
 
-object AudioItemMetadataContextualSerializer : KSerializer<AudioItemMetadata> {
+internal object AudioItemMetadataContextualSerializer : KSerializer<AudioItemMetadata> {
 
     override val descriptor: SerialDescriptor =
         buildClassSerialDescriptor("AudioItemMetadata") {
@@ -296,9 +296,10 @@ object AudioItemMetadataContextualSerializer : KSerializer<AudioItemMetadata> {
  * Contextual [SerializersModule] for the audio-item value types, passed to
  * `lirpSerializer(sample, module)` so the reflective entity serializer resolves serializers for
  * the non-`@Serializable` nested types. Reused by the FX-tier persistence module.
+ * @since 1.0
  */
 @get:JvmName("audioItemSerializersModule")
-val audioItemSerializersModule: SerializersModule =
+public val audioItemSerializersModule: SerializersModule =
     SerializersModule {
         contextual(Path::class, PathContextualSerializer)
         contextual(Duration::class, DurationContextualSerializer)

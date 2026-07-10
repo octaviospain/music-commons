@@ -1,0 +1,298 @@
+public final class net/transgressoft/commons/fx/music/FXMusicLibrary : net/transgressoft/commons/music/MusicLibrary {
+	public static final field Companion Lnet/transgressoft/commons/fx/music/FXMusicLibrary$Companion;
+	public synthetic fun <init> (Lnet/transgressoft/commons/fx/music/audio/FXAudioLibrary;Lnet/transgressoft/commons/fx/music/playlist/FXPlaylistHierarchy;Lnet/transgressoft/commons/music/waveform/AudioWaveformRepository;Lnet/transgressoft/commons/music/audio/AudioMetadataIO;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun audioItemFromFile (Ljava/nio/file/Path;)Lnet/transgressoft/commons/fx/music/audio/ObservableAudioItem;
+	public synthetic fun audioItemFromFile (Ljava/nio/file/Path;)Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;
+	public fun audioLibrary ()Lnet/transgressoft/commons/fx/music/audio/ObservableAudioLibrary;
+	public synthetic fun audioLibrary ()Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;
+	public static final fun builder ()Lnet/transgressoft/commons/fx/music/FXMusicLibrary$Builder;
+	public fun close ()V
+	public fun createPlaylist (Ljava/lang/String;)Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;
+	public synthetic fun createPlaylist (Ljava/lang/String;)Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;
+	public final fun createPlaylist (Ljava/lang/String;Ljava/util/List;)Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;
+	public fun createPlaylistDirectory (Ljava/lang/String;)Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;
+	public synthetic fun createPlaylistDirectory (Ljava/lang/String;)Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;
+	public fun createPlaylistWithIds (Ljava/lang/String;Ljava/util/List;)Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;
+	public synthetic fun createPlaylistWithIds (Ljava/lang/String;Ljava/util/List;)Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;
+	public fun findPlaylistByName (Ljava/lang/String;)Ljava/util/Optional;
+	public final fun getAlbumsProperty ()Ljavafx/beans/property/ReadOnlyListProperty;
+	public final fun getArtistCatalogPublisher ()Lnet/transgressoft/lirp/event/LirpEventPublisher;
+	public final fun getArtistCatalogsProperty ()Ljavafx/beans/property/ReadOnlySetProperty;
+	public final fun getAudioItemsProperty ()Ljavafx/beans/property/ReadOnlyListProperty;
+	public final fun getEmptyLibraryProperty ()Ljavafx/beans/property/ReadOnlyBooleanProperty;
+	public final fun getGenreIndexesProperty ()Ljavafx/beans/property/ReadOnlyListProperty;
+	public final fun getInstanceName ()Ljava/lang/String;
+	public final fun getItunesImport ()Lnet/transgressoft/commons/music/itunes/ItunesImportService;
+	public final fun getM3uImport ()Lnet/transgressoft/commons/music/m3u/M3uImportService;
+	public final fun getPlayerSubscriber ()Ljava/util/concurrent/Flow$Subscriber;
+	public final fun getPlaylistsProperty ()Ljavafx/beans/property/ReadOnlySetProperty;
+	public fun movePlaylist (Ljava/lang/String;Ljava/lang/String;)V
+	public fun playlistHierarchy ()Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylistHierarchy;
+	public synthetic fun playlistHierarchy ()Lnet/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy;
+	public final fun waveformRepository ()Lnet/transgressoft/commons/music/waveform/AudioWaveformRepository;
+}
+
+public final class net/transgressoft/commons/fx/music/FXMusicLibrary$Builder {
+	public fun <init> ()V
+	public final fun audioRepository (Lnet/transgressoft/lirp/persistence/Repository;)Lnet/transgressoft/commons/fx/music/FXMusicLibrary$Builder;
+	public final fun build ()Lnet/transgressoft/commons/fx/music/FXMusicLibrary;
+	public final fun instanceName (Ljava/lang/String;)Lnet/transgressoft/commons/fx/music/FXMusicLibrary$Builder;
+	public final fun metadataIO (Lnet/transgressoft/commons/music/audio/AudioMetadataIO;)Lnet/transgressoft/commons/fx/music/FXMusicLibrary$Builder;
+	public final fun playlistRepository (Lnet/transgressoft/lirp/persistence/Repository;)Lnet/transgressoft/commons/fx/music/FXMusicLibrary$Builder;
+	public final fun waveformRepository (Lnet/transgressoft/lirp/persistence/Repository;)Lnet/transgressoft/commons/fx/music/FXMusicLibrary$Builder;
+}
+
+public final class net/transgressoft/commons/fx/music/FXMusicLibrary$Companion {
+	public final fun builder ()Lnet/transgressoft/commons/fx/music/FXMusicLibrary$Builder;
+}
+
+public final class net/transgressoft/commons/fx/music/audio/FXAudioItem : net/transgressoft/lirp/entity/ReactiveEntityBase, java/lang/Comparable, net/transgressoft/commons/fx/music/audio/ObservableAudioItem {
+	public fun <init> (Ljava/nio/file/Path;ILnet/transgressoft/commons/music/audio/AudioItemMetadata;)V
+	public fun <init> (Ljava/nio/file/Path;ILnet/transgressoft/commons/music/audio/AudioItemMetadata;Ljava/time/LocalDateTime;)V
+	public fun <init> (Ljava/nio/file/Path;ILnet/transgressoft/commons/music/audio/AudioItemMetadata;Ljava/time/LocalDateTime;Ljava/time/LocalDateTime;)V
+	public fun <init> (Ljava/nio/file/Path;Lnet/transgressoft/commons/music/audio/AudioItemMetadata;)V
+	public fun asJsonKeyValue ()Ljava/lang/String;
+	public fun asJsonValue ()Ljava/lang/String;
+	public synthetic fun clone ()Ljava/lang/Object;
+	public fun clone ()Lnet/transgressoft/commons/fx/music/audio/FXAudioItem;
+	public synthetic fun clone ()Lnet/transgressoft/lirp/entity/IdentifiableEntity;
+	public synthetic fun clone ()Lnet/transgressoft/lirp/entity/ReactiveEntity;
+	public synthetic fun compareTo (Ljava/lang/Object;)I
+	public fun compareTo (Lnet/transgressoft/commons/fx/music/audio/ObservableAudioItem;)I
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getAlbum ()Lnet/transgressoft/commons/music/audio/AlbumDetails;
+	public fun getAlbumProperty ()Ljavafx/beans/property/ObjectProperty;
+	public fun getArtist ()Lnet/transgressoft/commons/music/audio/Artist;
+	public fun getArtistProperty ()Ljavafx/beans/property/ObjectProperty;
+	public fun getArtistsInvolved ()Ljava/util/Set;
+	public fun getArtistsInvolvedProperty ()Ljavafx/beans/property/ReadOnlySetProperty;
+	public fun getBitRate ()I
+	public fun getBpm ()Ljava/lang/Float;
+	public fun getBpmProperty ()Ljavafx/beans/property/FloatProperty;
+	public fun getComments ()Ljava/lang/String;
+	public fun getCommentsProperty ()Ljavafx/beans/property/StringProperty;
+	public fun getCoverImageBytes ()[B
+	public fun getCoverImageProperty ()Ljavafx/beans/property/ReadOnlyObjectProperty;
+	public fun getDateOfCreation ()Ljava/time/LocalDateTime;
+	public fun getDateOfCreationProperty ()Ljavafx/beans/property/ReadOnlyObjectProperty;
+	public fun getDiscNumber ()Ljava/lang/Short;
+	public fun getDiscNumberProperty ()Ljavafx/beans/property/IntegerProperty;
+	public fun getDuration ()Ljava/time/Duration;
+	public fun getEncoder ()Ljava/lang/String;
+	public fun getEncoding ()Ljava/lang/String;
+	public fun getExtension ()Ljava/lang/String;
+	public fun getFileName ()Ljava/lang/String;
+	public fun getGenres ()Ljava/util/Set;
+	public fun getGenresProperty ()Ljavafx/beans/property/ObjectProperty;
+	public synthetic fun getId ()Ljava/lang/Comparable;
+	public fun getId ()Ljava/lang/Integer;
+	public fun getLastDateModified ()Ljava/time/LocalDateTime;
+	public fun getLastDateModifiedProperty ()Ljavafx/beans/property/ReadOnlyObjectProperty;
+	public fun getLength ()J
+	public final fun getMetadata ()Lnet/transgressoft/commons/music/audio/AudioItemMetadata;
+	public fun getPath ()Ljava/nio/file/Path;
+	public fun getPlayCount ()S
+	public fun getPlayCountProperty ()Ljavafx/beans/property/ReadOnlyIntegerProperty;
+	public fun getTitle ()Ljava/lang/String;
+	public fun getTitleProperty ()Ljavafx/beans/property/StringProperty;
+	public fun getTrackNumber ()Ljava/lang/Short;
+	public fun getTrackNumberProperty ()Ljavafx/beans/property/IntegerProperty;
+	public fun getUniqueId ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun mutate (Lkotlin/jvm/functions/Function1;)V
+	public fun setAlbum (Lnet/transgressoft/commons/music/audio/AlbumDetails;)V
+	public fun setArtist (Lnet/transgressoft/commons/music/audio/Artist;)V
+	public fun setBpm (Ljava/lang/Float;)V
+	public fun setComments (Ljava/lang/String;)V
+	public fun setCoverImageBytes ([B)V
+	public fun setDiscNumber (Ljava/lang/Short;)V
+	public fun setGenres (Ljava/util/Set;)V
+	public fun setLastDateModified (Ljava/time/LocalDateTime;)V
+	public final fun setMetadata (Lnet/transgressoft/commons/music/audio/AudioItemMetadata;)V
+	public fun setPlayCount (S)V
+	public fun setTitle (Ljava/lang/String;)V
+	public fun setTrackNumber (Ljava/lang/Short;)V
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class net/transgressoft/commons/fx/music/audio/ObservableAlbum : java/lang/Comparable, net/transgressoft/commons/music/audio/ReactiveAlbum {
+	public abstract fun getAlbumProperty ()Ljavafx/beans/property/ReadOnlyObjectProperty;
+	public abstract fun getCoverProperty ()Ljavafx/beans/property/ReadOnlyObjectProperty;
+	public abstract fun getEmptyProperty ()Ljavafx/beans/property/ReadOnlyBooleanProperty;
+	public abstract fun getSizeProperty ()Ljavafx/beans/property/ReadOnlyIntegerProperty;
+	public abstract fun getTracksProperty ()Ljavafx/beans/property/ReadOnlyListProperty;
+}
+
+public final class net/transgressoft/commons/fx/music/audio/ObservableAlbum$DefaultImpls {
+	public static fun getAlbumArtist (Lnet/transgressoft/commons/fx/music/audio/ObservableAlbum;)Lnet/transgressoft/commons/music/audio/Artist;
+	public static fun getAlbumName (Lnet/transgressoft/commons/fx/music/audio/ObservableAlbum;)Ljava/lang/String;
+	public static fun getCoverImageBytes (Lnet/transgressoft/commons/fx/music/audio/ObservableAlbum;)[B
+	public static fun getLabel (Lnet/transgressoft/commons/fx/music/audio/ObservableAlbum;)Lnet/transgressoft/commons/music/audio/Label;
+	public static fun getYear (Lnet/transgressoft/commons/fx/music/audio/ObservableAlbum;)Ljava/lang/Short;
+	public static fun isCompilation (Lnet/transgressoft/commons/fx/music/audio/ObservableAlbum;)Z
+	public static fun subscribeAsync (Lnet/transgressoft/commons/fx/music/audio/ObservableAlbum;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public abstract interface class net/transgressoft/commons/fx/music/audio/ObservableArtistCatalog : java/lang/Comparable, net/transgressoft/commons/music/audio/ReactiveArtistCatalog {
+	public abstract fun albumAudioItemsProperty (Ljava/lang/String;)Ljavafx/beans/property/ReadOnlyListProperty;
+	public abstract fun getAlbumCountProperty ()Ljavafx/beans/property/ReadOnlyIntegerProperty;
+	public abstract fun getAlbumsProperty ()Ljavafx/beans/property/ReadOnlySetProperty;
+	public abstract fun getArtistProperty ()Ljavafx/beans/property/ReadOnlyObjectProperty;
+	public abstract fun getEmptyProperty ()Ljavafx/beans/property/ReadOnlyBooleanProperty;
+	public abstract fun getSizeProperty ()Ljavafx/beans/property/ReadOnlyIntegerProperty;
+}
+
+public final class net/transgressoft/commons/fx/music/audio/ObservableArtistCatalog$DefaultImpls {
+	public static fun albumAudioItems (Lnet/transgressoft/commons/fx/music/audio/ObservableArtistCatalog;Lnet/transgressoft/commons/music/audio/AlbumDetails;)Ljava/util/Set;
+	public static fun getArtistName (Lnet/transgressoft/commons/fx/music/audio/ObservableArtistCatalog;)Ljava/lang/String;
+	public static fun subscribeAsync (Lnet/transgressoft/commons/fx/music/audio/ObservableArtistCatalog;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public abstract interface class net/transgressoft/commons/fx/music/audio/ObservableAudioItem : net/transgressoft/commons/music/audio/ReactiveAudioItem {
+	public abstract fun getAlbumProperty ()Ljavafx/beans/property/ObjectProperty;
+	public abstract fun getArtistProperty ()Ljavafx/beans/property/ObjectProperty;
+	public abstract fun getArtistsInvolvedProperty ()Ljavafx/beans/property/ReadOnlySetProperty;
+	public abstract fun getBpmProperty ()Ljavafx/beans/property/FloatProperty;
+	public abstract fun getCommentsProperty ()Ljavafx/beans/property/StringProperty;
+	public abstract fun getCoverImageProperty ()Ljavafx/beans/property/ReadOnlyObjectProperty;
+	public abstract fun getDateOfCreationProperty ()Ljavafx/beans/property/ReadOnlyObjectProperty;
+	public abstract fun getDiscNumberProperty ()Ljavafx/beans/property/IntegerProperty;
+	public abstract fun getGenresProperty ()Ljavafx/beans/property/ObjectProperty;
+	public abstract fun getLastDateModifiedProperty ()Ljavafx/beans/property/ReadOnlyObjectProperty;
+	public abstract fun getPlayCountProperty ()Ljavafx/beans/property/ReadOnlyIntegerProperty;
+	public abstract fun getTitleProperty ()Ljavafx/beans/property/StringProperty;
+	public abstract fun getTrackNumberProperty ()Ljavafx/beans/property/IntegerProperty;
+}
+
+public final class net/transgressoft/commons/fx/music/audio/ObservableAudioItem$DefaultImpls {
+	public static fun asJsonKeyValue (Lnet/transgressoft/commons/fx/music/audio/ObservableAudioItem;)Ljava/lang/String;
+	public static fun asJsonValue (Lnet/transgressoft/commons/fx/music/audio/ObservableAudioItem;)Ljava/lang/String;
+	public static fun subscribeAsync (Lnet/transgressoft/commons/fx/music/audio/ObservableAudioItem;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public abstract interface class net/transgressoft/commons/fx/music/audio/ObservableAudioLibrary : net/transgressoft/commons/music/audio/ReactiveAudioLibrary {
+	public abstract fun getAlbumsProperty ()Ljavafx/beans/property/ReadOnlyListProperty;
+	public abstract fun getArtistCatalogsProperty ()Ljavafx/beans/property/ReadOnlySetProperty;
+	public abstract fun getAudioItemsProperty ()Ljavafx/beans/property/ReadOnlyListProperty;
+	public abstract fun getEmptyLibraryProperty ()Ljavafx/beans/property/ReadOnlyBooleanProperty;
+	public abstract fun getGenreIndexesProperty ()Ljavafx/beans/property/ReadOnlyListProperty;
+}
+
+public final class net/transgressoft/commons/fx/music/audio/ObservableAudioLibrary$DefaultImpls {
+	public static fun createFromFileBatchAsync (Lnet/transgressoft/commons/fx/music/audio/ObservableAudioLibrary;Ljava/util/Collection;I)Ljava/util/concurrent/CompletableFuture;
+	public static fun createFromFileBatchAsync (Lnet/transgressoft/commons/fx/music/audio/ObservableAudioLibrary;Ljava/util/Collection;Ljava/util/concurrent/Executor;I)Ljava/util/concurrent/CompletableFuture;
+	public static fun createFromFileBatchAsync (Lnet/transgressoft/commons/fx/music/audio/ObservableAudioLibrary;Ljava/util/Collection;Lkotlinx/coroutines/CoroutineDispatcher;I)Ljava/util/concurrent/CompletableFuture;
+	public static fun minus (Lnet/transgressoft/commons/fx/music/audio/ObservableAudioLibrary;Ljava/util/Collection;)Z
+	public static fun minus (Lnet/transgressoft/commons/fx/music/audio/ObservableAudioLibrary;Lnet/transgressoft/commons/fx/music/audio/ObservableAudioItem;)Z
+	public static fun restore (Lnet/transgressoft/commons/fx/music/audio/ObservableAudioLibrary;Lnet/transgressoft/commons/fx/music/audio/ObservableAudioItem;)Z
+	public static fun softDelete (Lnet/transgressoft/commons/fx/music/audio/ObservableAudioLibrary;Lnet/transgressoft/commons/fx/music/audio/ObservableAudioItem;)Z
+	public static fun subscribeAsync (Lnet/transgressoft/commons/fx/music/audio/ObservableAudioLibrary;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public static fun subscribeAsync (Lnet/transgressoft/commons/fx/music/audio/ObservableAudioLibrary;Lkotlin/jvm/functions/Function2;Lnet/transgressoft/lirp/event/LirpErrorHandler;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public abstract interface class net/transgressoft/commons/fx/music/audio/ObservableGenreIndex : java/lang/Comparable, net/transgressoft/commons/music/audio/ReactiveGenreIndex {
+	public abstract fun getEmptyProperty ()Ljavafx/beans/property/ReadOnlyBooleanProperty;
+	public abstract fun getGenreProperty ()Ljavafx/beans/property/ReadOnlyObjectProperty;
+	public abstract fun getSizeProperty ()Ljavafx/beans/property/ReadOnlyIntegerProperty;
+	public abstract fun getTracksProperty ()Ljavafx/beans/property/ReadOnlyListProperty;
+}
+
+public final class net/transgressoft/commons/fx/music/audio/ObservableGenreIndex$DefaultImpls {
+	public static fun subscribeAsync (Lnet/transgressoft/commons/fx/music/audio/ObservableGenreIndex;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public final class net/transgressoft/commons/fx/music/player/FXAudioItemPlayer : net/transgressoft/commons/music/player/AudioItemPlayer {
+	public fun <init> ()V
+	public fun <init> (Lnet/transgressoft/commons/media/player/CoreAudioItemPlayer;)V
+	public synthetic fun <init> (Lnet/transgressoft/commons/media/player/CoreAudioItemPlayer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun dispose ()V
+	public fun getCurrentTime ()Ljava/time/Duration;
+	public final fun getCurrentTimeProperty ()Ljavafx/beans/property/ReadOnlyObjectProperty;
+	public final fun getStatusProperty ()Ljavafx/beans/property/ReadOnlyObjectProperty;
+	public fun getTotalDuration ()Ljava/time/Duration;
+	public final fun getVolumeProperty ()Ljavafx/beans/property/DoubleProperty;
+	public fun onFinish (Ljava/lang/Runnable;)V
+	public fun pause ()V
+	public fun play (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)V
+	public fun resume ()V
+	public fun seek (Ljava/time/Duration;)V
+	public fun setVolume (D)V
+	public fun status ()Lnet/transgressoft/commons/music/player/AudioItemPlayer$Status;
+	public fun stop ()V
+	public fun subscribe (Ljava/util/concurrent/Flow$Subscriber;)V
+}
+
+public abstract interface class net/transgressoft/commons/fx/music/playlist/ObservablePlaylist : net/transgressoft/commons/music/playlist/ReactiveAudioPlaylist {
+	public abstract fun getAudioItemsProperty ()Ljavafx/beans/property/ReadOnlyListProperty;
+	public abstract fun getAudioItemsRecursiveProperty ()Ljavafx/beans/property/ReadOnlyListProperty;
+	public abstract fun getCoverImageProperty ()Ljavafx/beans/property/ReadOnlyObjectProperty;
+	public abstract fun getNameProperty ()Ljavafx/beans/property/ReadOnlyStringProperty;
+	public abstract fun getPlaylistsProperty ()Ljavafx/beans/property/ReadOnlySetProperty;
+	public abstract fun isDirectoryProperty ()Ljavafx/beans/property/ReadOnlyBooleanProperty;
+}
+
+public final class net/transgressoft/commons/fx/music/playlist/ObservablePlaylist$DefaultImpls {
+	public static fun addAudioItem (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;Lnet/transgressoft/commons/fx/music/audio/ObservableAudioItem;)Z
+	public static fun addPlaylist (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;)Z
+	public static fun asJsonKeyValue (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;)Ljava/lang/String;
+	public static fun audioItemsAllMatch (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;Ljava/util/function/Predicate;)Z
+	public static fun audioItemsAnyMatch (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;Ljava/util/function/Predicate;)Z
+	public static fun compareTo (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;Lnet/transgressoft/commons/music/playlist/AudioPlaylist;)I
+	public static fun exportToM3uFile (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;Ljava/nio/file/Path;)V
+	public static fun getAudioItemsRecursive (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;)Ljava/util/List;
+	public static fun getUniqueId (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;)Ljava/lang/String;
+	public static fun removeAudioItem (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;I)Z
+	public static fun removeAudioItem (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;Lnet/transgressoft/commons/fx/music/audio/ObservableAudioItem;)Z
+	public static fun removePlaylist (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;I)Z
+	public static fun removePlaylist (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;)Z
+	public static fun subscribeAsync (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public abstract interface class net/transgressoft/commons/fx/music/playlist/ObservablePlaylistHierarchy : net/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy {
+	public abstract fun getPlaylistsProperty ()Ljavafx/beans/property/ReadOnlySetProperty;
+}
+
+public final class net/transgressoft/commons/fx/music/playlist/ObservablePlaylistHierarchy$DefaultImpls {
+	public static fun addAudioItemToPlaylist (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylistHierarchy;Lnet/transgressoft/commons/fx/music/audio/ObservableAudioItem;Ljava/lang/String;)Z
+	public static fun addPlaylistToDirectory (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylistHierarchy;Ljava/lang/String;Ljava/lang/String;)Z
+	public static fun addPlaylistToDirectory (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylistHierarchy;Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;Ljava/lang/String;)Z
+	public static fun minus (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylistHierarchy;Ljava/util/Collection;)Z
+	public static fun minus (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylistHierarchy;Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;)Z
+	public static fun removeAudioItemFromPlaylist (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylistHierarchy;ILjava/lang/String;)Z
+	public static fun removeAudioItemFromPlaylist (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylistHierarchy;Lnet/transgressoft/commons/fx/music/audio/ObservableAudioItem;Ljava/lang/String;)Z
+	public static fun removePlaylistFromDirectory (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylistHierarchy;Ljava/lang/String;Ljava/lang/String;)Z
+	public static fun removePlaylistFromDirectory (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylistHierarchy;Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;Ljava/lang/String;)Z
+	public static fun restore (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylistHierarchy;Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;)Z
+	public static fun softDelete (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylistHierarchy;Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylist;)Z
+	public static fun subscribeAsync (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylistHierarchy;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public static fun subscribeAsync (Lnet/transgressoft/commons/fx/music/playlist/ObservablePlaylistHierarchy;Lkotlin/jvm/functions/Function2;Lnet/transgressoft/lirp/event/LirpErrorHandler;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public final class net/transgressoft/commons/fx/music/waveform/PlayableWaveformPane : javafx/scene/layout/Region {
+	public static final field SHIMMER_CYCLE_MS D
+	public fun <init> ()V
+	public final fun dispose ()V
+	public final fun getBackgroundColorProperty ()Ljavafx/beans/property/ObjectProperty;
+	public final fun getPlayedColorProperty ()Ljavafx/beans/property/SimpleObjectProperty;
+	public final fun getProgressProperty ()Ljavafx/beans/property/SimpleDoubleProperty;
+	public final fun getWaveformColorProperty ()Ljavafx/beans/property/SimpleObjectProperty;
+	public final fun loadWaveform (Lnet/transgressoft/commons/music/waveform/AudioWaveform;)V
+}
+
+public final class net/transgressoft/commons/fx/music/waveform/SeekEvent : javafx/event/Event {
+	public static final field Companion Lnet/transgressoft/commons/fx/music/waveform/SeekEvent$Companion;
+	public fun <init> (Ljava/lang/Object;Ljavafx/event/EventTarget;D)V
+	public final fun getSeekRatio ()D
+}
+
+public final class net/transgressoft/commons/fx/music/waveform/SeekEvent$Companion {
+	public final fun getSEEK ()Ljavafx/event/EventType;
+}
+
+public final class net/transgressoft/commons/fx/music/waveform/WaveformPane : javafx/scene/canvas/Canvas {
+	public fun <init> ()V
+	public final fun dispose ()V
+	public final fun drawWaveformAsync (Lnet/transgressoft/commons/music/waveform/AudioWaveform;Ljavafx/scene/paint/Color;Ljavafx/scene/paint/Color;)V
+	public static synthetic fun drawWaveformAsync$default (Lnet/transgressoft/commons/fx/music/waveform/WaveformPane;Lnet/transgressoft/commons/music/waveform/AudioWaveform;Ljavafx/scene/paint/Color;Ljavafx/scene/paint/Color;ILjava/lang/Object;)V
+}
+

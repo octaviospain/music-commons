@@ -32,8 +32,9 @@ package net.transgressoft.commons.music.audio
  *
  * This is a pure function of [tracks]: it reads no external state and has no side effects.
  * Both the core and FX registries call it from their value-transform lambda.
+ * @since 1.0
  */
-fun <I : ReactiveAudioItem<I>> deriveRepresentativeAlbumDetails(tracks: List<I>): AlbumDetails {
+public fun <I : ReactiveAudioItem<I>> deriveRepresentativeAlbumDetails(tracks: List<I>): AlbumDetails {
     val name =
         mostFrequent(
             tracks.map { it.album.name.trim().replace(Regex("\\s+"), " ") }.filter { it.isNotBlank() }

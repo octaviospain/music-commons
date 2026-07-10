@@ -1,0 +1,623 @@
+public final class net/transgressoft/commons/music/CoreMusicLibrary : net/transgressoft/commons/music/MusicLibrary {
+	public static final field Companion Lnet/transgressoft/commons/music/CoreMusicLibrary$Companion;
+	public synthetic fun <init> (Lnet/transgressoft/commons/music/audio/AudioLibrary;Lnet/transgressoft/commons/music/playlist/PlaylistHierarchy;Lnet/transgressoft/commons/music/waveform/AudioWaveformRepository;Lnet/transgressoft/commons/music/audio/AudioMetadataIO;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun audioItemFromFile (Ljava/nio/file/Path;)Lnet/transgressoft/commons/music/audio/AudioItem;
+	public synthetic fun audioItemFromFile (Ljava/nio/file/Path;)Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;
+	public fun audioLibrary ()Lnet/transgressoft/commons/music/audio/AudioLibrary;
+	public synthetic fun audioLibrary ()Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;
+	public static final fun builder ()Lnet/transgressoft/commons/music/CoreMusicLibrary$Builder;
+	public fun close ()V
+	public fun createPlaylist (Ljava/lang/String;)Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;
+	public synthetic fun createPlaylist (Ljava/lang/String;)Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;
+	public final fun createPlaylist (Ljava/lang/String;Ljava/util/List;)Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;
+	public fun createPlaylistDirectory (Ljava/lang/String;)Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;
+	public synthetic fun createPlaylistDirectory (Ljava/lang/String;)Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;
+	public fun createPlaylistWithIds (Ljava/lang/String;Ljava/util/List;)Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;
+	public synthetic fun createPlaylistWithIds (Ljava/lang/String;Ljava/util/List;)Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;
+	public final fun findAlbumAudioItems (Lnet/transgressoft/commons/music/audio/Artist;Ljava/lang/String;)Ljava/util/Collection;
+	public fun findPlaylistByName (Ljava/lang/String;)Ljava/util/Optional;
+	public final fun getArtistCatalog (Lnet/transgressoft/commons/music/audio/Artist;)Ljava/util/Optional;
+	public final fun getArtistCatalogPublisher ()Lnet/transgressoft/lirp/event/LirpEventPublisher;
+	public final fun getInstanceName ()Ljava/lang/String;
+	public final fun getItunesImport ()Lnet/transgressoft/commons/music/itunes/ItunesImportService;
+	public final fun getM3uImport ()Lnet/transgressoft/commons/music/m3u/M3uImportService;
+	public final fun getOrCreateWaveformAsync (Lnet/transgressoft/commons/music/audio/AudioItem;SS)Ljava/util/concurrent/CompletableFuture;
+	public final fun getPlayerSubscriber ()Ljava/util/concurrent/Flow$Subscriber;
+	public fun movePlaylist (Ljava/lang/String;Ljava/lang/String;)V
+	public fun playlistHierarchy ()Lnet/transgressoft/commons/music/playlist/PlaylistHierarchy;
+	public synthetic fun playlistHierarchy ()Lnet/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy;
+	public final fun subscribeToAudioItemEvents (Ljava/util/concurrent/Flow$Subscriber;)V
+	public final fun subscribeToPlaylistEvents (Ljava/util/concurrent/Flow$Subscriber;)V
+	public final fun waveformRepository ()Lnet/transgressoft/commons/music/waveform/AudioWaveformRepository;
+}
+
+public final class net/transgressoft/commons/music/CoreMusicLibrary$Builder {
+	public fun <init> ()V
+	public final fun audioRepository (Lnet/transgressoft/lirp/persistence/Repository;)Lnet/transgressoft/commons/music/CoreMusicLibrary$Builder;
+	public final fun build ()Lnet/transgressoft/commons/music/CoreMusicLibrary;
+	public final fun instanceName (Ljava/lang/String;)Lnet/transgressoft/commons/music/CoreMusicLibrary$Builder;
+	public final fun metadataIO (Lnet/transgressoft/commons/music/audio/AudioMetadataIO;)Lnet/transgressoft/commons/music/CoreMusicLibrary$Builder;
+	public final fun playlistRepository (Lnet/transgressoft/lirp/persistence/Repository;)Lnet/transgressoft/commons/music/CoreMusicLibrary$Builder;
+	public final fun waveformRepository (Lnet/transgressoft/lirp/persistence/Repository;)Lnet/transgressoft/commons/music/CoreMusicLibrary$Builder;
+}
+
+public final class net/transgressoft/commons/music/CoreMusicLibrary$Companion {
+	public final fun builder ()Lnet/transgressoft/commons/music/CoreMusicLibrary$Builder;
+}
+
+public abstract interface class net/transgressoft/commons/music/audio/Album : java/lang/Comparable, net/transgressoft/commons/music/audio/ReactiveAlbum {
+}
+
+public final class net/transgressoft/commons/music/audio/Album$DefaultImpls {
+	public static fun getAlbumArtist (Lnet/transgressoft/commons/music/audio/Album;)Lnet/transgressoft/commons/music/audio/Artist;
+	public static fun getAlbumName (Lnet/transgressoft/commons/music/audio/Album;)Ljava/lang/String;
+	public static fun getCoverImageBytes (Lnet/transgressoft/commons/music/audio/Album;)[B
+	public static fun getLabel (Lnet/transgressoft/commons/music/audio/Album;)Lnet/transgressoft/commons/music/audio/Label;
+	public static fun getYear (Lnet/transgressoft/commons/music/audio/Album;)Ljava/lang/Short;
+	public static fun isCompilation (Lnet/transgressoft/commons/music/audio/Album;)Z
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/audio/Album;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public abstract class net/transgressoft/commons/music/audio/AlbumRegistryBase {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun close ()V
+	public final fun contains (Lkotlin/jvm/functions/Function1;)Z
+	public final fun findById (Lnet/transgressoft/commons/music/audio/AlbumDetails;)Ljava/util/Optional;
+	public final fun findFirst (Ljava/lang/String;)Ljava/util/Optional;
+	public final fun findFirst (Lkotlin/jvm/functions/Function1;)Ljava/util/Optional;
+	public final fun forEach (Lkotlin/jvm/functions/Function1;)V
+	public final fun getAlbumPublisher ()Lnet/transgressoft/lirp/event/LirpEventPublisher;
+	protected abstract fun getProjection ()Lnet/transgressoft/lirp/persistence/projection/ObservableProjection;
+	public final fun isEmpty ()Z
+	protected final fun observeAlbumChanges (Lnet/transgressoft/lirp/persistence/projection/ObservableProjection;)V
+	public final fun orderedValues ()Ljava/util/List;
+	public final fun size ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/AlbumRepresentativeKt {
+	public static final fun deriveRepresentativeAlbumDetails (Ljava/util/List;)Lnet/transgressoft/commons/music/audio/AlbumDetails;
+}
+
+public abstract interface class net/transgressoft/commons/music/audio/ArtistCatalog : java/lang/Comparable, net/transgressoft/commons/music/audio/ReactiveArtistCatalog {
+}
+
+public final class net/transgressoft/commons/music/audio/ArtistCatalog$DefaultImpls {
+	public static fun albumAudioItems (Lnet/transgressoft/commons/music/audio/ArtistCatalog;Lnet/transgressoft/commons/music/audio/AlbumDetails;)Ljava/util/Set;
+	public static fun getArtistName (Lnet/transgressoft/commons/music/audio/ArtistCatalog;)Ljava/lang/String;
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/audio/ArtistCatalog;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public abstract class net/transgressoft/commons/music/audio/ArtistCatalogRegistryBase {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun close ()V
+	public final fun contains (Lkotlin/jvm/functions/Function1;)Z
+	public final fun findAlbumAudioItems (Lnet/transgressoft/commons/music/audio/Artist;Ljava/lang/String;)Ljava/util/Set;
+	public final fun findById (Lnet/transgressoft/commons/music/audio/Artist;)Ljava/util/Optional;
+	public final fun findFirst (Ljava/lang/String;)Ljava/util/Optional;
+	public final fun findFirst (Lkotlin/jvm/functions/Function1;)Ljava/util/Optional;
+	public final fun forEach (Lkotlin/jvm/functions/Function1;)V
+	public final fun getArtistCatalogPublisher ()Lnet/transgressoft/lirp/event/LirpEventPublisher;
+	protected abstract fun getProjection ()Lnet/transgressoft/lirp/persistence/projection/ObservableProjection;
+	public final fun isEmpty ()Z
+	protected final fun observeCatalogChanges (Lnet/transgressoft/lirp/persistence/projection/ObservableProjection;)V
+	public final fun size ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class net/transgressoft/commons/music/audio/AudioItem : net/transgressoft/commons/music/audio/ReactiveAudioItem {
+	public synthetic fun clone ()Ljava/lang/Object;
+	public abstract fun clone ()Lnet/transgressoft/commons/music/audio/AudioItem;
+	public synthetic fun clone ()Lnet/transgressoft/lirp/entity/IdentifiableEntity;
+	public synthetic fun clone ()Lnet/transgressoft/lirp/entity/ReactiveEntity;
+}
+
+public final class net/transgressoft/commons/music/audio/AudioItem$DefaultImpls {
+	public static fun asJsonKeyValue (Lnet/transgressoft/commons/music/audio/AudioItem;)Ljava/lang/String;
+	public static fun asJsonValue (Lnet/transgressoft/commons/music/audio/AudioItem;)Ljava/lang/String;
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/audio/AudioItem;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public final class net/transgressoft/commons/music/audio/AudioItemHelpersKt {
+	public static final fun albumBucketComparator ()Ljava/util/Comparator;
+	public static final fun audioItemArtistAlbumTrackComparator ()Ljava/util/Comparator;
+	public static final fun audioItemTrackDiscNumberComparator ()Ljava/util/Comparator;
+	public static final fun beautifyArtistName (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun firstCoverImageBytes (Ljava/lang/Iterable;)[B
+	public static final fun getArtistsNamesInvolved (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/util/Set;
+}
+
+public abstract interface class net/transgressoft/commons/music/audio/AudioLibrary : net/transgressoft/commons/music/audio/ReactiveAudioLibrary {
+}
+
+public final class net/transgressoft/commons/music/audio/AudioLibrary$DefaultImpls {
+	public static fun createFromFileBatchAsync (Lnet/transgressoft/commons/music/audio/AudioLibrary;Ljava/util/Collection;I)Ljava/util/concurrent/CompletableFuture;
+	public static fun createFromFileBatchAsync (Lnet/transgressoft/commons/music/audio/AudioLibrary;Ljava/util/Collection;Ljava/util/concurrent/Executor;I)Ljava/util/concurrent/CompletableFuture;
+	public static fun createFromFileBatchAsync (Lnet/transgressoft/commons/music/audio/AudioLibrary;Ljava/util/Collection;Lkotlinx/coroutines/CoroutineDispatcher;I)Ljava/util/concurrent/CompletableFuture;
+	public static fun minus (Lnet/transgressoft/commons/music/audio/AudioLibrary;Ljava/util/Collection;)Z
+	public static fun minus (Lnet/transgressoft/commons/music/audio/AudioLibrary;Lnet/transgressoft/commons/music/audio/AudioItem;)Z
+	public static fun restore (Lnet/transgressoft/commons/music/audio/AudioLibrary;Lnet/transgressoft/commons/music/audio/AudioItem;)Z
+	public static fun softDelete (Lnet/transgressoft/commons/music/audio/AudioLibrary;Lnet/transgressoft/commons/music/audio/AudioItem;)Z
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/audio/AudioLibrary;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/audio/AudioLibrary;Lkotlin/jvm/functions/Function2;Lnet/transgressoft/lirp/event/LirpErrorHandler;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public abstract class net/transgressoft/commons/music/audio/AudioLibraryBase : net/transgressoft/commons/music/audio/ReactiveAudioLibrary, net/transgressoft/lirp/persistence/Repository {
+	public static final field MAX_ID_ALLOCATION_ATTEMPTS I
+	public fun <init> (Lnet/transgressoft/lirp/persistence/Repository;Lnet/transgressoft/commons/music/audio/ArtistCatalogRegistryBase;Lnet/transgressoft/commons/music/audio/AlbumRegistryBase;Lnet/transgressoft/commons/music/audio/GenreIndexRegistryBase;Lnet/transgressoft/commons/music/audio/AudioMetadataIO;)V
+	public synthetic fun <init> (Lnet/transgressoft/lirp/persistence/Repository;Lnet/transgressoft/commons/music/audio/ArtistCatalogRegistryBase;Lnet/transgressoft/commons/music/audio/AlbumRegistryBase;Lnet/transgressoft/commons/music/audio/GenreIndexRegistryBase;Lnet/transgressoft/commons/music/audio/AudioMetadataIO;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun activateEvents ([Lnet/transgressoft/lirp/event/CrudEvent$Type;)V
+	public synthetic fun activateEvents ([Lnet/transgressoft/lirp/event/EventType;)V
+	public fun add (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Z
+	public synthetic fun add (Lnet/transgressoft/lirp/entity/IdentifiableEntity;)Z
+	protected final fun cancelBaseSubscriptions ()V
+	protected final fun checkOpen ()V
+	public fun clear ()V
+	public fun close ()V
+	public fun contains (I)Z
+	public synthetic fun contains (Ljava/lang/Comparable;)Z
+	public fun contains (Ljava/util/function/Predicate;)Z
+	public fun containsAudioItemWithAlbum (Ljava/lang/String;)Z
+	public fun containsAudioItemWithArtist (Ljava/lang/String;)Z
+	public fun containsAudioItemWithGenre (Ljava/lang/String;)Z
+	public fun createAudioItem (Lkotlin/jvm/functions/Function1;)Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;
+	public fun createFromFileBatchAsync (Ljava/util/Collection;I)Ljava/util/concurrent/CompletableFuture;
+	public fun createFromFileBatchAsync (Ljava/util/Collection;Ljava/util/concurrent/Executor;I)Ljava/util/concurrent/CompletableFuture;
+	public fun createFromFileBatchAsync (Ljava/util/Collection;Lkotlinx/coroutines/CoroutineDispatcher;I)Ljava/util/concurrent/CompletableFuture;
+	public fun disableEvents ([Lnet/transgressoft/lirp/event/CrudEvent$Type;)V
+	public synthetic fun disableEvents ([Lnet/transgressoft/lirp/event/EventType;)V
+	public fun emitAsync (Lnet/transgressoft/lirp/event/CrudEvent;)V
+	public synthetic fun emitAsync (Lnet/transgressoft/lirp/event/LirpEvent;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun findAlbumAudioItems (Lnet/transgressoft/commons/music/audio/Artist;Ljava/lang/String;)Ljava/util/Set;
+	public fun findById (I)Ljava/util/Optional;
+	public synthetic fun findById (Ljava/lang/Comparable;)Ljava/util/Optional;
+	public fun findByIndex (Ljava/lang/String;Ljava/lang/Object;)Ljava/util/Set;
+	public fun findByUniqueId (Ljava/lang/String;)Ljava/util/Optional;
+	public fun findFirst (Ljava/util/function/Predicate;)Ljava/util/Optional;
+	public fun findFirstByIndex (Ljava/lang/String;Ljava/lang/Object;)Ljava/util/Optional;
+	public fun getAlbum (Ljava/lang/String;)Ljava/util/Optional;
+	public fun getAlbum (Lnet/transgressoft/commons/music/audio/AlbumDetails;)Ljava/util/Optional;
+	public fun getAlbumPublisher ()Lnet/transgressoft/lirp/event/LirpEventPublisher;
+	public fun getArtistCatalog (Ljava/lang/String;)Ljava/util/Optional;
+	public fun getArtistCatalog (Lnet/transgressoft/commons/music/audio/Artist;)Ljava/util/Optional;
+	public fun getArtistCatalogPublisher ()Lnet/transgressoft/lirp/event/LirpEventPublisher;
+	public fun getChanges ()Lkotlinx/coroutines/flow/SharedFlow;
+	protected final fun getClosed ()Ljava/util/concurrent/atomic/AtomicBoolean;
+	public fun getGenreIndex (Ljava/lang/String;)Ljava/util/Optional;
+	public fun getGenreIndex (Lnet/transgressoft/commons/music/audio/Genre;)Ljava/util/Optional;
+	public fun getGenreIndexPublisher ()Lnet/transgressoft/lirp/event/LirpEventPublisher;
+	protected final fun getMetadataIO ()Lnet/transgressoft/commons/music/audio/AudioMetadataIO;
+	protected final fun getObservableAlbumRegistry ()Lnet/transgressoft/commons/music/audio/AlbumRegistryBase;
+	protected final fun getObservableArtistCatalogRegistry ()Lnet/transgressoft/commons/music/audio/ArtistCatalogRegistryBase;
+	protected final fun getObservableGenreIndexRegistry ()Lnet/transgressoft/commons/music/audio/GenreIndexRegistryBase;
+	public synthetic fun getPlayerSubscriber ()Ljava/util/concurrent/Flow$Subscriber;
+	public fun getPlayerSubscriber ()Lnet/transgressoft/commons/music/event/PlayedEventSubscriber;
+	public fun getRandomAudioItemsFromAlbum (Lnet/transgressoft/commons/music/audio/AlbumDetails;S)Ljava/util/List;
+	public fun getRandomAudioItemsFromArtist (Lnet/transgressoft/commons/music/audio/Artist;S)Ljava/util/List;
+	public fun getRandomAudioItemsFromGenre (Lnet/transgressoft/commons/music/audio/Genre;S)Ljava/util/List;
+	protected final fun getRepository ()Lnet/transgressoft/lirp/persistence/Repository;
+	public fun getSubscriberCount ()I
+	public fun hashCode ()I
+	public fun isClosed ()Z
+	public fun isEmpty ()Z
+	public fun isEventActive (Lnet/transgressoft/lirp/event/CrudEvent$Type;)Z
+	public synthetic fun isEventActive (Lnet/transgressoft/lirp/event/EventType;)Z
+	public fun iterator ()Ljava/util/Iterator;
+	public fun lazySearch (Ljava/util/function/Predicate;)Lkotlin/sequences/Sequence;
+	public fun minus (Ljava/util/Collection;)Z
+	public fun minus (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Z
+	public synthetic fun minus (Lnet/transgressoft/lirp/entity/IdentifiableEntity;)Z
+	protected final fun newId ()I
+	public fun remove (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Z
+	public synthetic fun remove (Lnet/transgressoft/lirp/entity/IdentifiableEntity;)Z
+	public fun removeAll (Ljava/util/Collection;)Z
+	public fun restore (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Z
+	public synthetic fun restore (Lnet/transgressoft/lirp/entity/IdentifiableEntity;)Z
+	public fun search (ILjava/util/function/Predicate;)Ljava/util/Set;
+	public fun search (Ljava/util/function/Predicate;)Ljava/util/Set;
+	public fun searchStream (Ljava/util/function/Predicate;)Ljava/util/stream/Stream;
+	public fun size ()I
+	public fun softDelete (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Z
+	public synthetic fun softDelete (Lnet/transgressoft/lirp/entity/IdentifiableEntity;)Z
+	public fun subscribe (Ljava/util/concurrent/Flow$Subscriber;)V
+	public fun subscribe (Lkotlin/jvm/functions/Function1;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public fun subscribe ([Lnet/transgressoft/lirp/event/CrudEvent$Type;Lkotlin/jvm/functions/Function1;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public synthetic fun subscribe ([Lnet/transgressoft/lirp/event/EventType;Lkotlin/jvm/functions/Function1;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public fun subscribeAsync (Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public fun subscribeAsync (Lkotlin/jvm/functions/Function2;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public fun subscribeAsync (Lkotlin/jvm/functions/Function2;Lnet/transgressoft/lirp/event/LirpErrorHandler;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public fun subscribeAsync ([Lnet/transgressoft/lirp/event/CrudEvent$Type;Lkotlin/jvm/functions/Function2;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public synthetic fun subscribeAsync ([Lnet/transgressoft/lirp/event/EventType;Lkotlin/jvm/functions/Function2;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	protected final fun subscribeExistingItems ()V
+}
+
+public final class net/transgressoft/commons/music/audio/AudioLibraryKt {
+	public static final fun albumIn (Lnet/transgressoft/commons/music/audio/AudioItem;Lnet/transgressoft/commons/music/audio/AudioLibrary;)Ljava/util/Optional;
+}
+
+public abstract interface class net/transgressoft/commons/music/audio/GenreIndex : java/lang/Comparable, net/transgressoft/commons/music/audio/ReactiveGenreIndex {
+}
+
+public final class net/transgressoft/commons/music/audio/GenreIndex$DefaultImpls {
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/audio/GenreIndex;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public abstract class net/transgressoft/commons/music/audio/GenreIndexRegistryBase {
+	public fun <init> ()V
+	public fun <init> (Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun close ()V
+	public final fun contains (Lkotlin/jvm/functions/Function1;)Z
+	public final fun findById (Lnet/transgressoft/commons/music/audio/Genre;)Ljava/util/Optional;
+	public final fun findFirst (Ljava/lang/String;)Ljava/util/Optional;
+	public final fun findFirst (Lkotlin/jvm/functions/Function1;)Ljava/util/Optional;
+	public final fun forEach (Lkotlin/jvm/functions/Function1;)V
+	public final fun getGenreIndexPublisher ()Lnet/transgressoft/lirp/event/LirpEventPublisher;
+	protected abstract fun getProjection ()Lnet/transgressoft/lirp/persistence/projection/ObservableProjection;
+	public final fun isEmpty ()Z
+	protected final fun observeGenreIndexChanges (Lnet/transgressoft/lirp/persistence/projection/ObservableProjection;)V
+	public final fun orderedValues ()Ljava/util/List;
+	public final fun size ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/audio/JAudioTaggerMetadataIO : net/transgressoft/commons/music/audio/AudioMetadataIO {
+	public fun <init> ()V
+	public fun loadCover (Ljava/nio/file/Path;)[B
+	public fun loadCover (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)[B
+	public fun readMetadata (Ljava/nio/file/Path;)Lnet/transgressoft/commons/music/audio/AudioItemMetadata;
+	public fun writeMetadata (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)V
+}
+
+public final class net/transgressoft/commons/music/audio/MutableAudioItemKt {
+	public static final field UNASSIGNED_ID I
+}
+
+public class net/transgressoft/commons/music/audio/event/AudioItemEventSubscriber : net/transgressoft/lirp/event/LirpEventSubscriberBase {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun cancelSubscription ()V
+	public fun toString ()Ljava/lang/String;
+}
+
+public class net/transgressoft/commons/music/event/PlayedEventSubscriber : net/transgressoft/lirp/event/LirpEventSubscriberBase {
+	public fun <init> ()V
+	public final fun cancelSubscription ()V
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/itunes/ImportProgress {
+	public fun <init> (IILjava/lang/String;)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy (IILjava/lang/String;)Lnet/transgressoft/commons/music/itunes/ImportProgress;
+	public static synthetic fun copy$default (Lnet/transgressoft/commons/music/itunes/ImportProgress;IILjava/lang/String;ILjava/lang/Object;)Lnet/transgressoft/commons/music/itunes/ImportProgress;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCurrentFile ()Ljava/lang/String;
+	public final fun getItemsProcessed ()I
+	public final fun getTotalItems ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/itunes/ItunesImportPolicy {
+	public fun <init> ()V
+	public fun <init> (ZZZLjava/util/Set;)V
+	public synthetic fun <init> (ZZZLjava/util/Set;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Z
+	public final fun component2 ()Z
+	public final fun component3 ()Z
+	public final fun component4 ()Ljava/util/Set;
+	public final fun copy (ZZZLjava/util/Set;)Lnet/transgressoft/commons/music/itunes/ItunesImportPolicy;
+	public static synthetic fun copy$default (Lnet/transgressoft/commons/music/itunes/ItunesImportPolicy;ZZZLjava/util/Set;ILjava/lang/Object;)Lnet/transgressoft/commons/music/itunes/ItunesImportPolicy;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAcceptedFileTypes ()Ljava/util/Set;
+	public final fun getHoldPlayCount ()Z
+	public final fun getUseFileMetadata ()Z
+	public final fun getWriteMetadata ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/itunes/ItunesImportService : java/lang/AutoCloseable {
+	public fun <init> (Lnet/transgressoft/commons/music/MusicLibrary;)V
+	public fun <init> (Lnet/transgressoft/commons/music/MusicLibrary;Lnet/transgressoft/commons/music/audio/AudioMetadataIO;)V
+	public fun <init> (Lnet/transgressoft/commons/music/MusicLibrary;Lnet/transgressoft/commons/music/audio/AudioMetadataIO;Ljava/nio/file/FileSystem;)V
+	public fun <init> (Lnet/transgressoft/commons/music/MusicLibrary;Lnet/transgressoft/commons/music/audio/AudioMetadataIO;Ljava/nio/file/FileSystem;Ljava/lang/String;)V
+	public synthetic fun <init> (Lnet/transgressoft/commons/music/MusicLibrary;Lnet/transgressoft/commons/music/audio/AudioMetadataIO;Ljava/nio/file/FileSystem;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun close ()V
+	public final fun importAsync (Ljava/util/List;Lnet/transgressoft/commons/music/itunes/ItunesLibrary;Lnet/transgressoft/commons/music/itunes/ItunesImportPolicy;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Ljava/util/concurrent/CompletableFuture;
+	public static synthetic fun importAsync$default (Lnet/transgressoft/commons/music/itunes/ItunesImportService;Ljava/util/List;Lnet/transgressoft/commons/music/itunes/ItunesLibrary;Lnet/transgressoft/commons/music/itunes/ItunesImportPolicy;Ljava/lang/String;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Ljava/util/concurrent/CompletableFuture;
+}
+
+public final class net/transgressoft/commons/music/itunes/ItunesLibrary {
+	public fun <init> (Ljava/util/Map;Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/Map;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/util/Map;Ljava/util/List;)Lnet/transgressoft/commons/music/itunes/ItunesLibrary;
+	public static synthetic fun copy$default (Lnet/transgressoft/commons/music/itunes/ItunesLibrary;Ljava/util/Map;Ljava/util/List;ILjava/lang/Object;)Lnet/transgressoft/commons/music/itunes/ItunesLibrary;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPlaylists ()Ljava/util/List;
+	public final fun getTracks ()Ljava/util/Map;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/itunes/ItunesLibraryParser {
+	public static final field INSTANCE Lnet/transgressoft/commons/music/itunes/ItunesLibraryParser;
+	public final fun parse (Ljava/nio/file/Path;)Lnet/transgressoft/commons/music/itunes/ItunesLibrary;
+}
+
+public final class net/transgressoft/commons/music/itunes/ItunesPlaylist {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Z
+	public final fun component5 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/util/List;)Lnet/transgressoft/commons/music/itunes/ItunesPlaylist;
+	public static synthetic fun copy$default (Lnet/transgressoft/commons/music/itunes/ItunesPlaylist;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/util/List;ILjava/lang/Object;)Lnet/transgressoft/commons/music/itunes/ItunesPlaylist;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getName ()Ljava/lang/String;
+	public final fun getParentPersistentId ()Ljava/lang/String;
+	public final fun getPersistentId ()Ljava/lang/String;
+	public final fun getTrackIds ()Ljava/util/List;
+	public fun hashCode ()I
+	public final fun isFolder ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/itunes/ItunesTrack {
+	public fun <init> (ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Short;Ljava/lang/Short;Ljava/lang/Short;JISILjava/lang/Float;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/time/LocalDateTime;)V
+	public final fun component1 ()I
+	public final fun component10 ()J
+	public final fun component11 ()I
+	public final fun component12 ()S
+	public final fun component13 ()I
+	public final fun component14 ()Ljava/lang/Float;
+	public final fun component15 ()Ljava/lang/String;
+	public final fun component16 ()Ljava/lang/String;
+	public final fun component17 ()Z
+	public final fun component18 ()Ljava/lang/String;
+	public final fun component19 ()Ljava/time/LocalDateTime;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6 ()Ljava/lang/String;
+	public final fun component7 ()Ljava/lang/Short;
+	public final fun component8 ()Ljava/lang/Short;
+	public final fun component9 ()Ljava/lang/Short;
+	public final fun copy (ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Short;Ljava/lang/Short;Ljava/lang/Short;JISILjava/lang/Float;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/time/LocalDateTime;)Lnet/transgressoft/commons/music/itunes/ItunesTrack;
+	public static synthetic fun copy$default (Lnet/transgressoft/commons/music/itunes/ItunesTrack;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Short;Ljava/lang/Short;Ljava/lang/Short;JISILjava/lang/Float;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;Ljava/time/LocalDateTime;ILjava/lang/Object;)Lnet/transgressoft/commons/music/itunes/ItunesTrack;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAlbum ()Ljava/lang/String;
+	public final fun getAlbumArtist ()Ljava/lang/String;
+	public final fun getArtist ()Ljava/lang/String;
+	public final fun getBitRate ()I
+	public final fun getBpm ()Ljava/lang/Float;
+	public final fun getComments ()Ljava/lang/String;
+	public final fun getDateAdded ()Ljava/time/LocalDateTime;
+	public final fun getDiscNumber ()Ljava/lang/Short;
+	public final fun getGenre ()Ljava/lang/String;
+	public final fun getId ()I
+	public final fun getLocation ()Ljava/lang/String;
+	public final fun getPersistentId ()Ljava/lang/String;
+	public final fun getPlayCount ()S
+	public final fun getRating ()I
+	public final fun getTitle ()Ljava/lang/String;
+	public final fun getTotalTimeMs ()J
+	public final fun getTrackNumber ()Ljava/lang/Short;
+	public final fun getYear ()Ljava/lang/Short;
+	public fun hashCode ()I
+	public final fun isCompilation ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/transgressoft/commons/music/m3u/M3uCycleException : java/lang/Exception {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public final class net/transgressoft/commons/music/m3u/M3uImportException : java/lang/Exception {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public final class net/transgressoft/commons/music/m3u/M3uImportService : java/lang/AutoCloseable {
+	public static final field Companion Lnet/transgressoft/commons/music/m3u/M3uImportService$Companion;
+	public static final field DEFAULT_MAX_DEPTH I
+	public fun <init> (Lnet/transgressoft/commons/music/MusicLibrary;ILjava/lang/String;)V
+	public synthetic fun <init> (Lnet/transgressoft/commons/music/MusicLibrary;ILjava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun close ()V
+	public final fun import (Ljava/nio/file/Path;)Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;
+	public final fun importAsync (Ljava/nio/file/Path;)Ljava/util/concurrent/CompletableFuture;
+	public final fun importAsync (Ljava/nio/file/Path;Lkotlinx/coroutines/CoroutineDispatcher;)Ljava/util/concurrent/CompletableFuture;
+}
+
+public final class net/transgressoft/commons/music/m3u/M3uImportService$Companion {
+}
+
+public final class net/transgressoft/commons/music/m3u/M3uParseException : java/lang/Exception {
+	public fun <init> (Ljava/lang/String;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public abstract interface class net/transgressoft/commons/music/playlist/MutableAudioPlaylist : net/transgressoft/commons/music/playlist/ReactiveAudioPlaylist {
+}
+
+public final class net/transgressoft/commons/music/playlist/MutableAudioPlaylist$DefaultImpls {
+	public static fun addAudioItem (Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;Lnet/transgressoft/commons/music/audio/AudioItem;)Z
+	public static fun addPlaylist (Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;)Z
+	public static fun asJsonKeyValue (Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;)Ljava/lang/String;
+	public static fun audioItemsAllMatch (Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;Ljava/util/function/Predicate;)Z
+	public static fun audioItemsAnyMatch (Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;Ljava/util/function/Predicate;)Z
+	public static fun compareTo (Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;Lnet/transgressoft/commons/music/playlist/AudioPlaylist;)I
+	public static fun exportToM3uFile (Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;Ljava/nio/file/Path;)V
+	public static fun getAudioItemsRecursive (Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;)Ljava/util/List;
+	public static fun getUniqueId (Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;)Ljava/lang/String;
+	public static fun removeAudioItem (Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;I)Z
+	public static fun removeAudioItem (Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;Lnet/transgressoft/commons/music/audio/AudioItem;)Z
+	public static fun removePlaylist (Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;I)Z
+	public static fun removePlaylist (Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;)Z
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public abstract class net/transgressoft/commons/music/playlist/MutablePlaylistBase : net/transgressoft/lirp/entity/ReactiveEntityBase, net/transgressoft/commons/music/playlist/ReactiveAudioPlaylist {
+	public fun <init> (ILjava/lang/String;Z)V
+	public fun addAudioItem (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Z
+	public fun addAudioItems (Ljava/util/Collection;)Z
+	public fun addPlaylist (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;)Z
+	public fun addPlaylists (Ljava/util/Collection;)Z
+	public fun asJsonKeyValue ()Ljava/lang/String;
+	public fun audioItemsAllMatch (Ljava/util/function/Predicate;)Z
+	public fun audioItemsAnyMatch (Ljava/util/function/Predicate;)Z
+	public fun clearAudioItems ()V
+	public fun clearPlaylists ()V
+	public synthetic fun compareTo (Ljava/lang/Object;)I
+	public fun compareTo (Lnet/transgressoft/commons/music/playlist/AudioPlaylist;)I
+	public fun exportToM3uFile (Ljava/nio/file/Path;)V
+	public abstract fun getAudioItems ()Ljava/util/List;
+	public fun getAudioItemsRecursive ()Ljava/util/List;
+	public synthetic fun getId ()Ljava/lang/Comparable;
+	public fun getId ()Ljava/lang/Integer;
+	public fun getName ()Ljava/lang/String;
+	public abstract fun getPlaylists ()Ljava/util/Set;
+	public fun getUniqueId ()Ljava/lang/String;
+	public fun isDirectory ()Z
+	public fun removeAudioItem (I)Z
+	public fun removeAudioItem (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;)Z
+	public fun removeAudioItemIds (Ljava/util/Collection;)Z
+	public fun removeAudioItems (Ljava/util/Collection;)Z
+	public fun removePlaylist (I)Z
+	public fun removePlaylist (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;)Z
+	public fun removePlaylistIds (Ljava/util/Collection;)Z
+	public fun removePlaylists (Ljava/util/Collection;)Z
+	public fun setDirectory (Z)V
+	public fun setName (Ljava/lang/String;)V
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class net/transgressoft/commons/music/playlist/PlaylistHierarchy : net/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy {
+}
+
+public final class net/transgressoft/commons/music/playlist/PlaylistHierarchy$DefaultImpls {
+	public static fun addAudioItemToPlaylist (Lnet/transgressoft/commons/music/playlist/PlaylistHierarchy;Lnet/transgressoft/commons/music/audio/AudioItem;Ljava/lang/String;)Z
+	public static fun addPlaylistToDirectory (Lnet/transgressoft/commons/music/playlist/PlaylistHierarchy;Ljava/lang/String;Ljava/lang/String;)Z
+	public static fun addPlaylistToDirectory (Lnet/transgressoft/commons/music/playlist/PlaylistHierarchy;Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;Ljava/lang/String;)Z
+	public static fun minus (Lnet/transgressoft/commons/music/playlist/PlaylistHierarchy;Ljava/util/Collection;)Z
+	public static fun minus (Lnet/transgressoft/commons/music/playlist/PlaylistHierarchy;Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;)Z
+	public static fun removeAudioItemFromPlaylist (Lnet/transgressoft/commons/music/playlist/PlaylistHierarchy;ILjava/lang/String;)Z
+	public static fun removeAudioItemFromPlaylist (Lnet/transgressoft/commons/music/playlist/PlaylistHierarchy;Lnet/transgressoft/commons/music/audio/AudioItem;Ljava/lang/String;)Z
+	public static fun removePlaylistFromDirectory (Lnet/transgressoft/commons/music/playlist/PlaylistHierarchy;Ljava/lang/String;Ljava/lang/String;)Z
+	public static fun removePlaylistFromDirectory (Lnet/transgressoft/commons/music/playlist/PlaylistHierarchy;Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;Ljava/lang/String;)Z
+	public static fun restore (Lnet/transgressoft/commons/music/playlist/PlaylistHierarchy;Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;)Z
+	public static fun softDelete (Lnet/transgressoft/commons/music/playlist/PlaylistHierarchy;Lnet/transgressoft/commons/music/playlist/MutableAudioPlaylist;)Z
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/playlist/PlaylistHierarchy;Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public static fun subscribeAsync (Lnet/transgressoft/commons/music/playlist/PlaylistHierarchy;Lkotlin/jvm/functions/Function2;Lnet/transgressoft/lirp/event/LirpErrorHandler;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public abstract class net/transgressoft/commons/music/playlist/PlaylistHierarchyBase : net/transgressoft/commons/music/playlist/ReactivePlaylistHierarchy, net/transgressoft/lirp/event/LirpEventSubscriber, net/transgressoft/lirp/persistence/Repository {
+	public fun <init> (Lnet/transgressoft/lirp/persistence/Repository;Lnet/transgressoft/commons/music/audio/event/AudioItemEventSubscriber;)V
+	public synthetic fun <init> (Lnet/transgressoft/lirp/persistence/Repository;Lnet/transgressoft/commons/music/audio/event/AudioItemEventSubscriber;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun activateEvents ([Lnet/transgressoft/lirp/event/CrudEvent$Type;)V
+	public synthetic fun activateEvents ([Lnet/transgressoft/lirp/event/EventType;)V
+	public fun add (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;)Z
+	public synthetic fun add (Lnet/transgressoft/lirp/entity/IdentifiableEntity;)Z
+	public fun addAudioItemToPlaylist (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;Ljava/lang/String;)Z
+	public fun addAudioItemsToPlaylist (Ljava/util/Collection;Ljava/lang/String;)Z
+	public fun addOnCompleteEventAction (Ljava/lang/Runnable;)V
+	public fun addOnErrorEventAction (Ljava/util/function/Consumer;)V
+	public fun addOnNextEventAction ([Lnet/transgressoft/lirp/event/EventType;Ljava/util/function/Consumer;)V
+	public fun addOnSubscribeEventAction (Ljava/util/function/Consumer;)V
+	public fun addPlaylistNamesToDirectory (Ljava/util/Set;Ljava/lang/String;)Z
+	public fun addPlaylistToDirectory (Ljava/lang/String;Ljava/lang/String;)Z
+	public fun addPlaylistToDirectory (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;Ljava/lang/String;)Z
+	public fun addPlaylistsToDirectory (Ljava/util/Set;Ljava/lang/String;)Z
+	protected final fun cancelBaseSubscriptions ()V
+	protected final fun checkOpen ()V
+	public fun clear ()V
+	public fun clearSubscriptionActions ()V
+	public fun close ()V
+	public fun contains (I)Z
+	public synthetic fun contains (Ljava/lang/Comparable;)Z
+	public fun contains (Ljava/util/function/Predicate;)Z
+	public fun disableEvents ([Lnet/transgressoft/lirp/event/CrudEvent$Type;)V
+	public synthetic fun disableEvents ([Lnet/transgressoft/lirp/event/EventType;)V
+	public fun emitAsync (Lnet/transgressoft/lirp/event/CrudEvent;)V
+	public synthetic fun emitAsync (Lnet/transgressoft/lirp/event/LirpEvent;)V
+	public fun findById (I)Ljava/util/Optional;
+	public synthetic fun findById (Ljava/lang/Comparable;)Ljava/util/Optional;
+	public fun findByIndex (Ljava/lang/String;Ljava/lang/Object;)Ljava/util/Set;
+	public fun findByName (Ljava/lang/String;)Ljava/util/Optional;
+	public fun findByUniqueId (Ljava/lang/String;)Ljava/util/Optional;
+	public fun findFirst (Ljava/util/function/Predicate;)Ljava/util/Optional;
+	public fun findFirstByIndex (Ljava/lang/String;Ljava/lang/Object;)Ljava/util/Optional;
+	public fun findParentPlaylist (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;)Ljava/util/Optional;
+	public fun getChanges ()Lkotlinx/coroutines/flow/SharedFlow;
+	protected final fun getClosed ()Ljava/util/concurrent/atomic/AtomicBoolean;
+	protected abstract fun getPlaylistElementType ()Lkotlin/reflect/KClass;
+	public fun getSubscriberCount ()I
+	public fun isClosed ()Z
+	public fun isEmpty ()Z
+	public fun isEventActive (Lnet/transgressoft/lirp/event/CrudEvent$Type;)Z
+	public synthetic fun isEventActive (Lnet/transgressoft/lirp/event/EventType;)Z
+	public fun iterator ()Ljava/util/Iterator;
+	public fun lazySearch (Ljava/util/function/Predicate;)Lkotlin/sequences/Sequence;
+	protected final synthetic fun markDeleteSubscriberWiredForTesting ()V
+	public fun minus (Ljava/util/Collection;)Z
+	public fun minus (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;)Z
+	public synthetic fun minus (Lnet/transgressoft/lirp/entity/IdentifiableEntity;)Z
+	public fun movePlaylist (Ljava/lang/String;Ljava/lang/String;)V
+	protected final fun newId ()I
+	public fun numberOfPlaylistDirectories ()I
+	public fun numberOfPlaylists ()I
+	public fun onComplete ()V
+	public fun onError (Ljava/lang/Throwable;)V
+	public synthetic fun onNext (Ljava/lang/Object;)V
+	public fun onNext (Lnet/transgressoft/lirp/event/CrudEvent;)V
+	public fun onSubscribe (Ljava/util/concurrent/Flow$Subscription;)V
+	public fun remove (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;)Z
+	public synthetic fun remove (Lnet/transgressoft/lirp/entity/IdentifiableEntity;)Z
+	public fun removeAll (Ljava/util/Collection;)Z
+	public fun removeAudioItemFromPlaylist (ILjava/lang/String;)Z
+	public fun removeAudioItemFromPlaylist (Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;Ljava/lang/String;)Z
+	public fun removeAudioItemIdsFromPlaylist (Ljava/util/Collection;Ljava/lang/String;)Z
+	public fun removeAudioItemsFromPlaylist (Ljava/util/Collection;Ljava/lang/String;)Z
+	public fun removePlaylistFromDirectory (Ljava/lang/String;Ljava/lang/String;)Z
+	public fun removePlaylistFromDirectory (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;Ljava/lang/String;)Z
+	public fun removePlaylistNamesFromDirectory (Ljava/util/Set;Ljava/lang/String;)Z
+	public fun removePlaylistsFromDirectory (Ljava/util/Set;Ljava/lang/String;)Z
+	public fun restore (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;)Z
+	public synthetic fun restore (Lnet/transgressoft/lirp/entity/IdentifiableEntity;)Z
+	public fun search (ILjava/util/function/Predicate;)Ljava/util/Set;
+	public fun search (Ljava/util/function/Predicate;)Ljava/util/Set;
+	public fun searchStream (Ljava/util/function/Predicate;)Ljava/util/stream/Stream;
+	public fun size ()I
+	public fun softDelete (Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;)Z
+	public synthetic fun softDelete (Lnet/transgressoft/lirp/entity/IdentifiableEntity;)Z
+	public fun subscribe (Ljava/util/concurrent/Flow$Subscriber;)V
+	public fun subscribe (Lkotlin/jvm/functions/Function1;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public fun subscribe ([Lnet/transgressoft/lirp/event/CrudEvent$Type;Lkotlin/jvm/functions/Function1;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public synthetic fun subscribe ([Lnet/transgressoft/lirp/event/EventType;Lkotlin/jvm/functions/Function1;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public fun subscribeAsync (Ljava/util/function/Consumer;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public fun subscribeAsync (Lkotlin/jvm/functions/Function2;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public fun subscribeAsync (Lkotlin/jvm/functions/Function2;Lnet/transgressoft/lirp/event/LirpErrorHandler;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public fun subscribeAsync ([Lnet/transgressoft/lirp/event/CrudEvent$Type;Lkotlin/jvm/functions/Function2;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+	public synthetic fun subscribeAsync ([Lnet/transgressoft/lirp/event/EventType;Lkotlin/jvm/functions/Function2;)Lnet/transgressoft/lirp/event/LirpEventSubscription;
+}
+
+public class net/transgressoft/commons/music/playlist/event/AudioPlaylistEventSubscriber : net/transgressoft/lirp/event/LirpEventSubscriberBase {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun cancelSubscription ()V
+	public fun toString ()Ljava/lang/String;
+}
+

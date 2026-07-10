@@ -20,5 +20,6 @@ package net.transgressoft.commons.music.player
 /**
  * Exception thrown when an audio item cannot be played because its format or encoding
  * is not supported by the underlying player implementation.
+ * @since 1.0
  */
-class UnsupportedAudioPlaybackException(message: String, cause: Throwable? = null) : Exception(message, cause)
+public class UnsupportedAudioPlaybackException(message: String, cause: Throwable? = null) : Exception(message, cause)

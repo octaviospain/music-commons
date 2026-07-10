@@ -34,18 +34,19 @@ import java.util.Optional
  * Provides observable collections of audio items and nested playlists backed directly by
  * lirp-fx aggregate delegates, plus a derived cover image property extracted from the first
  * audio item with cover art.
+ * @since 1.0
  */
-interface ObservablePlaylist : ReactiveAudioPlaylist<ObservableAudioItem, ObservablePlaylist> {
+public interface ObservablePlaylist : ReactiveAudioPlaylist<ObservableAudioItem, ObservablePlaylist> {
 
-    val nameProperty: ReadOnlyStringProperty
+    public val nameProperty: ReadOnlyStringProperty
 
-    val isDirectoryProperty: ReadOnlyBooleanProperty
+    public val isDirectoryProperty: ReadOnlyBooleanProperty
 
-    val audioItemsProperty: ReadOnlyListProperty<ObservableAudioItem>
+    public val audioItemsProperty: ReadOnlyListProperty<ObservableAudioItem>
 
-    val audioItemsRecursiveProperty: ReadOnlyListProperty<ObservableAudioItem>
+    public val audioItemsRecursiveProperty: ReadOnlyListProperty<ObservableAudioItem>
 
-    val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist>
+    public val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist>
 
-    val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>>
+    public val coverImageProperty: ReadOnlyObjectProperty<Optional<Image>>
 }

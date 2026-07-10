@@ -67,26 +67,30 @@ import java.util.Optional
  *
  * @param I The concrete audio item type
  * @param P The concrete playlist type
+ * @since 1.0
  */
-interface MusicLibrary<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>> : AutoCloseable {
+public interface MusicLibrary<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>> : AutoCloseable {
 
     /**
      * Returns the underlying audio library for direct access to audio item management.
+     * @since 1.0
      */
-    fun audioLibrary(): ReactiveAudioLibrary<I, *, *, *>
+    public fun audioLibrary(): ReactiveAudioLibrary<I, *, *, *>
 
     /**
      * Returns the underlying playlist hierarchy for direct access to playlist management.
+     * @since 1.0
      */
-    fun playlistHierarchy(): ReactivePlaylistHierarchy<I, P>
+    public fun playlistHierarchy(): ReactivePlaylistHierarchy<I, P>
 
     /**
      * Creates an audio item from the audio file at [path] and adds it to the audio library.
      *
      * @param path the path to the audio file
      * @return the created audio item
+     * @since 1.0
      */
-    fun audioItemFromFile(path: Path): I
+    public fun audioItemFromFile(path: Path): I
 
     /**
      * Creates a new playlist with [name].
@@ -94,8 +98,9 @@ interface MusicLibrary<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>
      * @param name the unique playlist name
      * @return the created playlist
      * @throws IllegalArgumentException if a playlist with [name] already exists
+     * @since 1.0
      */
-    fun createPlaylist(name: String): P
+    public fun createPlaylist(name: String): P
 
     /**
      * Creates a new playlist with [name] pre-populated with audio items identified by [audioItemIds].
@@ -104,10 +109,11 @@ interface MusicLibrary<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>
      * @param audioItemIds the IDs of audio items to include in the playlist
      * @return the created playlist
      * @throws IllegalArgumentException if a playlist with [name] already exists
+     * @since 1.0
      */
     @Suppress("INAPPLICABLE_JVM_NAME")
     @JvmName("createPlaylistWithIds")
-    fun createPlaylist(name: String, audioItemIds: List<Int>): P
+    public fun createPlaylist(name: String, audioItemIds: List<Int>): P
 
     /**
      * Creates a new playlist directory with [name].
@@ -115,22 +121,25 @@ interface MusicLibrary<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>
      * @param name the unique directory name
      * @return the created playlist directory
      * @throws IllegalArgumentException if a playlist with [name] already exists
+     * @since 1.0
      */
-    fun createPlaylistDirectory(name: String): P
+    public fun createPlaylistDirectory(name: String): P
 
     /**
      * Moves the playlist named [playlistNameToMove] into the directory named [destinationPlaylistName].
      *
      * @param playlistNameToMove the name of the playlist to move
      * @param destinationPlaylistName the name of the destination playlist directory
+     * @since 1.0
      */
-    fun movePlaylist(playlistNameToMove: String, destinationPlaylistName: String)
+    public fun movePlaylist(playlistNameToMove: String, destinationPlaylistName: String)
 
     /**
      * Finds the playlist with the given [name].
      *
      * @param name the playlist name to search for
      * @return an [Optional] containing the playlist, or empty if not found
+     * @since 1.0
      */
-    fun findPlaylistByName(name: String): Optional<out P>
+    public fun findPlaylistByName(name: String): Optional<out P>
 }

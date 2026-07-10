@@ -60,9 +60,10 @@ import kotlinx.serialization.json.put
  * `serializersModule` is required — waveforms are not polymorphic at the JSON level.
  *
  * Thread-safety: the serializer is stateless; concurrent reads are safe.
+ * @since 1.0
  */
 @get:JvmName("AudioWaveformMapSerializer")
-val AudioWaveformMapSerializer: KSerializer<Map<Int, AudioWaveform>> = MapSerializer(Int.serializer(), AudioWaveformSerializer())
+public val AudioWaveformMapSerializer: KSerializer<Map<Int, AudioWaveform>> = MapSerializer(Int.serializer(), AudioWaveformSerializer())
 
 /**
  * Kotlinx serialization serializer for [AudioWaveform] instances.
@@ -91,8 +92,9 @@ val AudioWaveformMapSerializer: KSerializer<Map<Int, AudioWaveform>> = MapSerial
  * @param fileSystem the [FileSystem] used to materialize the [java.nio.file.Path] backing
  *  the deserialized waveform. Defaults to [FileSystems.getDefault]; tests may pass a
  *  Jimfs filesystem to round-trip waveform JSON against an in-memory tree.
+ * @since 1.0
  */
-class AudioWaveformSerializer
+public class AudioWaveformSerializer
     @JvmOverloads
     constructor(
         private val fileSystem: FileSystem = FileSystems.getDefault()

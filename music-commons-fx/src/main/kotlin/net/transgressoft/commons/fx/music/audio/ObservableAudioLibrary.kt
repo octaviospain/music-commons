@@ -31,32 +31,37 @@ import javafx.beans.property.ReadOnlySetProperty
  *
  * Flat artist, album, and genre sets are derived from the catalog set properties
  * (e.g. `albumsProperty.map { it.album }.toSet()`).
+ * @since 1.0
  */
-interface ObservableAudioLibrary :
+public interface ObservableAudioLibrary :
     ReactiveAudioLibrary<ObservableAudioItem, ObservableArtistCatalog, ObservableAlbum, ObservableGenreIndex> {
 
     /**
      * Observable list of all audio items in the library, suitable for direct JavaFX binding.
+     * @since 1.0
      */
-    val audioItemsProperty: ReadOnlyListProperty<ObservableAudioItem>
+    public val audioItemsProperty: ReadOnlyListProperty<ObservableAudioItem>
 
     /**
      * Boolean property that is true when the library contains no audio items.
+     * @since 1.0
      */
-    val emptyLibraryProperty: ReadOnlyBooleanProperty
+    public val emptyLibraryProperty: ReadOnlyBooleanProperty
 
     /**
      * Observable set of all artist catalogs, each grouping albums and items by artist.
+     * @since 1.0
      */
-    val artistCatalogsProperty: ReadOnlySetProperty<ObservableArtistCatalog>
+    public val artistCatalogsProperty: ReadOnlySetProperty<ObservableArtistCatalog>
 
     /**
      * Observable ordered list of all album buckets, each grouping items by album.
      *
      * Albums are ordered by name (blank last), then artist, then year, matching the
      * bucket ordering of the underlying projection. The list is index-addressable.
+     * @since 1.0
      */
-    val albumsProperty: ReadOnlyListProperty<ObservableAlbum>
+    public val albumsProperty: ReadOnlyListProperty<ObservableAlbum>
 
     /**
      * Observable ordered list of all genre indexes, each grouping items by genre.
@@ -64,6 +69,7 @@ interface ObservableAudioLibrary :
      * Genre indexes are ordered by [net.transgressoft.commons.music.audio.Genre] natural
      * order, with [net.transgressoft.commons.music.audio.Genre.None] first. The list is
      * index-addressable.
+     * @since 1.0
      */
-    val genreIndexesProperty: ReadOnlyListProperty<ObservableGenreIndex>
+    public val genreIndexesProperty: ReadOnlyListProperty<ObservableGenreIndex>
 }

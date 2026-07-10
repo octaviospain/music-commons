@@ -31,9 +31,10 @@ import java.util.concurrent.ConcurrentHashMap
  * represents a label whose name and country are unspecified.
  *
  * Access instances via the [of] factory rather than the constructor directly.
+ * @since 1.0
  */
 @ConsistentCopyVisibility
-data class Label internal constructor(
+public data class Label internal constructor(
     val name: String,
     val countryCode: CountryCode = CountryCode.UNDEFINED
 ) : Comparable<Label> {
@@ -43,11 +44,11 @@ data class Label internal constructor(
         return if (result == 0) compareValues(countryCode, other.countryCode) else result
     }
 
-    companion object {
+    public companion object {
 
         @JvmField
         @get:JvmName("UNKNOWN")
-        val UNKNOWN: Label = Label("", CountryCode.UNDEFINED)
+        public val UNKNOWN: Label = Label("", CountryCode.UNDEFINED)
 
         // Soft-reference flyweight cache (see Artist for design rationale).
         private val labelReferenceQueue = ReferenceQueue<Label>()
@@ -59,10 +60,11 @@ data class Label internal constructor(
          * Uses a flyweight pattern over soft references so that repeated lookups of the same
          * label return the same object instance. Returns [UNKNOWN] when both arguments are at
          * their default values.
+         * @since 1.0
          */
         @JvmStatic
         @JvmOverloads
-        fun of(name: String, countryCode: CountryCode = CountryCode.UNDEFINED): Label {
+        public fun of(name: String, countryCode: CountryCode = CountryCode.UNDEFINED): Label {
             val normalizedName = name.trim()
             if (normalizedName.isEmpty() && countryCode == CountryCode.UNDEFINED) return UNKNOWN
             expungeStaleEntries(labelMap, labelReferenceQueue)

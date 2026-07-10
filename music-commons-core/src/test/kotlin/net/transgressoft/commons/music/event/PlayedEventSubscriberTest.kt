@@ -31,7 +31,7 @@ internal class PlayedEventSubscriberTest : StringSpec({
         publisher.subscribe(subscriber)
 
         val audioItem = mockk<AudioItem>(relaxed = true)
-        publisher.emitAsync(AudioItemPlayerEvent.Played<AudioItem>(audioItem))
+        publisher.emitAsync(AudioItemPlayerEvent.Played(audioItem))
         reactive.advance()
 
         playedEventReceived shouldBe true
@@ -49,14 +49,14 @@ internal class PlayedEventSubscriberTest : StringSpec({
         publisher.subscribe(subscriber)
 
         val audioItem = mockk<AudioItem>(relaxed = true)
-        publisher.emitAsync(AudioItemPlayerEvent.Played<AudioItem>(audioItem))
+        publisher.emitAsync(AudioItemPlayerEvent.Played(audioItem))
         reactive.advance()
 
         val countAfterFirst = eventCount
 
         subscriber.cancelSubscription()
 
-        publisher.emitAsync(AudioItemPlayerEvent.Played<AudioItem>(audioItem))
+        publisher.emitAsync(AudioItemPlayerEvent.Played(audioItem))
         reactive.advance()
 
         eventCount shouldBe countAfterFirst

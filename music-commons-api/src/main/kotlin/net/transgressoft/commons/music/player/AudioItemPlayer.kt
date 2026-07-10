@@ -38,8 +38,9 @@ import java.util.concurrent.Flow
  *
  * A natural end-of-track triggers an [AudioItemPlayerEvent.Played] event and any callback
  * registered via [onFinish]; transport-initiated stops and decode errors do not.
+ * @since 1.0
  */
-interface AudioItemPlayer : Flow.Publisher<AudioItemPlayerEvent> {
+public interface AudioItemPlayer : Flow.Publisher<AudioItemPlayerEvent> {
     /**
      * Lifecycle states reported by [status]. Implementations move through these states in
      * response to transport calls and to playback progress.
@@ -57,8 +58,9 @@ interface AudioItemPlayer : Flow.Publisher<AudioItemPlayerEvent> {
      *   player must be re-initialized with a new [play] call to recover.
      * - [DISPOSED]: terminal state after [dispose]; all further transport calls are
      *   silently ignored (no-ops, no exception thrown).
+     * @since 1.0
      */
-    enum class Status {
+    public enum class Status {
         UNKNOWN,
         READY,
         PAUSED,
@@ -73,18 +75,23 @@ interface AudioItemPlayer : Flow.Publisher<AudioItemPlayerEvent> {
      * Total duration of the currently loaded audio item, or [Duration.ZERO] when nothing
      * has been loaded yet or when the duration is not yet known (e.g. before decoding has
      * read enough of the source to determine length).
+     * @since 1.0
      */
-    val totalDuration: Duration
+    public val totalDuration: Duration
 
-    /** Returns the current [Status] of the player. */
-    fun status(): Status
+    /**
+     * Returns the current [Status] of the player.
+     * @since 1.0
+     */
+    public fun status(): Status
 
     /**
      * Returns the playback position of the currently loaded audio item. Returns
      * [Duration.ZERO] when no item is loaded, before playback has produced any output,
      * or after [stop].
+     * @since 1.0
      */
-    fun getCurrentTime(): Duration
+    public fun getCurrentTime(): Duration
 
     /**
      * Begins playing [audioItem] from the start. If another item is currently playing or
@@ -94,41 +101,47 @@ interface AudioItemPlayer : Flow.Publisher<AudioItemPlayerEvent> {
      * @param audioItem the audio item to play
      * @throws UnsupportedAudioPlaybackException if the item's file is missing or its
      *   format cannot be decoded
+     * @since 1.0
      */
     @Throws(UnsupportedAudioPlaybackException::class)
-    fun play(audioItem: ReactiveAudioItem<*>)
+    public fun play(audioItem: ReactiveAudioItem<*>)
 
     /**
      * Suspends playback while preserving the current position. Has no effect if the
      * player is not in [Status.PLAYING]. Call [resume] to continue.
+     * @since 1.0
      */
-    fun pause()
+    public fun pause()
 
     /**
      * Continues playback from the position at which it was paused. Has no effect if the
      * player is not in [Status.PAUSED].
+     * @since 1.0
      */
-    fun resume()
+    public fun resume()
 
     /**
      * Halts playback and resets the position to the start of the current audio item. The
      * loaded item is retained, so a subsequent [play] call (with the same or a different
      * item) begins from the beginning.
+     * @since 1.0
      */
-    fun stop()
+    public fun stop()
 
     /**
      * Releases all underlying resources (audio output line, decoder buffers, pump
      * threads). Idempotent: calling more than once is safe. After disposal the player
      * transitions to [Status.DISPOSED] and silently ignores any further transport calls.
+     * @since 1.0
      */
-    fun dispose()
+    public fun dispose()
 
     /**
      * Sets the playback volume in the range `[0.0, 1.0]`. Values outside the range are
      * clamped. Takes effect on subsequent audio output.
+     * @since 1.0
      */
-    fun setVolume(value: Double)
+    public fun setVolume(value: Double)
 
     /**
      * Requests a seek to [position] within the currently loaded audio item. The seek is
@@ -163,18 +176,20 @@ interface AudioItemPlayer : Flow.Publisher<AudioItemPlayerEvent> {
      * @param position the target playback position; negative values are clamped to
      *   [Duration.ZERO], and positions beyond `totalDuration` are clamped to it once the total
      *   duration is known (while it is still being resolved, the target is applied unclamped)
+     * @since 1.0
      */
-    fun seek(position: Duration)
+    public fun seek(position: Duration)
 
     /**
      * Registers a callback to be invoked exactly once when the currently loaded audio
      * item reaches its natural end of stream. The callback does not fire for
      * transport-initiated stops, errors, or when [dispose] is called. Setting a new
      * callback replaces any previously registered one.
+     * @since 1.0
      */
-    fun onFinish(value: Runnable)
+    public fun onFinish(value: Runnable)
 
-    companion object {
+    public companion object {
         private val PLAYABLE_FILE_TYPES = AudioFileType.entries.filter { it.isPrimaryCodecSupported() }.toSet()
 
         /**
@@ -186,8 +201,9 @@ interface AudioItemPlayer : Flow.Publisher<AudioItemPlayerEvent> {
          *
          * @param audioItem the audio item to check
          * @return true if the item's format and codec are supported for playback
+         * @since 1.0
          */
-        fun isPlayable(audioItem: ReactiveAudioItem<*>): Boolean {
+        public fun isPlayable(audioItem: ReactiveAudioItem<*>): Boolean {
             val fileType = runCatching { audioItem.extension.toAudioFileType() }.getOrNull()
             if (fileType !in PLAYABLE_FILE_TYPES) return false
 
@@ -212,8 +228,9 @@ interface AudioItemPlayer : Flow.Publisher<AudioItemPlayerEvent> {
          *
          * @param audioItem the audio item to analyze
          * @return the detected codec or null
+         * @since 1.0
          */
-        fun detectCodec(audioItem: ReactiveAudioItem<*>): AudioFileCodec? {
+        public fun detectCodec(audioItem: ReactiveAudioItem<*>): AudioFileCodec? {
             val fileType = runCatching { audioItem.extension.toAudioFileType() }.getOrNull() ?: return null
             val encoding = audioItem.encoding ?: ""
 

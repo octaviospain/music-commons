@@ -38,9 +38,10 @@ import kotlinx.serialization.modules.SerializersModule
  *
  * @param entityClassName binary name of the reactive entity (e.g. the mutable audio item impl)
  * @param params constructor-parameter-keyed values matching the entity's `_LirpRawConstructor`
+ * @since 1.0
  */
 @Suppress("UNCHECKED_CAST")
-fun <K : Comparable<K>, E : ReactiveEntity<K, E>> rawConstruct(
+public fun <K : Comparable<K>, E : ReactiveEntity<K, E>> rawConstruct(
     entityClassName: String,
     params: Map<String, Any?>
 ): ReactiveEntityBase<K, E> {
@@ -70,9 +71,10 @@ fun <K : Comparable<K>, E : ReactiveEntity<K, E>> rawConstruct(
  *
  * @param sample a single entity instance whose concrete class the serializer mirrors
  * @param module contextual serializers for the entity's non-`@Serializable` nested types
+ * @since 1.0
  */
 @Suppress("UNCHECKED_CAST")
-fun <K : Comparable<K>, E : ReactiveEntity<K, E>> lirpSerializerFor(
+public fun <K : Comparable<K>, E : ReactiveEntity<K, E>> lirpSerializerFor(
     sample: ReactiveEntityBase<K, E>,
     module: SerializersModule = EmptySerializersModule()
 ): KSerializer<E> =

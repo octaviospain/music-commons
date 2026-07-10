@@ -26,11 +26,15 @@ import kotlinx.coroutines.Dispatchers
 
 /**
  * Represents an audio waveform with capabilities to generate amplitude data and visual representations.
+ * @since 1.0
  */
-interface AudioWaveform : ReactiveEntity<Int, AudioWaveform> {
+public interface AudioWaveform : ReactiveEntity<Int, AudioWaveform> {
 
-    /** Absolute path to the audio file from which this waveform was derived. */
-    val audioFilePath: Path
+    /**
+     * Absolute path to the audio file from which this waveform was derived.
+     * @since 1.0
+     */
+    public val audioFilePath: Path
 
     /**
      * Calculates the waveform amplitudes for the specified dimensions.
@@ -42,9 +46,10 @@ interface AudioWaveform : ReactiveEntity<Int, AudioWaveform> {
      * transcodes) the audio file. Callers may inject an alternative (e.g., a test dispatcher)
      * without having to wrap the call in `withContext`
      * @throws AudioWaveformProcessingException if an error occurs during amplitude calculation
+     * @since 1.0
      */
     @Throws(AudioWaveformProcessingException::class)
-    suspend fun amplitudes(width: Int, height: Int, dispatcher: CoroutineDispatcher = Dispatchers.IO): FloatArray
+    public suspend fun amplitudes(width: Int, height: Int, dispatcher: CoroutineDispatcher = Dispatchers.IO): FloatArray
 
     /**
      * Renders the waveform as an image file with the specified colors and dimensions.
@@ -55,8 +60,9 @@ interface AudioWaveform : ReactiveEntity<Int, AudioWaveform> {
      * @param width image width in pixels
      * @param height image height in pixels
      * @param dispatcher the coroutine dispatcher on which rendering runs; defaults to [Dispatchers.IO]
+     * @since 1.0
      */
-    suspend fun createImage(
+    public suspend fun createImage(
         outputFile: File,
         waveformColor: Color,
         backgroundColor: Color,

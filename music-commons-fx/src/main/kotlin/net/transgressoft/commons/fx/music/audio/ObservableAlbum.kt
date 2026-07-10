@@ -36,37 +36,42 @@ import java.util.Optional
  * UI binding.
  *
  * @see ReactiveAlbum
+ * @since 1.0
  */
-interface ObservableAlbum :
+public interface ObservableAlbum :
     ReactiveAlbum<ObservableAlbum, ObservableAudioItem>, Comparable<ObservableAlbum> {
 
     /**
      * Observable list of all audio items in this album, in disc-then-track order.
      *
      * @return A read-only list property containing the album's audio items
+     * @since 1.0
      */
-    val tracksProperty: ReadOnlyListProperty<ObservableAudioItem>
+    public val tracksProperty: ReadOnlyListProperty<ObservableAudioItem>
 
     /**
      * Observable count of audio items in this album.
      *
      * @return A read-only integer property with the total item count
+     * @since 1.0
      */
-    val sizeProperty: ReadOnlyIntegerProperty
+    public val sizeProperty: ReadOnlyIntegerProperty
 
     /**
      * Observable boolean indicating whether this album is empty.
      *
      * @return A read-only boolean property that is true when the album has no audio items
+     * @since 1.0
      */
-    val emptyProperty: ReadOnlyBooleanProperty
+    public val emptyProperty: ReadOnlyBooleanProperty
 
     /**
      * Observable album details associated with this bucket.
      *
      * @return A read-only object property containing the album details
+     * @since 1.0
      */
-    val albumProperty: ReadOnlyObjectProperty<AlbumDetails>
+    public val albumProperty: ReadOnlyObjectProperty<AlbumDetails>
 
     /**
      * Lazily resolved album cover [Image] for this album.
@@ -84,6 +89,7 @@ interface ObservableAlbum :
      *
      * @return A read-only object property containing an [Optional] wrapping the resolved [Image],
      * or an empty [Optional] when there is no cover
+     * @since 1.0
      */
-    val coverProperty: ReadOnlyObjectProperty<Optional<Image>>
+    public val coverProperty: ReadOnlyObjectProperty<Optional<Image>>
 }

@@ -25,5 +25,6 @@ import net.transgressoft.commons.music.audio.AudioItem
  * Provides a clean, non-generic entry point for consumers that work with the core domain types.
  * Extends [ReactivePlaylistHierarchy] with concrete type parameters, removing the need to specify
  * generics at call sites.
+ * @since 1.0
  */
-interface PlaylistHierarchy : ReactivePlaylistHierarchy<AudioItem, MutableAudioPlaylist>
+public interface PlaylistHierarchy : ReactivePlaylistHierarchy<AudioItem, MutableAudioPlaylist>

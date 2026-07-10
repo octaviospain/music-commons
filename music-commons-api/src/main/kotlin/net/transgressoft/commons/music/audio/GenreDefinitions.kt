@@ -24,749 +24,750 @@ package net.transgressoft.commons.music.audio
  * Each singleton is a [Genre] subtype keyed by its display name. Use these constants when
  * constructing or comparing genre values to avoid raw string allocation and to benefit from
  * identity-level equality checks. Genres not present here should use [Genre.Custom].
+ * @since 1.0
  */
-data object Abstract : Genre("Abstract")
+public data object Abstract : Genre("Abstract")
 
-data object AbstractHipHop : Genre("Abstract Hip Hop")
+public data object AbstractHipHop : Genre("Abstract Hip Hop")
 
-data object AbstractRock : Genre("Abstract Rock")
+public data object AbstractRock : Genre("Abstract Rock")
 
-data object Acapella : Genre("Acapella")
+public data object Acapella : Genre("Acapella")
 
-data object AcidBreakbeat : Genre("Acid Breakbeat")
+public data object AcidBreakbeat : Genre("Acid Breakbeat")
 
-data object AcidHouse : Genre("Acid House")
+public data object AcidHouse : Genre("Acid House")
 
-data object AcidJazz : Genre("Acid Jazz")
+public data object AcidJazz : Genre("Acid Jazz")
 
-data object AcidRock : Genre("Acid Rock")
+public data object AcidRock : Genre("Acid Rock")
 
-data object Acoustic : Genre("Acoustic")
+public data object Acoustic : Genre("Acoustic")
 
-data object Alternative : Genre("Alternative")
+public data object Alternative : Genre("Alternative")
 
-data object AlternativeCountry : Genre("Alternative Country")
+public data object AlternativeCountry : Genre("Alternative Country")
 
-data object AlternativeDance : Genre("Alternative Dance")
+public data object AlternativeDance : Genre("Alternative Dance")
 
-data object AlternativeMetal : Genre("Alternative Metal")
+public data object AlternativeMetal : Genre("Alternative Metal")
 
-data object AlternativeRock : Genre("Alternative Rock")
+public data object AlternativeRock : Genre("Alternative Rock")
 
-data object Ambient : Genre("Ambient")
+public data object Ambient : Genre("Ambient")
 
-data object Americana : Genre("Americana")
+public data object Americana : Genre("Americana")
 
-data object Anime : Genre("Anime")
+public data object Anime : Genre("Anime")
 
-data object ArtRock : Genre("Art Rock")
+public data object ArtRock : Genre("Art Rock")
 
-data object Avantgarde : Genre("Avantgarde")
+public data object Avantgarde : Genre("Avantgarde")
 
-data object AvantgardeJazz : Genre("Avantgarde Jazz")
+public data object AvantgardeJazz : Genre("Avantgarde Jazz")
 
-data object AvantgardeMetal : Genre("Avantgarde Metal")
+public data object AvantgardeMetal : Genre("Avantgarde Metal")
 
-data object Bachata : Genre("Bachata")
+public data object Bachata : Genre("Bachata")
 
-data object Baroque : Genre("Baroque")
+public data object Baroque : Genre("Baroque")
 
-data object BassMusic : Genre("Bass Music")
+public data object BassMusic : Genre("Bass Music")
 
-data object Beatbox : Genre("Beatbox")
+public data object Beatbox : Genre("Beatbox")
 
-data object Bebop : Genre("Bebop")
+public data object Bebop : Genre("Bebop")
 
-data object BigBand : Genre("Big Band")
+public data object BigBand : Genre("Big Band")
 
-data object BigBeat : Genre("Big Beat")
+public data object BigBeat : Genre("Big Beat")
 
-data object Bitcore : Genre("Bitcore")
+public data object Bitcore : Genre("Bitcore")
 
-data object Bitpop : Genre("Bitpop")
+public data object Bitpop : Genre("Bitpop")
 
-data object BlackMetal : Genre("Black Metal")
+public data object BlackMetal : Genre("Black Metal")
 
-data object Bluegrass : Genre("Bluegrass")
+public data object Bluegrass : Genre("Bluegrass")
 
-data object Blues : Genre("Blues")
+public data object Blues : Genre("Blues")
 
-data object BluesRock : Genre("Blues Rock")
+public data object BluesRock : Genre("Blues Rock")
 
-data object Boogie : Genre("Boogie")
+public data object Boogie : Genre("Boogie")
 
-data object BoogieWoogie : Genre("Boogie Woogie")
+public data object BoogieWoogie : Genre("Boogie Woogie")
 
-data object BossaNova : Genre("Bossa Nova")
+public data object BossaNova : Genre("Bossa Nova")
 
-data object BrassBand : Genre("Brass Band")
+public data object BrassBand : Genre("Brass Band")
 
-data object Breakbeat : Genre("Breakbeat")
+public data object Breakbeat : Genre("Breakbeat")
 
-data object Breakcore : Genre("Breakcore")
+public data object Breakcore : Genre("Breakcore")
 
-data object Britpop : Genre("Britpop")
+public data object Britpop : Genre("Britpop")
 
-data object BrokenBeat : Genre("Broken Beat")
+public data object BrokenBeat : Genre("Broken Beat")
 
-data object BumbaMeuBoi : Genre("Bumba Meu Boi")
+public data object BumbaMeuBoi : Genre("Bumba Meu Boi")
 
-data object Celtic : Genre("Celtic")
+public data object Celtic : Genre("Celtic")
 
-data object CelticFusion : Genre("Celtic Fusion")
+public data object CelticFusion : Genre("Celtic Fusion")
 
-data object CelticMetal : Genre("Celtic Metal")
+public data object CelticMetal : Genre("Celtic Metal")
 
-data object CelticPunk : Genre("Celtic Punk")
+public data object CelticPunk : Genre("Celtic Punk")
 
-data object CelticReggae : Genre("Celtic Reggae")
+public data object CelticReggae : Genre("Celtic Reggae")
 
-data object CelticRock : Genre("Celtic Rock")
+public data object CelticRock : Genre("Celtic Rock")
 
-data object Chamber : Genre("Chamber")
+public data object Chamber : Genre("Chamber")
 
-data object ChamberJazz : Genre("Chamber Jazz")
+public data object ChamberJazz : Genre("Chamber Jazz")
 
-data object ChamberMusic : Genre("Chamber Music")
+public data object ChamberMusic : Genre("Chamber Music")
 
-data object ChamberPop : Genre("Chamber Pop")
+public data object ChamberPop : Genre("Chamber Pop")
 
-data object Chanson : Genre("Chanson")
+public data object Chanson : Genre("Chanson")
 
-data object Chant : Genre("Chant")
+public data object Chant : Genre("Chant")
 
-data object ChaChaCha : Genre("Cha Cha Cha")
+public data object ChaChaCha : Genre("Cha Cha Cha")
 
-data object Chicha : Genre("Chicha")
+public data object Chicha : Genre("Chicha")
 
-data object Children : Genre("Children")
+public data object Children : Genre("Children")
 
-data object Chillout : Genre("Chillout")
+public data object Chillout : Genre("Chillout")
 
-data object Chillwave : Genre("Chillwave")
+public data object Chillwave : Genre("Chillwave")
 
-data object Chiptune : Genre("Chiptune")
+public data object Chiptune : Genre("Chiptune")
 
-data object Christian : Genre("Christian")
+public data object Christian : Genre("Christian")
 
-data object Christmas : Genre("Christmas")
+public data object Christmas : Genre("Christmas")
 
-data object CityPop : Genre("City Pop")
+public data object CityPop : Genre("City Pop")
 
-data object Classic : Genre("Classic")
+public data object Classic : Genre("Classic")
 
-data object Classical : Genre("Classical")
+public data object Classical : Genre("Classical")
 
-data object ClassicPop : Genre("Classic Pop")
+public data object ClassicPop : Genre("Classic Pop")
 
-data object ClassicRock : Genre("Classic Rock")
+public data object ClassicRock : Genre("Classic Rock")
 
-data object Club : Genre("Club")
+public data object Club : Genre("Club")
 
-data object Comedy : Genre("Comedy")
+public data object Comedy : Genre("Comedy")
 
-data object ContemporaryBlues : Genre("Contemporary Blues")
+public data object ContemporaryBlues : Genre("Contemporary Blues")
 
-data object ContemporaryClassical : Genre("Contemporary Classical")
+public data object ContemporaryClassical : Genre("Contemporary Classical")
 
-data object ContemporaryJazz : Genre("Contemporary Jazz")
+public data object ContemporaryJazz : Genre("Contemporary Jazz")
 
-data object CoolJazz : Genre("Cool Jazz")
+public data object CoolJazz : Genre("Cool Jazz")
 
-data object Country : Genre("Country")
+public data object Country : Genre("Country")
 
-data object CountryPop : Genre("Country Pop")
+public data object CountryPop : Genre("Country Pop")
 
-data object CountryRock : Genre("Country Rock")
+public data object CountryRock : Genre("Country Rock")
 
-data object Crossover : Genre("Crossover")
+public data object Crossover : Genre("Crossover")
 
-data object Crunk : Genre("Crunk")
+public data object Crunk : Genre("Crunk")
 
-data object Crunkcore : Genre("Crunkcore")
+public data object Crunkcore : Genre("Crunkcore")
 
-data object CrustPunk : Genre("Crust Punk")
+public data object CrustPunk : Genre("Crust Punk")
 
-data object CGothic : Genre("C Gothic")
+public data object CGothic : Genre("C Gothic")
 
-data object CHipHop : Genre("C Hip Hop")
+public data object CHipHop : Genre("C Hip Hop")
 
-data object CJazz : Genre("C Jazz")
+public data object CJazz : Genre("C Jazz")
 
-data object CPop : Genre("C Pop")
+public data object CPop : Genre("C Pop")
 
-data object CRock : Genre("C Rock")
+public data object CRock : Genre("C Rock")
 
-data object CSka : Genre("C Ska")
+public data object CSka : Genre("C Ska")
 
-data object CTrance : Genre("C Trance")
+public data object CTrance : Genre("C Trance")
 
-data object Dance : Genre("Dance")
+public data object Dance : Genre("Dance")
 
-data object Dancehall : Genre("Dancehall")
+public data object Dancehall : Genre("Dancehall")
 
-data object DarkAmbient : Genre("Dark Ambient")
+public data object DarkAmbient : Genre("Dark Ambient")
 
-data object DarkCore : Genre("Dark Core")
+public data object DarkCore : Genre("Dark Core")
 
-data object DarkPop : Genre("Dark Pop")
+public data object DarkPop : Genre("Dark Pop")
 
-data object DarkStep : Genre("Dark Step")
+public data object DarkStep : Genre("Dark Step")
 
-data object DarkWave : Genre("Dark Wave")
+public data object DarkWave : Genre("Dark Wave")
 
-data object Deathcore : Genre("Deathcore")
+public data object Deathcore : Genre("Deathcore")
 
-data object Deathgrind : Genre("Deathgrind")
+public data object Deathgrind : Genre("Deathgrind")
 
-data object DeathMetal : Genre("Death Metal")
+public data object DeathMetal : Genre("Death Metal")
 
-data object DeepFunk : Genre("Deep Funk")
+public data object DeepFunk : Genre("Deep Funk")
 
-data object DeepHouse : Genre("Deep House")
+public data object DeepHouse : Genre("Deep House")
 
-data object DeepSoul : Genre("Deep Soul")
+public data object DeepSoul : Genre("Deep Soul")
 
-data object Disco : Genre("Disco")
+public data object Disco : Genre("Disco")
 
-data object DiscoHouse : Genre("Disco House")
+public data object DiscoHouse : Genre("Disco House")
 
-data object DixielandJazz : Genre("Dixieland Jazz")
+public data object DixielandJazz : Genre("Dixieland Jazz")
 
-data object Doomcore : Genre("Doomcore")
+public data object Doomcore : Genre("Doomcore")
 
-data object DoomMetal : Genre("Doom Metal")
+public data object DoomMetal : Genre("Doom Metal")
 
-data object DooWop : Genre("Doo Wop")
+public data object DooWop : Genre("Doo Wop")
 
-data object Downtempo : Genre("Downtempo")
+public data object Downtempo : Genre("Downtempo")
 
-data object DreamPop : Genre("Dream Pop")
+public data object DreamPop : Genre("Dream Pop")
 
-data object Drone : Genre("Drone")
+public data object Drone : Genre("Drone")
 
-data object DroneMetal : Genre("Drone Metal")
+public data object DroneMetal : Genre("Drone Metal")
 
-data object DrumAndBass : Genre("Drum And Bass")
+public data object DrumAndBass : Genre("Drum And Bass")
 
-data object Dub : Genre("Dub")
+public data object Dub : Genre("Dub")
 
-data object Dubstep : Genre("Dubstep")
+public data object Dubstep : Genre("Dubstep")
 
-data object DubHouse : Genre("Dub House")
+public data object DubHouse : Genre("Dub House")
 
-data object Dubtronica : Genre("Dubtronica")
+public data object Dubtronica : Genre("Dubtronica")
 
-data object Ebm : Genre("Ebm")
+public data object Ebm : Genre("Ebm")
 
-data object Edm : Genre("Edm")
+public data object Edm : Genre("Edm")
 
-data object Electro : Genre("Electro")
+public data object Electro : Genre("Electro")
 
-data object Electronic : Genre("Electronic")
+public data object Electronic : Genre("Electronic")
 
-data object Electronica : Genre("Electronica")
+public data object Electronica : Genre("Electronica")
 
-data object ElectronicDance : Genre("Electronic Dance")
+public data object ElectronicDance : Genre("Electronic Dance")
 
-data object Electropop : Genre("Electropop")
+public data object Electropop : Genre("Electropop")
 
-data object ElectroSwing : Genre("Electro Swing")
+public data object ElectroSwing : Genre("Electro Swing")
 
-data object ElectroWave : Genre("Electro Wave")
+public data object ElectroWave : Genre("Electro Wave")
 
-data object Emo : Genre("Emo")
+public data object Emo : Genre("Emo")
 
-data object EmoPop : Genre("Emo Pop")
+public data object EmoPop : Genre("Emo Pop")
 
-data object EmoRap : Genre("Emo Rap")
+public data object EmoRap : Genre("Emo Rap")
 
-data object Enka : Genre("Enka")
+public data object Enka : Genre("Enka")
 
-data object Ethnic : Genre("Ethnic")
+public data object Ethnic : Genre("Ethnic")
 
-data object EuroDance : Genre("Euro Dance")
+public data object EuroDance : Genre("Euro Dance")
 
-data object EuroDisco : Genre("Euro Disco")
+public data object EuroDisco : Genre("Euro Disco")
 
-data object EuroHouse : Genre("Euro House")
+public data object EuroHouse : Genre("Euro House")
 
-data object EuroPop : Genre("Euro Pop")
+public data object EuroPop : Genre("Euro Pop")
 
-data object EuroTrance : Genre("Euro Trance")
+public data object EuroTrance : Genre("Euro Trance")
 
-data object Experimental : Genre("Experimental")
+public data object Experimental : Genre("Experimental")
 
-data object ExperimentalNoise : Genre("Experimental Noise")
+public data object ExperimentalNoise : Genre("Experimental Noise")
 
-data object ExperimentalPop : Genre("Experimental Pop")
+public data object ExperimentalPop : Genre("Experimental Pop")
 
-data object ExperimentalRock : Genre("Experimental Rock")
+public data object ExperimentalRock : Genre("Experimental Rock")
 
-data object FemaleVocalist : Genre("Female Vocalist")
+public data object FemaleVocalist : Genre("Female Vocalist")
 
-data object Fingerstyle : Genre("Fingerstyle")
+public data object Fingerstyle : Genre("Fingerstyle")
 
-data object Flamenco : Genre("Flamenco")
+public data object Flamenco : Genre("Flamenco")
 
-data object Folk : Genre("Folk")
+public data object Folk : Genre("Folk")
 
-data object FolkHop : Genre("Folk Hop")
+public data object FolkHop : Genre("Folk Hop")
 
-data object FolkMetal : Genre("Folk Metal")
+public data object FolkMetal : Genre("Folk Metal")
 
-data object FolkPop : Genre("Folk Pop")
+public data object FolkPop : Genre("Folk Pop")
 
-data object FolkPunk : Genre("Folk Punk")
+public data object FolkPunk : Genre("Folk Punk")
 
-data object FolkRock : Genre("Folk Rock")
+public data object FolkRock : Genre("Folk Rock")
 
-data object Folktronica : Genre("Folktronica")
+public data object Folktronica : Genre("Folktronica")
 
-data object FreakFolk : Genre("Freak Folk")
+public data object FreakFolk : Genre("Freak Folk")
 
-data object Funk : Genre("Funk")
+public data object Funk : Genre("Funk")
 
-data object Fusion : Genre("Fusion")
+public data object Fusion : Genre("Fusion")
 
-data object FusionJazz : Genre("Fusion Jazz")
+public data object FusionJazz : Genre("Fusion Jazz")
 
-data object FutureBass : Genre("Future Bass")
+public data object FutureBass : Genre("Future Bass")
 
-data object FutureJazz : Genre("Future Jazz")
+public data object FutureJazz : Genre("Future Jazz")
 
-data object Garage : Genre("Garage")
+public data object Garage : Genre("Garage")
 
-data object GarageRock : Genre("Garage Rock")
+public data object GarageRock : Genre("Garage Rock")
 
-data object GlamMetal : Genre("Glam Metal")
+public data object GlamMetal : Genre("Glam Metal")
 
-data object GlamPunk : Genre("Glam Punk")
+public data object GlamPunk : Genre("Glam Punk")
 
-data object GlamRock : Genre("Glam Rock")
+public data object GlamRock : Genre("Glam Rock")
 
-data object Glitch : Genre("Glitch")
+public data object Glitch : Genre("Glitch")
 
-data object GlitchHop : Genre("Glitch Hop")
+public data object GlitchHop : Genre("Glitch Hop")
 
-data object GloFi : Genre("Glo Fi")
+public data object GloFi : Genre("Glo Fi")
 
-data object Goa : Genre("Goa")
+public data object Goa : Genre("Goa")
 
-data object Gospel : Genre("Gospel")
+public data object Gospel : Genre("Gospel")
 
-data object Gothic : Genre("Gothic")
+public data object Gothic : Genre("Gothic")
 
-data object GothicMetal : Genre("Gothic Metal")
+public data object GothicMetal : Genre("Gothic Metal")
 
-data object GothicRock : Genre("Gothic Rock")
+public data object GothicRock : Genre("Gothic Rock")
 
-data object Grime : Genre("Grime")
+public data object Grime : Genre("Grime")
 
-data object Grindcore : Genre("Grindcore")
+public data object Grindcore : Genre("Grindcore")
 
-data object Grunge : Genre("Grunge")
+public data object Grunge : Genre("Grunge")
 
-data object GypsyJazz : Genre("Gypsy Jazz")
+public data object GypsyJazz : Genre("Gypsy Jazz")
 
-data object GypsyPunk : Genre("Gypsy Punk")
+public data object GypsyPunk : Genre("Gypsy Punk")
 
-data object GFunk : Genre("G Funk")
+public data object GFunk : Genre("G Funk")
 
-data object Hardcore : Genre("Hardcore")
+public data object Hardcore : Genre("Hardcore")
 
-data object Hardstyle : Genre("Hardstyle")
+public data object Hardstyle : Genre("Hardstyle")
 
-data object HardBop : Genre("Hard Bop")
+public data object HardBop : Genre("Hard Bop")
 
-data object HardHouse : Genre("Hard House")
+public data object HardHouse : Genre("Hard House")
 
-data object HardRock : Genre("Hard Rock")
+public data object HardRock : Genre("Hard Rock")
 
-data object HardTrance : Genre("Hard Trance")
+public data object HardTrance : Genre("Hard Trance")
 
-data object HeavyMetal : Genre("Heavy Metal")
+public data object HeavyMetal : Genre("Heavy Metal")
 
-data object HipHop : Genre("Hip Hop")
+public data object HipHop : Genre("Hip Hop")
 
-data object Horrorcore : Genre("Horrorcore")
+public data object Horrorcore : Genre("Horrorcore")
 
-data object HorrorPunk : Genre("Horror Punk")
+public data object HorrorPunk : Genre("Horror Punk")
 
-data object House : Genre("House")
+public data object House : Genre("House")
 
-data object Idm : Genre("Idm")
+public data object Idm : Genre("Idm")
 
-data object Illbient : Genre("Illbient")
+public data object Illbient : Genre("Illbient")
 
-data object Impressionist : Genre("Impressionist")
+public data object Impressionist : Genre("Impressionist")
 
-data object Incidental : Genre("Incidental")
+public data object Incidental : Genre("Incidental")
 
-data object Indie : Genre("Indie")
+public data object Indie : Genre("Indie")
 
-data object IndieFolk : Genre("Indie Folk")
+public data object IndieFolk : Genre("Indie Folk")
 
-data object IndiePop : Genre("Indie Pop")
+public data object IndiePop : Genre("Indie Pop")
 
-data object IndieRock : Genre("Indie Rock")
+public data object IndieRock : Genre("Indie Rock")
 
-data object Indietronic : Genre("Indietronic")
+public data object Indietronic : Genre("Indietronic")
 
-data object Industrial : Genre("Industrial")
+public data object Industrial : Genre("Industrial")
 
-data object IndustrialMetal : Genre("Industrial Metal")
+public data object IndustrialMetal : Genre("Industrial Metal")
 
-data object IndustrialRock : Genre("Industrial Rock")
+public data object IndustrialRock : Genre("Industrial Rock")
 
-data object Instrumental : Genre("Instrumental")
+public data object Instrumental : Genre("Instrumental")
 
-data object InstrumentalHipHop : Genre("Instrumental Hip Hop")
+public data object InstrumentalHipHop : Genre("Instrumental Hip Hop")
 
-data object InstrumentalRock : Genre("Instrumental Rock")
+public data object InstrumentalRock : Genre("Instrumental Rock")
 
-data object Jazz : Genre("Jazz")
+public data object Jazz : Genre("Jazz")
 
-data object JazzFusion : Genre("Jazz Fusion")
+public data object JazzFusion : Genre("Jazz Fusion")
 
-data object JazzHop : Genre("Jazz Hop")
+public data object JazzHop : Genre("Jazz Hop")
 
-data object Jumpstyle : Genre("Jumpstyle")
+public data object Jumpstyle : Genre("Jumpstyle")
 
-data object Jungle : Genre("Jungle")
+public data object Jungle : Genre("Jungle")
 
-data object JFusion : Genre("J Fusion")
+public data object JFusion : Genre("J Fusion")
 
-data object JGothic : Genre("J Gothic")
+public data object JGothic : Genre("J Gothic")
 
-data object JHipHop : Genre("J Hip Hop")
+public data object JHipHop : Genre("J Hip Hop")
 
-data object JJazz : Genre("J Jazz")
+public data object JJazz : Genre("J Jazz")
 
-data object JPop : Genre("J Pop")
+public data object JPop : Genre("J Pop")
 
-data object JRock : Genre("J Rock")
+public data object JRock : Genre("J Rock")
 
-data object JSka : Genre("J Ska")
+public data object JSka : Genre("J Ska")
 
-data object JTrance : Genre("J Trance")
+public data object JTrance : Genre("J Trance")
 
-data object Krautrock : Genre("Krautrock")
+public data object Krautrock : Genre("Krautrock")
 
-data object KGothic : Genre("K Gothic")
+public data object KGothic : Genre("K Gothic")
 
-data object KHipHop : Genre("K Hip Hop")
+public data object KHipHop : Genre("K Hip Hop")
 
-data object KJazz : Genre("K Jazz")
+public data object KJazz : Genre("K Jazz")
 
-data object KPop : Genre("K Pop")
+public data object KPop : Genre("K Pop")
 
-data object KRock : Genre("K Rock")
+public data object KRock : Genre("K Rock")
 
-data object KSka : Genre("K Ska")
+public data object KSka : Genre("K Ska")
 
-data object KTrance : Genre("K Trance")
+public data object KTrance : Genre("K Trance")
 
-data object Latin : Genre("Latin")
+public data object Latin : Genre("Latin")
 
-data object LatinJazz : Genre("Latin Jazz")
+public data object LatinJazz : Genre("Latin Jazz")
 
-data object LatinPop : Genre("Latin Pop")
+public data object LatinPop : Genre("Latin Pop")
 
-data object LatinRock : Genre("Latin Rock")
+public data object LatinRock : Genre("Latin Rock")
 
-data object LiquidFunk : Genre("Liquid Funk")
+public data object LiquidFunk : Genre("Liquid Funk")
 
-data object LoFi : Genre("Lo Fi")
+public data object LoFi : Genre("Lo Fi")
 
-data object Lounge : Genre("Lounge")
+public data object Lounge : Genre("Lounge")
 
-data object Mambo : Genre("Mambo")
+public data object Mambo : Genre("Mambo")
 
-data object Marimba : Genre("Marimba")
+public data object Marimba : Genre("Marimba")
 
-data object Mathcore : Genre("Mathcore")
+public data object Mathcore : Genre("Mathcore")
 
-data object MathRock : Genre("Math Rock")
+public data object MathRock : Genre("Math Rock")
 
-data object Medieval : Genre("Medieval")
+public data object Medieval : Genre("Medieval")
 
-data object MedievalMetal : Genre("Medieval Metal")
+public data object MedievalMetal : Genre("Medieval Metal")
 
-data object MedievalRock : Genre("Medieval Rock")
+public data object MedievalRock : Genre("Medieval Rock")
 
-data object MelodicMetal : Genre("Melodic Metal")
+public data object MelodicMetal : Genre("Melodic Metal")
 
-data object MelodicMetalcore : Genre("Melodic Metalcore")
+public data object MelodicMetalcore : Genre("Melodic Metalcore")
 
-data object MelodicTrance : Genre("Melodic Trance")
+public data object MelodicTrance : Genre("Melodic Trance")
 
-data object Merengue : Genre("Merengue")
+public data object Merengue : Genre("Merengue")
 
-data object Metal : Genre("Metal")
+public data object Metal : Genre("Metal")
 
-data object Metalcore : Genre("Metalcore")
+public data object Metalcore : Genre("Metalcore")
 
-data object Microhouse : Genre("Microhouse")
+public data object Microhouse : Genre("Microhouse")
 
-data object Minimal : Genre("Minimal")
+public data object Minimal : Genre("Minimal")
 
-data object ModalJazz : Genre("Modal Jazz")
+public data object ModalJazz : Genre("Modal Jazz")
 
-data object ModernClassical : Genre("Modern Classical")
+public data object ModernClassical : Genre("Modern Classical")
 
-data object ModernRock : Genre("Modern Rock")
+public data object ModernRock : Genre("Modern Rock")
 
-data object Motown : Genre("Motown")
+public data object Motown : Genre("Motown")
 
-data object Mpb : Genre("Mpb")
+public data object Mpb : Genre("Mpb")
 
-data object Musical : Genre("Musical")
+public data object Musical : Genre("Musical")
 
-data object MushroomJazz : Genre("Mushroom Jazz")
+public data object MushroomJazz : Genre("Mushroom Jazz")
 
-data object Ndw : Genre("Ndw")
+public data object Ndw : Genre("Ndw")
 
-data object NeoClassical : Genre("Neo Classical")
+public data object NeoClassical : Genre("Neo Classical")
 
-data object NeoFolk : Genre("Neo Folk")
+public data object NeoFolk : Genre("Neo Folk")
 
-data object NeoMedieval : Genre("Neo Medieval")
+public data object NeoMedieval : Genre("Neo Medieval")
 
-data object NeoProgressive : Genre("Neo Progressive")
+public data object NeoProgressive : Genre("Neo Progressive")
 
-data object NeoPsychedelic : Genre("Neo Psychedelic")
+public data object NeoPsychedelic : Genre("Neo Psychedelic")
 
-data object NeoSoul : Genre("Neo Soul")
+public data object NeoSoul : Genre("Neo Soul")
 
-data object Nerdcore : Genre("Nerdcore")
+public data object Nerdcore : Genre("Nerdcore")
 
-data object NewAge : Genre("New Age")
+public data object NewAge : Genre("New Age")
 
-data object NewWave : Genre("New Wave")
+public data object NewWave : Genre("New Wave")
 
-data object Newgrass : Genre("Newgrass")
+public data object Newgrass : Genre("Newgrass")
 
-data object Noise : Genre("Noise")
+public data object Noise : Genre("Noise")
 
-data object NoisePop : Genre("Noise Pop")
+public data object NoisePop : Genre("Noise Pop")
 
-data object NoiseRock : Genre("Noise Rock")
+public data object NoiseRock : Genre("Noise Rock")
 
-data object NuDisco : Genre("Nu Disco")
+public data object NuDisco : Genre("Nu Disco")
 
-data object NuJazz : Genre("Nu Jazz")
+public data object NuJazz : Genre("Nu Jazz")
 
-data object NuMetal : Genre("Nu Metal")
+public data object NuMetal : Genre("Nu Metal")
 
-data object NuSoul : Genre("Nu Soul")
+public data object NuSoul : Genre("Nu Soul")
 
-data object Nwa : Genre("Nwa")
+public data object Nwa : Genre("Nwa")
 
-data object Nwobhm : Genre("Nwobhm")
+public data object Nwobhm : Genre("Nwobhm")
 
-data object Nyhc : Genre("Nyhc")
+public data object Nyhc : Genre("Nyhc")
 
-data object Oldies : Genre("Oldies")
+public data object Oldies : Genre("Oldies")
 
-data object Opera : Genre("Opera")
+public data object Opera : Genre("Opera")
 
-data object Orchestral : Genre("Orchestral")
+public data object Orchestral : Genre("Orchestral")
 
-data object Oriental : Genre("Oriental")
+public data object Oriental : Genre("Oriental")
 
-data object OutlawCountry : Genre("Outlaw Country")
+public data object OutlawCountry : Genre("Outlaw Country")
 
-data object Pop : Genre("Pop")
+public data object Pop : Genre("Pop")
 
-data object PopPunk : Genre("Pop Punk")
+public data object PopPunk : Genre("Pop Punk")
 
-data object PopRock : Genre("Pop Rock")
+public data object PopRock : Genre("Pop Rock")
 
-data object PostBritpop : Genre("Post Britpop")
+public data object PostBritpop : Genre("Post Britpop")
 
-data object PostDisco : Genre("Post Disco")
+public data object PostDisco : Genre("Post Disco")
 
-data object PostGrunge : Genre("Post Grunge")
+public data object PostGrunge : Genre("Post Grunge")
 
-data object PostHardcore : Genre("Post Hardcore")
+public data object PostHardcore : Genre("Post Hardcore")
 
-data object PostIndustrial : Genre("Post Industrial")
+public data object PostIndustrial : Genre("Post Industrial")
 
-data object PostMetal : Genre("Post Metal")
+public data object PostMetal : Genre("Post Metal")
 
-data object PostPunk : Genre("Post Punk")
+public data object PostPunk : Genre("Post Punk")
 
-data object PostRock : Genre("Post Rock")
+public data object PostRock : Genre("Post Rock")
 
-data object PowerMetal : Genre("Power Metal")
+public data object PowerMetal : Genre("Power Metal")
 
-data object PowerNoise : Genre("Power Noise")
+public data object PowerNoise : Genre("Power Noise")
 
-data object PowerPop : Genre("Power Pop")
+public data object PowerPop : Genre("Power Pop")
 
-data object ProgressiveBluegrass : Genre("Progressive Bluegrass")
+public data object ProgressiveBluegrass : Genre("Progressive Bluegrass")
 
-data object ProgressiveCountry : Genre("Progressive Country")
+public data object ProgressiveCountry : Genre("Progressive Country")
 
-data object ProgressiveHouse : Genre("Progressive House")
+public data object ProgressiveHouse : Genre("Progressive House")
 
-data object ProgressiveMetal : Genre("Progressive Metal")
+public data object ProgressiveMetal : Genre("Progressive Metal")
 
-data object ProgressiveRock : Genre("Progressive Rock")
+public data object ProgressiveRock : Genre("Progressive Rock")
 
-data object ProgressiveTrance : Genre("Progressive Trance")
+public data object ProgressiveTrance : Genre("Progressive Trance")
 
-data object Protopunk : Genre("Protopunk")
+public data object Protopunk : Genre("Protopunk")
 
-data object Psychedelic : Genre("Psychedelic")
+public data object Psychedelic : Genre("Psychedelic")
 
-data object PsychedelicPop : Genre("Psychedelic Pop")
+public data object PsychedelicPop : Genre("Psychedelic Pop")
 
-data object PsychedelicRock : Genre("Psychedelic Rock")
+public data object PsychedelicRock : Genre("Psychedelic Rock")
 
-data object PsyTrance : Genre("Psy Trance")
+public data object PsyTrance : Genre("Psy Trance")
 
-data object Punk : Genre("Punk")
+public data object Punk : Genre("Punk")
 
-data object PunkRock : Genre("Punk Rock")
+public data object PunkRock : Genre("Punk Rock")
 
-data object PFunk : Genre("P Funk")
+public data object PFunk : Genre("P Funk")
 
-data object Ragga : Genre("Ragga")
+public data object Ragga : Genre("Ragga")
 
-data object Rap : Genre("Rap")
+public data object Rap : Genre("Rap")
 
-data object Rapcore : Genre("Rapcore")
+public data object Rapcore : Genre("Rapcore")
 
-data object Reggae : Genre("Reggae")
+public data object Reggae : Genre("Reggae")
 
-data object Reggaeton : Genre("Reggaeton")
+public data object Reggaeton : Genre("Reggaeton")
 
-data object ReggaeFusion : Genre("Reggae Fusion")
+public data object ReggaeFusion : Genre("Reggae Fusion")
 
-data object Renaissance : Genre("Renaissance")
+public data object Renaissance : Genre("Renaissance")
 
-data object Rock : Genre("Rock")
+public data object Rock : Genre("Rock")
 
-data object Rockabilly : Genre("Rockabilly")
+public data object Rockabilly : Genre("Rockabilly")
 
-data object Rocksteady : Genre("Rocksteady")
+public data object Rocksteady : Genre("Rocksteady")
 
-data object RockAndRoll : Genre("Rock And Roll")
+public data object RockAndRoll : Genre("Rock And Roll")
 
-data object RootsReggae : Genre("Roots Reggae")
+public data object RootsReggae : Genre("Roots Reggae")
 
-data object RootsRock : Genre("Roots Rock")
+public data object RootsRock : Genre("Roots Rock")
 
-data object RAndB : Genre("R And B")
+public data object RAndB : Genre("R And B")
 
-data object Salsa : Genre("Salsa")
+public data object Salsa : Genre("Salsa")
 
-data object Samba : Genre("Samba")
+public data object Samba : Genre("Samba")
 
-data object Schlager : Genre("Schlager")
+public data object Schlager : Genre("Schlager")
 
-data object Schranz : Genre("Schranz")
+public data object Schranz : Genre("Schranz")
 
-data object Screamo : Genre("Screamo")
+public data object Screamo : Genre("Screamo")
 
-data object Shoegaze : Genre("Shoegaze")
+public data object Shoegaze : Genre("Shoegaze")
 
-data object SingerSongwriter : Genre("Singer Songwriter")
+public data object SingerSongwriter : Genre("Singer Songwriter")
 
-data object Ska : Genre("Ska")
+public data object Ska : Genre("Ska")
 
-data object Skacore : Genre("Skacore")
+public data object Skacore : Genre("Skacore")
 
-data object SkaPunk : Genre("Ska Punk")
+public data object SkaPunk : Genre("Ska Punk")
 
-data object Skatepunk : Genre("Skatepunk")
+public data object Skatepunk : Genre("Skatepunk")
 
-data object Skiffle : Genre("Skiffle")
+public data object Skiffle : Genre("Skiffle")
 
-data object Slowcore : Genre("Slowcore")
+public data object Slowcore : Genre("Slowcore")
 
-data object SludgeMetal : Genre("Sludge Metal")
+public data object SludgeMetal : Genre("Sludge Metal")
 
-data object SmoothJazz : Genre("Smooth Jazz")
+public data object SmoothJazz : Genre("Smooth Jazz")
 
-data object SoftRock : Genre("Soft Rock")
+public data object SoftRock : Genre("Soft Rock")
 
-data object Soul : Genre("Soul")
+public data object Soul : Genre("Soul")
 
-data object Soundtrack : Genre("Soundtrack")
+public data object Soundtrack : Genre("Soundtrack")
 
-data object SouthernRock : Genre("Southern Rock")
+public data object SouthernRock : Genre("Southern Rock")
 
-data object SpaceRock : Genre("Space Rock")
+public data object SpaceRock : Genre("Space Rock")
 
-data object SpeedGarage : Genre("Speed Garage")
+public data object SpeedGarage : Genre("Speed Garage")
 
-data object SpeedMetal : Genre("Speed Metal")
+public data object SpeedMetal : Genre("Speed Metal")
 
-data object Speedcore : Genre("Speedcore")
+public data object Speedcore : Genre("Speedcore")
 
-data object StageAndScreen : Genre("Stage And Screen")
+public data object StageAndScreen : Genre("Stage And Screen")
 
-data object StonerMetal : Genre("Stoner Metal")
+public data object StonerMetal : Genre("Stoner Metal")
 
-data object StonerRock : Genre("Stoner Rock")
+public data object StonerRock : Genre("Stoner Rock")
 
-data object SwampBlues : Genre("Swamp Blues")
+public data object SwampBlues : Genre("Swamp Blues")
 
-data object SwampPop : Genre("Swamp Pop")
+public data object SwampPop : Genre("Swamp Pop")
 
-data object SwampRock : Genre("Swamp Rock")
+public data object SwampRock : Genre("Swamp Rock")
 
-data object Swing : Genre("Swing")
+public data object Swing : Genre("Swing")
 
-data object SymphonicMetal : Genre("Symphonic Metal")
+public data object SymphonicMetal : Genre("Symphonic Metal")
 
-data object SymphonicRock : Genre("Symphonic Rock")
+public data object SymphonicRock : Genre("Symphonic Rock")
 
-data object Synthwave : Genre("Synthwave")
+public data object Synthwave : Genre("Synthwave")
 
-data object SynthPop : Genre("Synth Pop")
+public data object SynthPop : Genre("Synth Pop")
 
-data object SynthPunk : Genre("Synth Punk")
+public data object SynthPunk : Genre("Synth Punk")
 
-data object Tango : Genre("Tango")
+public data object Tango : Genre("Tango")
 
-data object TechnicalMetal : Genre("Technical Metal")
+public data object TechnicalMetal : Genre("Technical Metal")
 
-data object Techno : Genre("Techno")
+public data object Techno : Genre("Techno")
 
-data object Techstep : Genre("Techstep")
+public data object Techstep : Genre("Techstep")
 
-data object TechHouse : Genre("Tech House")
+public data object TechHouse : Genre("Tech House")
 
-data object TechTrance : Genre("Tech Trance")
+public data object TechTrance : Genre("Tech Trance")
 
-data object ThrashMetal : Genre("Thrash Metal")
+public data object ThrashMetal : Genre("Thrash Metal")
 
-data object Trance : Genre("Trance")
+public data object Trance : Genre("Trance")
 
-data object Trap : Genre("Trap")
+public data object Trap : Genre("Trap")
 
-data object TribalHouse : Genre("Tribal House")
+public data object TribalHouse : Genre("Tribal House")
 
-data object TripHop : Genre("Trip Hop")
+public data object TripHop : Genre("Trip Hop")
 
-data object TripRock : Genre("Trip Rock")
+public data object TripRock : Genre("Trip Rock")
 
-data object TropicalHouse : Genre("Tropical House")
+public data object TropicalHouse : Genre("Tropical House")
 
-data object Turntablism : Genre("Turntablism")
+public data object Turntablism : Genre("Turntablism")
 
-data object TwoStep : Genre("Two Step")
+public data object TwoStep : Genre("Two Step")
 
-data object VocalHouse : Genre("Vocal House")
+public data object VocalHouse : Genre("Vocal House")
 
-data object VocalJazz : Genre("Vocal Jazz")
+public data object VocalJazz : Genre("Vocal Jazz")
 
-data object VocalTrance : Genre("Vocal Trance")
+public data object VocalTrance : Genre("Vocal Trance")
 
-data object World : Genre("World")
+public data object World : Genre("World")
 
-data object WorldFusion : Genre("World Fusion")
+public data object WorldFusion : Genre("World Fusion")

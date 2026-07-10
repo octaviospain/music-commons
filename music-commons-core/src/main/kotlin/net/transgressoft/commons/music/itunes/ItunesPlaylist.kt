@@ -6,8 +6,9 @@ package net.transgressoft.commons.music.itunes
  * Regular playlists contain [trackIds] referencing [ItunesTrack.id] values.
  * Folder playlists have [isFolder] set to `true` and child playlists reference them
  * via [parentPersistentId] matching the folder's [persistentId].
+ * @since 1.0
  */
-data class ItunesPlaylist(
+public data class ItunesPlaylist(
     val name: String,
     val persistentId: String,
     val parentPersistentId: String?,

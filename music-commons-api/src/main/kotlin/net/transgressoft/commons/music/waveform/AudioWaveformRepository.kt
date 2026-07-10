@@ -31,9 +31,10 @@ import kotlinx.coroutines.asCoroutineDispatcher
  * Repository for managing audio waveforms associated with audio items.
  *
  * Provides asynchronous methods to retrieve or create waveforms on demand.
+ * @since 1.0
  */
-interface AudioWaveformRepository<W : AudioWaveform, I : ReactiveAudioItem<I>>
-: Repository<Int, W>, LirpEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>> {
+public interface AudioWaveformRepository<W : AudioWaveform, I : ReactiveAudioItem<I>> :
+    Repository<Int, W>, LirpEventSubscriber<I, CrudEvent.Type, CrudEvent<Int, I>> {
 
     /**
      * Retrieves an existing waveform or creates a new one asynchronously for the given audio item,
@@ -44,8 +45,9 @@ interface AudioWaveformRepository<W : AudioWaveform, I : ReactiveAudioItem<I>>
      * @param height desired waveform height in pixels
      * @param dispatcher coroutine dispatcher for the computation
      * @return a [CompletableFuture] that completes with the waveform once ready
+     * @since 1.0
      */
-    fun getOrCreateWaveformAsync(
+    public fun getOrCreateWaveformAsync(
         audioItem: I,
         width: Short,
         height: Short,
@@ -61,8 +63,9 @@ interface AudioWaveformRepository<W : AudioWaveform, I : ReactiveAudioItem<I>>
      * @param height desired waveform height in pixels
      * @param executor Java executor to back the coroutine dispatcher
      * @return a [CompletableFuture] that completes with the waveform once ready
+     * @since 1.0
      */
-    fun getOrCreateWaveformAsync(
+    public fun getOrCreateWaveformAsync(
         audioItem: I,
         width: Short,
         height: Short,
@@ -77,8 +80,9 @@ interface AudioWaveformRepository<W : AudioWaveform, I : ReactiveAudioItem<I>>
      * @param width desired waveform width in pixels
      * @param height desired waveform height in pixels
      * @return a [CompletableFuture] that completes with the waveform once ready
+     * @since 1.0
      */
-    fun getOrCreateWaveformAsync(
+    public fun getOrCreateWaveformAsync(
         audioItem: I,
         width: Short,
         height: Short
@@ -90,8 +94,9 @@ interface AudioWaveformRepository<W : AudioWaveform, I : ReactiveAudioItem<I>>
      * Silently ignores IDs for which no waveform exists.
      *
      * @param audioItemIds set of audio item IDs whose waveforms should be removed
+     * @since 1.0
      */
-    fun removeByAudioItemIds(audioItemIds: Set<Int>) {
+    public fun removeByAudioItemIds(audioItemIds: Set<Int>) {
         audioItemIds.forEach { findById(it).ifPresent { waveform -> remove(waveform) } }
     }
 }

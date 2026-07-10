@@ -26,5 +26,6 @@ package net.transgressoft.commons.music.audio
  * mutually comparable. Ordering of tracks within an album is owned by the concrete implementations.
  *
  * @param I The type of audio items contained in this album
+ * @since 1.0
  */
-interface Album<I : ReactiveAudioItem<I>> : ReactiveAlbum<Album<I>, I>, Comparable<Album<I>>
+public interface Album<I : ReactiveAudioItem<I>> : ReactiveAlbum<Album<I>, I>, Comparable<Album<I>>

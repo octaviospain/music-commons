@@ -4,6 +4,10 @@ plugins {
 
 description = 'Transgressoft Music Commons - JavaFX'
 
+kotlin {
+    explicitApi()
+}
+
 javafx {
     version = JavaVersion.VERSION_21
     modules = ['javafx.controls']

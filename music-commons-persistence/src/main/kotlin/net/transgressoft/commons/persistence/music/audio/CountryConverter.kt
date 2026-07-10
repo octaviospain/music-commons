@@ -27,10 +27,11 @@ import com.neovisionaries.i18n.CountryCode
  * [CountryCode.UNDEFINED] serializes as `"UNDEFINED"` — the ISO 3166-1 alpha-2 lookup
  * (`getByCode`) returns null for this sentinel value, so the fallback `valueOf` (enum constant
  * name lookup) is used to reconstruct it during deserialization.
+ * @since 1.0
  */
-object CountryConverter : ColumnConverter<CountryCode, String> {
+public object CountryConverter : ColumnConverter<CountryCode, String> {
 
-    override val sqlType = ColumnType.TextType
+    override val sqlType: ColumnType = ColumnType.TextType
 
     override fun toSql(value: CountryCode): String = value.getAlpha2()
 

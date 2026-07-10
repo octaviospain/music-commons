@@ -42,14 +42,22 @@ import java.util.UUID
  * @param I The type of audio items stored in albums
  * @param AE The concrete album type managed by this registry
  * @param publisherName Name for the event publisher, used in logging
+ *
+ * This is a framework base type. It is `public` only because `music-commons-fx` extends it across the
+ * module boundary; it is not a consumer extension point and its protected surface is not a stable
+ * contract. Extend the provided library facades instead of subclassing this type directly.
+ * @since 1.0
  */
-abstract class AlbumRegistryBase<I, AE>(private val publisherName: String = "AlbumRegistry")
+public abstract class AlbumRegistryBase<I, AE>(private val publisherName: String = "AlbumRegistry")
     where I : ReactiveAudioItem<I>, I : Comparable<I>, AE : ReactiveAlbum<AE, I>, AE : Comparable<AE> {
 
     private val log = KotlinLogging.logger {}
 
-    /** CRUD event publisher for album changes — exposed to [AudioLibraryBase] consumers. */
-    val albumPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<AlbumDetails, AE>> =
+    /**
+     * CRUD event publisher for album changes — exposed to [AudioLibraryBase] consumers.
+     * @since 1.0
+     */
+    public val albumPublisher: LirpEventPublisher<CrudEvent.Type, CrudEvent<AlbumDetails, AE>> =
         FlowEventPublisher<CrudEvent.Type, CrudEvent<AlbumDetails, AE>>(publisherName).also {
             it.activateEvents(CrudEvent.Type.CREATE, CrudEvent.Type.UPDATE, CrudEvent.Type.DELETE)
         }
@@ -99,8 +107,9 @@ abstract class AlbumRegistryBase<I, AE>(private val publisherName: String = "Alb
      * [AlbumDetails] value (including one with a non-null year or specific albumArtist) resolves
      * to the same bucket as a fully canonical key. This is the correct way to look up a bucket
      * when only a raw track's album metadata is available.
+     * @since 1.0
      */
-    fun findById(album: AlbumDetails): Optional<AE> = Optional.ofNullable(projection[album.canonicalKey()])
+    public fun findById(album: AlbumDetails): Optional<AE> = Optional.ofNullable(projection[album.canonicalKey()])
 
     /**
      * Returns the first album whose name contains [albumName] (case-insensitive), or empty if none
@@ -110,8 +119,9 @@ abstract class AlbumRegistryBase<I, AE>(private val publisherName: String = "Alb
      * the compilation-aware album artist. When more than one bucket matches [albumName], the bucket
      * returned is not deterministic; use [findById] with the exact [AlbumDetails] to address a
      * specific album unambiguously.
+     * @since 1.0
      */
-    fun findFirst(albumName: String): Optional<AE> {
+    public fun findFirst(albumName: String): Optional<AE> {
         if (albumName.isBlank()) return Optional.empty()
         return Optional.ofNullable(
             projection.entries.firstOrNull {
@@ -122,33 +132,50 @@ abstract class AlbumRegistryBase<I, AE>(private val publisherName: String = "Alb
 
     /**
      * Returns the first album matching [predicate], or empty if none matches.
+     * @since 1.0
      */
-    fun findFirst(predicate: (AE) -> Boolean): Optional<AE> =
+    public fun findFirst(predicate: (AE) -> Boolean): Optional<AE> =
         Optional.ofNullable(projection.values.firstOrNull(predicate))
 
     /**
      * Returns all current album values in bucket order (name, then artist, then year).
+     * @since 1.0
      */
-    fun orderedValues(): List<AE> = projection.values.toList()
+    public fun orderedValues(): List<AE> = projection.values.toList()
 
-    /** Iterates all current album values. */
-    fun forEach(action: (AE) -> Unit) = projection.values.forEach(action)
+    /**
+     * Iterates all current album values.
+     * @since 1.0
+     */
+    public fun forEach(action: (AE) -> Unit): Unit = projection.values.forEach(action)
 
-    /** Returns the number of albums. */
-    fun size(): Int = projection.size
+    /**
+     * Returns the number of albums.
+     * @since 1.0
+     */
+    public fun size(): Int = projection.size
 
-    /** Returns `true` if there are no albums. */
-    val isEmpty: Boolean get() = projection.isEmpty()
+    /**
+     * Returns `true` if there are no albums.
+     * @since 1.0
+     */
+    public val isEmpty: Boolean get() = projection.isEmpty()
 
-    /** Returns `true` if any album satisfies [predicate]. */
-    fun contains(predicate: (AE) -> Boolean): Boolean = projection.values.any(predicate)
+    /**
+     * Returns `true` if any album satisfies [predicate].
+     * @since 1.0
+     */
+    public fun contains(predicate: (AE) -> Boolean): Boolean = projection.values.any(predicate)
 
-    /** Releases the projection subscription and the projection. Called when the owning library is closed. */
-    open fun close() {
+    /**
+     * Releases the projection subscription and the projection. Called when the owning library is closed.
+     * @since 1.0
+     */
+    public open fun close() {
         entriesChangedHandle?.close()
         projection.close()
         log.debug { "$publisherName closed" }
     }
 
-    override fun toString() = "${this::class.simpleName}(numberOfAlbums=${projection.size})"
+    override fun toString(): String = "${this::class.simpleName}(numberOfAlbums=${projection.size})"
 }

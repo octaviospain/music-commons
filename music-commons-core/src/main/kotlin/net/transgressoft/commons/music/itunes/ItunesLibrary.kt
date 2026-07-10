@@ -7,8 +7,9 @@ package net.transgressoft.commons.music.itunes
  * and all non-smart playlists including folder playlists for hierarchy reconstruction.
  * Consumers inspect [playlists] to select which ones to import, then pass this object
  * along with the selection to `ItunesImportService`.
+ * @since 1.0
  */
-data class ItunesLibrary(
+public data class ItunesLibrary(
     val tracks: Map<Int, ItunesTrack>,
     val playlists: List<ItunesPlaylist>
 )

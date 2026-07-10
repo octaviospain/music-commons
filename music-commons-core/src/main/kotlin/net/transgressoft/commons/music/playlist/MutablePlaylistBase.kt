@@ -31,8 +31,13 @@ import mu.KotlinLogging
  * internally and handle lazy entity resolution from [net.transgressoft.lirp.persistence.LirpContext].
  * This class has no dependency on any playlist hierarchy — name uniqueness and hierarchy tracking
  * are the hierarchy's responsibility.
+ *
+ * This is a framework base type. It is `public` only because `music-commons-fx` extends it across the
+ * module boundary; it is not a consumer extension point and its protected surface is not a stable
+ * contract. Extend the provided library facades instead of subclassing this type directly.
+ * @since 1.0
  */
-abstract class MutablePlaylistBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>>(
+public abstract class MutablePlaylistBase<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylist<I, P>>(
     override val id: Int,
     name: String,
     isDirectory: Boolean

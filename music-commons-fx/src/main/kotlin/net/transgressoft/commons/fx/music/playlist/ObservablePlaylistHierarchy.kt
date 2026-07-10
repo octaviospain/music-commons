@@ -27,11 +27,13 @@ import javafx.beans.property.ReadOnlySetProperty
  * Extends [ReactivePlaylistHierarchy] with concrete JavaFX-observable type parameters and adds
  * a JavaFX property for direct binding to UI components. All playlist changes are reflected
  * in [playlistsProperty] automatically on the JavaFX Application Thread.
+ * @since 1.0
  */
-interface ObservablePlaylistHierarchy : ReactivePlaylistHierarchy<ObservableAudioItem, ObservablePlaylist> {
+public interface ObservablePlaylistHierarchy : ReactivePlaylistHierarchy<ObservableAudioItem, ObservablePlaylist> {
 
     /**
      * Observable set of all playlists in the hierarchy, suitable for direct JavaFX binding.
+     * @since 1.0
      */
-    val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist>
+    public val playlistsProperty: ReadOnlySetProperty<ObservablePlaylist>
 }

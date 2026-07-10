@@ -1,5 +1,9 @@
 description = 'Transgressoft Music Commons - Core'
 
+kotlin {
+    explicitApi()
+}
+
 dependencies {
     api project(path: ':music-commons-api')
     api 'org.jetbrains.kotlinx:kotlinx-coroutines-core'

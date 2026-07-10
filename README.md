@@ -243,7 +243,8 @@ Audio items and playlists carry two identifiers with different scopes:
 
 - **`id`** — repository-local. The same audio file reloaded into a fresh library instance may
   receive a different `id`. Do not use `id` to correlate entities across instances.
-- **`uniqueId`** — content-derived and stable across instances. Use `uniqueId` (or content-based
+- **`uniqueId`** — physical-identity key: `fileName + "-" + duration(s) + "-" + bitRate`. Stable
+  across instances and reloads regardless of tag metadata changes. Use `uniqueId` (or content-based
   `equals`) to identify the same logical entity when comparing across instances or reloads.
 
 Entities are bound to the library instance that created them. Mixing entities from different
@@ -254,6 +255,15 @@ Support for running multiple live library instances simultaneously within one JV
 future release. The prerequisite work is tracked at
 [lirp#321](https://github.com/octaviospain/lirp/issues/321) and
 [music-commons#196](https://github.com/octaviospain/music-commons/issues/196).
+
+### API stability markers
+
+All public API is stamped `@since 1.0`. Elements marked `@MusicCommonsExperimentalApi` may change
+or be removed in a future minor version — using them without opting in via
+`@OptIn(MusicCommonsExperimentalApi::class)` produces a compile-time error. The BCV-based
+`apiCheck` task guards the public ABI surface: any deliberate API change requires regenerating the
+`.api` baseline with `gradle apiDump`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full
+deprecation lifecycle.
 
 ### Typed path validation
 

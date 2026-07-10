@@ -53,7 +53,7 @@ import javax.sound.sampled.spi.AudioFileReader
  * producing the first PCM bytes. That keeps a buggy reader from blocking a later one that
  * can actually play the file.
  */
-fun decodeToPcmStream(path: Path): AudioInputStream {
+internal fun decodeToPcmStream(path: Path): AudioInputStream {
     val file = path.toFile()
     val readers = prioritizeAudioFileReaders(file, loadAudioFileReaders())
     if (readers.isEmpty()) {
@@ -120,7 +120,7 @@ private fun skipFullyOnStream(stream: java.io.InputStream, count: Long): Long {
 /**
  * Reads audio file metadata using the same prioritized and exception-safe provider order as [decodeToPcmStream].
  */
-fun readAudioFileFormat(path: Path): AudioFileFormat {
+internal fun readAudioFileFormat(path: Path): AudioFileFormat {
     val file = path.toFile()
     val readers = prioritizeAudioFileReaders(file, loadAudioFileReaders())
     if (readers.isEmpty()) {
