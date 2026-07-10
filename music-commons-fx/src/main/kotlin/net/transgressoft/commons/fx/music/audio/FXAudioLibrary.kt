@@ -258,14 +258,18 @@ internal class FXAudioLibrary
                 delay(FX_REFRESH_DEBOUNCE_MILLIS.milliseconds)
                 Platform.runLater {
                     if (closed.get()) return@runLater
-                    try {
-                        catalogRefreshRequested.set(false)
-                        refreshCatalogProperties()
-                    } finally {
-                        catalogRefreshQueued.set(false)
-                        if (catalogRefreshRequested.get()) {
-                            queueCatalogRefresh()
-                        }
+                    // Close the check-then-act gap that could otherwise drop a catalog update permanently
+                    // under concurrent producers on the multi-threaded reactive scope. Releasing the queued
+                    // gate before reading the backing set lets a producer that mutates during the reconcile
+                    // re-arm the debounce itself, and clearing the "work arrived" flag immediately before the
+                    // read (rather than at the start of the runnable) guarantees any producer that runs after
+                    // this point is caught by the post-reconcile re-check. Either path re-triggers a refresh,
+                    // so no producer's signal is consumed separately from the state it guards.
+                    catalogRefreshQueued.set(false)
+                    catalogRefreshRequested.set(false)
+                    refreshCatalogProperties()
+                    if (catalogRefreshRequested.get()) {
+                        queueCatalogRefresh()
                     }
                 }
             }
@@ -280,8 +284,13 @@ internal class FXAudioLibrary
             // per tick), but emits only the add/remove changes that actually occurred, so bound
             // ListView/TableView consumers do O(delta) work per tick and keep selection/scroll state.
             // That frees the FX thread for the catalog projections' own builds so they converge in time.
-            observableArtistCatalogSet.retainAll(artistCatalogBacking)
-            observableArtistCatalogSet.addAll(artistCatalogBacking)
+            //
+            // Read the backing set into a single snapshot so the retain and add reconcile against one
+            // consistent view. Reading it twice would let a concurrent producer mutate between the two
+            // operations, leaving the observable set transiently inconsistent with any single backing state.
+            val backingSnapshot = artistCatalogBacking.toSet()
+            observableArtistCatalogSet.retainAll(backingSnapshot)
+            observableArtistCatalogSet.addAll(backingSnapshot)
             syncOrderedList(observableAlbumList, observableAlbumRegistry.orderedValues())
             syncOrderedList(observableGenreIndexList, observableGenreIndexRegistry.orderedValues())
         }
