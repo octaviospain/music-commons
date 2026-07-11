@@ -49,6 +49,14 @@ unchanged**, so existing library files remain readable without migration.
 - FXAudioLibrary artist-catalog projection lost-update race that left
   `artistCatalogsProperty` intermittently missing the final update during large,
   involved-artist-heavy imports (#195).
+- iTunes import dropped the artist catalog of any artist that appeared only in a
+  track's title (featured or remix credits). Items were registered from their
+  file tag and then mutated in place, re-keying the artist-catalog projection
+  while the entity was already live, so a projection read racing the mutation
+  could permanently drop a title-only artist's bucket. Imported items are now
+  built with their final metadata before registration — a new `metadataTransform`
+  overload on `createFromFile`/`audioItemFromFile` — so they enter the library
+  complete, in a single registration, with no post-add re-key (#206).
 - Registry-overwrite corruption when a second library instance shared a store
   (#197).
 - Id generation fails fast on counter overflow instead of handing out negative
