@@ -445,8 +445,12 @@ public class FXAudioItem
                 getArtistsNamesInvolved(
                     title, artist.name, album.albumArtist.name
                 ).map { Artist.of(it) }.toSet()
-            artistsInvolvedProperty.clear()
+            // Add-before-remove: populate the new artists first, then drop the stale ones, so a
+            // concurrent reader (e.g. a grouped projection re-keying off this set) never observes the
+            // set momentarily missing an artist it still involves. A clear()+addAll() would expose an
+            // empty window, from which such a reader can drop a still-valid catalog key.
             artistsInvolvedProperty.addAll(involved)
+            artistsInvolvedProperty.retainAll(involved)
         }
 
         override fun setPlayCount(count: Short) {

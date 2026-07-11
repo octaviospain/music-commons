@@ -3,6 +3,8 @@ public final class net/transgressoft/commons/fx/music/FXMusicLibrary : net/trans
 	public synthetic fun <init> (Lnet/transgressoft/commons/fx/music/audio/FXAudioLibrary;Lnet/transgressoft/commons/fx/music/playlist/FXPlaylistHierarchy;Lnet/transgressoft/commons/music/waveform/AudioWaveformRepository;Lnet/transgressoft/commons/music/audio/AudioMetadataIO;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun audioItemFromFile (Ljava/nio/file/Path;)Lnet/transgressoft/commons/fx/music/audio/ObservableAudioItem;
 	public synthetic fun audioItemFromFile (Ljava/nio/file/Path;)Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;
+	public fun audioItemFromFile (Ljava/nio/file/Path;Lkotlin/jvm/functions/Function1;)Lnet/transgressoft/commons/fx/music/audio/ObservableAudioItem;
+	public synthetic fun audioItemFromFile (Ljava/nio/file/Path;Lkotlin/jvm/functions/Function1;)Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;
 	public fun audioLibrary ()Lnet/transgressoft/commons/fx/music/audio/ObservableAudioLibrary;
 	public synthetic fun audioLibrary ()Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;
 	public static final fun builder ()Lnet/transgressoft/commons/fx/music/FXMusicLibrary$Builder;

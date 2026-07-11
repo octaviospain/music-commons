@@ -29,6 +29,7 @@ import net.transgressoft.commons.fx.music.playlist.ObservablePlaylistHierarchy
 import net.transgressoft.commons.media.waveform.audioWaveformRepository
 import net.transgressoft.commons.music.MusicLibrary
 import net.transgressoft.commons.music.audio.Artist
+import net.transgressoft.commons.music.audio.AudioItemMetadata
 import net.transgressoft.commons.music.audio.AudioMetadataIO
 import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
 import net.transgressoft.commons.music.audio.event.AudioItemEventSubscriber
@@ -224,6 +225,12 @@ public class FXMusicLibrary private constructor(
         withLoggingContext("libraryInstance" to instanceName) {
             WindowsPathValidator.validatePath(path)
             _audioLibrary.createFromFile(path)
+        }
+
+    override fun audioItemFromFile(path: Path, metadataTransform: (AudioItemMetadata) -> AudioItemMetadata): ObservableAudioItem =
+        withLoggingContext("libraryInstance" to instanceName) {
+            WindowsPathValidator.validatePath(path)
+            _audioLibrary.createFromFile(path, metadataTransform)
         }
 
     override fun createPlaylist(name: String): ObservablePlaylist = _playlistHierarchy.createPlaylist(name)

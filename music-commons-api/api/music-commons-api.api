@@ -3,6 +3,7 @@ public abstract interface annotation class net/transgressoft/commons/music/Music
 
 public abstract interface class net/transgressoft/commons/music/MusicLibrary : java/lang/AutoCloseable {
 	public abstract fun audioItemFromFile (Ljava/nio/file/Path;)Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;
+	public abstract fun audioItemFromFile (Ljava/nio/file/Path;Lkotlin/jvm/functions/Function1;)Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;
 	public abstract fun audioLibrary ()Lnet/transgressoft/commons/music/audio/ReactiveAudioLibrary;
 	public abstract fun createPlaylist (Ljava/lang/String;)Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;
 	public abstract fun createPlaylistDirectory (Ljava/lang/String;)Lnet/transgressoft/commons/music/playlist/ReactiveAudioPlaylist;
@@ -2488,6 +2489,7 @@ public abstract interface class net/transgressoft/commons/music/audio/ReactiveAu
 	public abstract fun containsAudioItemWithGenre (Ljava/lang/String;)Z
 	public abstract fun createAudioItem (Lkotlin/jvm/functions/Function1;)Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;
 	public abstract fun createFromFile (Ljava/nio/file/Path;)Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;
+	public abstract fun createFromFile (Ljava/nio/file/Path;Lkotlin/jvm/functions/Function1;)Lnet/transgressoft/commons/music/audio/ReactiveAudioItem;
 	public fun createFromFileBatchAsync (Ljava/util/Collection;I)Ljava/util/concurrent/CompletableFuture;
 	public fun createFromFileBatchAsync (Ljava/util/Collection;Ljava/util/concurrent/Executor;I)Ljava/util/concurrent/CompletableFuture;
 	public fun createFromFileBatchAsync (Ljava/util/Collection;Lkotlinx/coroutines/CoroutineDispatcher;I)Ljava/util/concurrent/CompletableFuture;

@@ -90,7 +90,9 @@ internal class DefaultAudioLibrary
             return super.add(entity)
         }
 
-        override fun createFromFile(audioItemPath: Path): AudioItem {
+        override fun createFromFile(audioItemPath: Path): AudioItem = createFromFile(audioItemPath) { it }
+
+        override fun createFromFile(audioItemPath: Path, metadataTransform: (AudioItemMetadata) -> AudioItemMetadata): AudioItem {
             if (!Files.exists(audioItemPath)) {
                 throw InvalidAudioFilePathException("File '${audioItemPath.toAbsolutePath()}' does not exist")
             }
@@ -102,7 +104,9 @@ internal class DefaultAudioLibrary
             }
             val tag = metadataIO.readMetadata(audioItemPath)
             // Dedup by physical identity: if an item with the same fileName-duration-bitRate key
-            // already exists, return it without allocating a new id or adding a duplicate.
+            // already exists, return it without allocating a new id or adding a duplicate. The key is
+            // derived from the raw file tag; metadataTransform only enriches user-facing fields, never
+            // the technical fields the identity is built from.
             val candidateUniqueId =
                 buildString {
                     append(audioItemPath.fileName.toString().replace(' ', '_'))
@@ -111,7 +115,7 @@ internal class DefaultAudioLibrary
                 }
             val existing = findByUniqueId(candidateUniqueId)
             if (existing.isPresent) return existing.get()
-            return MutableAudioItem(audioItemPath, newId(), tag).also { audioItem ->
+            return MutableAudioItem(audioItemPath, newId(), metadataTransform(tag)).also { audioItem ->
                 add(audioItem)
                 logger.trace { "New AudioItem was created from file $audioItemPath with id ${audioItem.id}" }
             }

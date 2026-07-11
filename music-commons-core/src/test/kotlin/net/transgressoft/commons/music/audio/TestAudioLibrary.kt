@@ -20,10 +20,12 @@ internal class TestAudioLibrary(
         metadataIO
     ) {
 
-    override fun createFromFile(audioItemPath: Path): AudioItem {
+    override fun createFromFile(audioItemPath: Path): AudioItem = createFromFile(audioItemPath) { it }
+
+    override fun createFromFile(audioItemPath: Path, metadataTransform: (AudioItemMetadata) -> AudioItemMetadata): AudioItem {
         val tag = metadataIO.readMetadata(audioItemPath)
         val cover = metadataIO.loadCover(audioItemPath)
-        return MutableAudioItem(audioItemPath, newId(), tag.copy(coverBytes = cover)).also { add(it) }
+        return MutableAudioItem(audioItemPath, newId(), metadataTransform(tag.copy(coverBytes = cover))).also { add(it) }
     }
 
     /** Exposes the artist catalog registry for test assertions on post-close catalog state. */

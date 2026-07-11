@@ -86,6 +86,27 @@ public interface ReactiveAudioLibrary<
     public fun createFromFile(audioItemPath: Path): I
 
     /**
+     * Creates an audio item from the file at the specified path, transforming the metadata read from
+     * the file before the item is constructed.
+     *
+     * Unlike [createFromFile], the item is registered in a single step already carrying its final
+     * metadata — no post-registration mutation is required. Importers that enrich file metadata from
+     * an external source (for example iTunes) use this so the item enters the library complete: a
+     * register-then-update sequence would otherwise force grouped projections to re-key the entity
+     * while it is already live, and a projection reading the entity mid-update can miss a key.
+     *
+     * [metadataTransform] is applied only when a new item is constructed. When an item with the same
+     * physical identity already exists, it is returned unchanged and the transform is not applied.
+     *
+     * @param audioItemPath Path to the audio file
+     * @param metadataTransform maps the metadata read from the file to the metadata the new item is
+     *   built with
+     * @return The created audio item, or the already-present item with the same physical identity
+     * @since 1.0
+     */
+    public fun createFromFile(audioItemPath: Path, metadataTransform: (AudioItemMetadata) -> AudioItemMetadata): I
+
+    /**
      * Finds all audio items for a specific album by an artist.
      *
      * @param artist The artist to search for

@@ -25,7 +25,9 @@ import net.transgressoft.commons.music.testing.registryIsolation
 import net.transgressoft.lirp.persistence.VolatileRepository
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.matchers.optional.shouldBePresent
 import io.kotest.property.arbitrary.next
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
@@ -110,6 +112,84 @@ internal class FXAudioLibraryCatalogConvergenceTest : StringSpec({
                         catalogsByArtist.getValue(artist).itemIds() shouldContainExactlyInAnyOrder expectedIds
                         // ...and the public property agrees with the registry projection.
                         library.getArtistCatalog(artist).get().itemIds() shouldContainExactlyInAnyOrder expectedIds
+                    }
+                }
+            }
+        }
+    }
+
+    "getArtistCatalog resolves an artist that appears only as a title-parsed guest" {
+        FXAudioLibrary(VolatileRepository("TitleGuestFx")).use { library ->
+            val primary = Artist.of("Primary One")
+            val album = AlbumDetails("Solo Album", primary)
+            val guest = Artist.of("Guest Deejay")
+
+            val item = library.addItem(primary, album, "Night Drive feat Guest Deejay", 1)
+
+            // The guest is parsed only from the title and is nobody's primary or album artist. Since the
+            // registry keys every artist in artistsInvolved, the guest must expose a retrievable catalog.
+            item.artistsInvolved shouldContain guest
+
+            eventually(5.seconds) {
+                WaitForAsyncUtils.waitForFxEvents()
+                library.getArtistCatalog(guest).shouldBePresent { it.itemIds() shouldContainExactlyInAnyOrder setOf(item.id) }
+            }
+        }
+    }
+
+    "getArtistCatalog resolves every title-parsed guest under a compilation-style import at scale" {
+        val trackCount = 80
+
+        repeat(4) { iteration ->
+            FXAudioLibrary(VolatileRepository("TitleGuestScaleFx-$iteration")).use { library ->
+                val variousArtists = Artist.of("Various Artists")
+                val compilation = AlbumDetails("Compilations", variousArtists)
+
+                // Each track has a distinct primary artist, the shared (churned) "Various Artists" album
+                // artist, and a unique guest that appears only in the title. Every guest must resolve.
+                val expectedGuestIds = linkedMapOf<Artist, Int>()
+                for (index in 1..trackCount) {
+                    val primary = Artist.of("Primary $index")
+                    val guest = Artist.of("Guest $index")
+                    val item = library.addItem(primary, compilation, "Song $index feat Guest $index", index.toShort())
+                    expectedGuestIds[guest] = item.id
+                }
+
+                eventually(10.seconds) {
+                    WaitForAsyncUtils.waitForFxEvents()
+                    expectedGuestIds.forEach { (guest, id) ->
+                        library.getArtistCatalog(guest).shouldBePresent { it.itemIds() shouldContain id }
+                    }
+                }
+            }
+        }
+    }
+
+    "getArtistCatalog resolves every title-guest introduced by mutating in-repository items at scale" {
+        val trackCount = 120
+
+        repeat(4) { iteration ->
+            FXAudioLibrary(VolatileRepository("TitleGuestMutateScaleFx-$iteration")).use { library ->
+                val variousArtists = Artist.of("Various Artists")
+                val compilation = AlbumDetails("Compilations", variousArtists)
+
+                // Mirror the iTunes import: add each item with a plain title (from its file tag), then
+                // mutate it in place to apply the richer metadata whose title introduces a unique guest.
+                // The shared "Various Artists" album artist is churned once per mutation.
+                val expectedGuestIds = linkedMapOf<Artist, Int>()
+                val items = mutableListOf<FXAudioItem>()
+                for (index in 1..trackCount) {
+                    val primary = Artist.of("Primary $index")
+                    val item = library.addItem(primary, compilation, "Song $index", index.toShort())
+                    items += item
+                    expectedGuestIds[Artist.of("Guest ${item.id}")] = item.id
+                }
+                items.forEach { item -> item.mutate { title = "Song ${item.id} feat Guest ${item.id}" } }
+
+                eventually(10.seconds) {
+                    WaitForAsyncUtils.waitForFxEvents()
+                    expectedGuestIds.forEach { (guest, id) ->
+                        library.getArtistCatalog(guest).shouldBePresent { it.itemIds() shouldContain id }
                     }
                 }
             }
