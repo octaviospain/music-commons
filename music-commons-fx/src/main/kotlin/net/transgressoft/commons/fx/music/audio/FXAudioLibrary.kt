@@ -19,6 +19,7 @@ package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.fx.music.conditionalDeregister
 import net.transgressoft.commons.fx.music.guardedRegister
+import net.transgressoft.commons.music.audio.AudioItemMetadata
 import net.transgressoft.commons.music.audio.AudioLibraryBase
 import net.transgressoft.commons.music.audio.AudioMetadataIO
 import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
@@ -358,7 +359,9 @@ internal class FXAudioLibrary
             queueCatalogRefresh()
         }
 
-        override fun createFromFile(audioItemPath: Path): FXAudioItem {
+        override fun createFromFile(audioItemPath: Path): FXAudioItem = createFromFile(audioItemPath) { it }
+
+        override fun createFromFile(audioItemPath: Path, metadataTransform: (AudioItemMetadata) -> AudioItemMetadata): FXAudioItem {
             checkOpen()
             if (!Files.exists(audioItemPath)) {
                 throw InvalidAudioFilePathException("File '${audioItemPath.toAbsolutePath()}' does not exist")
@@ -371,7 +374,9 @@ internal class FXAudioLibrary
             }
             val metadata = metadataIO.readMetadata(audioItemPath)
             // Dedup by physical identity: if an item with the same fileName-duration-bitRate key
-            // already exists, return it without allocating a new id or adding a duplicate.
+            // already exists, return it without allocating a new id or adding a duplicate. The key is
+            // derived from the raw file tag; metadataTransform only enriches user-facing fields, never
+            // the technical fields the identity is built from.
             val candidateUniqueId =
                 buildString {
                     append(audioItemPath.fileName.toString().replace(' ', '_'))
@@ -380,7 +385,7 @@ internal class FXAudioLibrary
                 }
             val existing = findByUniqueId(candidateUniqueId)
             if (existing.isPresent) return existing.get() as FXAudioItem
-            return FXAudioItem(audioItemPath, newId(), metadata).also { fxAudioItem ->
+            return FXAudioItem(audioItemPath, newId(), metadataTransform(metadata)).also { fxAudioItem ->
                 add(fxAudioItem)
                 logger.trace { "New ObservableAudioItem was created from file $audioItemPath with id ${fxAudioItem.id}" }
             }

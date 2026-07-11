@@ -20,6 +20,7 @@ package net.transgressoft.commons.music.itunes
 import net.transgressoft.commons.music.MusicLibrary
 import net.transgressoft.commons.music.audio.AlbumDetails
 import net.transgressoft.commons.music.audio.Artist
+import net.transgressoft.commons.music.audio.AudioItemMetadata
 import net.transgressoft.commons.music.audio.AudioMetadataIO
 import net.transgressoft.commons.music.audio.Genre
 import net.transgressoft.commons.music.audio.JAudioTaggerMetadataIO
@@ -207,11 +208,17 @@ public class ItunesImportService<I, P>
     }
 
     private fun importTrack(track: ItunesTrack, path: Path, policy: ItunesImportPolicy): I {
-        val audioItem = musicLibrary.audioItemFromFile(path)
-
-        if (!policy.useFileMetadata) {
-            applyItunesMetadata(audioItem, track)
-        }
+        // When enriching with iTunes metadata, build the item complete via the metadata transform so
+        // it is registered in a single step. A register-then-mutate sequence changes the item's
+        // involved-artist key set while it is already live in the library, forcing its grouped
+        // projections (artist catalogs) to re-key; a projection reading the entity mid-mutation can
+        // miss a title-derived artist and permanently drop that catalog.
+        val audioItem =
+            if (policy.useFileMetadata) {
+                musicLibrary.audioItemFromFile(path)
+            } else {
+                musicLibrary.audioItemFromFile(path, itunesMetadataTransform(track))
+            }
 
         if (policy.holdPlayCount && track.playCount > 0) {
             audioItem.setPlayCount(track.playCount)
@@ -224,17 +231,19 @@ public class ItunesImportService<I, P>
         return audioItem
     }
 
-    private fun applyItunesMetadata(audioItem: I, track: ItunesTrack) {
+    private fun itunesMetadataTransform(track: ItunesTrack): (AudioItemMetadata) -> AudioItemMetadata {
         val (artist, album, genres) = resolveItunesMetadata(track)
-        audioItem.mutate {
-            title = track.title
-            this.artist = artist
-            this.album = album
-            this.genres = genres
-            comments = track.comments
-            trackNumber = track.trackNumber
-            discNumber = track.discNumber
-            bpm = track.bpm
+        return { fileMetadata ->
+            fileMetadata.copy(
+                title = track.title,
+                artist = artist,
+                album = album,
+                genres = genres,
+                comments = track.comments,
+                trackNumber = track.trackNumber,
+                discNumber = track.discNumber,
+                bpm = track.bpm
+            )
         }
     }
 

@@ -17,6 +17,7 @@
 
 package net.transgressoft.commons.music
 
+import net.transgressoft.commons.music.audio.AudioItemMetadata
 import net.transgressoft.commons.music.audio.ReactiveAudioItem
 import net.transgressoft.commons.music.audio.ReactiveAudioLibrary
 import net.transgressoft.commons.music.playlist.ReactiveAudioPlaylist
@@ -91,6 +92,24 @@ public interface MusicLibrary<I : ReactiveAudioItem<I>, P : ReactiveAudioPlaylis
      * @since 1.0
      */
     public fun audioItemFromFile(path: Path): I
+
+    /**
+     * Creates an audio item from the audio file at [path], transforming the metadata read from the
+     * file before the item is constructed, and adds it to the audio library in a single step.
+     *
+     * Importers that enrich file metadata from an external source use this so the item enters the
+     * library already carrying its final metadata, avoiding a register-then-update sequence. See
+     * [ReactiveAudioLibrary.createFromFile] for the transform semantics (applied only to newly
+     * constructed items; an already-present item with the same physical identity is returned
+     * unchanged).
+     *
+     * @param path the path to the audio file
+     * @param metadataTransform maps the metadata read from the file to the metadata the new item is
+     *   built with
+     * @return the created (or already-present) audio item
+     * @since 1.0
+     */
+    public fun audioItemFromFile(path: Path, metadataTransform: (AudioItemMetadata) -> AudioItemMetadata): I
 
     /**
      * Creates a new playlist with [name].

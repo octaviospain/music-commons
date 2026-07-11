@@ -21,6 +21,7 @@ import net.transgressoft.commons.media.waveform.audioWaveformRepository
 import net.transgressoft.commons.music.audio.Artist
 import net.transgressoft.commons.music.audio.ArtistCatalog
 import net.transgressoft.commons.music.audio.AudioItem
+import net.transgressoft.commons.music.audio.AudioItemMetadata
 import net.transgressoft.commons.music.audio.AudioLibrary
 import net.transgressoft.commons.music.audio.AudioMetadataIO
 import net.transgressoft.commons.music.audio.DefaultAudioLibrary
@@ -151,6 +152,12 @@ public class CoreMusicLibrary private constructor(
             // again, but failing here surfaces the exception before the audio item construction kicks off.
             WindowsPathValidator.validatePath(path)
             _audioLibrary.createFromFile(path)
+        }
+
+    override fun audioItemFromFile(path: Path, metadataTransform: (AudioItemMetadata) -> AudioItemMetadata): AudioItem =
+        withLoggingContext("libraryInstance" to instanceName) {
+            WindowsPathValidator.validatePath(path)
+            _audioLibrary.createFromFile(path, metadataTransform)
         }
 
     override fun createPlaylist(name: String): MutableAudioPlaylist = _playlistHierarchy.createPlaylist(name)
