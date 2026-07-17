@@ -1,9 +1,9 @@
 [versions]
-kotlin = "2.4.0"
+kotlin = "2.4.10"
 coroutines = "1.11.0"
 kotest = "6.2.1"
 lirp = "3.2.1"
-ksp = "2.3.9"
+ksp = "2.3.10"
 jaudiotagger = "3.0.1"
 nv-i18n = "1.29"
 ddplist = "1.29"
