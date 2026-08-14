@@ -5,7 +5,7 @@ kotest = "6.2.1"
 lirp = "3.2.1"
 ksp = "2.3.9"
 jaudiotagger = "3.0.1"
-nv-i18n = "1.29"
+nv-i18n = "1.33"
 ddplist = "1.29"
 kotlin-logging = "3.0.5"
 kotlinx-serialization = "1.11.0"
@@ -52,7 +52,7 @@ lirp-sql = { module = "net.transgressoft:lirp-sql", version.ref = "lirp" }
 lirp-sql-api = { module = "net.transgressoft:lirp-sql-api", version.ref = "lirp" }
 lirp-fx = { module = "net.transgressoft:lirp-fx", version.ref = "lirp" }
 jaudiotagger = { module = "net.jthink:jaudiotagger", version.ref = "jaudiotagger" }
-nv-i18n = { module = "com.neovisionaries:nv-i18n", version.ref = "nv-i18n" }
+nv-i18n = { module = "uk.co.foundationsedge:nv-i18n", version.ref = "nv-i18n" }
 dd-plist = { module = "com.googlecode.plist:dd-plist", version.ref = "ddplist" }
 kotlin-logging = { module = "io.github.microutils:kotlin-logging-jvm", version.ref = "kotlin-logging" }
 logback-core = { module = "ch.qos.logback:logback-core", version.ref = "logback" }
