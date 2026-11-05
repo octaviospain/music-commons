@@ -101,6 +101,8 @@ public interface ObservableAudioItem : ReactiveAudioItem<ObservableAudioItem> {
 
     /**
      * Observable property exposing the full set of [Artist]s involved in the track, derived from title, artist, and album-artist fields.
+     * Use [artistsInvolved] for background iteration; [FXAudioItem] exposes an immutable snapshot
+     * there rather than this live JavaFX collection.
      * @since 1.0
      */
     public val artistsInvolvedProperty: ReadOnlySetProperty<Artist>

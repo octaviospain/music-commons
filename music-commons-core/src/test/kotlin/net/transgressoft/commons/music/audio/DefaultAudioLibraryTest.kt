@@ -27,7 +27,6 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.property.Arb
-import io.kotest.property.arbitrary.list
 import io.kotest.property.arbitrary.next
 import java.io.File
 import java.nio.file.Files
@@ -149,7 +148,15 @@ internal class DefaultAudioLibraryTest: StringSpec({
     }
 
     "Creates a batch of audio items asynchronously with tag-derived encoding and persistence" {
-        val filePaths = Arb.list(files.virtualAudioFile(), 50..100).next()
+        // Identity uses filename, duration and bitrate, not the parent path. Random metadata can
+        // produce duplicate filenames after sanitization, which are intentionally deduplicated.
+        val filePaths =
+            AudioFileTagType.entries.flatMap { tagType ->
+                List(12) { index ->
+                    files.virtualAudioFile(tagType) { title = "Batch ${tagType.name} $index" }.next()
+                }
+            }
+        filePaths.map { it.fileName.toString().replace(' ', '_') }.distinct().size shouldBe filePaths.size
 
         val result: List<AudioItem> = audioRepository.createFromFileBatchAsync(filePaths, reactive.dispatcher.asExecutor()).get()
 
@@ -162,15 +169,29 @@ internal class DefaultAudioLibraryTest: StringSpec({
         val flacItems = result.filter { it.path.toString().endsWith("flac") }
         val wavItems = result.filter { it.path.toString().endsWith("wav") }
         val m4aItems = result.filter { it.path.toString().endsWith("m4a") }
+        val oggItems = result.filter { it.path.toString().endsWith("ogg") }
 
         mp3Items.forEach { it.encoding shouldBe "MPEG-1 Layer 3" }
         flacItems.forEach { it.encoding shouldBe "FLAC" }
         wavItems.forEach { it.encoding shouldBe "WAV" }
         m4aItems.forEach { it.encoding shouldBe "AAC" }
+        oggItems.forEach { it.encoding shouldBe "Vorbis" }
 
         val persisted = Json.decodeFromString(AudioItemMapSerializer, jsonFile.readText())
 
         persisted.keys shouldContainExactlyInAnyOrder result.map { it.id }
+    }
+
+    "DefaultAudioLibrary deduplicates matching file identities from different directories" {
+        val attributes = Arb.audioAttributes().next()
+        val firstPath = files.createAt(files.fileSystem.getPath("/first/song.mp3"), attributes, AudioFileTagType.ID3_V_24)
+        val secondPath = files.createAt(files.fileSystem.getPath("/second/song.mp3"), attributes, AudioFileTagType.ID3_V_24)
+
+        val first = audioRepository.createFromFile(firstPath)
+        val second = audioRepository.createFromFile(secondPath)
+
+        second shouldBe first
+        audioRepository.size() shouldBe 1
     }
 
     // Every accepted batch size must create the full set of items: the default (no explicit size),
@@ -181,7 +202,10 @@ internal class DefaultAudioLibraryTest: StringSpec({
         1000,
         100
     ) { batchSize ->
-        val filePaths = Arb.list(files.virtualAudioFile(), 10..20).next()
+        val filePaths =
+            List(12) { index ->
+                files.virtualAudioFile { title = "Batch size $batchSize item $index" }.next()
+            }
 
         val result: List<AudioItem> =
             if (batchSize == null) {

@@ -44,7 +44,9 @@ import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
+import javafx.collections.SetChangeListener
 import javafx.scene.image.Image
+import org.testfx.api.FxToolkit
 import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -54,6 +56,44 @@ import kotlin.time.Duration.Companion.seconds
 
 internal class FXAudioItemTest : StringSpec({
     val files = virtualFiles()
+
+    beforeSpec { FxToolkit.registerPrimaryStage() }
+    afterSpec { FxToolkit.cleanupStages() }
+
+    "FXAudioItem retains immutable artist snapshots while title, artist and album metadata change" {
+        val item =
+            FXAudioItem(
+                Paths.get("snapshot.mp3"),
+                metadata =
+                    AudioItemMetadata(
+                        title = "Song",
+                        artist = Artist.of("Primary"),
+                        album = AlbumDetails("Compilation", Artist.of("Various Artists"))
+                    )
+            )
+        val initial = setOf(Artist.of("Primary"), Artist.of("Various Artists"))
+        val snapshot = item.artistsInvolved
+        val iterator = snapshot.iterator()
+        var snapshotDuringNotification: Set<Artist>? = null
+        item.artistsInvolvedProperty.addListener(SetChangeListener { snapshotDuringNotification = item.artistsInvolved })
+        item.title = "Song feat Guest"
+        iterator.asSequence().toSet() shouldBe initial
+        snapshot shouldBe initial
+        item.artistsInvolved shouldBe initial + Artist.of("Guest")
+        snapshotDuringNotification shouldBe item.artistsInvolved
+
+        val titleSnapshot = item.artistsInvolved
+        item.artistProperty.set(Artist.of("Replacement"))
+        titleSnapshot shouldBe initial + Artist.of("Guest")
+        item.artistsInvolved shouldBe setOf(Artist.of("Replacement"), Artist.of("Various Artists"), Artist.of("Guest"))
+
+        val artistSnapshot = item.artistsInvolved
+        item.album = AlbumDetails("Solo", Artist.of("Replacement"))
+        artistSnapshot shouldBe setOf(Artist.of("Replacement"), Artist.of("Various Artists"), Artist.of("Guest"))
+        item.artistsInvolved shouldBe setOf(Artist.of("Replacement"), Artist.of("Guest"))
+        item.artistsInvolvedProperty.value shouldBe item.artistsInvolved
+        shouldThrow<UnsupportedOperationException> { (item.artistsInvolved as MutableSet<Artist>).clear() }
+    }
 
     "Changes its properties when observable properties are updated" {
         val path = files.virtualAudioFile { coverImageBytes = testCoverBytes }.next()

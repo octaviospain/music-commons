@@ -89,6 +89,11 @@ Waveforms persist to JSON only; their serializer ships from `music-commons-media
 All JavaFX modules use the shared `javafx-controls` version in `gradle/libs.versions.toml`,
 including the JavaFX plugin configuration and test utilities. Headless FX tests use Monocle
 21.0.2 on the Java 21 toolchain; newer JavaFX major releases may require a newer JDK.
+CI uses Monocle's headless backend and pure-Java JavaSound decoders, so it does not
+install GStreamer, FFmpeg, or Xvfb or require a display server.
+
+JavaFX audio items expose involved artists as immutable snapshots for asynchronous catalog
+projections. UI bindings continue to observe the live `artistsInvolvedProperty` collection.
 
 ## Installation
 
@@ -299,6 +304,9 @@ published modules, and the build enforces SHA-256 dependency verification. Contr
 dependency must regenerate the verification metadata — see
 [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and the supply-chain (Renovate, OSV-Scanner)
 details.
+
+`check` verifies JavaFX native JAR checksums for every supported desktop platform,
+not just the host OS, so metadata regenerated on Linux also covers Windows and macOS.
 
 ## Feature index
 

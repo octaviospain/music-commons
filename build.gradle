@@ -123,6 +123,30 @@ sonar {
 
 tasks.named('check') {
     dependsOn tasks.named('testCodeCoverageReport', JacocoReport)
+    dependsOn 'resolveJavafxVerificationArtifacts'
+}
+
+// JavaFX normally resolves only the host's native JARs. Keep every supported desktop
+// classifier in the ledger so regeneration on Linux also verifies macOS and Windows.
+def javafxVerificationArtifacts = configurations.create('javafxVerificationArtifacts') {
+    canBeConsumed = false
+    canBeResolved = true
+    transitive = false
+}
+dependencies {
+    ['base', 'controls', 'graphics'].each { module ->
+        ['linux', 'linux-aarch64', 'mac', 'mac-aarch64', 'win'].each { platform ->
+            add(javafxVerificationArtifacts.name, "org.openjfx:javafx-${module}:${libs.versions.javafx.controls.get()}:${platform}@jar")
+        }
+    }
+}
+tasks.register('resolveJavafxVerificationArtifacts') {
+    group = 'verification'
+    description = 'Resolves JavaFX native JARs for every supported desktop platform with dependency verification.'
+    inputs.files(javafxVerificationArtifacts)
+    doLast {
+        logger.lifecycle("Verified ${javafxVerificationArtifacts.files.size()} JavaFX platform artifacts.")
+    }
 }
 
 /**
