@@ -33,24 +33,6 @@ jobs:
                     distribution: 'liberica'
                     java-package: 'jdk+fx'
 
-            -   name: Install dependencies (Linux)
-                if: matrix.os == 'ubuntu-latest'
-                run: |
-                    sudo apt-get update
-                    sudo apt-get install -y \
-                      libgstreamer1.0-0 \
-                      gstreamer1.0-plugins-base \
-                      gstreamer1.0-plugins-good \
-                      gstreamer1.0-plugins-bad \
-                      gstreamer1.0-libav \
-                      gstreamer1.0-tools \
-                      libgstreamer-plugins-base1.0-dev \
-                      xvfb \
-                      ffmpeg
-                    export DISPLAY=:99.0
-                    Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-                    sleep 2
-                    echo "DISPLAY=:99.0" >> $GITHUB_ENV
 
             -   name: Cache Gradle packages
                 uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -62,7 +44,8 @@ jobs:
                     restore-keys: |
                         ${{ runner.os }}-gradle-
 
-            -   name: Build with Virtual Display (Linux)
+            # Monocle is headless and decoding uses JavaSound SPI; neither needs Xvfb or GStreamer.
+            -   name: Build (Linux, skip audio-hardware tests)
                 if: matrix.os == 'ubuntu-latest'
                 run: ./gradlew check dokkaGenerate -PexcludeAudioHardware=true
 
@@ -78,8 +61,7 @@ jobs:
 
             -   name: Build (macOS, skip Linux-only and audio-hardware tests)
                 if: matrix.os == 'macos-latest'
-                # macOS needs no gstreamer/Xvfb: JavaFX tests run under Monocle headless (bundled
-                # in Liberica jdk+fx) and audio decode is pure-Java JavaSound SPI.
+                # JavaFX tests use the Monocle test dependency; audio decode is pure-Java JavaSound SPI.
                 run: ./gradlew check -PexcludeAudioHardware=true -PexcludeLinuxOnly=true
 
             -   name: Cross-check verification metadata against Maven Central

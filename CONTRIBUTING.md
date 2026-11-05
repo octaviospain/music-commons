@@ -189,6 +189,20 @@ can fail during build configuration. The second command rebuilds, generates the 
 and documentation, and prunes obsolete entries while preserving the verification
 configuration. The `help` command alone does not resolve every build dependency.
 
+`check` also runs `resolveJavafxVerificationArtifacts`, which resolves the base, controls,
+and graphics JARs for Linux x64/ARM64, macOS x64/ARM64, and Windows x64, regardless of
+the host OS. Regeneration therefore records each platform's SHA-256 without a blanket
+JavaFX trust exemption. These verification-only artifacts are not added to application
+classpaths. To diagnose platform-checksum failures without running tests:
+
+```bash
+gradle resolveJavafxVerificationArtifacts
+```
+
+Do not replace the verification configuration when updating checksums. Missing platform
+checksums fail deterministically before tests; retrying jobs or disabling tests cannot
+repair them.
+
 After regeneration, verify without metadata-writing mode and run the CI metadata
 comparison:
 

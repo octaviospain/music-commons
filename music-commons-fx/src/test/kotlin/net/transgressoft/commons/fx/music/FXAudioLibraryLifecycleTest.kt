@@ -17,9 +17,8 @@
 
 package net.transgressoft.commons.fx.music
 
-import net.transgressoft.commons.fx.music.eventuallyAfterFxEvents
 import net.transgressoft.commons.music.audio.virtualFiles
-import net.transgressoft.commons.music.testing.ReactiveScopeSerialization
+import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.commons.music.testing.registryIsolation
 import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldNotThrowAny
@@ -30,9 +29,11 @@ import io.kotest.property.arbitrary.next
 import org.testfx.api.FxToolkit
 import org.testfx.util.WaitForAsyncUtils
 import java.lang.ref.WeakReference
-import kotlin.time.Duration.Companion.milliseconds
+import java.util.concurrent.Callable
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
 
 /**
  * Verifies the close-lifecycle contracts of [FXMusicLibrary] and its underlying [FXAudioLibrary]:
@@ -43,11 +44,17 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 internal class FXAudioLibraryLifecycleTest : StringSpec({
 
     registryIsolation()
-    // This spec exercises the real debounce/refresh timing (create-close cycles, WeakReference leak
-    // detection) with eventuallyAfterFxEvents, so it keeps ReactiveScope's production dispatchers via
-    // ReactiveScopeSerialization rather than swapping in a TestDispatcher.
-    extension(ReactiveScopeSerialization)
+    val reactive = reactiveScope(StandardTestDispatcher())
     val files = virtualFiles()
+
+    // Reactive callbacks post FX work, which can publish another debounced reactive update.
+    // Advance both boundaries without making lifecycle correctness depend on runner speed.
+    fun settleReactiveAndFx() {
+        repeat(2) {
+            reactive.advance()
+            WaitForAsyncUtils.asyncFx(Runnable {}).get(2, TimeUnit.SECONDS)
+        }
+    }
 
     beforeSpec {
         FxToolkit.registerPrimaryStage()
@@ -84,19 +91,35 @@ internal class FXAudioLibraryLifecycleTest : StringSpec({
 
     "100 create-close-create cycles leave no stale items in a fresh library" {
         repeat(100) {
-            val lib = FXMusicLibrary.builder().metadataIO(files.metadataIO).build()
-            lib.audioItemFromFile(files.virtualAudioFile().next())
-            eventuallyAfterFxEvents(500.milliseconds) {
-                lib.audioItemsProperty.isEmpty() shouldBe false
+            FXMusicLibrary.builder().metadataIO(files.metadataIO).build().use { lib ->
+                settleReactiveAndFx()
+                lib.audioItemFromFile(files.virtualAudioFile().next())
+                settleReactiveAndFx()
+                WaitForAsyncUtils.asyncFx(Callable { lib.audioItemsProperty.isEmpty() }).get(2, TimeUnit.SECONDS) shouldBe false
             }
-            lib.close()
+            settleReactiveAndFx()
         }
 
-        val fresh = FXMusicLibrary.builder().metadataIO(files.metadataIO).build()
-        eventuallyAfterFxEvents(200.milliseconds) {
-            fresh.audioItemsProperty.isEmpty() shouldBe true
+        FXMusicLibrary.builder().metadataIO(files.metadataIO).build().use { fresh ->
+            settleReactiveAndFx()
+            WaitForAsyncUtils.asyncFx(Callable { fresh.audioItemsProperty.isEmpty() }).get(2, TimeUnit.SECONDS) shouldBe true
         }
-        fresh.close()
+        settleReactiveAndFx()
+    }
+
+    "FXMusicLibrary releases its registry slot when a lifecycle assertion fails" {
+        shouldThrow<AssertionError> {
+            FXMusicLibrary.builder().metadataIO(files.metadataIO).build().use {
+                settleReactiveAndFx()
+                throw AssertionError("Intentional lifecycle assertion failure")
+            }
+        }
+        settleReactiveAndFx()
+        FXMusicLibrary.builder().metadataIO(files.metadataIO).build().use { fresh ->
+            settleReactiveAndFx()
+            WaitForAsyncUtils.asyncFx(Callable { fresh.audioItemsProperty.isEmpty() }).get(2, TimeUnit.SECONDS) shouldBe true
+        }
+        settleReactiveAndFx()
     }
 
     "FXAudioLibrary is not retained after close" {
@@ -104,11 +127,10 @@ internal class FXAudioLibraryLifecycleTest : StringSpec({
         val ref = WeakReference(library!!.audioLibrary())
 
         library.close()
-        WaitForAsyncUtils.waitForFxEvents()
+        settleReactiveAndFx()
         library = null
 
         eventually(5.seconds) {
-            WaitForAsyncUtils.waitForFxEvents()
             System.gc()
             ref.get() shouldBe null
         }

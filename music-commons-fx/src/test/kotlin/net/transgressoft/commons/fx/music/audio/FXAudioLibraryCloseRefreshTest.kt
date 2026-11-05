@@ -18,18 +18,19 @@
 package net.transgressoft.commons.fx.music.audio
 
 import net.transgressoft.commons.fx.music.FXMusicLibrary
-import net.transgressoft.commons.fx.music.eventuallyAfterFxEvents
 import net.transgressoft.commons.music.audio.virtualFiles
-import net.transgressoft.commons.music.testing.ReactiveScopeSerialization
+import net.transgressoft.commons.music.testing.reactiveScope
 import net.transgressoft.commons.music.testing.registryIsolation
 import io.kotest.core.annotation.DisplayName
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.property.arbitrary.next
 import org.testfx.api.FxToolkit
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
+import org.testfx.util.WaitForAsyncUtils
+import java.util.concurrent.Callable
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
 
 /**
  * Regression test for the closed-flag guard in [FXAudioLibrary]: queued
@@ -43,8 +44,16 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 internal class FXAudioLibraryCloseRefreshTest : StringSpec({
 
     registryIsolation()
-    extension(ReactiveScopeSerialization)
+    val reactive = reactiveScope(StandardTestDispatcher())
     val files = virtualFiles()
+
+    // FX callbacks can publish another reactive update; settle both boundaries without sleeps.
+    fun settleReactiveAndFx() {
+        repeat(2) {
+            reactive.advance()
+            WaitForAsyncUtils.asyncFx(Runnable {}).get(2, TimeUnit.SECONDS)
+        }
+    }
 
     beforeSpec {
         FxToolkit.registerPrimaryStage()
@@ -55,58 +64,62 @@ internal class FXAudioLibraryCloseRefreshTest : StringSpec({
     }
 
     "#13 queued audio-items refresh is a no-op after close: no stale items in a fresh library" {
-        // Add an item and then immediately close before the debounced refresh drains.
-        // The closed-flag guard (closed.get() inside Platform.runLater) must absorb the pending
-        // refresh so the observable collections are never mutated post-close.
         val library = FXMusicLibrary.builder().metadataIO(files.metadataIO).build()
-        library.audioItemFromFile(files.virtualAudioFile().next())
-        // Close immediately — the debounced refresh may not have fired yet
-        library.close()
+        library.use {
+            settleReactiveAndFx()
+            library.audioItemFromFile(files.virtualAudioFile().next())
+            // Start the refresh launch but do not advance its debounce before close.
+            reactive.dispatcher.scheduler.runCurrent()
+            WaitForAsyncUtils.asyncFx(Callable { library.audioItemsProperty.isEmpty() }).get(2, TimeUnit.SECONDS) shouldBe true
+        }
+        settleReactiveAndFx()
+        WaitForAsyncUtils.asyncFx(Callable { library.audioItemsProperty.isEmpty() }).get(2, TimeUnit.SECONDS) shouldBe true
 
         // A fresh library must see an empty audioItemsProperty:
         // the closed predecessor's pending runLater must not inject any items into it.
-        val fresh = FXMusicLibrary.builder().metadataIO(files.metadataIO).build()
-        try {
-            eventuallyAfterFxEvents(2.seconds) {
-                fresh.audioItemsProperty.isEmpty() shouldBe true
-            }
-        } finally {
-            fresh.close()
+        FXMusicLibrary.builder().metadataIO(files.metadataIO).build().use { fresh ->
+            settleReactiveAndFx()
+            WaitForAsyncUtils.asyncFx(Callable { fresh.audioItemsProperty.isEmpty() }).get(2, TimeUnit.SECONDS) shouldBe true
         }
+        settleReactiveAndFx()
     }
 
     "#13 queued catalog refresh is a no-op after close: no stale catalogs in a fresh library" {
         val library = FXMusicLibrary.builder().metadataIO(files.metadataIO).build()
-        library.audioItemFromFile(files.virtualAudioFile().next())
-        library.close()
-
-        val fresh = FXMusicLibrary.builder().metadataIO(files.metadataIO).build()
-        try {
-            eventuallyAfterFxEvents(2.seconds) {
-                fresh.artistCatalogsProperty.isEmpty() shouldBe true
-            }
-        } finally {
-            fresh.close()
+        library.use {
+            settleReactiveAndFx()
+            library.audioItemFromFile(files.virtualAudioFile().next())
+            reactive.dispatcher.scheduler.runCurrent()
+            // Let the FX factory publish its catalog, then start (but do not advance) its debounce.
+            WaitForAsyncUtils.asyncFx(Runnable {}).get(2, TimeUnit.SECONDS)
+            reactive.dispatcher.scheduler.runCurrent()
+            WaitForAsyncUtils.asyncFx(Callable { library.artistCatalogsProperty.isEmpty() }).get(2, TimeUnit.SECONDS) shouldBe true
         }
+        settleReactiveAndFx()
+        WaitForAsyncUtils.asyncFx(Callable { library.artistCatalogsProperty.isEmpty() }).get(2, TimeUnit.SECONDS) shouldBe true
+
+        FXMusicLibrary.builder().metadataIO(files.metadataIO).build().use { fresh ->
+            settleReactiveAndFx()
+            WaitForAsyncUtils.asyncFx(Callable { fresh.artistCatalogsProperty.isEmpty() }).get(2, TimeUnit.SECONDS) shouldBe true
+        }
+        settleReactiveAndFx()
     }
 
     "#13 rapid create-close cycles leave no residue in the final library" {
         repeat(5) {
-            val lib = FXMusicLibrary.builder().metadataIO(files.metadataIO).build()
-            lib.audioItemFromFile(files.virtualAudioFile().next())
-            eventuallyAfterFxEvents(500.milliseconds) {
-                lib.audioItemsProperty.isEmpty() shouldBe false
+            FXMusicLibrary.builder().metadataIO(files.metadataIO).build().use { lib ->
+                settleReactiveAndFx()
+                lib.audioItemFromFile(files.virtualAudioFile().next())
+                settleReactiveAndFx()
+                WaitForAsyncUtils.asyncFx(Callable { lib.audioItemsProperty.isEmpty() }).get(2, TimeUnit.SECONDS) shouldBe false
             }
-            lib.close()
+            settleReactiveAndFx()
         }
 
-        val last = FXMusicLibrary.builder().metadataIO(files.metadataIO).build()
-        try {
-            eventuallyAfterFxEvents(2.seconds) {
-                last.audioItemsProperty.isEmpty() shouldBe true
-            }
-        } finally {
-            last.close()
+        FXMusicLibrary.builder().metadataIO(files.metadataIO).build().use { last ->
+            settleReactiveAndFx()
+            WaitForAsyncUtils.asyncFx(Callable { last.audioItemsProperty.isEmpty() }).get(2, TimeUnit.SECONDS) shouldBe true
         }
+        settleReactiveAndFx()
     }
 })

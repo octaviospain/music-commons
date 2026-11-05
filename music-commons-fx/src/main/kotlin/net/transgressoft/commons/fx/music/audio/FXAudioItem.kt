@@ -51,6 +51,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDateTime
+import java.util.Collections
 import java.util.Objects
 import java.util.Optional
 import java.util.concurrent.atomic.AtomicBoolean
@@ -70,6 +71,9 @@ import kotlinx.serialization.Transient
  * [fxInteger], [fxFloat]) that serves as the single source of truth for its JavaFX value.
  * Reactive mutation events are published via [mutateAndPublish] so [lastDateModified] is
  * updated and subscribers are notified on every state change.
+ *
+ * [artistsInvolved] is an immutable, safely published snapshot for asynchronous projections;
+ * [artistsInvolvedProperty] remains the live observable collection for UI bindings.
  *
  * Cover image bytes are loaded lazily. The owning [FXAudioLibrary] is held as a strong back-ref
  * (wired by [FXAudioLibrary.add]) so [coverImageBytes] can fetch on first access through
@@ -385,19 +389,20 @@ public class FXAudioItem
             }
         }
 
+        // Projection callbacks can retain and iterate keys while metadata setters update the UI set.
+        @Transient
+        @Volatile
+        private var _artistsInvolved: Set<Artist> = artistsInvolvedSnapshot()
+
         @Transient
         override val artistsInvolvedProperty: ReadOnlySetProperty<Artist> =
             SimpleSetProperty(
                 this, "artists involved",
-                FXCollections.observableSet(
-                    getArtistsNamesInvolved(
-                        titleProperty.value, artistProperty.value.name, albumProperty.value.albumArtist.name
-                    ).map { Artist.of(it) }.toMutableSet()
-                )
+                FXCollections.observableSet(_artistsInvolved.toMutableSet())
             )
 
         override val artistsInvolved: Set<Artist>
-            get() = artistsInvolvedProperty.value
+            get() = _artistsInvolved
 
         @Serializable
         override val playCount: Short
@@ -440,15 +445,18 @@ public class FXAudioItem
             }
         }
 
-        private fun syncArtistsInvolved() {
-            val involved =
+        private fun artistsInvolvedSnapshot(): Set<Artist> =
+            Collections.unmodifiableSet(
                 getArtistsNamesInvolved(
                     title, artist.name, album.albumArtist.name
                 ).map { Artist.of(it) }.toSet()
-            // Add-before-remove: populate the new artists first, then drop the stale ones, so a
-            // concurrent reader (e.g. a grouped projection re-keying off this set) never observes the
-            // set momentarily missing an artist it still involves. A clear()+addAll() would expose an
-            // empty window, from which such a reader can drop a still-valid catalog key.
+            )
+
+        private fun syncArtistsInvolved() {
+            val involved = artistsInvolvedSnapshot()
+            // Publish complete keys before UI notifications can trigger downstream reads. Never
+            // mutate a published snapshot: even add-before-remove invalidates an active iterator.
+            _artistsInvolved = involved
             artistsInvolvedProperty.addAll(involved)
             artistsInvolvedProperty.retainAll(involved)
         }
