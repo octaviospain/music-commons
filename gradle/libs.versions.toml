@@ -17,7 +17,8 @@ jimfs = "1.3.1"
 lincheck = "3.6"
 testfx = "4.0.18"
 monocle = "21.0.2"
-javafx-controls = "28-ea+12"
+# Keep JavaFX on the Java 21-compatible release line used by the toolchain and Monocle tests.
+javafx-controls = "21.0.13"
 # Plugin versions
 maven-publish = "0.37.0"
 dokka = "2.2.0"

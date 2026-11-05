@@ -9,7 +9,7 @@ kotlin {
 }
 
 javafx {
-    version = JavaVersion.VERSION_21
+    version = libs.versions.javafx.controls.get()
     modules = ['javafx.controls']
 }
 

@@ -65,10 +65,11 @@ internal class FXArtistCatalogSqliteConvergenceTest : StringSpec({
     "getArtistCatalog resolves every title-guest after an add-then-mutate SQLite import at scale" {
         val trackCount = 120
         val dbFile = File.createTempFile("fxArtistCatalogSql", ".db").apply { deleteOnExit() }
+        val sqliteRepository = SqliteRepository.fileBacked(dbFile.toPath(), FXAudioItemSqlTableDef)
 
         val library =
             FXMusicLibrary.builder()
-                .audioRepository(SqliteRepository.fileBacked(dbFile.toPath(), FXAudioItemSqlTableDef))
+                .audioRepository(sqliteRepository)
                 .metadataIO(files.metadataIO)
                 .build()
         val repository = library.audioLibrary()
@@ -107,7 +108,11 @@ internal class FXArtistCatalogSqliteConvergenceTest : StringSpec({
                 }
             }
         } finally {
-            library.close()
+            try {
+                library.close()
+            } finally {
+                sqliteRepository.close()
+            }
         }
     }
 })

@@ -180,10 +180,28 @@ as the dependency bump:
 
 ```bash
 gradle --write-verification-metadata sha256 help
+gradle regenerateVerificationMetadata
 ```
 
-Review the diff — it should ONLY contain entries for the bumped artifact and its
-transitives. Commit alongside the dependency change:
+The first command bootstraps checksums for updated plugins: Gradle resolves plugins
+before it can execute `regenerateVerificationMetadata`, so invoking that task alone
+can fail during build configuration. The second command rebuilds, generates the SBOM
+and documentation, and prunes obsolete entries while preserving the verification
+configuration. The `help` command alone does not resolve every build dependency.
+
+After regeneration, verify without metadata-writing mode and run the CI metadata
+comparison:
+
+```bash
+gradle build cyclonedxBom --no-parallel
+gradle --write-verification-metadata sha256 build cyclonedxBom \
+       --dry-run --no-parallel --refresh-dependencies
+diff -u gradle/verification-metadata.xml gradle/verification-metadata.dryrun.xml
+```
+
+Review the diff — additions and removals should correspond to the bumped artifacts
+and their transitives. Investigate unrelated changes before trusting them.
+Commit alongside the dependency change:
 
 ```bash
 git add gradle/libs.versions.toml gradle/verification-metadata.xml
