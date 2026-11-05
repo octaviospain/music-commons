@@ -43,6 +43,15 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 internal class FXAudioItemSqlTableDefTest : StringSpec({
 
     val reactive = reactiveScope()
+    val repositories = mutableListOf<AutoCloseable>()
+
+    fun sqliteRepository(dbFile: File) =
+        SqliteRepository.fileBacked(dbFile.toPath(), FXAudioItemSqlTableDef).also { repositories.add(it) }
+
+    afterTest {
+        repositories.asReversed().forEach { it.close() }
+        repositories.clear()
+    }
 
     beforeSpec { FxToolkit.registerPrimaryStage() }
 
@@ -51,7 +60,7 @@ internal class FXAudioItemSqlTableDefTest : StringSpec({
 
         val library =
             FXMusicLibrary.builder()
-                .audioRepository(SqliteRepository.fileBacked(dbFile.toPath(), FXAudioItemSqlTableDef))
+                .audioRepository(sqliteRepository(dbFile))
                 .build()
 
         val originals = (1..4).map { library.audioItemFromFile(Arb.realAudioFile(ID3_V_24).next()) }
@@ -63,7 +72,7 @@ internal class FXAudioItemSqlTableDefTest : StringSpec({
 
         val reloadedLibrary =
             FXMusicLibrary.builder()
-                .audioRepository(SqliteRepository.fileBacked(dbFile.toPath(), FXAudioItemSqlTableDef))
+                .audioRepository(sqliteRepository(dbFile))
                 .build()
 
         reloadedLibrary.audioLibrary().size() shouldBe originals.size
@@ -93,7 +102,7 @@ internal class FXAudioItemSqlTableDefTest : StringSpec({
 
         val library =
             FXMusicLibrary.builder()
-                .audioRepository(SqliteRepository.fileBacked(dbFile.toPath(), FXAudioItemSqlTableDef))
+                .audioRepository(sqliteRepository(dbFile))
                 .build()
 
         val original = library.audioItemFromFile(Arb.realAudioFile(ID3_V_24).next())
@@ -116,7 +125,7 @@ internal class FXAudioItemSqlTableDefTest : StringSpec({
 
         val reloadedLibrary =
             FXMusicLibrary.builder()
-                .audioRepository(SqliteRepository.fileBacked(dbFile.toPath(), FXAudioItemSqlTableDef))
+                .audioRepository(sqliteRepository(dbFile))
                 .build()
 
         val loaded = reloadedLibrary.audioLibrary().findById(id).orElse(null)
@@ -137,7 +146,7 @@ internal class FXAudioItemSqlTableDefTest : StringSpec({
 
         val seedLibrary =
             FXMusicLibrary.builder()
-                .audioRepository(SqliteRepository.fileBacked(dbFile.toPath(), FXAudioItemSqlTableDef))
+                .audioRepository(sqliteRepository(dbFile))
                 .build()
         val seededIds = (1..3).map { seedLibrary.audioItemFromFile(Arb.realAudioFile(ID3_V_24).next()).id }
         reactive.advance()
@@ -146,7 +155,7 @@ internal class FXAudioItemSqlTableDefTest : StringSpec({
 
         val library =
             FXMusicLibrary.builder()
-                .audioRepository(SqliteRepository.fileBacked(dbFile.toPath(), FXAudioItemSqlTableDef))
+                .audioRepository(sqliteRepository(dbFile))
                 .build()
 
         library.audioLibrary().size() shouldBe seededIds.size

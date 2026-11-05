@@ -84,7 +84,11 @@ Waveforms persist to JSON only; their serializer ships from `music-commons-media
 
 - **Java** 21 or higher
 - **Kotlin** 2.4.0
-- **JavaFX** 21.0.11 or higher (only for the `music-commons-fx` module)
+- **JavaFX** 21.0.13 (for FX modules; the Java 21-compatible build baseline)
+
+All JavaFX modules use the shared `javafx-controls` version in `gradle/libs.versions.toml`,
+including the JavaFX plugin configuration and test utilities. Headless FX tests use Monocle
+21.0.2 on the Java 21 toolchain; newer JavaFX major releases may require a newer JDK.
 
 ## Installation
 

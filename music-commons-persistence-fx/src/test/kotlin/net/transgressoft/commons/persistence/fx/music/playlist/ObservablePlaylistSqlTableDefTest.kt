@@ -46,6 +46,15 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 internal class ObservablePlaylistSqlTableDefTest : StringSpec({
 
     val reactive = reactiveScope()
+    val repositories = mutableListOf<AutoCloseable>()
+
+    fun sqliteRepository(dbFile: File) =
+        SqliteRepository.fileBacked(dbFile.toPath(), ObservablePlaylistSqlTableDef, false).also { repositories.add(it) }
+
+    afterTest {
+        repositories.asReversed().forEach { it.close() }
+        repositories.clear()
+    }
 
     beforeSpec { FxToolkit.registerPrimaryStage() }
 
@@ -56,7 +65,7 @@ internal class ObservablePlaylistSqlTableDefTest : StringSpec({
         val library =
             FXMusicLibrary.builder()
                 .audioRepository(JsonFileRepository(audioFile, ObservableAudioItemMapSerializer))
-                .playlistRepository(SqliteRepository.fileBacked(dbFile.toPath(), ObservablePlaylistSqlTableDef, false))
+                .playlistRepository(sqliteRepository(dbFile))
                 .build()
 
         val item1 = library.audioItemFromFile(Arb.realAudioFile(ID3_V_24).next())
@@ -78,7 +87,7 @@ internal class ObservablePlaylistSqlTableDefTest : StringSpec({
         val reloaded =
             FXMusicLibrary.builder()
                 .audioRepository(JsonFileRepository(audioFile, ObservableAudioItemMapSerializer))
-                .playlistRepository(SqliteRepository.fileBacked(dbFile.toPath(), ObservablePlaylistSqlTableDef, false))
+                .playlistRepository(sqliteRepository(dbFile))
                 .build()
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
@@ -118,7 +127,7 @@ internal class ObservablePlaylistSqlTableDefTest : StringSpec({
         val seedLibrary =
             FXMusicLibrary.builder()
                 .audioRepository(JsonFileRepository(audioFile, ObservableAudioItemMapSerializer))
-                .playlistRepository(SqliteRepository.fileBacked(dbFile.toPath(), ObservablePlaylistSqlTableDef, false))
+                .playlistRepository(sqliteRepository(dbFile))
                 .build()
         val seedItem = seedLibrary.audioItemFromFile(Arb.realAudioFile(ID3_V_24).next())
         val seededId = seedLibrary.createPlaylist("Seeded", listOf(seedItem)).id
@@ -129,7 +138,7 @@ internal class ObservablePlaylistSqlTableDefTest : StringSpec({
         val library =
             FXMusicLibrary.builder()
                 .audioRepository(JsonFileRepository(audioFile, ObservableAudioItemMapSerializer))
-                .playlistRepository(SqliteRepository.fileBacked(dbFile.toPath(), ObservablePlaylistSqlTableDef, false))
+                .playlistRepository(sqliteRepository(dbFile))
                 .build()
         reactive.advance()
         WaitForAsyncUtils.waitForFxEvents()
