@@ -32,6 +32,11 @@
             "groupName": "github-actions"
         },
         {
+            "description": "Lincheck 3.7 breaks deterministic replay of the SortedMultimap model check, including without JaCoCo.",
+            "matchPackageNames": ["org.jetbrains.lincheck:lincheck"],
+            "allowedVersions": "!/^(3\\.7)$/"
+        },
+        {
             "description": "Group Gradle wrapper bumps",
             "matchManagers": ["gradle-wrapper"],
             "groupName": "gradle-wrapper"
