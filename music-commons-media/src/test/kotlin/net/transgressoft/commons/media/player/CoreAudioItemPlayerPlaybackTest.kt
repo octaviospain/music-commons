@@ -37,6 +37,7 @@ import io.kotest.property.arbitrary.next
 import java.io.InputStream
 import java.nio.file.Files.createTempFile
 import java.time.Duration
+import java.util.concurrent.TimeUnit
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioInputStream
 import javax.sound.sampled.AudioSystem
@@ -110,7 +111,8 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
 
     context("Status transitions across all supported formats") {
         withData(SUPPORTED_FORMATS) { tagType ->
-            val player = testPlayer(::decodeToPcmStream) { FakeAudioLine() }
+            val line = GatedAudioLine()
+            val player = testPlayer(::decodeToPcmStream) { line }
             val realAudioPath = Arb.realAudioFile(tagType).next()
             val audioItem = Arb.audioItem { path = realAudioPath }.next()
             player.setVolume(0.0)
@@ -121,6 +123,7 @@ internal class CoreAudioItemPlayerPlaybackTest : FunSpec({
 
                 // Play
                 player.play(audioItem)
+                line.awaitWrite(5, TimeUnit.SECONDS) shouldBe true
                 player.status() shouldBe Status.PLAYING
 
                 // Stop

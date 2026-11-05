@@ -31,6 +31,7 @@ import io.kotest.matchers.longs.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -38,7 +39,8 @@ import kotlin.time.Duration.Companion.seconds
  * exercise the real SPI decode pipeline without audio hardware.
  *
  * Each test row drives the real [decodeToPcmStream] factory so actual codec-specific decoding
- * happens; only the hardware output sink is replaced by [FakeAudioLine]. The test matrix covers
+ * happens; only the hardware output sink is replaced by [GatedAudioLine], which holds PLAYING
+ * until asserted before allowing [FakeAudioLine] to drain. The test matrix covers
  * the 6 formats for which [net.transgressoft.commons.music.player.AudioItemPlayer.isPlayable]
  * returns `true`: MP3 VBR, MP3 CBR, FLAC, AAC/M4A, WAV, and Vorbis/OGG.
  *
@@ -82,14 +84,17 @@ internal class CoreAudioItemPlayerFormatIntegrationTest : FunSpec({
             // AAC/M4A — DurationProber probes asynchronously for M4A; wider tolerance
             FormatCase("AAC/M4A", "testeable_aac.m4a", expectedMs = 41_559L, toleranceMs = 500L)
         ) { (_, resourcePath, expectedMs, toleranceMs) ->
-            val player = testPlayer(::decodeToPcmStream) { FakeAudioLine() }
+            val line = GatedAudioLine()
+            val player = testPlayer(::decodeToPcmStream) { line }
             val file = ArbitraryAudioFile.getResourceAsFile("/testfiles/$resourcePath")
             val audioItem = Arb.audioItem { path = file.toPath() }.next()
             player.setVolume(0.0)
 
             try {
                 player.play(audioItem)
+                line.awaitWrite(5, TimeUnit.SECONDS) shouldBe true
                 player.status() shouldBe Status.PLAYING
+                line.releaseWrites()
 
                 // CBR/AAC resolve totalDuration asynchronously via a background probe thread;
                 // wait for the value to settle before asserting the tolerance window.

@@ -21,7 +21,9 @@ import io.kotest.assertions.json.shouldContainJsonKey
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -60,7 +62,8 @@ enum class FieldAbsentContract {
  * The field-absent branch strips [fieldName] from every entity object in the encoded JSON using
  * type-safe kotlinx JSON operations, then decodes the stripped JSON and asserts the outcome
  * dictated by [fieldAbsentContract]:
- * - [FieldAbsentContract.FAILS_FAST] — decoding throws with a message naming the missing field.
+ * - [FieldAbsentContract.FAILS_FAST] — decoding throws [SerializationException] with an
+ *   [IllegalStateException] cause naming the missing field; JSON decoding wraps serializer failures.
  * - [FieldAbsentContract.LOADS_ALL_ENTITIES] — decoding recovers every entity ([presentMap] size
  *   is preserved), confirming none is silently dropped.
  *
@@ -99,8 +102,8 @@ fun <T> assertOptionalFieldRoundTrips(
     val stripped = stripField(json, encoded, fieldName)
     when (fieldAbsentContract) {
         FieldAbsentContract.FAILS_FAST -> {
-            val failure = shouldThrow<IllegalStateException> { json.decodeFromString(serializer, stripped) }
-            failure.message shouldContain fieldName
+            val failure = shouldThrow<SerializationException> { json.decodeFromString(serializer, stripped) }
+            failure.cause.shouldBeInstanceOf<IllegalStateException>().message shouldContain fieldName
         }
         FieldAbsentContract.LOADS_ALL_ENTITIES -> {
             val fieldAbsentDecoded = json.decodeFromString(serializer, stripped)

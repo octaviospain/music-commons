@@ -18,6 +18,7 @@
 package net.transgressoft.commons.fx.music.player
 
 import net.transgressoft.commons.media.player.FakeAudioLine
+import net.transgressoft.commons.media.player.GatedAudioLine
 import net.transgressoft.commons.media.player.testPlayer
 import net.transgressoft.commons.music.audio.ArbitraryAudioFile
 import net.transgressoft.commons.music.audio.audioItem
@@ -33,6 +34,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.next
 import org.testfx.api.FxToolkit
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -44,7 +46,8 @@ import kotlin.time.Duration.Companion.seconds
  * [net.transgressoft.commons.media.player.CoreAudioItemPlayer] state machine, and JavaFX
  * observable property synchronisation — without requiring audio hardware or a real
  * [javax.sound.sampled.SourceDataLine]. [FakeAudioLine] advances its virtual clock
- * proportionally to bytes written, allowing deterministic status-transition and duration assertions.
+ * proportionally to bytes written. [GatedAudioLine] holds the first write until PLAYING is asserted,
+ * preventing the pump from reaching READY before the test thread observes the intermediate state.
  *
  * The matrix covers the 6 formats for which [net.transgressoft.commons.music.player.AudioItemPlayer.isPlayable]
  * returns `true`: MP3 VBR, MP3 CBR, FLAC, AAC/M4A, WAV, and Vorbis/OGG.
@@ -101,14 +104,17 @@ internal class FXAudioItemPlayerFormatIntegrationTest : FunSpec({
             // ALAC (testeable_alac.m4a) and Opus (testeable_opus.ogg) are not in this matrix:
             // AudioItemPlayer.isPlayable() returns false for both formats — play() would throw UnsupportedAudioPlaybackException.
         ) { (_, resourcePath, expectedMs, toleranceMs) ->
-            val player = testFxPlayer()
+            val line = GatedAudioLine()
+            val player = testFxPlayer(line)
             val file = ArbitraryAudioFile.getResourceAsFile("/testfiles/$resourcePath")
             val audioItem = Arb.audioItem { path = file.toPath() }.next()
             player.setVolume(0.0)
 
             try {
                 player.play(audioItem)
+                line.awaitWrite(5, TimeUnit.SECONDS) shouldBe true
                 player.status() shouldBe Status.PLAYING
+                line.releaseWrites()
 
                 // CBR/AAC resolve totalDuration asynchronously via a background probe thread;
                 // wait for the value to settle before asserting the tolerance window.
@@ -132,11 +138,11 @@ internal class FXAudioItemPlayerFormatIntegrationTest : FunSpec({
 
 /**
  * Builds an [FXAudioItemPlayer] wrapping a real [net.transgressoft.commons.media.player.CoreAudioItemPlayer]
- * with [FakeAudioLine] substituting the hardware output sink.
+ * with [GatedAudioLine] substituting the hardware output sink.
  *
  * Delegates to [testPlayer] from the media testFixtures, which uses the real
  * [net.transgressoft.commons.media.util.decodeToPcmStream] factory so actual codec-specific SPI
- * decoding occurs. [FakeAudioLine] drains written bytes immediately and advances a virtual
- * clock deterministically, enabling status-transition and duration assertions without audio hardware.
+ * decoding occurs. The output gate keeps PLAYING observable until explicitly released; afterward,
+ * the underlying [FakeAudioLine] drains immediately and advances its virtual clock without hardware.
  */
-private fun testFxPlayer(): FXAudioItemPlayer = FXAudioItemPlayer(testPlayer(lineFactory = { FakeAudioLine() }))
+private fun testFxPlayer(line: GatedAudioLine): FXAudioItemPlayer = FXAudioItemPlayer(testPlayer(lineFactory = { line }))
