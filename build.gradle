@@ -32,7 +32,7 @@ plugins {
     id 'org.sonarqube'
     id 'pl.allegro.tech.build.axion-release'
     id 'org.cyclonedx.bom' version '3.5.1'
-    id 'org.jetbrains.kotlinx.binary-compatibility-validator' version '0.18.1'
+    id 'org.jetbrains.kotlinx.binary-compatibility-validator' version '0.18.2'
 }
 
 repositories {
