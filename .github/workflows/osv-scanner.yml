@@ -23,7 +23,7 @@ jobs:
             -   uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
             -   name: Set up JDK 21
-                uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+                uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
                 with:
                     java-version: 21
                     distribution: 'zulu'
@@ -77,7 +77,7 @@ jobs:
                         --output=results.sarif
 
             -   name: Upload SARIF to Code Scanning
-                uses: github/codeql-action/upload-sarif@1fc58d04a4d4374f921bdac573c3811c240f9c26 # v4.39.2
+                uses: github/codeql-action/upload-sarif@915412ff23e8b7659517e607487dbeae018f2934 # v4.39.5
                 with:
                     sarif_file: results.sarif
 
@@ -117,7 +117,7 @@ jobs:
 
             -   name: Upload SARIF to Code Scanning
                 continue-on-error: true
-                uses: github/codeql-action/upload-sarif@1fc58d04a4d4374f921bdac573c3811c240f9c26 # v4.39.2
+                uses: github/codeql-action/upload-sarif@915412ff23e8b7659517e607487dbeae018f2934 # v4.39.5
                 with:
                     sarif_file: results-build-tooling.sarif
                     category: build-tooling
